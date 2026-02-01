@@ -5,13 +5,9 @@
 
 **Problem statement:** Managing the onboarding and profile system of gig workers for a specialized marketplace connecting early-stage startups with skilled talent for short-term, outcome-driven tasks.
 
-**Date of interaction:** Not specified
-
 **Mode of interaction:** Video call
 
-**Duration (in-minutes):** Not specified
-
-**Publicly accessible Video link:** Not provided
+**Publicly accessible Video link:** https://drive.google.com/drive/folders/1cI6rb27y57KTYFbwAwRnSYFoR_OY13jv
 
 ## Domain Expert Details
 **Role/designation:** Team Lead managing Audit, Digital Gigs (DG), and Invigilation verticals at Aigna
