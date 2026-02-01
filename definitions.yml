@@ -1,0 +1,250 @@
+# Domain: Gig and Creator Economy
+# Problem Statement: Managing the onboarding and profile system of gig workers for a specialized marketplace connecting early-stage startups with skilled talent for short-term, outcome-driven tasks
+# Last Updated: 2026-02-01
+
+MicroGigs:
+  name: Micro-gigs
+  definition: >
+    Small, short-term tasks with clearly defined scope and deliverables that can be 
+    completed quickly, typically ranging from a few hours to a few days. These are 
+    specific, outcome-driven assignments rather than open-ended projects or long-term 
+    employment commitments.
+  examples:
+    - Building a landing page for a startup's new product launch
+    - Designing a pitch deck with 10 slides for investor meetings
+    - Creating product marketing assets (logos, banners, social media graphics)
+    - Writing technical documentation for a specific feature
+  aliases:
+    - Short-term tasks
+    - Quick gigs
+    - Task-based work
+
+Supply:
+  name: Supply
+  definition: >
+    The pool of gig workers, creators, and skilled talent available on the platform 
+    to complete tasks. This includes verified students building portfolios and industry 
+    professionals seeking side projects. Supply represents the talent-side of the 
+    marketplace.
+  examples:
+    - A graphic design student who has passed aptitude testing and completed training
+    - A freelance web developer with 3 years experience offering weekend project work
+    - A content writer maintaining an active profile with portfolio samples
+  aliases:
+    - Gig workers
+    - Talent pool
+    - Creators
+    - Service providers
+
+Demand:
+  name: Demand
+  definition: >
+    Clients, organizations, and startups posting work requirements on the platform. 
+    Demand represents the buyer-side of the marketplace seeking to hire talent for 
+    specific tasks without long-term employment commitments.
+  examples:
+    - An early-stage SaaS startup needing a landing page built in 3 days
+    - A small marketing team requiring social media graphics for a campaign
+    - An entrepreneur posting requirements for a pitch deck design
+  aliases:
+    - Clients
+    - Buyers
+    - Task posters
+    - Hiring entities
+
+OutcomeDrivenTasks:
+  name: Outcome-driven tasks
+  definition: >
+    Work assignments defined by specific, measurable deliverables with clear end goals 
+    and success criteria, rather than time-based or open-ended work. These tasks have 
+    explicit outputs that can be verified upon completion.
+  examples:
+    - "Build a responsive landing page with contact form integration" (specific deliverable)
+    - "Design a 15-slide pitch deck following provided brand guidelines" (measurable output)
+    - "Create 10 social media posts with graphics for Instagram" (clear quantity and format)
+  aliases:
+    - Deliverable-based tasks
+    - Results-oriented work
+    - Specific assignments
+
+AptitudeBasedTests:
+  name: Aptitude-based tests
+  definition: >
+    Skill verification assessments administered during the onboarding process to ensure 
+    candidate quality before platform activation. These tests are conducted during 
+    mandatory training sessions and require a minimum 70% pass rate to qualify workers 
+    for the active talent pool.
+  examples:
+    - A web development assessment testing HTML/CSS/JavaScript knowledge for frontend developers
+    - A design skills test evaluating UI/UX principles and tool proficiency
+    - A content writing evaluation measuring grammar, style, and clarity
+  aliases:
+    - Skill tests
+    - Qualification assessments
+    - Verification tests
+    - Quality checks
+
+SOP:
+  name: Standard Operating Procedure (SOP)
+  definition: >
+    Documented, standardized workflow processes that define how communication and task 
+    execution should occur from requirement posting through task completion. SOPs ensure 
+    consistency, clarity, and quality across all platform interactions.
+  examples:
+    - Communication workflow: Requirement submission → Creator application → Selection → Progress updates → Delivery → Review → Payment
+    - Client onboarding SOP outlining steps from registration to first task posting
+    - Dispute resolution procedure defining escalation paths and resolution timelines
+  aliases:
+    - Standard procedures
+    - Workflow guidelines
+    - Process documentation
+    - Operating procedures
+
+Testimonial:
+  name: Testimonial
+  definition: >
+    Mandatory reviews, ratings, and feedback provided by both clients and creators 
+    after task completion. Testimonials build credibility, establish trust, and help 
+    future clients or workers make informed decisions. They are a core part of the 
+    platform's reputation system.
+  examples:
+    - A startup rating a designer 5 stars with feedback: "Delivered amazing pitch deck ahead of schedule"
+    - A creator reviewing a client: "Clear requirements, timely payment, great to work with"
+    - Public testimonials displayed on creator profiles showing completed task history
+  aliases:
+    - Reviews
+    - Ratings
+    - Feedback
+    - Endorsements
+
+PortfolioBuilding:
+  name: Portfolio building
+  definition: >
+    The process of creating and curating a collection of completed work samples that 
+    demonstrate a creator's skills, style, and capabilities to potential clients. 
+    Portfolio building is a primary motivation for students and emerging professionals 
+    on the platform.
+  examples:
+    - A design student showcasing 5 landing pages created for different startups
+    - A developer displaying GitHub repositories of completed micro-gig projects
+    - A content writer presenting published articles and case studies from platform tasks
+  aliases:
+    - Work samples collection
+    - Showcase creation
+    - Credential building
+    - Experience demonstration
+
+VariabilizeFixedCosts:
+  name: Variabilize fixed costs
+  definition: >
+    The business strategy of converting fixed employment expenses (salaries, benefits, 
+    infrastructure) into variable, on-demand costs by hiring gig workers only when needed. 
+    This allows organizations to scale workforce up or down based on actual requirements 
+    without long-term financial commitments.
+  examples:
+    - A startup hiring a designer for 2 weeks instead of a full-time employee with annual salary
+    - An organization staffing an audit team for a 1-month project rather than maintaining permanent staff
+    - A company paying per-task completion instead of monthly retainers
+  aliases:
+    - Convert fixed to variable
+    - On-demand hiring
+    - Flexible cost structure
+    - Pay-as-you-go employment
+
+Sourcing:
+  name: Sourcing
+  definition: >
+    The active process of finding, recruiting, and onboarding gig workers in specific 
+    geographic locations or skill areas to meet platform demand. Sourcing is particularly 
+    challenging in areas with low digital literacy or limited internet penetration.
+  examples:
+    - Platform team conducting campus drives to recruit design students in tier-2 cities
+    - Targeted marketing campaigns to attract web developers in specific regions
+    - Outreach programs in areas with low digital literacy to expand worker base
+  aliases:
+    - Talent acquisition
+    - Recruitment
+    - Worker recruitment
+    - Candidate sourcing
+
+DigitalLiteracy:
+  name: Digital literacy
+  definition: >
+    The level of comfort, competence, and familiarity an individual has with digital 
+    tools, online platforms, and internet-based communication. Digital literacy affects 
+    both worker ability to use the platform and the ease of sourcing talent in different 
+    geographic regions.
+  examples:
+    - A worker comfortable navigating online dashboards, uploading files, and using communication tools
+    - A region with high smartphone penetration and internet usage showing high digital literacy
+    - An area requiring additional training and support due to limited prior digital tool exposure
+  aliases:
+    - Digital competence
+    - Tech-savviness
+    - Online proficiency
+    - Digital skills
+
+PaymentCycle:
+  name: Payment cycle
+  definition: >
+    The predefined, clearly communicated timeline and process for how and when gig 
+    workers receive payment after task completion. Well-defined payment cycles are 
+    essential for transparency and trust, preventing disputes and ensuring worker satisfaction.
+  examples:
+    - "Payment processed within 5 business days after client approval of deliverables"
+    - "Bi-weekly payment cycles with direct deposit to registered bank accounts"
+    - "Milestone-based payments: 50% on project start, 50% on completion"
+  aliases:
+    - Payment schedule
+    - Payout timeline
+    - Compensation cycle
+    - Payment process
+
+BulkHiring:
+  name: Bulk hiring
+  definition: >
+    The process where organizations post multiple task requirements simultaneously and 
+    hire numerous gig workers for different assignments, managed through a centralized 
+    dashboard. This is common for large-scale projects, events, or audit teams requiring 
+    diverse skills across multiple locations.
+  examples:
+    - A company hiring 50 auditors across 10 cities for a nationwide compliance check
+    - An event management team recruiting 30 different creators for promotional materials
+    - An organization staffing multiple concurrent projects with specialized workers
+  aliases:
+    - Mass hiring
+    - Multi-task hiring
+    - Large-scale recruitment
+    - Concurrent hiring
+
+QualityFiltering:
+  name: Quality filtering
+  definition: >
+    The systematic process of verifying, testing, and approving gig workers before 
+    platform activation to ensure consistent quality standards. This includes aptitude 
+    testing, mandatory training, minimum pass rates, and ongoing performance monitoring.
+  examples:
+    - Requiring 70% minimum score on skill assessments before worker activation
+    - Filtering out candidates who don't meet training completion requirements
+    - Removing workers with consistently poor testimonials or failed deliverables
+  aliases:
+    - Quality control
+    - Verification process
+    - Talent vetting
+    - Quality assurance
+
+ReferralSystem:
+  name: Referral system
+  definition: >
+    A mandatory program where existing gig workers invite and recommend new talent to 
+    join the platform, helping with supply growth while leveraging trusted networks for 
+    quality candidates. The system incentivizes current workers to bring in qualified peers.
+  examples:
+    - A designer referring 3 classmates who also pass aptitude tests and join the platform
+    - Workers receiving bonuses or priority task access for successful referrals
+    - Platform tracking referral sources to identify high-quality talent networks
+  aliases:
+    - Referral program
+    - Worker referrals
+    - Network-based recruitment
+    - Peer recommendations
