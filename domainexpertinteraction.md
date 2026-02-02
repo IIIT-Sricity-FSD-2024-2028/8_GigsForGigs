@@ -33,17 +33,16 @@ The platform aims to solve the critical speed versus quality trade-off in the gi
 **List key terms used by the domain expert and their meanings:**
 
 | Term | Meaning as explained by the expert |
-|---|---|
+|------|-----------------------------------|
 | Gig Economy | Employment model where people work on short-term, task-based assignments rather than traditional full-time positions |
-| Micro-gigs | Small, short-term tasks that can be completed quickly (as opposed to long-term projects) |
-| Supply | Gig workers or talent available on the platform to complete tasks |
+| Micro-gigs | Small, short-term tasks that can be completed quickly |
+| Supply | Gig workers or talent available on the platform |
 | Demand | Clients or organizations posting work requirements |
-| Variabilize fixed costs | Convert fixed employment costs (salaries, benefits) into variable costs by hiring on-demand |
+| Variabilize fixed costs | Convert fixed employment costs into variable costs by hiring on-demand |
 | Sourcing | The process of finding and recruiting gig workers in specific locations or skill areas |
 | SOP (Standard Operating Procedure) | Documented process defining how communication and workflow should happen from requirement submission to task completion |
-| Aptitude-based tests | Assessments used during onboarding to verify candidate skills and quality |
 | Digital literacy | Level of comfort and competence with digital tools and online platforms |
-| Outcome-driven tasks | Specific deliverables with clear end goals (e.g., "build a landing page") vs. open-ended work |
+| Outcome-driven tasks | Specific deliverables with clear end goals |
 | Portfolio building | Creating a collection of completed work samples to demonstrate skills to future clients |
 
 ## Actors and Responsibilities
@@ -59,14 +58,12 @@ The platform aims to solve the critical speed versus quality trade-off in the gi
 ### Workflow 1: Gig Worker Onboarding and Verification
 **Trigger/start condition:** New candidate registers on the platform
 
-**Steps involved (in order):**
-1. Candidate creates profile with basic information
-2. Platform administers aptitude-based test relevant to the candidate's skill area
-3. Candidate completes mandatory training session
-4. Test is conducted during training with minimum 70% pass requirement
-5. Candidates who meet the threshold are approved and added to the active talent pool
-6. Candidates who don't meet requirements are filtered out
-7. Approved workers receive access to browse and apply for gigs
+**Steps involved:**  
+1. Candidate creates profile with basic information (skills, tools, experience, portfolio)  
+2. Platform verifies profile through manual or automated checks (profile completeness, document verification, sample work review)  
+3. Candidates who meet quality criteria are approved and added to the active talent pool  
+4. Candidates who do not meet requirements are filtered out  
+5. Approved workers receive access to browse and apply for gigs 
 
 **Outcome/End condition:** Verified, quality-checked gig worker is active on the platform and can start applying for tasks
 
@@ -91,48 +88,44 @@ The platform aims to solve the critical speed versus quality trade-off in the gi
 ### Workflow 3: Bulk Hiring/Organization Management
 **Trigger/start condition:** Organization needs multiple gig workers for mass hiring (e.g., audit team, promotional events)
 
-**Steps involved (in order):**
-1. Organization manager logs into dedicated portal/dashboard
-2. Manager posts multiple requirements simultaneously
-3. Platform sources candidates matching specific criteria (location, skills)
-4. Candidates undergo onboarding and verification process
-5. Manager views progress of all requirements through centralized dashboard
-6. Approved candidates are assigned to different tasks/projects
-7. Manager tracks progress across all active assignments
-8. Work is completed and verified
-9. Payment cycles are managed in bulk
-10. Performance data is collected for future hiring decisions
+**Steps involved:**  
+1. Manager logs into dashboard  
+2. Manager posts multiple requirements  
+3. Platform sources candidates  
+4. Candidates undergo onboarding and verification  
+5. Manager tracks progress  
+6. Approved candidates assigned  
+7. Work completed  
+8. Payments managed in bulk  
+9. Performance data collected
 
 **Outcome/End condition:** Organization successfully staffs multiple positions with verified gig workers, all tracked through single management interface
 
 ## Rules, Constraints, and Exceptions
 
 **Mandatory rules or policies:**
-- Minimum 70% pass rate required on aptitude tests during onboarding
-- Payment cycles must be clearly defined and communicated upfront
-- Standard Operating Procedures (SOPs) must be followed for all client communication from requirement submission to completion
-- Testimonials are mandatory for both clients and gig workers after task completion
+- All workers must complete profile verification before being activated  
+- Payment cycles must be clearly defined and communicated upfront  
+- SOPs must be followed for all client communication  
+- Testimonials are mandatory for both clients and gig workers  
 - Referral system is mandatory for gig workers
-- All workers must complete training before being activated
 
 **Constraints or limitations:**
 - Sourcing workers in areas with low digital literacy or small registered user base is challenging
 - Getting demand (clients) is more difficult than getting supply (workers) for new platforms
 - Platform focuses on limited scope, standardized tasks rather than open-ended employment
 - Quality consistency requires ongoing filtering and verification processes
-- Geographic constraints when specific location-based work is needed (e.g., on-site audits)
 
 **Common exceptions or edge cases:**
 - Remote locations where no qualified workers are available despite marketing efforts
 - Clients with highly customized requirements that don't fit standardized task templates
 - Urgent requirements that bypass normal matching timelines
-- Workers who perform well in practice but score below 70% on initial tests
+- Workers performing well in practice but filtered initially
 - Bulk hiring scenarios requiring different approval/management workflows
 
 **Situations where things usually go wrong:**
-- Quality issues when adequate verification/testing is not conducted during onboarding
+- Quality issues when adequate verification is not conducted during onboarding
 - Communication breakdowns when SOP is not clearly defined or followed
-- Sourcing failures in low digital literacy areas without sufficient local outreach
 - Client dissatisfaction when platform tries to be everything to everyone instead of specializing in niche services
 - Payment disputes when payment cycles and terms are not clearly communicated upfront
 - Worker retention issues without proper support systems (cloud calling, help desk)
@@ -141,24 +134,15 @@ The platform aims to solve the critical speed versus quality trade-off in the gi
 
 **What parts of this process are most difficult or inefficient?**
 - Acquiring clients (demand) is significantly harder than recruiting gig workers (supply), especially for new platforms
-- Sourcing qualified workers in specific geographic areas with low digital penetration
 - Maintaining consistent quality across a large, distributed workforce
-- Competing with established platforms (like Upwork) that have brand recognition but suffer from noise and high costs
+- Competing with established platforms (like Upwork & fiverr) that have brand recognition but suffer from noise and high costs
 - Balancing platform standardization with client customization needs
 
 **Where do delays, errors, or misunderstandings usually occur?**
 - Communication gaps when SOP is not well-defined across departments
-- Quality issues when aptitude testing or training is inadequate
 - Sourcing delays in remote or low-connectivity areas
 - Matching errors when candidate skills don't align with actual task requirements
 - Payment disputes when cycles and terms are unclear from the start
-
-**What information is hardest to track or manage today?**
-- Progress tracking across multiple simultaneous requirements (especially for bulk hiring)
-- Maintaining accurate, up-to-date worker quality and performance metrics
-- Geographic availability of workers for location-specific tasks
-- Real-time status of sourcing efforts in difficult areas
-- Client satisfaction and testimonial collection post-project
 
 ## Assumptions & Clarifications
 
@@ -169,17 +153,11 @@ The platform aims to solve the critical speed versus quality trade-off in the gi
 - Testimonial systems work for both clients and workers
 - Support systems (like cloud calling) significantly improve user experience
 
-**What assumptions that were corrected:**
-- Initial assumption might have been that getting supply (workers) would be the main challenge, but the expert clarified that getting demand (clients) is actually harder for new platforms
-- The team may have underestimated the importance of geographic sourcing challenges in areas with low digital literacy
-- Generic platform approach is less effective than specializing in niche services where the platform can be the "champ"
-
 **Open questions that need follow-up:**
-- Specific metrics or KPIs for measuring worker quality beyond the 70% test threshold
+- Specific metrics or KPIs for measuring worker quality.
 - Detailed SOP documentation for communication workflow across all touchpoints
 - Pricing strategy for competing with established platforms while maintaining quality
 - Technology stack and implementation details for aptitude testing system
 - Specific strategies for targeting and acquiring initial startup clients (demand generation)
 - Integration requirements for cloud calling support system
 - Data privacy and security considerations for client and worker information
-- Scalability considerations for expanding to new geographic markets or verticals
