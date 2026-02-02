@@ -10,9 +10,9 @@
 **Publicly accessible Video link:** https://drive.google.com/drive/folders/1cI6rb27y57KTYFbwAwRnSYFoR_OY13jv
 
 ## Domain Expert Details
-**Role/designation:** Team Lead managing Audit, Digital Gigs (DG), and Invigilation verticals at Aigna
+**Role/designation:** Team Lead managing Audit, Digital Gigs (DG), and Invigilation verticals at Awign
 
-**Experience in the domain:** Over 4 years of experience in the gig economy sector. Previously worked at Gig India before joining Aigna (over 3.5 years at Aigna). Has handled over 25 mid-to-high-level clients including Britannia, Amazon, PhonePe, and TCS. Aigna is India's largest gig work platform, operating for 9 years across 78 different verticals.
+**Experience in the domain:** Over 4 years of experience in the gig economy sector. Previously worked at Gig India before joining Awign (over 3.5 years at Awign). Has handled over 25 mid-to-high-level clients including Britannia, Amazon, PhonePe, and TCS. Awign is India's largest gig work platform, operating for 9 years across 78 different verticals.
 
 **Nature of work:** Managerial/Team Lead
 
@@ -52,9 +52,7 @@ The platform aims to solve the critical speed versus quality trade-off in the gi
 |---|---|
 | **Creators/Gig Workers** | Create professional profiles; showcase skills, tools, and past work; upload portfolio items; apply to tasks posted by clients; build public task history and credibility through completed work |
 | **Clients (Individuals/Small Teams)** | Browse creator profiles; post specific service requirements; select and collaborate with creators; review completed work; provide testimonials |
-| **Organizations/Startups** | Post multiple tasks simultaneously; select different creators for different tasks; track progress across multiple assignments; manage bulk hiring needs |
-| **Platform Managers/Operations Team** | Handle client fulfillment; manage dashboards to track progress of multiple requirements; provide support through cloud calling system; ensure quality through aptitude testing and filtering |
-| **Auditors (Domain Expert's Vertical)** | Provide independent audit reports to ensure accuracy; verify ground-level execution meets client requirements; conduct on-site assessments |
+| **Managers** | Handles client fulfillment; manages dashboards; posts and oversees multiple requirements; tracks progress; ensures quality filtering; manages bulk hiring; provides operational support |
 
 ## Core workflows
 
