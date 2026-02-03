@@ -28,11 +28,10 @@ Managing the onboarding and profile system of gig workers for a specialized mark
 
 ### How It Works
 
-1. **Talent Verification**: Aptitude-based testing (70% pass rate) and mandatory training ensure quality
-2. **Smart Matching**: Startups post tasks; verified creators apply with portfolios
-3. **Standardized Workflows**: Clear SOPs from requirement posting to completion
-4. **Trust Building**: Mandatory testimonials and referral systems
-5. **Specialized Focus**: Platform champions niche services for excellence
+1. **Smart Matching**: Startups post tasks; verified creators apply with portfolios
+2. **Standardized Workflows**: Clear SOPs from requirement posting to completion
+3. **Trust Building**: Mandatory testimonials and referral systems
+4. **Specialized Focus**: Platform champions niche services for excellence
 
 ---
 
@@ -48,17 +47,11 @@ Individual entrepreneurs or small teams needing specific tasks without full-time
 
 **Primary Needs**: Quick access to verified talent, transparent pricing, easy task management, reliable deliverables
 
-### 3. Organizations / Startups
+### 3. Manager
 Early-stage companies requiring multiple concurrent tasks or bulk gig hiring.
 
-**Primary Needs**: Multi-task posting, progress tracking dashboard, diverse skill access, scalable hiring, consistent quality
+**Primary Needs**: Handles client fulfillment; manages dashboards; posts and oversees multiple requirements; tracks progress; ensures quality filtering; manages bulk hiring; provides operational support |
 
-### 4. Platform Managers / Operations Team
-Internal team managing platform operations, quality control, and user support.
-
-**Primary Needs**: Verification tools, fulfillment tracking, communication infrastructure, analytics capabilities
-
----
 
 ## Planned Features
 
@@ -66,7 +59,6 @@ Internal team managing platform operations, quality control, and user support.
 
 **Profile & Onboarding**
 - Professional profile with skills, portfolio uploads, and public task history
-- Aptitude-based testing (70% minimum pass rate) and mandatory training
 - Quality filtering before platform activation
 
 **Work & Credibility**
@@ -116,7 +108,6 @@ Internal team managing platform operations, quality control, and user support.
 ### For Platform Managers / Operations Team
 
 **Operations**
-- Application review and aptitude test administration
 - Training program management and quality monitoring
 - Client fulfillment dashboard and sourcing tools
 
@@ -135,7 +126,6 @@ Internal team managing platform operations, quality control, and user support.
 | **Supply** | Gig workers/talent available on the platform |
 | **Demand** | Clients/organizations posting work requirements |
 | **Outcome-driven tasks** | Specific deliverables with clear end goals (e.g., "build a landing page") |
-| **Aptitude-based tests** | Assessments during onboarding to verify candidate skills (70% pass required) |
 | **SOP** | Standard Operating Procedure - defined workflow from requirement to completion |
 | **Testimonial** | Reviews and ratings left by clients or creators after task completion |
 | **Portfolio building** | Creating work samples to demonstrate skills to future clients |

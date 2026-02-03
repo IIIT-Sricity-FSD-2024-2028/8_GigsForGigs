@@ -67,23 +67,6 @@ OutcomeDrivenTasks:
     - Results-oriented work
     - Specific assignments
 
-AptitudeBasedTests:
-  name: Aptitude-based tests
-  definition: >
-    Skill verification assessments administered during the onboarding process to ensure 
-    candidate quality before platform activation. These tests are conducted during 
-    mandatory training sessions and require a minimum 70% pass rate to qualify workers 
-    for the active talent pool.
-  examples:
-    - A web development assessment testing HTML/CSS/JavaScript knowledge for frontend developers
-    - A design skills test evaluating UI/UX principles and tool proficiency
-    - A content writing evaluation measuring grammar, style, and clarity
-  aliases:
-    - Skill tests
-    - Qualification assessments
-    - Verification tests
-    - Quality checks
-
 SOP:
   name: Standard Operating Procedure (SOP)
   definition: >
@@ -248,3 +231,41 @@ ReferralSystem:
     - Worker referrals
     - Network-based recruitment
     - Peer recommendations
+
+MatchingSystem:
+  name: Matching system
+  definition: >
+    The algorithmic or rule-based system that connects suitable creators 
+    with relevant client tasks based on skills, test scores, availability, 
+    past performance, and task requirements.
+  examples:
+    - Recommending UI designers with 80%+ test score for app design gigs
+    - Showing high-rated writers first for content-related tasks
+  aliases:
+    - Talent matching
+    - Smart allocation
+    - Recommendation engine
+
+EscrowSystem:
+  name: Escrow system
+  definition: >
+    A payment protection mechanism where client funds are held securely 
+    until deliverables are approved, ensuring creators are paid and clients 
+    receive agreed work.
+  examples:
+    - Funds locked before task begins and released after approval
+  aliases:
+    - Secure payment holding
+    - Payment protection
+
+AvailabilityStatus:
+  name: Availability status
+  definition: >
+    The real-time indication of whether a creator is currently open to 
+    taking new tasks, helping improve matching accuracy.
+  examples:
+    - "Available this weekend"
+    - "Booked until 15 Feb"
+  aliases:
+    - Work availability
+    - Active status
