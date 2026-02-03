@@ -47,17 +47,11 @@ Individual entrepreneurs or small teams needing specific tasks without full-time
 
 **Primary Needs**: Quick access to verified talent, transparent pricing, easy task management, reliable deliverables
 
-### 3. Organizations / Startups
+### 3. Manager
 Early-stage companies requiring multiple concurrent tasks or bulk gig hiring.
 
-**Primary Needs**: Multi-task posting, progress tracking dashboard, diverse skill access, scalable hiring, consistent quality
+**Primary Needs**: Handles client fulfillment; manages dashboards; posts and oversees multiple requirements; tracks progress; ensures quality filtering; manages bulk hiring; provides operational support |
 
-### 4. Platform Managers / Operations Team
-Internal team managing platform operations, quality control, and user support.
-
-**Primary Needs**: Verification tools, fulfillment tracking, communication infrastructure, analytics capabilities
-
----
 
 ## Planned Features
 
