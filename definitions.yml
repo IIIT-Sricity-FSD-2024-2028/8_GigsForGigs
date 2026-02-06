@@ -236,7 +236,7 @@ MatchingSystem:
   name: Matching system
   definition: >
     The algorithmic or rule-based system that connects suitable creators 
-    with relevant client tasks based on skills, test scores, availability, 
+    with relevant client tasks based on skills, availability, 
     past performance, and task requirements.
   examples:
     - Recommending UI designers with 80%+ test score for app design gigs
