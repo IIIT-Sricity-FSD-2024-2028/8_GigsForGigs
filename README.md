@@ -91,7 +91,7 @@ Early-stage companies requiring multiple concurrent tasks or bulk gig hiring.
 
 ---
 
-### For Organizations / Startups
+### Manager
 
 **Bulk Management**
 - Multi-task posting with centralized dashboard
@@ -102,19 +102,6 @@ Early-stage companies requiring multiple concurrent tasks or bulk gig hiring.
 - Access to diverse specialists for concurrent projects
 - Performance analytics and automated reporting
 - Variable cost management without long-term commitments
-
----
-
-### For Platform Managers / Operations Team
-
-**Operations**
-- Training program management and quality monitoring
-- Client fulfillment dashboard and sourcing tools
-
-**Support & Analytics**
-- Cloud call system and ticket management
-- Performance metrics and geographic analytics
-- SOP management and dispute resolution tools
 
 ---
 
