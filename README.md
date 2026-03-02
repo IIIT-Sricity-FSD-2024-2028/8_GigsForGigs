@@ -106,16 +106,16 @@ Early-stage companies requiring multiple concurrent tasks or bulk gig hiring.
 ---
 
 ## Key Terminology
-
-| Term | Definition |
-|------|------------|
-| **Micro-gigs** | Small, short-term tasks that can be completed quickly |
-| **Supply** | Gig workers/talent available on the platform |
-| **Demand** | Clients/organizations posting work requirements |
-| **Outcome-driven tasks** | Specific deliverables with clear end goals (e.g., "build a landing page") |
-| **SOP** | Standard Operating Procedure - defined workflow from requirement to completion |
-| **Testimonial** | Reviews and ratings left by clients or creators after task completion |
-| **Portfolio building** | Creating work samples to demonstrate skills to future clients |
+_____________________________________________________________________________________________________________
+| Term                     | Definition                                                                     |
+|--------------------------|--------------------------------------------------------------------------------|
+| **Micro-gigs**           | Small, short-term tasks that can be completed quickly                          |
+| **Supply**               | Gig professionals/talent available on the platform                             |
+| **Demand**               | Clients/organizations posting work requirements                                |
+| **Outcome-driven tasks** | Specific deliverables with clear end goals (e.g., "build a landing page")      |
+| **SOP**                  | Standard Operating Procedure - defined workflow from requirement to completion |
+| **Testimonial**          | Reviews and ratings left by clients or creators after task completion          |
+| **Portfolio building**   | Creating work samples to demonstrate skills to future clients                  |
 
 ---
 
