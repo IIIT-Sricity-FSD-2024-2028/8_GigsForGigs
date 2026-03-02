@@ -13,7 +13,7 @@ Managing the onboarding and profile system of gig workers for a specialized mark
 - Traditional hiring is too slow and expensive for short-term work
 - Large platforms like Upwork are noisy, resume-heavy, and often too expensive
 
-**For Creators and Gig Workers:**
+**For Creators and Gig Professional:**
 - Talented students and professionals struggle with discoverability
 - Limited opportunities to build portfolios with real startup projects
 - No structured way to establish credibility and convert skills into opportunities
@@ -37,7 +37,7 @@ Managing the onboarding and profile system of gig workers for a specialized mark
 
 ## Identified Actors
 
-### 1. Creators / Gig Workers
+### 1. Creators / Gig Professional
 Individuals offering specialized skills for short-term tasks—including skilled students building portfolios and industry professionals seeking side hustles.
 
 **Primary Needs**: Real project exposure, portfolio building, fair payment, credibility, clear task requirements
@@ -55,7 +55,7 @@ Early-stage companies requiring multiple concurrent tasks or bulk gig hiring.
 
 ## Planned Features
 
-### For Creators / Gig Workers
+### For Creators / Gig Professional
 
 **Profile & Onboarding**
 - Professional profile with skills, portfolio uploads, and public task history
