@@ -1,166 +1,123 @@
-Gig Marketplace Platform — ER Model
+# Gig Marketplace Platform — ER Model
 
 A normalized database design for a two-sided gig marketplace where clients post tasks and gig professionals apply to complete them.
 
-Overview
+## Overview
 
-The platform follows a task-based marketplace model rather than a service listing system. Clients post tasks, gig professionals apply, and the platform manages the lifecycle from application → hiring → deliverable → payment → review.
+The platform follows a task-based marketplace model rather than a service listing system. Clients post tasks, gig professionals apply, and the platform manages the lifecycle from **application → hiring → deliverable → payment → review**.
 
-The schema is normalized to Third Normal Form (3NF) and supports:
+The schema is normalized to **Third Normal Form (3NF)** and supports:
 
-Individual and organization-based hiring
+* Individual and organization-based hiring
+* Optional manager accounts for delegated hiring
+* End-to-end task lifecycle tracking
+* Bidirectional reviews after task completion
 
-Optional manager accounts for delegated hiring
-
-End-to-end task lifecycle tracking
-
-Bidirectional reviews after task completion
-
-Entities
+## Entities
 
 The system consists of the following core entities:
 
-USERS
-
-CLIENT
-
-ORGANIZATION
-
-MANAGER
-
-GIG_PROFESSIONAL_PROFILE
-
-PROFILE_SKILLS
-
-PROFILE_TOOLS
-
-PROFILE_PORTFOLIO
-
-TASKS
-
-APPLICATION
-
-DELIVERABLES
-
-PAYMENTS
-
-REVIEWS
+* **USERS**
+* **CLIENT**
+* **ORGANIZATION**
+* **MANAGER**
+* **GIG_PROFESSIONAL_PROFILE**
+* **PROFILE_SKILLS**
+* **PROFILE_TOOLS**
+* **PROFILE_PORTFOLIO**
+* **TASKS**
+* **APPLICATION**
+* **DELIVERABLES**
+* **PAYMENTS**
+* **REVIEWS**
 
 Attributes and constraints for these entities are defined in the ER diagram.
 
-Relationships
+## Relationships
 
 Key relationships in the system include:
 
-USERS may act as CLIENTS or GIG PROFESSIONALS
+* **USERS** may act as **CLIENTS** or **GIG PROFESSIONALS**
+* **CLIENTS** post **TASKS**
+* **CLIENTS** may optionally create **MANAGER** accounts
+* **ORGANIZATIONS** group multiple **CLIENT** accounts
+* **GIG PROFESSIONALS** apply to **TASKS** through **APPLICATION**
+* Accepted applications produce **DELIVERABLES**
+* Approved deliverables generate **PAYMENTS**
+* Both parties can leave **REVIEWS** after task completion
+* **GIG PROFESSIONAL** profiles maintain **SKILLS**, **TOOLS**, and **PORTFOLIO** links
 
-CLIENTS post TASKS
+---
 
-CLIENTS may optionally create MANAGER accounts
+## Normalization
 
-ORGANIZATIONS group multiple CLIENT accounts
+### First Normal Form (1NF)
 
-GIG PROFESSIONALS apply to TASKS through APPLICATION
-
-Accepted applications produce DELIVERABLES
-
-Approved deliverables generate PAYMENTS
-
-Both parties can leave REVIEWS after task completion
-
-GIG PROFESSIONAL profiles maintain SKILLS, TOOLS, and PORTFOLIO links
-
-Normalization
-First Normal Form (1NF)
-
-GIG_PROFESSIONAL_PROFILE originally contained multi-valued attributes (skills, tools, portfolio_links).
+**GIG_PROFESSIONAL_PROFILE** originally contained multi-valued attributes (skills, tools, portfolio_links).
 
 These were decomposed into:
 
-PROFILE_SKILLS
-
-PROFILE_TOOLS
-
-PROFILE_PORTFOLIO
+* **PROFILE_SKILLS**
+* **PROFILE_TOOLS**
+* **PROFILE_PORTFOLIO**
 
 Each row now stores one value only, satisfying atomicity.
 
-Second Normal Form (2NF)
+### Second Normal Form (2NF)
 
 Relations with composite keys were evaluated for partial dependencies:
 
-PROFILE_SKILLS
-
-PROFILE_TOOLS
-
-APPLICATION
-
-REVIEWS
+* **PROFILE_SKILLS**
+* **PROFILE_TOOLS**
+* **APPLICATION**
+* **REVIEWS**
 
 No partial dependencies were found, so all relations satisfy 2NF.
 
-Third Normal Form (3NF)
+### Third Normal Form (3NF)
 
 A transitive dependency existed between client and organization data:
 
-client_id → org_id → root_client_id
-manager_id → org_id → root_client_id
+* `client_id → org_id → root_client_id`
+* `manager_id → org_id → root_client_id`
 
-To remove this dependency, a separate ORGANIZATION entity was introduced.
-CLIENT and MANAGER now reference org_id via foreign keys.
+To remove this dependency, a separate **ORGANIZATION** entity was introduced. **CLIENT** and **MANAGER** now reference `org_id` via foreign keys. All relations are therefore in 3NF.
 
-All relations are therefore in 3NF.
+---
 
-Functional Dependencies
-USERS
-user_id → name, email, password_hash, role, created_at
-email → user_id
-CLIENT
-client_id → user_id, org_id, type
-user_id → client_id
-ORGANIZATION
-org_id → org_name, root_client_id
-MANAGER
-manager_id → org_id, current_profiles_managed
-GIG_PROFESSIONAL_PROFILE
-gig_profile_id → user_id, bio, rating
-user_id → gig_profile_id
-TASKS
-task_id → client_id, manager_id, title, description, budget, timeline, status
-APPLICATION
-application_id → gig_profile_id, task_id, status, created_at
-(gig_profile_id, task_id) → status, created_at
-DELIVERABLES
-deliverable_id → task_id, gig_profile_id, submission_link, status, created_at
-task_id → deliverable_id
-PAYMENTS
-payment_id → task_id, client_id, gig_profile_id, amount, due_date, status
-task_id → payment_id
-REVIEWS
-review_id → reviewer_id, reviewee_id, task_id, rating, comment
-(reviewer_id, task_id) → rating, comment
-Design Decisions
+## Functional Dependencies
 
-Manager accounts are optional. Root clients can perform all manager actions directly.
+* **USERS**: `user_id → name, email, password_hash, role, created_at`; `email → user_id`
+* **CLIENT**: `client_id → user_id, org_id, type`; `user_id → client_id`
+* **ORGANIZATION**: `org_id → org_name, root_client_id`
+* **MANAGER**: `manager_id → org_id, current_profiles_managed`
+* **GIG_PROFESSIONAL_PROFILE**: `gig_profile_id → user_id, bio, rating`; `user_id → gig_profile_id`
+* **TASKS**: `task_id → client_id, manager_id, title, description, budget, timeline, status`
+* **APPLICATION**: `application_id → gig_profile_id, task_id, status, created_at`; `(gig_profile_id, task_id) → status, created_at`
+* **DELIVERABLES**: `deliverable_id → task_id, gig_profile_id, submission_link, status, created_at`; `task_id → deliverable_id`
+* **PAYMENTS**: `payment_id → task_id, client_id, gig_profile_id, amount, due_date, status`; `task_id → payment_id`
+* **REVIEWS**: `review_id → reviewer_id, reviewee_id, task_id, rating, comment`; `(reviewer_id, task_id) → rating, comment`
 
-APPLICATION acts as an aggregation entity between profiles and tasks.
+---
 
-ORGANIZATION was introduced during normalization to eliminate transitive dependencies.
+## Design Decisions
 
-One task produces at most one deliverable and one payment.
+* Manager accounts are optional. Root clients can perform all manager actions directly.
+* **APPLICATION** acts as an aggregation entity between profiles and tasks.
+* **ORGANIZATION** was introduced during normalization to eliminate transitive dependencies.
+* One task produces at most one deliverable and one payment.
+* Skills, tools, and portfolio links are stored in separate tables due to 1NF decomposition.
 
-Skills, tools, and portfolio links are stored in separate tables due to 1NF decomposition.
-
-Future Extensions
+## Future Extensions
 
 Potential improvements for future versions include:
 
-Messaging between clients and gig professionals
+* Messaging between clients and gig professionals
+* Notification system for task and payment updates
+* Standardized skill taxonomy
+* Escrow-based milestone payments
+* Platform analytics and performance metrics
 
-Notification system for task and payment updates
+---
 
-Standardized skill taxonomy
-
-Escrow-based milestone payments
-
-Platform analytics and performance metrics
+Would you like me to generate the SQL schema based on this markdown file?
