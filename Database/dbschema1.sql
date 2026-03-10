@@ -5,16 +5,21 @@ CREATE TABLE USERS (
     user_id     INT PRIMARY KEY AUTO_INCREMENT,
     name        VARCHAR(100) NOT NULL,
     email       VARCHAR(100) NOT NULL UNIQUE,
+<<<<<<< HEAD:Database/dbschema1.sql
     role        ENUM('gig_professional', 'client') NOT NULL,
+=======
+    role        ENUM('client', 'gig_professional') NOT NULL,
+>>>>>>> c34a13d06cff9c1202c39781da9a3366a79afb70:Database/dbschema.sql
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CLIENT
 CREATE TABLE CLIENT (
-    client_id   INT PRIMARY KEY AUTO_INCREMENT,
-    user_id     INT NOT NULL UNIQUE,
-    client_name VARCHAR(100) NOT NULL,
-    domain      VARCHAR(100),
+    client_id      INT PRIMARY KEY AUTO_INCREMENT,
+    user_id        INT NOT NULL UNIQUE,
+    client_name    VARCHAR(100) NOT NULL,
+    domain         VARCHAR(100),
+    no_of_managers INT DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES USERS(user_id)
 );
 
@@ -24,7 +29,7 @@ CREATE TABLE MANAGER (
     client_id               INT NOT NULL,
     current_profiles_managed INT DEFAULT 0,
     tasks_managed           INT DEFAULT 0,
-    FOREIGN KEY (client_id) REFERENCES CLIENT(client_id)
+    FOREIGN KEY (client_id) REFERENCES CLIENT(client_id) ON DELETE CASCADE
 );
 
 -- GIG_PROFESSIONAL_PROFILE
@@ -41,7 +46,7 @@ CREATE TABLE PROFILE_SKILLS (
     gig_profile_id  INT NOT NULL,
     skill           VARCHAR(100) NOT NULL,
     PRIMARY KEY (gig_profile_id, skill),
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
+    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id) ON DELETE CASCADE
 );
 
 -- PROFILE_TOOLS (1NF decomposition)
@@ -49,7 +54,7 @@ CREATE TABLE PROFILE_TOOLS (
     gig_profile_id  INT NOT NULL,
     tool            VARCHAR(100) NOT NULL,
     PRIMARY KEY (gig_profile_id, tool),
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
+    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id) ON DELETE CASCADE
 );
 
 -- PROFILE_PORTFOLIO (1NF decomposition)
@@ -57,7 +62,7 @@ CREATE TABLE PROFILE_PORTFOLIO (
     portfolio_id    INT PRIMARY KEY AUTO_INCREMENT,
     gig_profile_id  INT NOT NULL,
     url             VARCHAR(500) NOT NULL,
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
+    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id) ON DELETE CASCADE
 );
 
 -- TASKS
@@ -70,7 +75,7 @@ CREATE TABLE TASKS (
     budget      DECIMAL(10, 2) NOT NULL,
     due_date    DATE,
     status      ENUM('open', 'in_progress', 'completed') NOT NULL DEFAULT 'open',
-    FOREIGN KEY (client_id) REFERENCES CLIENT(client_id)
+    FOREIGN KEY (client_id) REFERENCES CLIENT(client_id),
     FOREIGN KEY (manager_id) REFERENCES MANAGER(manager_id)
 );
 
@@ -82,21 +87,22 @@ CREATE TABLE APPLICATION (
     status          ENUM('pending', 'accepted', 'declined') NOT NULL DEFAULT 'pending',
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_application (gig_profile_id, task_id),
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
+    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id),
     FOREIGN KEY (task_id) REFERENCES TASKS(task_id)
-     
 );
 
 -- DELIVERABLES
 CREATE TABLE DELIVERABLES (
     deliverable_id  INT PRIMARY KEY AUTO_INCREMENT,
-    task_id         INT NOT NULL UNIQUE,
+    task_id         INT NOT NULL,
     gig_profile_id  INT NOT NULL,
+    manager_id      INT,
     submission_path VARCHAR(500) NOT NULL,
-    status          ENUM('submitted', 'approved', 'revision_requested') ,
+    status          ENUM('submitted', 'approved', 'revision_requested'),
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (task_id) REFERENCES TASKS(task_id)
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
+    FOREIGN KEY (task_id) REFERENCES TASKS(task_id),
+    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id),
+    FOREIGN KEY (manager_id) REFERENCES MANAGER(manager_id)
 );
 
 -- PAYMENT
@@ -108,8 +114,8 @@ CREATE TABLE PAYMENT (
     amount      DECIMAL(10, 2) NOT NULL,
     status      ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (task_id) REFERENCES TASKS(task_id)
-    FOREIGN KEY (client_id) REFERENCES CLIENT(client_id)
+    FOREIGN KEY (task_id) REFERENCES TASKS(task_id),
+    FOREIGN KEY (client_id) REFERENCES CLIENT(client_id),
     FOREIGN KEY (user_id) REFERENCES USERS(user_id)
 );
 
@@ -122,8 +128,7 @@ CREATE TABLE REVIEWS (
     rating      INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment     TEXT,
     UNIQUE KEY uq_review (reviewer_id, task_id),
-    FOREIGN KEY (reviewer_id) REFERENCES USERS(user_id)
-    FOREIGN KEY (reviewee_id) REFERENCES USERS(user_id)
+    FOREIGN KEY (reviewer_id) REFERENCES USERS(user_id),
+    FOREIGN KEY (reviewee_id) REFERENCES USERS(user_id),
     FOREIGN KEY (task_id) REFERENCES TASKS(task_id)
-        
 );
