@@ -5,8 +5,6 @@ CREATE TABLE USERS (
     user_id     INT PRIMARY KEY AUTO_INCREMENT,
     name        VARCHAR(100) NOT NULL,
     email       VARCHAR(100) NOT NULL UNIQUE,
-    role        ENUM('gig_professional', 'client') NOT NULL,
-=======
     role        ENUM('client', 'gig_professional') NOT NULL,
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -23,10 +21,11 @@ CREATE TABLE CLIENT (
 
 -- MANAGER
 CREATE TABLE MANAGER (
-    manager_id              INT PRIMARY KEY AUTO_INCREMENT,
     client_id               INT NOT NULL,
+    manager_no              INT NOT NULL,
     current_profiles_managed INT DEFAULT 0,
     tasks_managed           INT DEFAULT 0,
+    PRIMARY KEY (client_id, manager_no),
     FOREIGN KEY (client_id) REFERENCES CLIENT(client_id) ON DELETE CASCADE
 );
 
@@ -57,9 +56,9 @@ CREATE TABLE PROFILE_TOOLS (
 
 -- PROFILE_PORTFOLIO (1NF decomposition)
 CREATE TABLE PROFILE_PORTFOLIO (
-    portfolio_id    INT PRIMARY KEY AUTO_INCREMENT,
     gig_profile_id  INT NOT NULL,
     url             VARCHAR(500) NOT NULL,
+    PRIMARY KEY (gig_profile_id, url),
     FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id) ON DELETE CASCADE
 );
 
@@ -67,14 +66,14 @@ CREATE TABLE PROFILE_PORTFOLIO (
 CREATE TABLE TASKS (
     task_id     INT PRIMARY KEY AUTO_INCREMENT,
     client_id   INT NOT NULL,
-    manager_id  INT,
+    manager_no  INT,
     title       VARCHAR(255) NOT NULL,
     description TEXT,
     budget      DECIMAL(10, 2) NOT NULL,
     due_date    DATE,
     status      ENUM('open', 'in_progress', 'completed') NOT NULL DEFAULT 'open',
     FOREIGN KEY (client_id) REFERENCES CLIENT(client_id),
-    FOREIGN KEY (manager_id) REFERENCES MANAGER(manager_id)
+    FOREIGN KEY (client_id, manager_no) REFERENCES MANAGER(client_id, manager_no)
 );
 
 -- APPLICATION
@@ -94,13 +93,14 @@ CREATE TABLE DELIVERABLES (
     deliverable_id  INT PRIMARY KEY AUTO_INCREMENT,
     task_id         INT NOT NULL,
     gig_profile_id  INT NOT NULL,
-    manager_id      INT,
+    client_id       INT,
+    manager_no      INT,
     submission_path VARCHAR(500) NOT NULL,
     status          ENUM('submitted', 'approved', 'revision_requested'),
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (task_id) REFERENCES TASKS(task_id),
     FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id),
-    FOREIGN KEY (manager_id) REFERENCES MANAGER(manager_id)
+    FOREIGN KEY (client_id, manager_no) REFERENCES MANAGER(client_id, manager_no)
 );
 
 -- PAYMENT
