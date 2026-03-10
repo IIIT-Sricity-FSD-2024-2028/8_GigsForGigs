@@ -5,7 +5,7 @@ CREATE TABLE USERS (
     user_id     INT PRIMARY KEY AUTO_INCREMENT,
     name        VARCHAR(100) NOT NULL,
     email       VARCHAR(100) NOT NULL UNIQUE,
-    role        ENUM('gig_professional', 'client_root', 'client_manager') NOT NULL,
+    role        ENUM('gig_professional', 'client') NOT NULL,
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -33,32 +33,12 @@ CREATE TABLE GIG_PROFESSIONAL_PROFILE (
     user_id         INT NOT NULL UNIQUE,
     bio             TEXT,
     rating          FLOAT DEFAULT 0.0,
+     skill           VARCHAR(100) NOT NULL,
+      tool           VARCHAR(100) NOT NULL,
+    portfolio_link   VARCHAR(500) NOT NULL,
     FOREIGN KEY (user_id) REFERENCES USERS(user_id)
 );
 
--- PROFILE_SKILLS (1NF decomposition)
-CREATE TABLE PROFILE_SKILLS (
-    gig_profile_id  INT NOT NULL,
-    skill           VARCHAR(100) NOT NULL,
-    PRIMARY KEY (gig_profile_id, skill),
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
-);
-
--- PROFILE_TOOLS (1NF decomposition)
-CREATE TABLE PROFILE_TOOLS (
-    gig_profile_id  INT NOT NULL,
-    tool            VARCHAR(100) NOT NULL,
-    PRIMARY KEY (gig_profile_id, tool),
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
-);
-
--- PROFILE_PORTFOLIO (1NF decomposition)
-CREATE TABLE PROFILE_PORTFOLIO (
-    portfolio_id    INT PRIMARY KEY AUTO_INCREMENT,
-    gig_profile_id  INT NOT NULL,
-    url             VARCHAR(500) NOT NULL,
-    FOREIGN KEY (gig_profile_id) REFERENCES GIG_PROFESSIONAL_PROFILE(gig_profile_id)
-);
 
 -- TASKS
 CREATE TABLE TASKS (

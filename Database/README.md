@@ -87,16 +87,60 @@ To remove this dependency, a separate **ORGANIZATION** entity was introduced. **
 
 ## Functional Dependencies
 
-* **USERS**: `user_id → name, email, password_hash, role, created_at`; `email → user_id`
-* **CLIENT**: `client_id → user_id, org_id, type`; `user_id → client_id`
-* **ORGANIZATION**: `org_id → org_name, root_client_id`
-* **MANAGER**: `manager_id → org_id, current_profiles_managed`
-* **GIG_PROFESSIONAL_PROFILE**: `gig_profile_id → user_id, bio, rating`; `user_id → gig_profile_id`
-* **TASKS**: `task_id → client_id, manager_id, title, description, budget, timeline, status`
-* **APPLICATION**: `application_id → gig_profile_id, task_id, status, created_at`; `(gig_profile_id, task_id) → status, created_at`
-* **DELIVERABLES**: `deliverable_id → task_id, gig_profile_id, submission_link, status, created_at`; `task_id → deliverable_id`
-* **PAYMENTS**: `payment_id → task_id, client_id, gig_profile_id, amount, due_date, status`; `task_id → payment_id`
-* **REVIEWS**: `review_id → reviewer_id, reviewee_id, task_id, rating, comment`; `(reviewer_id, task_id) → rating, comment`
+### USERS
+
+* `user_id → name, email, role, created_at`
+* `email → user_id`
+
+### CLIENT
+
+* `client_id → user_id, client_name, domain`
+* `user_id → client_id`
+
+### MANAGER
+
+* `manager_id → client_id, current_profiles_managed, tasks_managed`
+
+### GIG_PROFESSIONAL_PROFILE
+
+* `gig_profile_id → user_id, bio, rating`
+* `user_id → gig_profile_id`
+
+### SKILLS
+
+* `(gig_profile_id, skill) → skill`
+
+### TOOLS
+
+* `(gig_profile_id, tool) → tool`
+
+### PORTFOLIO_LINK
+
+* `(gig_profile_id, portfolio_link) → portfolio_link`
+
+### TASKS
+
+* `task_id → client_id, manager_id, title, description, budget, due_date, status`
+
+### APPLICATION
+
+* `application_id → gig_profile_id, task_id, status, created_at`
+* `(gig_profile_id, task_id) → status, created_at`
+
+### DELIVERABLES
+
+* `deliverable_id → task_id, gig_profile_id, submission_path, status, created_at`
+* `task_id → deliverable_id`
+
+### PAYMENT
+
+* `payment_id → task_id, client_id, user_id, amount`
+* `task_id → payment_id`
+
+### REVIEWS
+
+* `review_id → reviewer_id, reviewee_id, task_id, rating, comment`
+* `(reviewer_id, task_id) → rating, comment`
 
 ---
 
@@ -117,7 +161,3 @@ Potential improvements for future versions include:
 * Standardized skill taxonomy
 * Escrow-based milestone payments
 * Platform analytics and performance metrics
-
----
-
-Would you like me to generate the SQL schema based on this markdown file?
