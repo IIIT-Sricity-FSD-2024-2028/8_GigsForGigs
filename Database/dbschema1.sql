@@ -5,11 +5,9 @@ CREATE TABLE USERS (
     user_id     INT PRIMARY KEY AUTO_INCREMENT,
     name        VARCHAR(100) NOT NULL,
     email       VARCHAR(100) NOT NULL UNIQUE,
-<<<<<<< HEAD:Database/dbschema1.sql
     role        ENUM('gig_professional', 'client') NOT NULL,
 =======
     role        ENUM('client', 'gig_professional') NOT NULL,
->>>>>>> c34a13d06cff9c1202c39781da9a3366a79afb70:Database/dbschema.sql
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
