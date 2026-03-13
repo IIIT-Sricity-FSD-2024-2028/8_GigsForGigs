@@ -1,14 +1,14 @@
 CREATE DATABASE GigsForGigs;
 USE GigsForGigs;
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 1. USERS
 --    All actors: client, manager, gig_professional
 --    (1)──(1) CLIENT | (1)──(1) MANAGER | (1)──(1) GIG_PROFESSIONAL_PROFILE
 --    Candidate Keys : user_id, email
 --    FDs: user_id → name, email, hash_password, role, created_at  
 --         email   → user_id, name, hash_password, role, created_at 
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE USERS (
     user_id        INT          PRIMARY KEY AUTO_INCREMENT,
     name           VARCHAR(100) NOT NULL,
@@ -19,14 +19,14 @@ CREATE TABLE USERS (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 2. CLIENT
 --    Subtype of USERS (role = 'client'). Posts tasks.
 --    (1)──(M) TASKS | (1)──(M) MANAGER
 --    Candidate Keys : client_id, user_id
 --    FDs: client_id → user_id, client_name, number_of_manager, domain  
 --         user_id   → client_id, client_name, number_of_manager, domain 
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE CLIENT (
     client_id          INT          PRIMARY KEY AUTO_INCREMENT,
     user_id            INT          NOT NULL UNIQUE,
@@ -37,7 +37,7 @@ CREATE TABLE CLIENT (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 3. MANAGER
 --    Weak entity of CLIENT. Subtype of USERS (role = 'manager').
 --    PK = (client_id, manager_id) — manager_id is partial key.
@@ -45,7 +45,7 @@ CREATE TABLE CLIENT (
 --    Candidate Keys : (client_id, manager_id), user_id
 --    FDs: (client_id, manager_id) → user_id  
 --         user_id → (client_id, manager_id)  
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE MANAGER (
     client_id   INT NOT NULL,
     manager_id  INT NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE MANAGER (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 4. GIG_PROFESSIONAL_PROFILE
 --    Subtype of USERS (role = 'gig_professional').
 --    (1)──(M) PROFILE_SKILLS, PROFILE_TOOLS, PROFILE_PORTFOLIO
@@ -64,7 +64,7 @@ CREATE TABLE MANAGER (
 --    Candidate Keys : gig_profile_id, user_id
 --    FDs: gig_profile_id → user_id, bio  
 --         user_id        → gig_profile_id, bio  
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE GIG_PROFESSIONAL_PROFILE (
     gig_profile_id  INT  PRIMARY KEY AUTO_INCREMENT,
     user_id         INT  NOT NULL UNIQUE,
@@ -73,13 +73,13 @@ CREATE TABLE GIG_PROFESSIONAL_PROFILE (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 5. PROFILE_SKILLS (1NF decomposition)
 --    (M)──(1) GIG_PROFESSIONAL_PROFILE
 --    Candidate Keys : (gig_profile_id, skill)
 --    FDs: (gig_profile_id, skill) → [no non-key attributes]
 --         No non-trivial FDs beyond the PK exist.
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE PROFILE_SKILLS (
     gig_profile_id  INT          NOT NULL,
     skill           VARCHAR(100) NOT NULL,
@@ -88,13 +88,13 @@ CREATE TABLE PROFILE_SKILLS (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 6. PROFILE_TOOLS (1NF decomposition)
 --    (M)──(1) GIG_PROFESSIONAL_PROFILE
 --    Candidate Keys : (gig_profile_id, tool)
 --    FDs: (gig_profile_id, tool) → [no non-key attributes]
 --         No non-trivial FDs beyond the PK exist.
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE PROFILE_TOOLS (
     gig_profile_id  INT          NOT NULL,
     tool            VARCHAR(100) NOT NULL,
@@ -103,13 +103,13 @@ CREATE TABLE PROFILE_TOOLS (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 7. PROFILE_PORTFOLIO (1NF decomposition)
 --    (M)──(1) GIG_PROFESSIONAL_PROFILE
 --    Candidate Keys : (gig_profile_id, url)
 --    FDs: (gig_profile_id, url) → [no non-key attributes]
 --         No non-trivial FDs beyond the PK exist.
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE PROFILE_PORTFOLIO (
     gig_profile_id  INT          NOT NULL,
     url             VARCHAR(500) NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE PROFILE_PORTFOLIO (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 8. TASKS
 --    Posted ONLY by root client. No manager at posting level.
 --    Removing manager eliminates manager_id → client_id FD.
@@ -127,7 +127,7 @@ CREATE TABLE PROFILE_PORTFOLIO (
 --    Candidate Keys : task_id
 --    FDs: task_id → client_id, title, description,
 --                   budget, due_date, status         
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE TASKS (
     task_id      INT            PRIMARY KEY AUTO_INCREMENT,
     client_id    INT            NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE TASKS (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 9. APPLICATION
 --    M:M between GIG_PROFESSIONAL_PROFILE and TASKS.
 --    One gig professional can apply to many tasks and vice versa.
@@ -149,7 +149,7 @@ CREATE TABLE TASKS (
 --    Candidate Keys : application_id, (gig_profile_id, task_id)
 --    FDs: application_id            → all  
 --         (gig_profile_id, task_id) → all  
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE APPLICATION (
     application_id  INT      PRIMARY KEY AUTO_INCREMENT,
     gig_profile_id  INT      NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE APPLICATION (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 10. GIG_MANAGER_ASSIGNMENT
 --     Ternary relationship — links gig professional, task, manager.
 --     Business Rule: one gig professional has ONE manager per task.
@@ -172,7 +172,8 @@ CREATE TABLE APPLICATION (
 --          (gig_profile_id, task_id) → assigned_at  
 --          gig_profile_id alone      → manager_id   
 --          task_id alone             → manager_id   
--- ============================================================
+---------------------------------------------------------------------------------
+
 CREATE TABLE GIG_MANAGER_ASSIGNMENT (
     gig_profile_id  INT      NOT NULL,
     task_id         INT      NOT NULL,
@@ -185,7 +186,7 @@ CREATE TABLE GIG_MANAGER_ASSIGNMENT (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 11. DELIVERABLE
 --     Weak entity of TASKS. deliverable_no is partial key.
 --     PK = (task_id, deliverable_no) — unique only within a task.
@@ -196,7 +197,8 @@ CREATE TABLE GIG_MANAGER_ASSIGNMENT (
 --     FDs: (task_id, deliverable_no) → gig_profile_id, description,
 --                                      submission_path, status,
 --                                      created_at              
--- ============================================================
+---------------------------------------------------------------------------------
+
 CREATE TABLE DELIVERABLE (
     task_id         INT          NOT NULL,
     deliverable_no  INT          NOT NULL,
@@ -212,7 +214,7 @@ CREATE TABLE DELIVERABLE (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 12. PAYMENT
 --     One payment per (task, gig_professional) pair.
 --     A task can have multiple payments to different gig professionals.
@@ -220,7 +222,8 @@ CREATE TABLE DELIVERABLE (
 --     Candidate Keys : payment_id, (task_id, gig_profile_id)
 --     FDs: payment_id                → all  
 --          (task_id, gig_profile_id) → all 
--- ============================================================
+---------------------------------------------------------------------------------
+
 CREATE TABLE PAYMENT (
     payment_id      INT            PRIMARY KEY AUTO_INCREMENT,
     task_id         INT            NOT NULL,
@@ -234,7 +237,7 @@ CREATE TABLE PAYMENT (
 );
 
 
--- ============================================================
+---------------------------------------------------------------------------------
 -- 13. REVIEWS
 --     Mutual reviews — client→gig and gig→client after task.
 --     reviewee_id explicitly stored (not derived transitively).
@@ -243,7 +246,7 @@ CREATE TABLE PAYMENT (
 --     Candidate Keys : review_id, (reviewer_id, reviewee_id, task_id)
 --     FDs: review_id                           → all  
 --          (reviewer_id, reviewee_id, task_id) → all 
--- ============================================================
+---------------------------------------------------------------------------------
 CREATE TABLE REVIEWS (
     review_id    INT      PRIMARY KEY AUTO_INCREMENT,
     reviewer_id  INT      NOT NULL,
