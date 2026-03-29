@@ -1,0 +1,164 @@
+/* components.css: Reusable UI Components */
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--color-primary-dark);
+  color: var(--color-white);
+}
+
+.btn-primary:hover {
+  background-color: #063b6b; /* darker yale-blue */
+}
+
+.btn-primary-blue {
+  background-color: var(--color-primary-blue);
+  color: var(--color-white);
+}
+
+.btn-primary-blue:hover {
+  background-color: #a65b00; /* darker copperwood */
+}
+
+.btn-outline {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-dark);
+}
+
+.btn-outline:hover {
+  border-color: var(--color-primary-dark);
+  color: var(--color-primary-dark);
+}
+
+.btn-outline-blue {
+  border: 1px solid var(--color-primary-blue);
+  background: transparent;
+  color: var(--color-primary-blue);
+}
+
+.btn-outline-blue:hover {
+  background-color: var(--color-primary-blue);
+  color: var(--color-white);
+}
+
+.btn-white {
+  background-color: var(--color-white);
+  color: var(--color-primary-blue);
+  border: 1px solid var(--color-primary-blue);
+}
+
+.btn-white:hover {
+  background-color: rgba(191, 105, 0, 0.05); /* copperwood with opacity */
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn-icon {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* Inputs & Forms */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-dark);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--color-text-dark);
+  background-color: var(--color-white);
+  transition: border-color 0.2s ease;
+}
+
+.form-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-input:focus {
+  border-color: var(--color-primary-blue);
+  outline: none;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.checkbox-input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--color-primary-blue);
+}
+
+/* Cards */
+.card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-body {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Badges / Pills */
+.pill {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: var(--color-bg-light);
+  color: var(--color-text-dark);
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.pill:hover {
+  background-color: var(--color-border);
+  cursor: pointer;
+}

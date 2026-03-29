@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Dashboard - GigsForGigs</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/client-dashboard.css">
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar (GigFlow CLIENT PORTAL) -->
+  <aside class="dashboard-sidebar">
+    <a href="manager-dashboard.html" class="client-sidebar-brand">
+      <div class="brand-icon">G</div>
+      <div class="brand-text">
+        <span class="brand-name">GigFlow</span>
+        <span class="brand-sub">Client Portal</span>
+      </div>
+    </a>
+    
+    <nav class="sidebar-nav">
+      <a href="manager-dashboard.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Dashboard
+      </a>
+      <a href="search-talent.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Find Talent
+      </a>
+      <a href="shortlisted-candidates.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+        Shortlisted
+      </a>
+      <a href="post-gig.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post a Gig
+      </a>
+    </nav>
+    
+    <div class="sidebar-user-info">
+      <div class="user-avatar" style="background-color: var(--color-primary-blue); color: var(--color-white); font-weight: 700; font-size: 0.875rem;">AR</div>
+      <div class="user-details">
+        <div class="user-name">Alex Rivera</div>
+        <div class="user-role">Project Manager</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <header class="dashboard-topbar">
+      <div class="topbar-search" style="width: 350px;">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search projects...">
+      </div>
+      <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+        <a href="post-gig.html" class="btn btn-primary" style="text-decoration: none;">Post a Gig</a>
+        <a href="client-profile-selection.html" style="color: var(--color-text-muted); text-decoration: none;" title="Switch Profile">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="dashboard-content">
+      
+      <!-- Active Tasks Section (Figma: top table with PROFESSIONAL, EST. DEADLINE, QUOTE, STATUS, ACTION) -->
+      <div class="tasks-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+          <h2 class="section-title" style="margin-bottom: 0;">Active Tasks</h2>
+        </div>
+        
+        <table class="tasks-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>PROFESSIONAL</th>
+              <th>EST. DEADLINE</th>
+              <th>QUOTE</th>
+              <th>STATUS</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="font-weight: 600; color: var(--color-text-dark);">Logo Refresh - Q4</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Brand Identity</div>
+              </td>
+              <td>
+                <div class="pro-cell">
+                  <div class="pro-photo"></div>
+                  Elena Rodriguez
+                </div>
+              </td>
+              <td style="color: var(--color-text-muted);">Nov 05, 2023</td>
+              <td style="font-weight: 600;">$400</td>
+              <td><span class="badge-pending-task">Pending</span></td>
+              <td><a href="review-deliverables.html" class="btn-review-proposal">Review Proposal</a></td>
+            </tr>
+            <tr>
+              <td>
+                <div style="font-weight: 600; color: var(--color-text-dark);">Social Media Copywriting</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Content Marketing</div>
+              </td>
+              <td>
+                <div class="pro-cell">
+                  <div class="pro-photo"></div>
+                  James Wilson
+                </div>
+              </td>
+              <td style="color: var(--color-text-muted);">Nov 02, 2023</td>
+              <td style="font-weight: 600;">$250</td>
+              <td><span class="badge-pending-task">Pending</span></td>
+              <td><a href="review-deliverables.html" class="btn-review-proposal">Review Proposal</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pending Tasks Section (Figma: bottom table with TASK TITLE, PROFESSIONAL, DEADLINE, BUDGET, STATUS) -->
+      <div class="tasks-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+          <h2 class="section-title" style="margin-bottom: 0;">Pending Tasks</h2>
+          <a href="#" class="filter-link">
+            <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            Filter
+          </a>
+        </div>
+        
+        <table class="tasks-table">
+          <thead>
+            <tr>
+              <th>TASK TITLE</th>
+              <th>PROFESSIONAL</th>
+              <th>DEADLINE</th>
+              <th>BUDGET</th>
+              <th>STATUS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="font-weight: 600; color: var(--color-text-dark);">UX Audit for Mobile App</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Design System • Phase 1</div>
+              </td>
+              <td>
+                <div class="pro-cell">
+                  <div class="pro-photo"></div>
+                  Sarah Chen
+                </div>
+              </td>
+              <td style="color: var(--color-text-muted);">Oct 24, 2023</td>
+              <td style="font-weight: 600;">$1,200</td>
+              <td><span class="badge-active-task">Active</span></td>
+              <td><button class="more-btn">⋮</button></td>
+            </tr>
+            <tr>
+              <td>
+                <div style="font-weight: 600; color: var(--color-text-dark);">API Documentation Suite</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Backend Development</div>
+              </td>
+              <td>
+                <div class="pro-cell">
+                  <div class="pro-photo"></div>
+                  Marcus Thorne
+                </div>
+              </td>
+              <td style="color: var(--color-text-muted);">Oct 28, 2023</td>
+              <td style="font-weight: 600;">$850</td>
+              <td><span class="badge-active-task">Active</span></td>
+              <td><button class="more-btn">⋮</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>
