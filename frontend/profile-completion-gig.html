@@ -27,7 +27,7 @@
       <h1 class="form-section-title">Complete your Professional Profile</h1>
       <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-xxl);">Highlight your skills and experience to attract the best clients.</p>
 
-      <form action="gig-dashboard.html" method="GET">
+      <form id="gig-profile-form" action="gig-dashboard.html" method="GET">
         
         <div class="form-row">
           <div class="form-group">
@@ -93,6 +93,38 @@
       </form>
     </div>
   </main>
+
+  <script>
+    const gigProfileForm = document.getElementById('gig-profile-form');
+    const profileParams = new URLSearchParams(window.location.search);
+    const isFirstTimeFromQuery = profileParams.get('firstTime') === '1';
+    const isFirstTimeFromStorage = sessionStorage.getItem('isFirstTimeJoin') === '1';
+
+    if (isFirstTimeFromQuery) {
+      sessionStorage.setItem('isFirstTimeJoin', '1');
+    }
+
+    if (gigProfileForm && (isFirstTimeFromQuery || isFirstTimeFromStorage)) {
+      gigProfileForm.action = 'gig-dashboard-first-time.html';
+    }
+
+    if (gigProfileForm) {
+      gigProfileForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const firstTime = profileParams.get('firstTime');
+        const isFirstTimeJoin = sessionStorage.getItem('isFirstTimeJoin') === '1';
+
+        if (firstTime === '1' || isFirstTimeJoin) {
+          sessionStorage.setItem('isFirstTimeJoin', '1');
+          window.location.href = 'gig-dashboard-first-time.html';
+          return;
+        }
+
+        window.location.href = 'gig-dashboard.html';
+      });
+    }
+  </script>
 
 </body>
 </html>

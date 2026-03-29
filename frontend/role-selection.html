@@ -31,7 +31,7 @@
       <div class="selection-grid">
         
         <!-- Client Option -->
-        <a href="profile-completion-client.html" style="display: block; text-decoration: none; color: inherit;">
+        <a id="client-role-link" href="profile-completion-client.html" style="display: block; text-decoration: none; color: inherit;">
           <div class="selection-card">
             <div class="check-indicator">✓</div>
             <div class="selection-icon">
@@ -43,7 +43,7 @@
         </a>
 
         <!-- Professional Option -->
-        <a href="profile-completion-gig.html" style="display: block; text-decoration: none; color: inherit;">
+        <a id="gig-role-link" href="profile-completion-gig.html" style="display: block; text-decoration: none; color: inherit;">
           <div class="selection-card">
             <div class="check-indicator">✓</div>
             <div class="selection-icon">
@@ -63,6 +63,30 @@
 
     </div>
   </main>
+
+  <script>
+    const clientRoleLink = document.getElementById('client-role-link');
+    const gigRoleLink = document.getElementById('gig-role-link');
+    const queryString = window.location.search;
+    const params = new URLSearchParams(queryString);
+    const isFirstTimeFromQuery = params.get('firstTime') === '1';
+    const isFirstTimeFromStorage = sessionStorage.getItem('isFirstTimeJoin') === '1';
+    const shouldKeepFirstTime = isFirstTimeFromQuery || isFirstTimeFromStorage;
+
+    if (isFirstTimeFromQuery) {
+      sessionStorage.setItem('isFirstTimeJoin', '1');
+    }
+
+    if (shouldKeepFirstTime) {
+      if (clientRoleLink) {
+        clientRoleLink.href += '?firstTime=1';
+      }
+
+      if (gigRoleLink) {
+        gigRoleLink.href += '?firstTime=1';
+      }
+    }
+  </script>
 
 </body>
 </html>
