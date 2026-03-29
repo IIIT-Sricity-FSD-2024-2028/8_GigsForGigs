@@ -1,5 +1,9 @@
 /* layout.css: Global Structure */
 
+html {
+  scroll-behavior: smooth;
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -9,6 +13,10 @@
 
 .section {
   padding: var(--spacing-xxl) 0;
+}
+
+#howitworks {
+  scroll-margin-top: 96px;
 }
 
 .section-header {
