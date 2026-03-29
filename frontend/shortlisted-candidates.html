@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saved Candidates - GigsForGigs</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/client-dashboard.css">
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar">
+    <a href="manager-dashboard.html" class="sidebar-header">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"/></svg>
+      GigsForGigs
+    </a>
+    
+    <nav class="sidebar-nav">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(240, 246, 246, 0.5); padding: 0 var(--spacing-md); margin-bottom: var(--spacing-sm); font-weight: 600;">Workspace</div>
+      
+      <a href="manager-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Overview
+      </a>
+      <a href="my-gigs-client.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Active Projects
+      </a>
+      <a href="search-talent.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Find Talent
+      </a>
+      <a href="shortlisted-candidates.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Saved Candidates <span class="badge badge-warning" style="margin-left: auto;">2</span>
+      </a>
+      
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(240, 246, 246, 0.5); padding: 0 var(--spacing-md); margin: var(--spacing-lg) 0 var(--spacing-sm); font-weight: 600;">Actions</div>
+      
+      <a href="post-gig.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post a Gig
+      </a>
+      <a href="client-profile-selection.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        Switch Profile
+      </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="profile-mini" style="background-color: var(--color-primary-blue);">M1</div>
+      <div style="font-size: 0.875rem;">
+        <div style="font-weight: 600;">Manager 1</div>
+        <div style="color: rgba(240, 246, 246, 0.7); font-size: 0.75rem;">Acme Corp</div>
+      </div>
+      <a href="index.html" style="margin-left: auto; color: var(--color-white);" title="Log out">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <header class="dashboard-topbar">
+      <div class="topbar-search">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search saved candidates...">
+      </div>
+      <div style="display: flex; gap: var(--spacing-lg); align-items: center;">
+        <button class="btn btn-primary" onclick="window.location.href='manager-dashboard.html'">Request Approvals</button>
+      </div>
+    </header>
+
+    <div class="dashboard-content container">
+      
+      <div style="margin-bottom: var(--spacing-xl);">
+        <h1 class="page-title">Saved Candidates</h1>
+        <p style="color: var(--color-text-muted);">Review professionals you've shortlisted before sending them to the Client Admin for final hiring approval.</p>
+      </div>
+
+      <!-- Shortlist Table Section -->
+      <div class="dashboard-section" style="margin-bottom: var(--spacing-xl);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+          <h2 style="font-size: 1.125rem; font-weight: 700; color: var(--color-primary-dark);">Pending Approval Requests</h2>
+        </div>
+        
+        <table class="client-table" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+          <thead>
+            <tr style="text-align: left; border-bottom: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 0.75rem;">
+              <th style="padding: var(--spacing-md); font-weight: 600; text-transform: uppercase;">Professional</th>
+              <th style="padding: var(--spacing-md); font-weight: 600; text-transform: uppercase;">Target Role / Gig</th>
+              <th style="padding: var(--spacing-md); font-weight: 600; text-transform: uppercase;">Expected Rate</th>
+              <th style="padding: var(--spacing-md); font-weight: 600; text-transform: uppercase; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td style="padding: var(--spacing-md);">
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                  <div class="talent-avatar" style="width: 32px; height: 32px; font-size: 0.75rem; color: var(--color-primary-dark); background-color: var(--color-bg-light);">MC</div>
+                  <div style="font-weight: 600; color: var(--color-text-dark);">Marcus Chen <span style="font-weight:normal; color: var(--color-text-muted); font-size: 0.75rem;">(React Expert)</span></div>
+                </div>
+              </td>
+              <td style="padding: var(--spacing-md); color: var(--color-text-dark); font-weight: 500;">Frontend Re-arch Phase 2</td>
+              <td style="padding: var(--spacing-md); font-weight: 600; color: var(--color-secondary);">$65.00/hr</td>
+              <td style="padding: var(--spacing-md); text-align: right;">
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">Remove</button>
+              </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td style="padding: var(--spacing-md);">
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                  <div class="talent-avatar" style="width: 32px; height: 32px; font-size: 0.75rem; color: var(--color-primary-blue); background-color: var(--color-bg-light);">AR</div>
+                  <div style="font-weight: 600; color: var(--color-text-dark);">Alex Rivera <span style="font-weight:normal; color: var(--color-text-muted); font-size: 0.75rem;">(Sr Developer)</span></div>
+                </div>
+              </td>
+              <td style="padding: var(--spacing-md); color: var(--color-text-dark); font-weight: 500;">API Intermediary Microservice</td>
+              <td style="padding: var(--spacing-md); font-weight: 600; color: var(--color-secondary);">$55.00/hr</td>
+              <td style="padding: var(--spacing-md); text-align: right;">
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">Remove</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Send Bulk Approval Button Area -->
+        <div style="display: flex; justify-content: flex-end; padding: var(--spacing-lg) 0 0 0; margin-top: var(--spacing-lg); border-top: 1px solid var(--color-border);">
+          <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
+            <span style="font-size: 0.875rem; color: var(--color-text-muted);">2 candidates selected</span>
+            <a href="manager-dashboard.html" class="btn btn-primary" style="text-decoration: none;">Request Admin Approval &rarr;</a>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

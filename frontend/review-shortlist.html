@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Candidates - GigsForGigs</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/client-dashboard.css">
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar">
+    <a href="client-dashboard.html" class="sidebar-header">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"/></svg>
+      GigsForGigs
+    </a>
+    
+    <nav class="sidebar-nav">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(240, 246, 246, 0.5); padding: 0 var(--spacing-md); margin-bottom: var(--spacing-sm); font-weight: 600;">Workspace</div>
+      
+      <a href="client-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Admin Dashboard
+      </a>
+      <a href="my-gigs-client.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Active Contracts
+      </a>
+      <a href="search-talent.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Search Talent
+      </a>
+      <a href="review-shortlist.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        Approvals <span class="badge badge-warning" style="margin-left: auto;">2</span>
+      </a>
+      <a href="total-spent.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Total Spent
+      </a>
+      
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(240, 246, 246, 0.5); padding: 0 var(--spacing-md); margin: var(--spacing-lg) 0 var(--spacing-sm); font-weight: 600;">Actions</div>
+      
+      <a href="post-gig.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post a Gig
+      </a>
+      <a href="client-profile-selection.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        Switch Profile
+      </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="profile-mini" style="background-color: var(--color-primary-dark);">A</div>
+      <div style="font-size: 0.875rem;">
+        <div style="font-weight: 600;">Admin</div>
+        <div style="color: rgba(240, 246, 246, 0.7); font-size: 0.75rem;">Acme Corp</div>
+      </div>
+      <a href="index.html" style="margin-left: auto; color: var(--color-white);" title="Log out">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <header class="dashboard-topbar">
+      <div class="topbar-search" style="width: 400px;">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search approvals...">
+      </div>
+    </header>
+
+    <div class="dashboard-content container">
+      
+      <div style="margin-bottom: var(--spacing-xl);">
+        <h1 class="page-title" style="margin-bottom: var(--spacing-sm);">Pending Hire Approvals</h1>
+        <p style="color: var(--color-text-muted);">Review candidates shortlisted by your managers before making a final job offer.</p>
+      </div>
+
+      <div style="display: flex; gap: var(--spacing-xl);">
+        
+        <!-- Filter / Groups sidebar -->
+        <div style="width: 250px; flex-shrink: 0;">
+          <h3 style="font-size: 0.875rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: var(--spacing-md);">By Department / Gig</h3>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--spacing-sm);">
+            <li>
+              <a href="#" style="display: flex; justify-content: space-between; padding: var(--spacing-sm) var(--spacing-md); background-color: var(--color-primary-dark); color: var(--color-white); border-radius: var(--radius-sm); text-decoration: none; font-size: 0.875rem;">
+                Design Team <span class="badge" style="background-color: var(--color-white); color: var(--color-primary-dark);">1</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" style="display: flex; justify-content: space-between; padding: var(--spacing-sm) var(--spacing-md); color: var(--color-text-dark); text-decoration: none; font-size: 0.875rem;">
+                Engineering <span class="badge" style="background-color: var(--color-bg-light); color: var(--color-text-dark);">2</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Cards -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: var(--spacing-lg);">
+          
+          <!-- Candidate Request 1 -->
+          <div class="dashboard-section" style="padding: var(--spacing-xl);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: var(--spacing-lg); border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-md);">
+              <div>
+                <h2 style="font-size: 1.125rem; font-weight: 700; color: var(--color-text-dark);">Logo Design Pro</h2>
+                <div style="font-size: 0.875rem; color: var(--color-text-muted);">Shortlisted by: <span style="font-weight: 600;">Manager 1</span> on Oct 24, 2023</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase;">Budget Allocated</div>
+                <div style="font-weight: 700; color: var(--color-secondary); font-size: 1.125rem;">$450.00</div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: var(--spacing-lg);">
+              <div class="talent-avatar" style="width: 80px; height: 80px; font-size: 2rem; color: var(--color-primary-blue); background-color: rgba(8, 75, 131, 0.1);">ER</div>
+              <div style="flex: 1;">
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--color-primary-dark);">Elena Rodriguez</h3>
+                <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: var(--spacing-sm);">Brand Identity & Logo Design Expert</div>
+                
+                <div style="display: flex; gap: 8px; font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: var(--spacing-md); align-items: center;">
+                  <span style="color: #facc15;">★ 4.9</span>
+                  <span>•</span>
+                  <span>100% Success</span>
+                  <span>•</span>
+                  <span>15 Gigs Completed</span>
+                </div>
+                
+                <div style="font-size: 0.875rem; line-height: 1.5; color: var(--color-text-dark); margin-bottom: var(--spacing-lg);">
+                  "I strongly recommend Elena for our impending rebranding phase. She has exactly what we need for the new UI guidelines." — Manager 1
+                </div>
+
+                <div style="display: flex; gap: var(--spacing-md);">
+                  <a href="client-dashboard.html" class="btn btn-outline" style="text-decoration: none;">View Full Profile</a>
+                  <!-- Approving redirects the admin back to the dashboard or to the active projects view -->
+                  <a href="my-gigs-client.html" class="btn btn-primary" style="background-color: var(--color-secondary); border-color: var(--color-secondary); text-decoration: none;">Approve & Hire</a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Client Profile - GigsForGigs</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/forms.css">
+</head>
+<body style="background-color: var(--color-bg-light); min-height: 100vh;">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-dark)"><circle cx="12" cy="12" r="10"/></svg>
+        GigsForGigs
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="form-page-container">
+      <h1 class="form-section-title">Complete your Client Profile</h1>
+      <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-xxl);">Tell us about your organization so we can help you hire the right talent.</p>
+
+      <!-- The action routes to the next desired flow page mimicking a backend redirect -->
+      <form action="client-profile-selection.html" method="GET">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="company-name">Company Name *</label>
+            <input type="text" id="company-name" class="form-input" placeholder="Acme Inc." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="industry">Industry *</label>
+            <select id="industry" class="form-input" required>
+              <option value="" disabled selected>Select an industry...</option>
+              <option value="tech">Technology / Software</option>
+              <option value="marketing">Marketing / Agency</option>
+              <option value="finance">Finance</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="website">Company Website</label>
+          <input type="url" id="website" class="form-input" placeholder="https://www.example.com">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="company-size">Company Size</label>
+            <select id="company-size" class="form-input">
+              <option value="1-10">1-10 employees</option>
+              <option value="11-50">11-50 employees</option>
+              <option value="51-200">51-200 employees</option>
+              <option value="200+">200+ employees</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="founded">Year Founded</label>
+            <input type="number" id="founded" class="form-input" placeholder="2020">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: var(--spacing-lg);">
+          <label class="form-label">Company Logo</label>
+          <div class="file-upload-area">
+            <div class="file-upload-icon">↑</div>
+            <p>Click to upload or drag and drop</p>
+            <span style="font-size: 0.75rem; color: var(--color-text-muted);">SVG, PNG, JPG (max. 5MB)</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="desc">Company Description</label>
+          <textarea id="desc" class="form-input" rows="5" placeholder="What does your company do?"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-xxl);">
+          <a href="role-selection.html" class="btn btn-outline" style="text-decoration: none;">Back</a>
+          <button type="submit" class="btn btn-primary">Complete Profile</button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+</body>
+</html>
