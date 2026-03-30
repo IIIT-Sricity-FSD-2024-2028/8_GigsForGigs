@@ -1,7 +1,7 @@
 /* client-dashboard.css: Section 8 — Client & Manager Portal Styles (Figma-accurate) */
 
 /* ═══════════════════════════════════════════════
-   SIDEBAR BRANDING (GigFlow CLIENT PORTAL style)
+   SIDEBAR BRANDING (GigsForGigs style)
    ═══════════════════════════════════════════════ */
 .client-sidebar-brand {
   display: flex;
@@ -14,15 +14,14 @@
 }
 
 .client-sidebar-brand .brand-icon {
-  width: 36px;
-  height: 36px;
-  background-color: var(--color-primary-blue);
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 1rem;
+}
+
+.client-sidebar-brand .brand-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 .client-sidebar-brand .brand-text {
@@ -1000,3 +999,4 @@
   max-width: 680px;
   margin: 0 auto;
 }
+
