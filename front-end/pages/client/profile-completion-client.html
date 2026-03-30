@@ -91,20 +91,7 @@
     </div>
   </main>
 
-  <script>
-    const clientProfileForm = document.getElementById('client-profile-form');
-    const profileParams = new URLSearchParams(window.location.search);
-    const isFirstTimeFromQuery = profileParams.get('firstTime') === '1';
-    const isFirstTimeFromStorage = sessionStorage.getItem('isFirstTimeJoin') === '1';
-
-    if (isFirstTimeFromQuery) {
-      sessionStorage.setItem('isFirstTimeJoin', '1');
-    }
-
-    if (clientProfileForm && (isFirstTimeFromQuery || isFirstTimeFromStorage)) {
-      clientProfileForm.action = 'client-profile-selection.html?firstTime=1';
-    }
-  </script>
+  <script type="module" src="../../js/main.js"></script>
 
 </body>
 </html>

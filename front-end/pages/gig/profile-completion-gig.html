@@ -94,37 +94,7 @@
     </div>
   </main>
 
-  <script>
-    const gigProfileForm = document.getElementById('gig-profile-form');
-    const profileParams = new URLSearchParams(window.location.search);
-    const isFirstTimeFromQuery = profileParams.get('firstTime') === '1';
-    const isFirstTimeFromStorage = sessionStorage.getItem('isFirstTimeJoin') === '1';
-
-    if (isFirstTimeFromQuery) {
-      sessionStorage.setItem('isFirstTimeJoin', '1');
-    }
-
-    if (gigProfileForm && (isFirstTimeFromQuery || isFirstTimeFromStorage)) {
-      gigProfileForm.action = 'gig-dashboard-first-time.html';
-    }
-
-    if (gigProfileForm) {
-      gigProfileForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-
-        const firstTime = profileParams.get('firstTime');
-        const isFirstTimeJoin = sessionStorage.getItem('isFirstTimeJoin') === '1';
-
-        if (firstTime === '1' || isFirstTimeJoin) {
-          sessionStorage.setItem('isFirstTimeJoin', '1');
-          window.location.href = 'gig-dashboard-first-time.html';
-          return;
-        }
-
-        window.location.href = 'gig-dashboard.html';
-      });
-    }
-  </script>
+  <script type="module" src="../../js/main.js"></script>
 
 </body>
 </html>

@@ -42,7 +42,17 @@
           <p>Please enter your details to sign in.</p>
         </div>
 
-        <form class="auth-form" id="login-form" action="role-selection.html">
+        <form class="auth-form" id="login-form">
+          <div class="form-group">
+            <label class="form-label" for="role">Log in as</label>
+            <select id="role" class="form-input" style="appearance: auto; cursor: pointer;" required>
+              <option value="" disabled selected>Select your role</option>
+              <option value="client">Client</option>
+              <option value="gig">Gig Professional</option>
+              <option value="manager">Manager</option>
+            </select>
+          </div>
+
           <div class="form-group">
             <label class="form-label" for="email">Email address</label>
             <input type="email" id="email" class="form-input" placeholder="name@company.com" required>
@@ -79,31 +89,7 @@
     </div>
   </div>
 
-  <script>
-    const loginForm = document.getElementById('login-form');
-
-    if (loginForm) {
-      loginForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-        sessionStorage.removeItem('isFirstTimeJoin');
-
-        const params = new URLSearchParams(window.location.search);
-        const role = params.get('role');
-
-        if (role === 'client') {
-          window.location.href = './client/client-profile-selection.html';
-          return;
-        }
-
-        if (role === 'gig') {
-          window.location.href = 'role-selection.html';
-          return;
-        }
-
-        window.location.href = 'role-selection.html';
-      });
-    }
-  </script>
+  <script type="module" src="../js/main.js"></script>
 
 </body>
 </html>

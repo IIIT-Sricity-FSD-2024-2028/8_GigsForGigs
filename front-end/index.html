@@ -288,54 +288,7 @@
     </div>
   </footer>
 
-  <script>
-    const hiwTabs = document.querySelectorAll('.hiw-tab');
-    const hiwStepsContainer = document.getElementById('hiw-steps-container');
-
-    const hiwFlows = {
-      hiring: [
-        { title: 'Create Account', description: 'Sign up for a free account to get started.' },
-        { title: 'Post Task', description: 'Describe what you need done in detail.' },
-        { title: 'Receive Proposals', description: 'Get bids from qualified professionals.' },
-        { title: 'Hire Talent', description: 'Select the best fit for your project.' },
-        { title: 'Complete Work', description: 'Pay only when you are 100% satisfied.' }
-      ],
-      'finding-work': [
-        { title: 'Create Professional Profile', description: 'Set up your profile with role, years of experience, and key skills.' },
-        { title: 'Explore Tasks', description: 'Browse open projects that match your expertise and interests.' },
-        { title: 'Send Proposals', description: 'Submit a strong proposal with your approach, timeline, and pricing.' },
-        { title: 'Start Working', description: 'Get hired, collaborate with the client, and share regular progress.' },
-        { title: 'Get Paid & Build Reputation', description: 'Deliver quality work, receive payment, and grow your ratings.' }
-      ]
-    };
-
-    function renderHowItWorks(flowKey) {
-      const flowSteps = hiwFlows[flowKey] || hiwFlows.hiring;
-
-      hiwStepsContainer.innerHTML = flowSteps
-        .map(function (step, index) {
-          return '<div class="hiw-step">'
-            + '<div class="hiw-icon">' + (index + 1) + '</div>'
-            + '<div class="hiw-title">' + step.title + '</div>'
-            + '<p class="card-body">' + step.description + '</p>'
-            + '</div>';
-        })
-        .join('');
-    }
-
-    hiwTabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        hiwTabs.forEach(function (item) {
-          item.classList.remove('active');
-        });
-
-        tab.classList.add('active');
-        renderHowItWorks(tab.dataset.flow);
-      });
-    });
-
-    renderHowItWorks('hiring');
-  </script>
+  <script type="module" src="./js/main.js"></script>
 
 </body>
 </html>

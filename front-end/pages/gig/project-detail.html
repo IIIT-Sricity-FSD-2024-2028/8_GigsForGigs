@@ -173,14 +173,7 @@
   </main>
 </div>
 
-<script>
-  if (sessionStorage.getItem('isFirstTimeJoin') === '1') {
-    const dashboardLinks = document.querySelectorAll('a[href="gig-dashboard.html"]');
-    dashboardLinks.forEach(function (link) {
-      link.href = 'gig-dashboard-first-time.html';
-    });
-  }
-</script>
+<script type="module" src="../../js/main.js"></script>
 
 </body>
 </html>

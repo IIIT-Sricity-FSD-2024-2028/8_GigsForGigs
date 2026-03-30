@@ -186,47 +186,7 @@
   </main>
 </div>
 
-<script>
-  const managerParams = new URLSearchParams(window.location.search);
-  const isFirstTimeManager = managerParams.get('firstTime') === '1' || sessionStorage.getItem('isFirstTimeJoin') === '1';
-
-  if (isFirstTimeManager) {
-    const managerActiveSection = document.getElementById('manager-active-tasks-section');
-    const managerActiveBody = document.getElementById('manager-active-tasks-body');
-    const managerPendingSection = document.getElementById('manager-pending-tasks-section');
-    const managerPendingBody = document.getElementById('manager-pending-tasks-body');
-
-    if (managerActiveSection) {
-      const title = managerActiveSection.querySelector('.section-title');
-      if (title) title.textContent = 'Active Tasks';
-    }
-
-    if (managerActiveBody) {
-      managerActiveBody.innerHTML = `
-        <tr>
-          <td colspan="6" style="text-align: center; color: var(--color-text-muted); padding: var(--spacing-xl);">
-            No active tasks yet.
-          </td>
-        </tr>
-      `;
-    }
-
-    if (managerPendingSection) {
-      const title = managerPendingSection.querySelector('.section-title');
-      if (title) title.textContent = 'Pending Tasks';
-    }
-
-    if (managerPendingBody) {
-      managerPendingBody.innerHTML = `
-        <tr>
-          <td colspan="6" style="text-align: center; color: var(--color-text-muted); padding: var(--spacing-xl);">
-            No pending tasks yet.
-          </td>
-        </tr>
-      `;
-    }
-  }
-</script>
+<script type="module" src="../../js/main.js"></script>
 
 </body>
 </html>
