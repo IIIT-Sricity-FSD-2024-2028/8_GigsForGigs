@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GigsForGigs - Find Work and Professionals</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-blue)"><circle cx="12" cy="12" r="10"/></svg>
+        GigsForGigs
+      </a>
+      
+      <nav class="nav-menu nav-menu-desktop">
+        <a href="login.html?role=gig" class="nav-link">Find Work</a>
+        <a href="login.html?role=client" class="nav-link">Find Gigs</a>
+        <a href="#howitworks" class="nav-link">How it Works</a>
+        <a href="#" class="nav-link">About Us</a>
+      </nav>
+
+      <div class="header-actions">
+        <a href="login.html" class="btn btn-outline">Login</a>
+        <a href="signup.html?firstTime=1" class="btn btn-primary-blue">Join</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container hero-wrapper">
+        <div class="hero-content">
+          <h1 class="hero-title">Find Great Work. Hire Great Talent.</h1>
+          <p class="hero-subtitle">Whether you are a client building a team or a professional growing your career, GigsForGigs helps both sides connect, collaborate, and succeed.</p>
+          
+          <div class="hero-search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 10px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" placeholder="Try UI/UX, Web Dev...">
+            <button class="btn btn-primary-blue">Search</button>
+          </div>
+          
+          <div class="hero-tags">
+            <span>Popular:</span>
+            <span class="pill">Web</span>
+            <span class="pill">UI</span>
+            <span class="pill">Design</span>
+            <span class="pill">Marketing</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust Bar -->
+    <div class="trust-bar">
+      <div class="container">
+        <p>Trusted by top companies</p>
+        <div class="trust-logos">
+          <span>Google</span>
+          <span>Amazon</span>
+          <span>Microsoft</span>
+          <span>TCS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Popular Services -->
+    <section class="section services">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Popular Professional Services</h2>
+        </div>
+        
+        <div class="grid grid-cols-4">
+          <div class="service-card">
+            <div class="service-icon">A</div>
+            <div class="service-title">Logo Design</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">&lt;/&gt;</div>
+            <div class="service-title">Web Development</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">🎤</div>
+            <div class="service-title">Voice Over</div>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">▶️</div>
+            <div class="service-title">Video Editing</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="section how-it-works" id="howitworks">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">How It Works</h2>
+        </div>
+
+        <div class="hiw-tabs">
+          <button class="hiw-tab active" type="button" data-flow="hiring">For Hiring</button>
+          <button class="hiw-tab" type="button" data-flow="finding-work">For Finding Work</button>
+        </div>
+
+        <div class="hiw-steps" id="hiw-steps-container">
+          <div class="hiw-step">
+            <div class="hiw-icon">1</div>
+            <div class="hiw-title">Create Account</div>
+            <p class="card-body">Sign up for a free account to get started.</p>
+          </div>
+          <div class="hiw-step">
+            <div class="hiw-icon">2</div>
+            <div class="hiw-title">Post Task</div>
+            <p class="card-body">Describe what you need done in detail.</p>
+          </div>
+          <div class="hiw-step">
+            <div class="hiw-icon">3</div>
+            <div class="hiw-title">Receive Proposals</div>
+            <p class="card-body">Get bids from qualified professionals.</p>
+          </div>
+          <div class="hiw-step">
+            <div class="hiw-icon">4</div>
+            <div class="hiw-title">Hire Talent</div>
+            <p class="card-body">Select the best fit for your project.</p>
+          </div>
+          <div class="hiw-step">
+            <div class="hiw-icon">5</div>
+            <div class="hiw-title">Complete Work</div>
+            <p class="card-body">Pay only when you are 100% satisfied.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Built for Professional Work -->
+    <section class="section features">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Built for Professional Work</h2>
+        </div>
+
+        <div class="feature-grid">
+          <div class="card feature-item">
+            <div class="feature-item-icon">📋</div>
+            <div class="feature-item-content">
+              <h3>Proposal System</h3>
+              <p>Sophisticated bidding system that helps you compare offers and portfolios effortlessly. Find the perfect match for your needs.</p>
+            </div>
+          </div>
+          <div class="card feature-item">
+            <div class="feature-item-icon">💻</div>
+            <div class="feature-item-content">
+              <h3>Manage Multiple Gigs</h3>
+              <p>A centralized dashboard to track all your ongoing projects, milestones, and deadlines across your team.</p>
+            </div>
+          </div>
+          <div class="card feature-item">
+            <div class="feature-item-icon">✍️</div>
+            <div class="feature-item-content">
+              <h3>Task Posting</h3>
+              <p>Detailed task description forms let you specify exactly what you want from the pros, avoiding misunderstandings.</p>
+            </div>
+          </div>
+          <div class="card feature-item">
+            <div class="feature-item-icon">⭐</div>
+            <div class="feature-item-content">
+              <h3>Ratings & Feedback</h3>
+              <p>Build trust within the community with our transparent rating and performance system for both clients and freelancers.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Success Stories -->
+    <section class="section testimonials">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Success Stories</h2>
+        </div>
+
+        <div class="grid grid-cols-3">
+          <div class="testimonial-card">
+            <div class="testimonial-rating">★★★★★</div>
+            <p class="testimonial-text">"GigsForGigs helped me land an incredible developer for my startup. The process was smooth and the quality of work exceeded expectations."</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar"></div>
+              <div class="testimonial-info">
+                <h4>Aditya Deshmukh</h4>
+                <p>Founder, TechStart</p>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="testimonial-rating">★★★★★</div>
+            <p class="testimonial-text">"As a freelancer, this platform provides a consistent stream of high-quality clients. I love the simple milestone tracking."</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar"></div>
+              <div class="testimonial-info">
+                <h4>Arham Kansal</h4>
+                <p>Senior UI Designer</p>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="testimonial-rating">★★★★★</div>
+            <p class="testimonial-text">"The built-in communication tools make managing distributed teams easier than ever. Highly recommended for remote agencies."</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar"></div>
+              <div class="testimonial-info">
+                <h4>Chaitanya Anand</h4>
+                <p>Project Manager</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+      <div class="container cta-container">
+        <h2 class="cta-title">Start Collaborating Today</h2>
+        <p class="cta-subtitle">Join thousands of businesses and professionals doing their best work on GigsForGigs.</p>
+        <div class="cta-actions">
+          <a href="#" class="btn btn-primary">Hire Professionals</a>
+          <a href="#" class="btn btn-white">Join as Professional</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"/></svg>
+            GigsForGigs
+          </div>
+          <p>The world's premium marketplace connecting businesses with top freelance professionals.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#">Explore Gigs</a></li>
+            <li><a href="#">Find Work</a></li>
+            <li><a href="#">How it Works</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#">About Us</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Press</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2024 GigsForGigs. All rights reserved.</div>
+        <div class="social-links">
+          <a href="#">in</a>
+          <a href="#">tw</a>
+          <a href="#">fb</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const hiwTabs = document.querySelectorAll('.hiw-tab');
+    const hiwStepsContainer = document.getElementById('hiw-steps-container');
+
+    const hiwFlows = {
+      hiring: [
+        { title: 'Create Account', description: 'Sign up for a free account to get started.' },
+        { title: 'Post Task', description: 'Describe what you need done in detail.' },
+        { title: 'Receive Proposals', description: 'Get bids from qualified professionals.' },
+        { title: 'Hire Talent', description: 'Select the best fit for your project.' },
+        { title: 'Complete Work', description: 'Pay only when you are 100% satisfied.' }
+      ],
+      'finding-work': [
+        { title: 'Create Professional Profile', description: 'Set up your profile with role, years of experience, and key skills.' },
+        { title: 'Explore Tasks', description: 'Browse open projects that match your expertise and interests.' },
+        { title: 'Send Proposals', description: 'Submit a strong proposal with your approach, timeline, and pricing.' },
+        { title: 'Start Working', description: 'Get hired, collaborate with the client, and share regular progress.' },
+        { title: 'Get Paid & Build Reputation', description: 'Deliver quality work, receive payment, and grow your ratings.' }
+      ]
+    };
+
+    function renderHowItWorks(flowKey) {
+      const flowSteps = hiwFlows[flowKey] || hiwFlows.hiring;
+
+      hiwStepsContainer.innerHTML = flowSteps
+        .map(function (step, index) {
+          return '<div class="hiw-step">'
+            + '<div class="hiw-icon">' + (index + 1) + '</div>'
+            + '<div class="hiw-title">' + step.title + '</div>'
+            + '<p class="card-body">' + step.description + '</p>'
+            + '</div>';
+        })
+        .join('');
+    }
+
+    hiwTabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        hiwTabs.forEach(function (item) {
+          item.classList.remove('active');
+        });
+
+        tab.classList.add('active');
+        renderHowItWorks(tab.dataset.flow);
+      });
+    });
+
+    renderHowItWorks('hiring');
+  </script>
+
+</body>
+</html>
