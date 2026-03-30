@@ -85,12 +85,13 @@
     if (loginForm) {
       loginForm.addEventListener('submit', function (event) {
         event.preventDefault();
+        sessionStorage.removeItem('isFirstTimeJoin');
 
         const params = new URLSearchParams(window.location.search);
         const role = params.get('role');
 
         if (role === 'client') {
-          window.location.href = 'client-dashboard.html';
+          window.location.href = 'client-profile-selection.html';
           return;
         }
 

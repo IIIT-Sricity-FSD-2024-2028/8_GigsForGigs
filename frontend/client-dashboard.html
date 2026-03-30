@@ -14,13 +14,13 @@
 
 <div class="dashboard-layout">
   
-  <!-- Sidebar (GigFlow CLIENT PORTAL) -->
+  <!-- Sidebar (GigsForGigs) -->
   <aside class="dashboard-sidebar">
     <a href="client-dashboard.html" class="client-sidebar-brand">
-      <div class="brand-icon">G</div>
+      <div class="brand-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-blue)"><circle cx="12" cy="12" r="10"/></svg></div>
       <div class="brand-text">
-        <span class="brand-name">GigFlow</span>
-        <span class="brand-sub">Client Portal</span>
+        <span class="brand-name">GigsForGigs</span>
+        
       </div>
     </a>
     
@@ -33,13 +33,9 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
         Active Contracts
       </a>
-      <a href="total-spent.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-        Total Spent
-      </a>
       <a href="review-shortlist.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-        Approve Shortlist
+        Approve Shortlists
       </a>
       <a href="search-talent.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -55,7 +51,7 @@
       <div class="user-avatar" style="background-color: var(--color-secondary); color: var(--color-white); font-weight: 700; font-size: 0.875rem;">AJ</div>
       <div class="user-details">
         <div class="user-name">Alex Johnson</div>
-        <div class="user-role">PREMIUM PLAN</div>
+        <div class="user-role">CLIENT PROFILE</div>
       </div>
       <div style="margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-secondary);"></div>
     </div>
@@ -83,15 +79,15 @@
       <div class="spend-hero">
         <div>
           <div class="total-label">Total Spent</div>
-          <div class="total-amount">₹14,250.82</div>
+          <div class="total-amount" id="total-spent-value">₹0.00</div>
           <div class="spend-hero-stats">
             <div class="spend-hero-stat">
               <div class="stat-sub-label">This Month</div>
-              <div class="stat-sub-value">₹12,400.00 <span class="trend">↗ +8.2%</span></div>
+              <div class="stat-sub-value" id="this-month-value">₹0.00</div>
             </div>
             <div class="spend-hero-stat">
-              <div class="stat-sub-label">Open Projects</div>
-              <div class="stat-sub-value">14 Active</div>
+              <div class="stat-sub-label">Active Tasks Budget</div>
+              <div class="stat-sub-value" id="active-budget-value">-</div>
             </div>
           </div>
         </div>
@@ -100,12 +96,8 @@
           <!-- Budget donut decorative SVG from Figma -->
           <svg viewBox="0 0 100 100" style="width: 140px; height: 140px;">
             <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-secondary)" stroke-width="12" 
-              stroke-dasharray="175 76" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-primary-blue)" stroke-width="12" 
-              stroke-dasharray="55 196" stroke-dashoffset="-175" transform="rotate(-90 50 50)"/>
             <text x="50" y="46" text-anchor="middle" fill="white" font-size="10" font-weight="700">Budget</text>
-            <text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">Across 4 categories</text>
+            <text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="6">No allocations yet</text>
           </svg>
         </div>
       </div>
@@ -123,23 +115,9 @@
           </select>
         </div>
         
-        <!-- Chart Area (CSS graph mockup matching Figma) -->
-        <div style="height: 200px; position: relative; border-bottom: 1px solid var(--color-border); border-left: 1px solid var(--color-border); margin-bottom: var(--spacing-lg);">
-          <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;" preserveAspectRatio="none" viewBox="0 0 600 200">
-            <defs>
-              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" style="stop-color: rgba(8,75,131,0.15)"/>
-                <stop offset="100%" style="stop-color: rgba(8,75,131,0)"/>
-              </linearGradient>
-            </defs>
-            <path d="M0,180 L100,160 200,120 300,140 400,60 500,30 600,80 L600,200 L0,200 Z" fill="url(#chartGrad)"/>
-            <polyline points="0,180 100,160 200,120 300,140 400,60 500,30 600,80" fill="none" stroke="var(--color-primary-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="100" cy="160" r="4" fill="var(--color-primary-dark)"/>
-            <circle cx="200" cy="120" r="4" fill="var(--color-primary-dark)"/>
-            <circle cx="300" cy="140" r="4" fill="var(--color-primary-dark)"/>
-            <circle cx="400" cy="60" r="4" fill="var(--color-primary-dark)"/>
-            <circle cx="500" cy="30" r="5" fill="var(--color-primary-dark)" stroke="var(--color-white)" stroke-width="2"/>
-          </svg>
+        <!-- Empty chart state for first-time clients -->
+        <div id="spending-chart-area" style="height: 200px; position: relative; border-bottom: 1px solid var(--color-border); border-left: 1px solid var(--color-border); margin-bottom: var(--spacing-lg); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); font-size: 0.875rem;">
+          No spending data yet.
         </div>
         
         <div style="display: flex; justify-content: space-around; font-size: 0.75rem; color: var(--color-text-muted);">
@@ -151,7 +129,6 @@
       <div class="transactions-card">
         <div class="card-header">
           <h2>Recent Transactions</h2>
-          <a href="total-spent.html">View All</a>
         </div>
         
         <table class="transactions-table">
@@ -164,32 +141,11 @@
               <th>STATUS</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="recent-transactions-body">
             <tr>
-              <td>
-                <span class="project-icon">A</span>
-                Q4 Mobile UI Redesign
+              <td colspan="5" style="text-align: center; color: var(--color-text-muted); padding: var(--spacing-xl);">
+                No transactions yet.
               </td>
-              <td>
-                <span class="pro-avatar"></span>
-                Sarah Jenkins
-              </td>
-              <td style="font-weight: 600;">$4,250.00</td>
-              <td style="color: var(--color-text-muted);">Oct 24, 2023</td>
-              <td><span class="badge-paid">✓ PAID</span></td>
-            </tr>
-            <tr>
-              <td>
-                <span class="project-icon">&lt;&gt;</span>
-                API Integration Layer
-              </td>
-              <td>
-                <span class="pro-avatar" style="background-color: #e8b4b4;"></span>
-                Marcello Rivera
-              </td>
-              <td style="font-weight: 600;">$12,800.00</td>
-              <td style="color: var(--color-text-muted);">Oct 20, 2023</td>
-              <td><span class="badge-paid">✓ PAID</span></td>
             </tr>
           </tbody>
         </table>
@@ -199,5 +155,85 @@
   </main>
 </div>
 
+<script>
+  const dashboardParams = new URLSearchParams(window.location.search);
+  const isFirstTimeFromQuery = dashboardParams.get('firstTime') === '1';
+  const isFirstTimeFromStorage = sessionStorage.getItem('isFirstTimeJoin') === '1';
+  const isFirstTimeJoin = isFirstTimeFromQuery || isFirstTimeFromStorage;
+
+  if (isFirstTimeFromQuery) {
+    sessionStorage.setItem('isFirstTimeJoin', '1');
+  }
+
+  if (!isFirstTimeJoin) {
+    const totalSpentValue = document.getElementById('total-spent-value');
+    const thisMonthValue = document.getElementById('this-month-value');
+    const activeBudgetValue = document.getElementById('active-budget-value');
+    const chartArea = document.getElementById('spending-chart-area');
+    const transactionsBody = document.getElementById('recent-transactions-body');
+
+    if (totalSpentValue) totalSpentValue.textContent = '₹14,250.82';
+    if (thisMonthValue) thisMonthValue.textContent = '₹12,400.00';
+    if (activeBudgetValue) activeBudgetValue.textContent = '₹1,600.00';
+
+    if (chartArea) {
+      chartArea.style.display = 'block';
+      chartArea.style.position = 'relative';
+      chartArea.style.color = '';
+      chartArea.style.fontSize = '';
+      chartArea.innerHTML = `
+        <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;" preserveAspectRatio="none" viewBox="0 0 600 200">
+          <defs>
+            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" style="stop-color: rgba(8,75,131,0.15)"/>
+              <stop offset="100%" style="stop-color: rgba(8,75,131,0)"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,180 L100,160 200,120 300,140 400,60 500,30 600,80 L600,200 L0,200 Z" fill="url(#chartGrad)"/>
+          <polyline points="0,180 100,160 200,120 300,140 400,60 500,30 600,80" fill="none" stroke="var(--color-primary-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="100" cy="160" r="4" fill="var(--color-primary-dark)"/>
+          <circle cx="200" cy="120" r="4" fill="var(--color-primary-dark)"/>
+          <circle cx="300" cy="140" r="4" fill="var(--color-primary-dark)"/>
+          <circle cx="400" cy="60" r="4" fill="var(--color-primary-dark)"/>
+          <circle cx="500" cy="30" r="5" fill="var(--color-primary-dark)" stroke="var(--color-white)" stroke-width="2"/>
+        </svg>
+      `;
+    }
+
+    if (transactionsBody) {
+      transactionsBody.innerHTML = `
+        <tr>
+          <td>
+            <span class="project-icon">A</span>
+            Q4 Mobile UI Redesign
+          </td>
+          <td>
+            <span class="pro-avatar"></span>
+            Sarah Jenkins
+          </td>
+          <td style="font-weight: 600;">$4,250.00</td>
+          <td style="color: var(--color-text-muted);">Oct 24, 2023</td>
+          <td><span class="badge-paid">✓ PAID</span></td>
+        </tr>
+        <tr>
+          <td>
+            <span class="project-icon">&lt;&gt;</span>
+            API Integration Layer
+          </td>
+          <td>
+            <span class="pro-avatar" style="background-color: #e8b4b4;"></span>
+            Marcello Rivera
+          </td>
+          <td style="font-weight: 600;">$12,800.00</td>
+          <td style="color: var(--color-text-muted);">Oct 20, 2023</td>
+          <td><span class="badge-paid">✓ PAID</span></td>
+        </tr>
+      `;
+    }
+  }
+</script>
+
 </body>
 </html>
+
+
