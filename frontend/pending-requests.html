@@ -15,13 +15,13 @@
   
   <!-- Sidebar -->
   <aside class="dashboard-sidebar">
-    <a href="gig-dashboard.html" class="sidebar-header">
+    <a id="dashboard-home-link" href="gig-dashboard.html" class="sidebar-header">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"/></svg>
       GigsForGigs
     </a>
     
     <nav class="sidebar-nav">
-      <a href="gig-dashboard.html" class="nav-item">
+      <a id="dashboard-nav-link" href="gig-dashboard.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
         Dashboard
       </a>
@@ -89,7 +89,7 @@
       <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-xxl);">Review invitations and offers from potential clients.</p>
       
       <!-- task list -->
-      <section style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+      <section id="pending-requests-list" style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
         
         <div class="task-card" style="align-items: flex-start; padding: var(--spacing-xl);">
           
@@ -154,6 +154,27 @@
     </div>
   </main>
 </div>
+
+<script>
+  const isFirstTimeJoin = sessionStorage.getItem('isFirstTimeJoin') === '1';
+  const dashboardHomeLink = document.getElementById('dashboard-home-link');
+  const dashboardNavLink = document.getElementById('dashboard-nav-link');
+  const pendingRequestsList = document.getElementById('pending-requests-list');
+
+  if (isFirstTimeJoin) {
+    if (dashboardHomeLink) {
+      dashboardHomeLink.href = 'gig-dashboard-first-time.html';
+    }
+
+    if (dashboardNavLink) {
+      dashboardNavLink.href = 'gig-dashboard-first-time.html';
+    }
+
+    if (pendingRequestsList) {
+      pendingRequestsList.innerHTML = '<div style="padding: var(--spacing-xl); border: 1px dashed var(--color-border); border-radius: var(--radius-lg); text-align: center; color: var(--color-text-muted);">No pending requests yet. Invitations from clients will appear here.</div>';
+    }
+  }
+</script>
 
 </body>
 </html>

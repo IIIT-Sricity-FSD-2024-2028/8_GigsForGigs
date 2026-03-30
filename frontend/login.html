@@ -42,7 +42,7 @@
           <p>Please enter your details to sign in.</p>
         </div>
 
-        <form class="auth-form" action="role-selection.html">
+        <form class="auth-form" id="login-form" action="role-selection.html">
           <div class="form-group">
             <label class="form-label" for="email">Email address</label>
             <input type="email" id="email" class="form-input" placeholder="name@company.com" required>
@@ -78,6 +78,31 @@
       </div>
     </div>
   </div>
+
+  <script>
+    const loginForm = document.getElementById('login-form');
+
+    if (loginForm) {
+      loginForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const params = new URLSearchParams(window.location.search);
+        const role = params.get('role');
+
+        if (role === 'client') {
+          window.location.href = 'client-dashboard.html';
+          return;
+        }
+
+        if (role === 'gig') {
+          window.location.href = 'gig-dashboard.html';
+          return;
+        }
+
+        window.location.href = 'role-selection.html';
+      });
+    }
+  </script>
 
 </body>
 </html>

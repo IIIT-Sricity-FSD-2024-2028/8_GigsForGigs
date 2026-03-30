@@ -41,7 +41,7 @@
           <p>Start your journey with us today.</p>
         </div>
 
-        <form class="auth-form" action="role-selection.html">
+        <form class="auth-form" id="signup-form" action="role-selection.html">
           <div class="form-group">
             <label class="form-label" for="fullname">Full Name</label>
             <input type="text" id="fullname" class="form-input" placeholder="John Doe" required>
@@ -79,6 +79,31 @@
       </div>
     </div>
   </div>
+
+  <script>
+    const signupForm = document.getElementById('signup-form');
+    const signupParams = new URLSearchParams(window.location.search);
+
+    if (signupParams.get('firstTime') === '1') {
+      sessionStorage.setItem('isFirstTimeJoin', '1');
+    }
+
+    if (signupForm) {
+      signupForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const firstTime = signupParams.get('firstTime');
+        const isFirstTimeJoin = sessionStorage.getItem('isFirstTimeJoin') === '1';
+
+        if (firstTime === '1' || isFirstTimeJoin) {
+          window.location.href = 'role-selection.html?firstTime=1';
+          return;
+        }
+
+        window.location.href = 'role-selection.html';
+      });
+    }
+  </script>
 
 </body>
 </html>
