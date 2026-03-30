@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explore Tasks - GigsForGigs</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <style>
+    .explore-card {
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s ease;
+    }
+    .explore-card:hover {
+      border-color: var(--color-primary-blue);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-2px);
+    }
+    .explore-image {
+      width: 100%;
+      height: 140px;
+      background-color: var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+    }
+    .explore-content {
+      padding: var(--spacing-lg);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .explore-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      margin-bottom: var(--spacing-xs);
+    }
+    .explore-client {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      margin-bottom: var(--spacing-md);
+    }
+    .explore-price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-secondary);
+      margin-bottom: var(--spacing-lg);
+    }
+    .explore-footer {
+      margin-top: auto;
+    }
+    .filter-bar {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+      background-color: var(--color-white);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-xxl);
+    }
+    .page-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--color-border);
+      background-color: var(--color-white);
+      color: var(--color-text-dark);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .page-btn.active {
+      background-color: var(--color-primary-dark);
+      color: var(--color-white);
+      border-color: var(--color-primary-dark);
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar">
+    <a href="gig-dashboard.html" class="sidebar-header">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"/></svg>
+      GigsForGigs
+    </a>
+    
+    <nav class="sidebar-nav">
+      <a href="gig-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Dashboard
+      </a>
+      <a href="explore-tasks.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Explore Tasks
+      </a>
+      <a href="active-tasks.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Active Tasks
+      </a>
+      <a href="pending-requests.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        Pending Requests
+      </a>
+      <a href="completed-projects.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Completed projects
+      </a>
+      <a href="total-earnings.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Total Earnings
+      </a>
+      <a href="post-service.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post a Service
+      </a>
+      <a href="gig-profile.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        My Profile
+      </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="profile-mini">JD</div>
+      <div style="font-size: 0.875rem;">
+        <div style="font-weight: 600;">John Doe</div>
+        <div style="color: rgba(240, 246, 246, 0.7); font-size: 0.75rem;">Gig Professional</div>
+      </div>
+      <a href="index.html" style="margin-left: auto; color: var(--color-white);" title="Log out">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <header class="dashboard-topbar">
+      <div class="topbar-search" style="width: 400px;">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search for opportunities across all categories...">
+      </div>
+      <div style="display: flex; gap: var(--spacing-lg); align-items: center;">
+        <button class="btn btn-primary" onclick="window.location.href='post-service.html'">Post a Service</button>
+      </div>
+    </header>
+
+    <div class="dashboard-content container">
+      
+      <div style="margin-bottom: var(--spacing-lg);">
+        <h1 class="page-title" style="margin-bottom: var(--spacing-sm);">Explore Tasks</h1>
+        <p style="color: var(--color-text-muted);">Find great projects that match your skills.</p>
+      </div>
+      
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
+          <option value="">All Categories</option>
+          <option value="design">Design</option>
+          <option value="dev">Development</option>
+          <option value="marketing">Marketing</option>
+        </select>
+        <div style="width: 1px; background-color: var(--color-border); margin: 4px 0;"></div>
+        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
+          <option value="">Any Budget</option>
+          <option value="1">Under $500</option>
+          <option value="2">$500 - $1k</option>
+          <option value="3">$1k+</option>
+        </select>
+        <div style="width: 1px; background-color: var(--color-border); margin: 4px 0;"></div>
+        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
+          <option value="">Any Duration</option>
+          <option value="1">Less than 1 week</option>
+          <option value="2">1 - 4 weeks</option>
+          <option value="3">1 month+</option>
+        </select>
+        <button class="btn btn-primary" style="padding: 8px 16px;">Filter</button>
+      </div>
+      
+      <!-- Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-xl);">
+        
+        <!-- Task Card 1 -->
+        <div class="explore-card">
+          <div class="explore-image" style="background-color: rgba(8, 75, 131, 0.1);">
+            <svg width="48" height="48" fill="none" stroke="var(--color-primary-dark)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          </div>
+          <div class="explore-content">
+            <h3 class="explore-title">Logo Design for Startup</h3>
+            <p class="explore-client">Acme Corp</p>
+            <div class="explore-price">$450</div>
+            <div class="explore-footer">
+              <a href="project-detail.html" class="btn btn-outline btn-full" style="text-align: center; text-decoration: none;">View Details</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Card 2 -->
+        <div class="explore-card">
+          <div class="explore-image" style="background-color: rgba(191, 105, 0, 0.1);">
+            <svg width="48" height="48" fill="none" stroke="var(--color-primary-blue)" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          </div>
+          <div class="explore-content">
+            <h3 class="explore-title">React Dashboard UI</h3>
+            <p class="explore-client">Nebula Inc.</p>
+            <div class="explore-price">$1,200</div>
+            <div class="explore-footer">
+              <a href="project-detail.html" class="btn btn-outline btn-full" style="text-align: center; text-decoration: none;">View Details</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Card 3 -->
+        <div class="explore-card">
+          <div class="explore-image" style="background-color: rgba(81, 158, 138, 0.1);">
+            <svg width="48" height="48" fill="none" stroke="var(--color-secondary)" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
+          </div>
+          <div class="explore-content">
+            <h3 class="explore-title">E-commerce Packaging</h3>
+            <p class="explore-client">Gifted LLC</p>
+            <div class="explore-price">$850</div>
+            <div class="explore-footer">
+              <a href="project-detail.html" class="btn btn-outline btn-full" style="text-align: center; text-decoration: none;">View Details</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task Card 4 -->
+        <div class="explore-card">
+          <div class="explore-image" style="background-color: var(--color-border);">
+            <svg width="48" height="48" fill="none" stroke="var(--color-text-dark)" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+          <div class="explore-content">
+            <h3 class="explore-title">SEO Optimization</h3>
+            <p class="explore-client">GrowFast</p>
+            <div class="explore-price">$600</div>
+            <div class="explore-footer">
+              <a href="project-detail.html" class="btn btn-outline btn-full" style="text-align: center; text-decoration: none;">View Details</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <a href="#" class="page-btn">&laquo;</a>
+        <a href="#" class="page-btn active">1</a>
+        <a href="#" class="page-btn">2</a>
+        <a href="#" class="page-btn">3</a>
+        <a href="#" class="page-btn">4</a>
+        <a href="#" class="page-btn">&raquo;</a>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  if (sessionStorage.getItem('isFirstTimeJoin') === '1') {
+    const dashboardLinks = document.querySelectorAll('a[href="gig-dashboard.html"]');
+    dashboardLinks.forEach(function (link) {
+      link.href = 'gig-dashboard-first-time.html';
+    });
+  }
+</script>
+
+</body>
+</html>
