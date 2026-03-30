@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - GigsForGigs</title>
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/reset.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/auth.css">
 </head>
 <body>
 
   <div class="auth-container">
     <!-- Left Panel (Illustration) -->
     <div class="auth-illustration">
-      <a href="index.html" class="auth-brand">
+      <a href="../index.html" class="auth-brand">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-blue)"><circle cx="12" cy="12" r="10"/></svg>
         GigsForGigs
       </a>
@@ -85,17 +85,18 @@
     if (loginForm) {
       loginForm.addEventListener('submit', function (event) {
         event.preventDefault();
+        sessionStorage.removeItem('isFirstTimeJoin');
 
         const params = new URLSearchParams(window.location.search);
         const role = params.get('role');
 
         if (role === 'client') {
-          window.location.href = 'client-dashboard.html';
+          window.location.href = './client/client-profile-selection.html';
           return;
         }
 
         if (role === 'gig') {
-          window.location.href = 'gig-dashboard.html';
+          window.location.href = 'role-selection.html';
           return;
         }
 
