@@ -1,3 +1,9 @@
+/* layout.css: Global Structure */
+
+html {
+  scroll-behavior: smooth;
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -7,6 +13,10 @@
 
 .section {
   padding: var(--spacing-xxl) 0;
+}
+
+#howitworks {
+  scroll-margin-top: 96px;
 }
 
 .section-header {
@@ -20,6 +30,7 @@
   color: var(--color-primary-dark);
 }
 
+/* Header Navbar */
 .header {
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-white);
@@ -69,6 +80,7 @@
   gap: var(--spacing-sm);
 }
 
+/* Footer structure */
 .footer {
   background-color: var(--color-primary-dark);
   color: var(--color-white);
@@ -106,7 +118,7 @@
 }
 
 .footer-links a {
-  color: #a0aec0;
+  color: #A0AEC0;
 }
 
 .footer-links a:hover {
@@ -119,7 +131,7 @@
   align-items: center;
   padding-top: var(--spacing-lg);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  color: #a0aec0;
+  color: #A0AEC0;
   font-size: 0.875rem;
 }
 
@@ -143,6 +155,7 @@
   background-color: var(--color-primary-blue);
 }
 
+/* Grids / Flex layout utilities */
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -161,135 +174,7 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
-.dashboard-layout {
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--color-bg-light);
-}
-
-.dashboard-sidebar {
-  width: 280px;
-  background-color: var(--color-primary-dark);
-  color: var(--color-white);
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  z-index: 100;
-  box-shadow: 2px 0 10px rgba(80, 36, 25, 0.1);
-}
-
-.sidebar-header {
-  padding: var(--spacing-xxl) var(--spacing-xl);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: 1.5rem;
-  font-weight: 700;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  text-decoration: none;
-  color: var(--color-white);
-}
-
-.sidebar-nav {
-  flex: 1;
-  padding: var(--spacing-xl) 0;
-  overflow-y: auto;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-xl);
-  color: rgba(240, 246, 246, 0.7);
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border-left: 4px solid transparent;
-}
-
-.nav-item:hover, .nav-item.active {
-  color: var(--color-white);
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.nav-item.active {
-  border-left-color: var(--color-primary-blue);
-}
-
-.sidebar-footer {
-  padding: var(--spacing-xl);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.profile-mini {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: var(--color-primary-blue);
-  color: var(--color-white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.dashboard-main {
-  flex: 1;
-  margin-left: 280px;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.dashboard-topbar {
-  background-color: var(--color-white);
-  padding: var(--spacing-lg) var(--spacing-xxl);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  z-index: 90;
-}
-
-.topbar-search {
-  display: flex;
-  align-items: center;
-  background-color: var(--color-bg-light);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
-  width: 300px;
-}
-
-.topbar-search input {
-  border: none;
-  background: transparent;
-  width: 100%;
-  margin-left: var(--spacing-sm);
-  outline: none;
-  color: var(--color-text-dark);
-}
-
-.dashboard-content {
-  padding: var(--spacing-xxl);
-  flex: 1;
-}
-
-.page-title {
-  font-size: 2rem;
-  color: var(--color-primary-dark);
-  margin-bottom: var(--spacing-xl);
-  font-weight: 700;
-}
-
+/* Responsiveness via media queries (basic desktop first / some mobile overrides) */
 @media (max-width: 900px) {
   .nav-menu-desktop {
     display: none;
@@ -301,14 +186,6 @@
   .grid-cols-4, .grid-cols-3 {
     grid-template-columns: repeat(2, 1fr);
   }
-  .dashboard-sidebar {
-    position: static;
-    width: 100%;
-    height: auto;
-  }
-  .dashboard-main {
-    margin-left: 0;
-  }
 }
 
 @media (max-width: 600px) {
@@ -319,13 +196,5 @@
   }
   .grid-cols-2 {
     grid-template-columns: 1fr;
-  }
-  .dashboard-topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-md);
-  }
-  .topbar-search {
-    width: 100%;
   }
 }

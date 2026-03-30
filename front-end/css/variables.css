@@ -1,0 +1,37 @@
+/* variables.css: Design Tokens */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Colors */
+  --color-primary-dark: #084b83; /* yale-blue */
+  --color-primary-blue: #bf6900; /* copperwood (replacing old blue for primary actions) */
+  --color-secondary: #519e8a; /* seagrass */
+  --color-bg-light: #f0f6f6; /* platinum */
+  --color-white: #FFFFFF;
+  --color-text-dark: #502419; /* espresso */
+  --color-text-light: #FFFFFF;
+  --color-text-muted: #805c54; /* lightened espresso for muted */
+  --color-border: #dbdfdf; /* darkened platinum for borders */
+  
+  /* Typography */
+  --font-family-sans: 'Inter', sans-serif;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem;  /* 8px */
+  --spacing-md: 1rem;    /* 16px */
+  --spacing-lg: 1.5rem;  /* 24px */
+  --spacing-xl: 2rem;    /* 32px */
+  --spacing-xxl: 4rem;   /* 64px */
+  
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
