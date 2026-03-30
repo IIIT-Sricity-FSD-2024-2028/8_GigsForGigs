@@ -28,7 +28,7 @@
       <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-xxl);">Tell us about your organization so we can help you hire the right talent.</p>
 
       <!-- The action routes to the next desired flow page mimicking a backend redirect -->
-      <form action="client-profile-selection.html" method="GET">
+      <form id="client-profile-form" action="client-profile-selection.html" method="GET">
         
         <div class="form-row">
           <div class="form-group">
@@ -90,6 +90,21 @@
       </form>
     </div>
   </main>
+
+  <script>
+    const clientProfileForm = document.getElementById('client-profile-form');
+    const profileParams = new URLSearchParams(window.location.search);
+    const isFirstTimeFromQuery = profileParams.get('firstTime') === '1';
+    const isFirstTimeFromStorage = sessionStorage.getItem('isFirstTimeJoin') === '1';
+
+    if (isFirstTimeFromQuery) {
+      sessionStorage.setItem('isFirstTimeJoin', '1');
+    }
+
+    if (clientProfileForm && (isFirstTimeFromQuery || isFirstTimeFromStorage)) {
+      clientProfileForm.action = 'client-profile-selection.html?firstTime=1';
+    }
+  </script>
 
 </body>
 </html>
