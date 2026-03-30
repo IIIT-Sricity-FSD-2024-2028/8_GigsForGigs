@@ -22,11 +22,14 @@
 
   <main class="chooser-content">
     <h1 class="chooser-title">Who's using this account?</h1>
+    <p id="first-time-profile-note" style="text-align: center; color: var(--color-text-muted); margin-bottom: var(--spacing-lg); display: none;">
+      No manager accounts yet.
+    </p>
 
     <div class="profile-grid">
       
       <!-- Admin Profile -->
-      <a href="client-dashboard.html" style="text-decoration: none;">
+      <a id="client-owner-link" href="client-dashboard.html" style="text-decoration: none;">
         <button class="profile-avatar-btn" type="button">
           <div class="avatar-square">
             A
@@ -39,7 +42,7 @@
       </a>
 
       <!-- Manager 1 -->
-      <a href="manager-dashboard.html" style="text-decoration: none;">
+      <a class="manager-profile-link" href="manager-dashboard.html" style="text-decoration: none;">
         <button class="profile-avatar-btn" type="button">
           <div class="avatar-square" style="color: var(--color-white); background-color: var(--color-primary-blue);">
             M1
@@ -51,7 +54,7 @@
       </a>
 
       <!-- Manager 2 -->
-      <a href="manager-dashboard.html" style="text-decoration: none;">
+      <a class="manager-profile-link" href="manager-dashboard.html" style="text-decoration: none;">
         <button class="profile-avatar-btn" type="button">
           <div class="avatar-square" style="color: var(--color-white); background-color: var(--color-secondary);">
             M2
@@ -80,6 +83,41 @@
   <footer style="text-align: center; padding: 20px; font-size: 0.8rem; color: var(--color-text-muted);">
     &copy; 2024 GigsForGigs. All Rights Reserved.
   </footer>
+
+  <script>
+    const profileParams = new URLSearchParams(window.location.search);
+    const isFirstTimeFromQuery = profileParams.get('firstTime') === '1';
+    const isFirstTimeFromStorage = sessionStorage.getItem('isFirstTimeJoin') === '1';
+    const isFirstTimeJoin = isFirstTimeFromQuery || isFirstTimeFromStorage;
+
+    const firstTimeNote = document.getElementById('first-time-profile-note');
+    const clientOwnerLink = document.getElementById('client-owner-link');
+    const managerLinks = document.querySelectorAll('.manager-profile-link');
+
+    if (isFirstTimeJoin) {
+      sessionStorage.setItem('isFirstTimeJoin', '1');
+      if (firstTimeNote) {
+        firstTimeNote.style.display = 'block';
+      }
+      if (clientOwnerLink) {
+        clientOwnerLink.href = 'client-dashboard.html?firstTime=1';
+      }
+      managerLinks.forEach((link) => {
+        link.style.display = 'none';
+      });
+    } else {
+      sessionStorage.removeItem('isFirstTimeJoin');
+      if (firstTimeNote) {
+        firstTimeNote.style.display = 'none';
+      }
+      if (clientOwnerLink) {
+        clientOwnerLink.href = 'client-dashboard.html';
+      }
+      managerLinks.forEach((link) => {
+        link.style.display = '';
+      });
+    }
+  </script>
 
 </body>
 </html>
