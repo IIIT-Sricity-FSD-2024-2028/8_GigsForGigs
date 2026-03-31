@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Manager - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/layout.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/modals.css">
+</head>
+<body style="background-color: var(--color-bg-light); min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+
+  <div class="modal-card" style="box-shadow: var(--shadow-md);">
+    
+    <div class="modal-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+    </div>
+
+    <h2 class="modal-title">Invite a Manager</h2>
+    <p class="modal-subtitle">Send an invitation so a team member can manage hiring tasks and oversee active gig postings.</p>
+
+    <!-- Simulating form post and returning to Client profile selection -->
+    <form action="client-profile-selection.html" method="GET" style="text-align: left;">
+      
+      <div class="form-group">
+        <label class="form-label" for="manager-email">Manager Email Address</label>
+        <input type="email" id="manager-email" class="form-input" placeholder="name@company.com" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full" style="margin-top: var(--spacing-sm);">
+        Send Invite
+        <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" style="margin-left:8px;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+
+      <div style="margin-top: var(--spacing-xl); display: flex; gap: var(--spacing-sm); align-items: flex-start; color: var(--color-primary-blue); font-size: 0.8rem; background-color: rgba(191, 105, 0, 0.05); padding: var(--spacing-md); border-radius: var(--radius-sm);">
+        <svg width="16" height="16" flex-shrink="0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <p style="margin: 0; line-height: 1.4;">Managers will create their profile PIN after accepting the invite to secure their access.</p>
+      </div>
+
+    </form>
+
+    <div style="margin-top: var(--spacing-lg);">
+      <a href="client-profile-selection.html" class="btn btn-outline btn-full btn-icon" style="justify-content: center; text-decoration: none;">
+        Cancel
+      </a>
+    </div>
+
+  </div>
+
+
+<script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gig Dashboard - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/dashboard.css">
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar">
+    <a href="gig-dashboard.html" class="sidebar-header">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"/></svg>
+      GigsForGigs
+    </a>
+    
+    <nav class="sidebar-nav">
+      <a href="gig-dashboard.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Dashboard
+      </a>
+      <a href="explore-tasks.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Explore Tasks
+      </a>
+      <a href="active-tasks.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Active Tasks
+      </a>
+      <a href="pending-requests.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        Pending Requests
+      </a>
+      <a href="completed-projects.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Completed projects
+      </a>
+      <a href="total-earnings.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Total Earnings
+      </a>
+      <a href="post-service.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post a Service
+      </a>
+      <a href="gig-profile.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        My Profile
+      </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="profile-mini">JD</div>
+      <div style="font-size: 0.875rem;">
+        <div style="font-weight: 600;">John Doe</div>
+        <div style="color: rgba(240, 246, 246, 0.7); font-size: 0.75rem;">Gig Professional</div>
+      </div>
+      <a href="index.html" style="margin-left: auto; color: var(--color-white);" title="Log out">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <header class="dashboard-topbar">
+      <div class="topbar-search">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search tasks, clients, messages...">
+      </div>
+      <div style="display: flex; gap: var(--spacing-lg); align-items: center;">
+        <button class="btn btn-primary" onclick="window.location.href='post-service.html'">Post a Service</button>
+        <button style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); position: relative;">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span style="position: absolute; top: -2px; right: 0; width: 10px; height: 10px; background-color: var(--color-primary-blue); border-radius: 50%; border: 2px solid var(--color-white);"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="dashboard-content container">
+      <h1 class="page-title">Dashboard Overview</h1>
+      
+      <!-- Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-title">Active Gigs</div>
+          <div class="metric-value">12</div>
+          <div class="metric-trend trend-up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+            +2 from last week
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Pending Requests</div>
+          <div class="metric-value">9</div>
+          <div class="metric-trend" style="color: var(--color-primary-blue);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Review needed
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Completed Tasks</div>
+          <div class="metric-value">148</div>
+          <div class="metric-trend trend-up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            98% on time delivery
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Total Earnings</div>
+          <div class="metric-value" style="color: var(--color-secondary);">$14,250</div>
+          <div class="metric-trend trend-up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+            +12% vs last month
+          </div>
+        </div>
+      </div>
+
+      <!-- Layout row for tables and charts -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-xxl);">
+        
+        <!-- Requests Table -->
+        <section class="dashboard-section" style="margin-bottom: 0;">
+          <div class="section-header">
+            <h2>Recent Gig Requests</h2>
+            <a href="pending-requests.html" style="color: var(--color-primary-blue); font-size: 0.875rem; text-decoration: none; font-weight: 500;">View All</a>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Service Name</th>
+                <th>Deadline</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div style="font-weight: 600; color: var(--color-text-dark);">Acme Corp</div></td>
+                <td>Logo Design for Startup</td>
+                <td>Oct 20, 2024</td>
+                <td style="font-weight: 600;">$450</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight: 600; color: var(--color-text-dark);">TechFlow</div></td>
+                <td>React Frontend Dev</td>
+                <td>Nov 05, 2024</td>
+                <td style="font-weight: 600;">$1,200</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight: 600; color: var(--color-text-dark);">Jane Studio</div></td>
+                <td>Brand Strategy Session</td>
+                <td>Oct 15, 2024</td>
+                <td style="font-weight: 600;">$250</td>
+                <td><span class="badge badge-active">Active</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight: 600; color: var(--color-text-dark);">Vortex Inc</div></td>
+                <td>Weekly SEO Audit</td>
+                <td>Oct 10, 2024</td>
+                <td style="font-weight: 600;">$800</td>
+                <td><span class="badge badge-completed">Completed</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Profile Score Circular Graph -->
+        <section class="dashboard-section" style="margin-bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <h2 style="font-size: 1.125rem; color: var(--color-text-dark); margin-bottom: var(--spacing-lg);">Profile Success Rate</h2>
+          
+          <svg viewBox="0 0 36 36" class="circular-chart">
+            <path class="circle-bg"
+              d="M18 2.0845
+                a 15.9155 15.9155 0 0 1 0 31.831
+                a 15.9155 15.9155 0 0 1 0 -31.831"
+            />
+            <path class="circle circle-primary"
+              stroke-dasharray="90, 100"
+              d="M18 2.0845
+                a 15.9155 15.9155 0 0 1 0 31.831
+                a 15.9155 15.9155 0 0 1 0 -31.831"
+            />
+            <text x="18" y="20.35" class="percentage">90%</text>
+          </svg>
+          <p style="text-align: center; color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--spacing-lg);">You are in the top 10% of freelancers in your category based on client ratings.</p>
+        </section>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>

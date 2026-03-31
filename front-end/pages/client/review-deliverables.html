@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Deliverables - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/dashboard.css">
+  <link rel="stylesheet" href="../../css/client-dashboard.css">
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar">
+    <a href="client-dashboard.html" class="sidebar-header">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"/></svg>
+      GigsForGigs
+    </a>
+    
+    <nav class="sidebar-nav">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(240, 246, 246, 0.5); padding: 0 var(--spacing-md); margin-bottom: var(--spacing-sm); font-weight: 600;">Workspace</div>
+      
+      <a href="client-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Admin Dashboard
+      </a>
+      <a href="my-gigs-client.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Active Contracts
+      </a>
+      <a href="search-talent.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Search Talent
+      </a>
+      <a href="review-shortlist.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        Approvals <span class="badge badge-warning" style="margin-left: auto;">2</span>
+      </a>
+      <a href="client-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Total Spent
+      </a>
+      
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(240, 246, 246, 0.5); padding: 0 var(--spacing-md); margin: var(--spacing-lg) 0 var(--spacing-sm); font-weight: 600;">Actions</div>
+      
+      <a href="post-gig.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post a Gig
+      </a>
+      <a href="client-profile-selection.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        Switch Profile
+      </a>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="profile-mini" style="background-color: var(--color-primary-dark);">A</div>
+      <div style="font-size: 0.875rem;">
+        <div style="font-weight: 600;">Admin</div>
+        <div style="color: rgba(240, 246, 246, 0.7); font-size: 0.75rem;">Acme Corp</div>
+      </div>
+      <a href="../../index.html" style="margin-left: auto; color: var(--color-white);" title="Log out">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <header class="dashboard-topbar">
+      <div class="topbar-search">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search tasks...">
+      </div>
+    </header>
+
+    <div class="dashboard-content container">
+      
+      <div style="margin-bottom: var(--spacing-md);">
+        <a href="my-gigs-client.html" style="display: inline-flex; align-items: center; gap: 8px; color: var(--color-primary-blue); font-weight: 500; text-decoration: none; margin-bottom: var(--spacing-sm);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          Back to Active Contracts
+        </a>
+      </div>
+      
+      <div style="margin-bottom: var(--spacing-xl);">
+        <h1 class="page-title">Review Deliverables</h1>
+        <p style="color: var(--color-text-muted);">Please review the submitted work for <span style="font-weight: 600; color: var(--color-text-dark);">Logo Refresh - Q4</span>.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-xl);">
+        
+        <!-- Left Column: File Preview -->
+        <div>
+          <!-- Mock Document Preview Viewer -->
+          <div class="deliverable-preview" style="background-color: var(--color-white); box-shadow: var(--shadow-sm); overflow: hidden;">
+            
+            <div style="width: 100%; height: 50px; background-color: var(--color-bg-light); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; padding: 0 var(--spacing-md); justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 600; color: var(--color-text-dark);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                Final_Brand_Guidelines.pdf
+              </div>
+              <div style="display: flex; gap: var(--spacing-sm);">
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">Zoom</button>
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">Download</button>
+              </div>
+            </div>
+            
+            <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; width: 100%; background-color: rgba(191, 105, 0, 0.05);">
+              
+              <!-- Mock PDF Page graphic visually reproducing Figma's abstract page preview -->
+              <div style="width: 250px; height: 320px; background-color: var(--color-white); box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                <div style="width: 100%; height: 100px; background-color: rgba(8, 75, 131, 0.8); border-radius: 4px; position:relative; overflow: hidden;">
+                   <div style="position: absolute; top:0;left:0; right:0; height: 100%; background: linear-gradient(135deg, transparent 40%, rgba(240,246,246,0.3) 50%, transparent 60%);"></div>
+                </div>
+                <div style="width: 70%; height: 12px; background-color: var(--color-border); border-radius: 6px;"></div>
+                <div style="width: 100%; height: 8px; background-color: var(--color-bg-light); border-radius: 4px;"></div>
+                <div style="width: 90%; height: 8px; background-color: var(--color-bg-light); border-radius: 4px;"></div>
+                <div style="width: 100%; height: 8px; background-color: var(--color-bg-light); border-radius: 4px;"></div>
+                
+                <div style="display: flex; gap: 8px; margin-top: auto;">
+                  <div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--color-secondary);"></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: center;">
+                    <div style="width: 80%; height: 6px; background-color: var(--color-border); border-radius: 3px;"></div>
+                    <div style="width: 60%; height: 6px; background-color: var(--color-bg-light); border-radius: 3px;"></div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          
+          <div style="margin-top: var(--spacing-lg); display: flex; gap: var(--spacing-sm);">
+            <div style="padding: 8px; border: 1px solid var(--color-primary-blue); border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--color-primary-dark); background-color: rgba(8, 75, 131, 0.05);">Final_Brand_Guidelines.pdf</div>
+            <div style="padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.75rem; color: var(--color-text-muted); cursor: pointer; background-color: var(--color-white);">Logo_Pack.zip</div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Sidebar Actions -->
+        <div>
+          <div class="deliverable-sidebar">
+            <div style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-border);">
+              <div class="talent-avatar" style="width: 48px; height: 48px; font-size: 1rem; color: var(--color-white); background-color: var(--color-primary-dark);">ER</div>
+              <div>
+                <div style="font-weight: 700; color: var(--color-text-dark); font-size: 1.125rem;">Elena Rodriguez</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Submitted Today, 10:45 AM</div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: var(--spacing-xl);">
+              <h3 style="font-size: 0.875rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: var(--spacing-sm);">Message from Professional</h3>
+              <div style="padding: var(--spacing-md); background-color: var(--color-bg-light); border-radius: var(--radius-md); font-size: 0.875rem; line-height: 1.5; color: var(--color-text-dark); font-style: italic;">
+                "Hi Team! I have attached the final brand guidelines PDF as well as the ZIP file containing all vector formats for the new logo. Let me know if you need any adjustments before approval. Thanks for the great project!"
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--color-border); margin: var(--spacing-lg) -1rem var(--spacing-lg); padding: var(--spacing-lg) 1rem 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-sm);">
+                <span style="font-weight: 600; color: var(--color-text-dark);">Payment Held in Escrow</span>
+                <span style="font-weight: 700; font-size: 1.25rem; color: var(--color-secondary);">$400.00</span>
+              </div>
+              <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: var(--spacing-xl);">Approving will release the funds to the professional and close this task.</p>
+              
+              <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+                <a href="client-dashboard.html" class="btn btn-primary-blue btn-full" style="text-align: center; text-decoration: none; padding: 12px;">Approve & Release Payment</a>
+                
+                <a href="review-shortlist.html" class="btn btn-outline btn-full" style="text-align: center; text-decoration: none; padding: 12px;">Request Changes</a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+
+<script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>

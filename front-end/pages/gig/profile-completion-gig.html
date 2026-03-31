@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Professional Profile - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/dashboard.css">
+  <link rel="stylesheet" href="../../css/forms.css">
+</head>
+<body style="background-color: var(--color-bg-light); min-height: 100vh;">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-dark)"><circle cx="12" cy="12" r="10"/></svg>
+        GigsForGigs
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="form-page-container">
+      <h1 class="form-section-title">Complete your Professional Profile</h1>
+      <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-xxl);">Highlight your skills and experience to attract the best clients.</p>
+
+      <form id="gig-profile-form" action="gig-dashboard.html" method="GET">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="job-title">Professional Title *</label>
+            <input type="text" id="job-title" class="form-input" placeholder="e.g. Senior Frontend Developer" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="experience">Years of Experience *</label>
+            <select id="experience" class="form-input" required>
+              <option value="" disabled selected>Select experience...</option>
+              <option value="entry">0-2 Years</option>
+              <option value="mid">3-5 Years</option>
+              <option value="senior">5-10 Years</option>
+              <option value="expert">10+ Years</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="skills">Key Skills (Comma separated)</label>
+          <input type="text" id="skills" class="form-input" placeholder="e.g. React, UI Design, Wireframing">
+        </div>
+
+        <div class="form-group" style="margin-top: var(--spacing-lg);">
+          <label class="form-label">Upload Resume / CV</label>
+          <div class="file-upload-area">
+            <div class="file-upload-icon">↑</div>
+            <p>Click to upload or drag and drop</p>
+            <span style="font-size: 0.75rem; color: var(--color-text-muted);">PDF or DOCX (max. 10MB)</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="portfolio">Portfolio URL</label>
+          <input type="url" id="portfolio" class="form-input" placeholder="https://www.yourportfolio.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="bio">Professional Bio</label>
+          <textarea id="bio" class="form-input" rows="6" placeholder="Describe your background, specialties, and the value you bring..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="hourly-rate">Hourly Rate (USD)</label>
+            <input type="number" id="hourly-rate" class="form-input" placeholder="0.00" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="availability">Availability</label>
+            <select id="availability" class="form-input">
+              <option value="full-time">Full-time (40+ hrs/wk)</option>
+              <option value="part-time">Part-time (10-30 hrs/wk)</option>
+              <option value="as-needed">As needed / Project based</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-xxl);">
+          <a href="role-selection.html" class="btn btn-outline" style="text-decoration: none;">Back</a>
+          <button type="submit" class="btn btn-primary">Complete Profile</button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>

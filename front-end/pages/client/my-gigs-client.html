@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Contracts - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/dashboard.css">
+  <link rel="stylesheet" href="../../css/client-dashboard.css">
+</head>
+<body>
+
+<div class="dashboard-layout">
+  
+  <!-- Sidebar (GigsForGigs) -->
+  <aside class="dashboard-sidebar">
+    <a href="client-dashboard.html" class="client-sidebar-brand">
+      <div class="brand-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-blue)"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="brand-text">
+        <span class="brand-name">GigsForGigs</span>
+        
+      </div>
+    </a>
+    
+    <nav class="sidebar-nav">
+      <a href="client-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Dashboard
+      </a>
+      <a href="my-gigs-client.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Active Contracts
+      </a>
+      <a href="review-shortlist.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        Approve Shortlists
+      </a>
+      <a href="search-talent.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Search Talent
+      </a>
+      <a href="post-gig.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Post a Gig
+      </a>
+    </nav>
+    
+    <div class="sidebar-user-info">
+      <div class="user-avatar" style="background-color: var(--color-secondary); color: var(--color-white); font-weight: 700; font-size: 0.875rem;">AJ</div>
+      <div class="user-details">
+        <div class="user-name">Alex Johnson</div>
+        <div class="user-role">CLIENT PROFILE</div>
+      </div>
+      <div style="margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-secondary);"></div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    
+    <header class="dashboard-topbar">
+      <div class="topbar-search" style="width: 400px;">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search active contracts...">
+      </div>
+    </header>
+
+    <div class="dashboard-content container">
+      
+      <div style="margin-bottom: var(--spacing-xl);">
+        <h1 class="page-title" style="margin-bottom: var(--spacing-sm);">Active Contracts (My Gigs)</h1>
+        <p style="color: var(--color-text-muted);">Your active contracts will appear here once you hire talent.</p>
+      </div>
+
+      <div id="active-contracts-content" class="dashboard-section" style="text-align: center; padding: var(--spacing-xxl); color: var(--color-text-muted);">
+        No active contracts yet.
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>
+
+

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Manager - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/layout.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/modals.css">
+  <link rel="stylesheet" href="../../css/forms.css">
+  <link rel="stylesheet" href="../../css/client-dashboard.css">
+</head>
+<body class="profile-chooser">
+
+  <!-- Background Content (Blurred) -->
+  <header class="chooser-header container" style="filter: blur(4px);">
+    <a href="../../index.html" class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-dark)"><circle cx="12" cy="12" r="10"/></svg>
+      GigsForGigs
+    </a>
+  </header>
+
+  <main class="chooser-content" style="filter: blur(4px);">
+    <h1 class="chooser-title">Who's using this account?</h1>
+    <div class="profile-grid">
+      <button class="profile-avatar-btn" type="button">
+        <div class="avatar-square">A</div>
+        <div style="display: flex; flex-direction: column; align-items: center;"><span class="avatar-name">Admin</span><span class="avatar-role">Client Owner</span></div>
+      </button>
+      <button class="profile-avatar-btn" type="button">
+        <div class="avatar-square" style="color: var(--color-white); background-color: var(--color-primary-blue);">M1</div>
+        <div style="display: flex; flex-direction: column; align-items: center;"><span class="avatar-name">Manager 1</span></div>
+      </button>
+      <button class="profile-avatar-btn add-profile-btn" type="button">
+        <div class="avatar-square">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center;"><span class="avatar-name">Add Manager</span></div>
+      </button>
+    </div>
+  </main>
+
+  <!-- Overlay Modal -->
+  <div class="invitation-overlay">
+    <div class="invitation-modal">
+      <div style="display: inline-flex; justify-content: center; align-items: center; width: 64px; height: 64px; background-color: rgba(8, 75, 131, 0.1); border-radius: 50%; color: var(--color-primary-dark); margin-bottom: var(--spacing-lg);">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      </div>
+      
+      <h2 style="font-size: 1.5rem; color: var(--color-text-dark); margin-bottom: var(--spacing-sm); font-weight: 700;">Add a Manager</h2>
+      <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: var(--spacing-xl);">Invite a colleague to post initial requests, review talent, and manage day-to-day gig operations.</p>
+      
+      <form action="invitation-accepted.html" method="GET">
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label" for="email">Colleague's Email Address</label>
+          <input type="email" id="email" class="form-input" placeholder="manager@company.com" required style="width: 100%;">
+        </div>
+        
+        <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-xl);">
+          <a href="client-profile-selection.html" class="btn btn-outline" style="flex: 1; text-align: center; text-decoration: none;">Cancel</a>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Send Invite &rarr;</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+<script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>
