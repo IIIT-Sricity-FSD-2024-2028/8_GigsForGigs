@@ -162,9 +162,26 @@ function initSignup() {
       email,
       password,
       role: role,
+      isFirstTimeUser: true,
       isProfileComplete: false,
       createdAt: new Date().toISOString()
     };
+
+    // Add role-specific stats initialized to 0
+    if (role === 'client') {
+      newUser.tasksPosted = 0;
+      newUser.activeProjects = 0;
+      newUser.totalSpent = 0;
+    } else if (role === 'manager') {
+      newUser.tasksManaged = 0;
+    } else if (role === 'gig') {
+      newUser.completedTasks = 0;
+      newUser.totalEarnings = 0;
+      newUser.avgRating = 0;
+      newUser.totalRatings = 0;
+      newUser.profileViews = 0;
+    }
+
     users.push(newUser);
 
     setUser({ id: newUser.id, name: newUser.name, role: newUser.role });

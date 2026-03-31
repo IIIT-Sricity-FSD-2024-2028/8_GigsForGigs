@@ -11,6 +11,7 @@ export const users = [
     email: 'alex@acmecorp.com',
     password: 'password1',
     role: 'client',
+    isFirstTimeUser: false,
     company: 'Acme Corp',
     industry: 'tech',
     website: 'https://acmecorp.com',
@@ -18,7 +19,10 @@ export const users = [
     founded: 2018,
     description: 'Leading technology solutions provider specializing in SaaS products.',
     createdAt: '2024-01-15T10:00:00Z',
-    isProfileComplete: true
+    isProfileComplete: true,
+    tasksPosted: 6,
+    activeProjects: 2,
+    totalSpent: 4500
   },
   {
     id: 'u2',
@@ -26,9 +30,11 @@ export const users = [
     email: 'rivera@acmecorp.com',
     password: 'password2',
     role: 'manager',
+    isFirstTimeUser: false,
     clientId: 'u1',               // linked to the root client
     createdAt: '2024-03-10T09:00:00Z',
-    isProfileComplete: true
+    isProfileComplete: true,
+    tasksManaged: 6
   },
   {
     id: 'u3',
@@ -36,6 +42,7 @@ export const users = [
     email: 'john@gigpro.com',
     password: 'password3',
     role: 'gig',
+    isFirstTimeUser: false,
     title: 'Senior Full-Stack Developer & UI/UX Expert',
     experience: 'senior',
     skills: ['React.js', 'Node.js', 'UI/UX Design', 'Figma', 'TypeScript', 'CSS Architecture', 'PostgreSQL'],
@@ -45,7 +52,12 @@ export const users = [
     availability: 'full-time',
     location: 'New York, USA',
     createdAt: '2024-02-20T14:00:00Z',
-    isProfileComplete: true
+    isProfileComplete: true,
+    completedTasks: 12,
+    totalEarnings: 15840,
+    avgRating: 4.8,
+    totalRatings: 24,
+    profileViews: 1250
   },
   {
     id: 'u4',
@@ -53,6 +65,7 @@ export const users = [
     email: 'sarah@gigpro.com',
     password: 'password4',
     role: 'gig',
+    isFirstTimeUser: false,
     title: 'Frontend Engineer & UI Specialist',
     experience: 'mid',
     skills: ['React', 'Vue.js', 'CSS', 'Accessibility', 'Wireframing'],
@@ -62,7 +75,54 @@ export const users = [
     availability: 'part-time',
     location: 'San Francisco, USA',
     createdAt: '2024-04-05T11:00:00Z',
-    isProfileComplete: true
+    isProfileComplete: true,
+    completedTasks: 8,
+    totalEarnings: 7200,
+    avgRating: 4.6,
+    totalRatings: 18,
+    profileViews: 680
+  },
+  {
+    id: 'u5',
+    name: 'New First Time User',
+    email: 'newuser@example.com',
+    password: 'password5',
+    role: 'gig',
+    isFirstTimeUser: true,
+    title: null,
+    experience: null,
+    skills: [],
+    bio: null,
+    portfolio: null,
+    hourlyRate: 0,
+    availability: null,
+    location: null,
+    createdAt: '2024-10-22T10:00:00Z',
+    isProfileComplete: false,
+    completedTasks: 0,
+    totalEarnings: 0,
+    avgRating: 0,
+    totalRatings: 0,
+    profileViews: 0
+  },
+  {
+    id: 'u6',
+    name: 'Emma Wilson',
+    email: 'emma@newstartup.com',
+    password: 'password6',
+    role: 'client',
+    isFirstTimeUser: true,
+    company: null,
+    industry: null,
+    website: null,
+    companySize: null,
+    founded: null,
+    description: null,
+    createdAt: '2024-10-23T14:30:00Z',
+    isProfileComplete: false,
+    tasksPosted: 0,
+    activeProjects: 0,
+    totalSpent: 0
   }
 ];
 
