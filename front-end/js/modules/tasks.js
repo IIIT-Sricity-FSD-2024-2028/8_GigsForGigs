@@ -4,7 +4,7 @@
 //         explore-tasks.html, active-tasks.html
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, applications, persistApplications } from '../data/mockData.js';
+import { tasks, users, applications, persistApplications, saveTasks } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import { validatePostGigForm } from '../utils/validation.js';
 import {
@@ -117,6 +117,8 @@ function initPostGig() {
 
       tasks.push(newTask);
     }
+
+    saveTasks();
 
     // Redirect back to client dashboard
     window.location.href = 'my-gigs-client.html';
@@ -244,6 +246,7 @@ function renderMyGigsClient() {
       const idx = tasks.findIndex(t => t.id === id);
       if (idx !== -1) {
         tasks.splice(idx, 1);
+        saveTasks();
         renderMyGigsClient(); // re‑render without page reload
       }
     });
@@ -408,6 +411,7 @@ function renderExploreTasks() {
     const client = getUserById(task.clientId);
     const linkedRequest = requestByTaskId.get(task.id) || null;
     const existingApp = applications.find((app) => app.taskId === task.id && app.gigId === user.id);
+    const hasApplied = Boolean(linkedRequest || existingApp);
     const statusLabel = linkedRequest
       ? humaniseStatus(linkedRequest.status)
       : existingApp
@@ -423,6 +427,7 @@ function renderExploreTasks() {
           <h3 class="explore-title">${task.title}</h3>
           <p class="explore-client">${client ? client.company || client.name : 'Unknown'}</p>
           <div class="explore-price">${formatCurrency(task.budget)}</div>
+          ${statusLabel ? `<div style="font-size:0.75rem;color:var(--color-text-muted);margin-bottom:var(--spacing-sm);">Application: ${statusLabel}</div>` : ''}
           <div class="explore-footer" style="display:flex;gap:var(--spacing-sm);">
             <a href="project-detail.html?taskId=${task.id}" class="btn btn-outline" style="flex:1;text-align:center;text-decoration:none;">View Details</a>
             ${hasApplied
@@ -470,10 +475,33 @@ function renderExploreTasks() {
       const idx = applications.findIndex(a => a.taskId === taskId && a.gigId === user.id);
       if (idx !== -1) {
         applications.splice(idx, 1);
+        persistApplications();
         renderExploreTasks(); // re‑render
       }
     });
   });
+
+  if (pagination) {
+    if (totalPages <= 1) {
+      pagination.innerHTML = '';
+      return;
+    }
+
+    pagination.innerHTML = Array.from({ length: totalPages }, (_, index) => {
+      const page = index + 1;
+      const activeClass = page === exploreState.page ? 'active' : '';
+      return `<button class="page-btn ${activeClass}" data-page="${page}" type="button">${page}</button>`;
+    }).join('');
+
+    pagination.querySelectorAll('.page-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        const nextPage = Number(button.dataset.page);
+        if (!Number.isFinite(nextPage) || nextPage === exploreState.page) return;
+        exploreState.page = nextPage;
+        renderExploreTasks();
+      });
+    });
+  }
 }
 
 function initExploreTasks() {

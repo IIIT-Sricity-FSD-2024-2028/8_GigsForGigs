@@ -1,4 +1,10 @@
-import { applications, tasks, users } from '../data/mockData.js';
+import {
+	applications,
+	tasks,
+	users,
+	persistApplications,
+	saveTasks
+} from '../data/mockData.js';
 import { generateId, getInitials } from '../utils/helpers.js';
 import { get, set } from '../utils/storage.js';
 
@@ -77,6 +83,63 @@ function dedupeById(items) {
 		if (item && item.id) map.set(item.id, item);
 	});
 	return [...map.values()];
+}
+
+function syncAcceptedRequestToCollections(gigId, request) {
+	if (!request?.sourceTaskId) return;
+
+	const sourceTask = tasks.find((task) => task.id === request.sourceTaskId);
+	if (sourceTask) {
+		sourceTask.assignedTo = gigId;
+		sourceTask.status = 'in_progress';
+		sourceTask.updatedAt = nowIso();
+		saveTasks();
+	}
+
+	const matchingApplication = applications.find(
+		(application) => application.taskId === request.sourceTaskId && application.gigId === gigId
+	);
+	if (matchingApplication) {
+		matchingApplication.status = 'shortlisted';
+	}
+
+	applications
+		.filter(
+			(application) =>
+				application.taskId === request.sourceTaskId &&
+				application.gigId !== gigId &&
+				application.status === 'pending'
+		)
+		.forEach((application) => {
+			application.status = 'rejected';
+		});
+
+	persistApplications();
+}
+
+function syncDeclinedRequestToCollections(gigId, request) {
+	if (!request?.sourceTaskId) return;
+
+	const matchingApplication = applications.find(
+		(application) => application.taskId === request.sourceTaskId && application.gigId === gigId
+	);
+	if (matchingApplication) {
+		matchingApplication.status = 'rejected';
+		persistApplications();
+	}
+}
+
+function syncCompletedTaskToCollections(gigId, task) {
+	if (!task?.sourceTaskId) return;
+
+	const sourceTask = tasks.find((item) => item.id === task.sourceTaskId);
+	if (!sourceTask) return;
+
+	sourceTask.assignedTo = gigId;
+	sourceTask.status = 'completed';
+	sourceTask.updatedAt = nowIso();
+	sourceTask.completedAt = nowIso();
+	saveTasks();
 }
 
 function normalizeGigState(gigState) {
@@ -278,6 +341,7 @@ export function acceptGigRequest(gigId, requestId) {
 			existingTask.status = 'active';
 			existingTask.progress = Math.max(20, toNumber(existingTask.progress, 20));
 			existingTask.updatedAt = nowIso();
+			syncAcceptedRequestToCollections(gigId, request);
 			return existingTask;
 		}
 
@@ -301,6 +365,7 @@ export function acceptGigRequest(gigId, requestId) {
 		};
 
 		gigState.tasks.push(newTask);
+		syncAcceptedRequestToCollections(gigId, request);
 		return newTask;
 	});
 }
@@ -321,6 +386,7 @@ export function declineGigRequest(gigId, requestId, options = {}) {
 		request.status = 'declined';
 		request.declinedAt = nowIso();
 		request.updatedAt = nowIso();
+		syncDeclinedRequestToCollections(gigId, request);
 		return true;
 	});
 }
@@ -343,6 +409,8 @@ export function markGigTaskComplete(gigId, taskId) {
 				request.updatedAt = nowIso();
 			}
 		}
+
+		syncCompletedTaskToCollections(gigId, task);
 
 		return task;
 	});

@@ -4,7 +4,7 @@
 // completed-projects.html   → lists completed tasks
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, deliverables } from '../data/mockData.js';
+import { tasks, users, deliverables, saveTasks } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import {
   formatDate, formatCurrency, generateId,
@@ -98,6 +98,7 @@ function initReviewDeliverables() {
           deliverable.paymentReleased = true;
         }
         task.status = 'completed';
+        saveTasks();
         window.location.href = 'my-gigs-client.html';
       });
     }
@@ -111,6 +112,7 @@ function initReviewDeliverables() {
           deliverable.status = 'revision_requested';
           deliverable.revisionNote = 'Client requested changes.';
         }
+        saveTasks();
         window.location.href = 'my-gigs-client.html';
       });
     }
@@ -212,6 +214,7 @@ function initProjectDetail() {
           submittedAt: new Date().toISOString()
         });
         task.status = 'under_review';
+        saveTasks();
         window.location.href = 'active-tasks.html';
       });
     }
@@ -224,6 +227,7 @@ function initProjectDetail() {
         e.preventDefault();
         task.assignedTo = user.id;
         task.status = 'in_progress';
+        saveTasks();
         window.location.href = 'active-tasks.html';
       });
     }

@@ -3,7 +3,7 @@
 // Gig side     → pending-requests.html : list service requests, accept / decline
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, applications } from '../data/mockData.js';
+import { tasks, users, applications, persistApplications, saveTasks } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import {
   formatDate, formatCurrency, getStatusBadgeClass,
@@ -111,6 +111,7 @@ function renderReviewShortlist() {
       const app = applications.find(a => a.id === btn.dataset.appId);
       if (app) {
         app.status = 'shortlisted';
+        persistApplications();
         renderReviewShortlist();
       }
     });
@@ -122,6 +123,7 @@ function renderReviewShortlist() {
       const app = applications.find(a => a.id === btn.dataset.appId);
       if (app) {
         app.status = 'rejected';
+        persistApplications();
         renderReviewShortlist();
       }
     });
@@ -138,12 +140,14 @@ function renderReviewShortlist() {
         if (task) {
           task.assignedTo = app.gigId;
           task.status = 'in_progress';
+          saveTasks();
         }
         // Reject other pending applications for this task
         applications
           .filter(a => a.taskId === app.taskId && a.id !== app.id && a.status === 'pending')
           .forEach(a => { a.status = 'rejected'; });
         app.status = 'shortlisted'; // keep as shortlisted (hired)
+        persistApplications();
         window.location.href = 'my-gigs-client.html';
       }
     });

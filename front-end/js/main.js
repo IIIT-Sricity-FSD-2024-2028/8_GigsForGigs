@@ -16,7 +16,8 @@ const MODULE_LOADERS = {
   deliverables: async () => import('./modules/deliverables.js'),
   managers: async () => import('./modules/managers.js'),
   profile: async () => import('./modules/profile.js'),
-  dashboard: async () => import('./modules/dashboard.js')
+  dashboard: async () => import('./modules/dashboard.js'),
+  marketplace: async () => import('./modules/marketplace.js')
 };
 
 // ── Page → module mapping ────────────────────────────────────────
@@ -41,7 +42,7 @@ const PAGE_MAP = {
   'my-gigs-client.html':            { moduleKey: 'tasks',         roles: ['client', 'manager'] },
   'review-shortlist.html':          { moduleKey: 'applications',  roles: ['client', 'manager'] },
   'review-deliverables.html':       { moduleKey: 'deliverables',  roles: ['client', 'manager'] },
-  'search-talent.html':             { moduleKey: null,            roles: ['client', 'manager'] },
+  'search-talent.html':             { moduleKey: 'marketplace',   roles: ['client', 'manager'] },
   'client-dashboard.html':          { moduleKey: 'dashboard',     roles: ['client'] },
   'client-profile-selection.html':  { moduleKey: 'dashboard',     roles: ['client'] },
   'add-manager.html':               { moduleKey: 'managers',      roles: ['client'] },
@@ -60,8 +61,8 @@ const PAGE_MAP = {
   'active-tasks.html':              { moduleKey: 'tasks',         roles: ['gig'] },
   'completed-projects.html':        { moduleKey: 'deliverables',  roles: ['gig'] },
   'project-detail.html':            { moduleKey: 'deliverables',  roles: ['gig', 'client', 'manager'] },
-  'post-service.html':              { moduleKey: null,            roles: ['gig'] },
-  'total-earnings.html':            { moduleKey: null,            roles: ['gig'] }
+  'post-service.html':              { moduleKey: 'marketplace',   roles: ['gig'] },
+  'total-earnings.html':            { moduleKey: 'dashboard',     roles: ['gig'] }
 };
 
 // ── Bootstrap ────────────────────────────────────────────────────
@@ -121,6 +122,7 @@ function bindLogout() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     bootstrap();
+    bindLogout();
   });
 } else {
   bootstrap();
