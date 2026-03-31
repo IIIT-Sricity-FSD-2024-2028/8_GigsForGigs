@@ -13,6 +13,7 @@ import * as applications from './modules/applications.js';
 import * as deliverables from './modules/deliverables.js';
 import * as managers from './modules/managers.js';
 import * as profile from './modules/profile.js';
+import * as dashboard from './modules/dashboard.js';
 
 // ── Page → module mapping ────────────────────────────────────────
 // Pages that do NOT require auth (public pages)
@@ -36,17 +37,17 @@ const PAGE_MAP = {
   'review-shortlist.html':          { module: applications,  roles: ['client', 'manager'] },
   'review-deliverables.html':       { module: deliverables,  roles: ['client', 'manager'] },
   'search-talent.html':             { module: null,          roles: ['client', 'manager'] },
-  'client-dashboard.html':          { module: null,          roles: ['client'] },
-  'client-profile-selection.html':  { module: null,          roles: ['client'] },
+  'client-dashboard.html':          { module: dashboard,     roles: ['client'] },
+  'client-profile-selection.html':  { module: dashboard,     roles: ['client'] },
   'add-manager.html':               { module: managers,      roles: ['client'] },
   'add-manager-flow.html':          { module: managers,      roles: ['client'] },
   'profile-completion-client.html': { module: profile,       roles: [] },
 
   // Manager pages
-  'manager-dashboard.html':         { module: tasks,         roles: ['manager'] },
+  'manager-dashboard.html':         { module: dashboard,     roles: ['manager'] },
 
   // Gig professional pages
-  'gig-dashboard.html':             { module: null,          roles: ['gig'] },
+  'gig-dashboard.html':             { module: dashboard,     roles: ['gig'] },
   'gig-profile.html':               { module: profile,       roles: ['gig'] },
   'profile-completion-gig.html':    { module: profile,       roles: [] },
   'explore-tasks.html':             { module: tasks,         roles: ['gig'] },

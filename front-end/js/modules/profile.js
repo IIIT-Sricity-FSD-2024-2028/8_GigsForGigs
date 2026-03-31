@@ -43,7 +43,10 @@ function initProfileCompletionClient() {
     // Update in‑memory user record
     if (user) {
       const u = users.find(x => x.id === user.id);
-      if (u) Object.assign(u, profileData);
+      if (u) {
+        Object.assign(u, profileData);
+        u.isFirstTimeUser = false;  // Mark as no longer first-time after profile completion
+      }
     }
 
     // Navigate to profile selection
