@@ -3,8 +3,33 @@
 // mutates them in‑place — no backend, no fetch, no JSON files.
 // ─────────────────────────────────────────────────────────────────
 
+const STORAGE_PREFIX = 'gfg_';
+const USERS_STORAGE_KEY = `${STORAGE_PREFIX}users`;
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function loadUsersFromStorage(seedUsers) {
+  try {
+    const raw = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!raw) return deepClone(seedUsers);
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : deepClone(seedUsers);
+  } catch {
+    return deepClone(seedUsers);
+  }
+}
+
+export function saveUsers() {
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  } catch {}
+}
+
 // ── Users ────────────────────────────────────────────────────────
-export const users = [
+const seedUsers = [
   {
     id: 'u1',
     name: 'Alex Johnson',
@@ -125,6 +150,8 @@ export const users = [
     totalSpent: 0
   }
 ];
+
+export const users = loadUsersFromStorage(seedUsers);
 
 // ── Tasks ────────────────────────────────────────────────────────
 // Statuses: open | in_progress | under_review | completed

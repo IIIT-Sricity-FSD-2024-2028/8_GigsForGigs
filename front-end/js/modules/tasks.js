@@ -23,35 +23,86 @@ function getUserById(id) {
 function initPostGig() {
   const user = getUser();
   if (!user) return;
+  if (user.role !== 'client') {
+    window.location.replace('../manager/manager-dashboard.html');
+    return;
+  }
 
   // Find the form — it has no id, select by context
   const form = document.querySelector('.form-page-container form');
   if (!form) return;
 
+  // Check if editing existing task
+  const params = new URLSearchParams(window.location.search);
+  const editId = params.get('editId');
+  const editingTask = editId ? tasks.find(t => t.id === editId) : null;
+
+  // Pre-fill form if editing
+  if (editingTask) {
+    const titleField = document.getElementById('gig-title');
+    const categoryField = document.getElementById('category');
+    const durationField = document.getElementById('duration');
+    const descField = document.getElementById('description');
+    const pricingRadios = document.querySelectorAll('input[name="pricing"]');
+    const budgetField = document.getElementById('budget');
+    const skillsField = document.getElementById('skills');
+
+    if (titleField) titleField.value = editingTask.title;
+    if (categoryField) categoryField.value = editingTask.category;
+    if (durationField) durationField.value = editingTask.duration;
+    if (descField) descField.value = editingTask.description;
+    if (budgetField) budgetField.value = editingTask.budget;
+    if (skillsField) skillsField.value = editingTask.skills.join(', ');
+
+    pricingRadios.forEach(radio => {
+      if (radio.value === editingTask.pricing) radio.checked = true;
+    });
+
+    // Update page title
+    const pageTitle = document.querySelector('.page-title');
+    if (pageTitle) pageTitle.textContent = 'Edit Task';
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!validatePostGigForm()) return;
 
-    const newTask = {
-      id: generateId('t'),
-      clientId: user.id,
-      title: document.getElementById('gig-title').value.trim(),
-      category: document.getElementById('category').value,
-      duration: document.getElementById('duration').value,
-      description: document.getElementById('description').value.trim(),
-      pricing: document.querySelector('input[name="pricing"]:checked')?.value || 'fixed',
-      budget: Number(document.getElementById('budget').value),
-      skills: (document.getElementById('skills').value || '')
+    if (editingTask) {
+      // UPDATE mode
+      editingTask.title = document.getElementById('gig-title').value.trim();
+      editingTask.category = document.getElementById('category').value;
+      editingTask.duration = document.getElementById('duration').value;
+      editingTask.description = document.getElementById('description').value.trim();
+      editingTask.pricing = document.querySelector('input[name="pricing"]:checked')?.value || 'fixed';
+      editingTask.budget = Number(document.getElementById('budget').value);
+      editingTask.skills = (document.getElementById('skills').value || '')
         .split(',')
         .map(s => s.trim())
-        .filter(Boolean),
-      status: 'open',
-      assignedTo: null,
-      deadline: new Date(Date.now() + 30 * 86400000).toISOString(), // default 30 days
-      createdAt: new Date().toISOString()
-    };
+        .filter(Boolean);
+      editingTask.updatedAt = new Date().toISOString();
+    } else {
+      // CREATE mode
+      const newTask = {
+        id: generateId('t'),
+        clientId: user.id,
+        title: document.getElementById('gig-title').value.trim(),
+        category: document.getElementById('category').value,
+        duration: document.getElementById('duration').value,
+        description: document.getElementById('description').value.trim(),
+        pricing: document.querySelector('input[name="pricing"]:checked')?.value || 'fixed',
+        budget: Number(document.getElementById('budget').value),
+        skills: (document.getElementById('skills').value || '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean),
+        status: 'open',
+        assignedTo: null,
+        deadline: new Date(Date.now() + 30 * 86400000).toISOString(), // default 30 days
+        createdAt: new Date().toISOString()
+      };
 
-    tasks.push(newTask);
+      tasks.push(newTask);
+    }
 
     // Redirect back to client dashboard
     window.location.href = 'my-gigs-client.html';
@@ -80,7 +131,7 @@ function renderMyGigsClient() {
     container.style.textAlign = 'center';
     container.style.padding = 'var(--spacing-xxl)';
     container.style.color = 'var(--color-text-muted)';
-    container.innerHTML = 'No active contracts yet. <a href="post-gig.html" style="color:var(--color-primary-blue);">Post a gig</a> to get started.';
+    container.innerHTML = 'No active contracts yet. <a href="post-gig.html" style="color:var(--color-primary-blue);">Post a task</a> to get started.';
     return;
   }
 
@@ -105,10 +156,16 @@ function renderMyGigsClient() {
         actions = `<span class="btn btn-outline" style="cursor:default;">In Progress</span>`;
       }
 
-      // Delete button — client only, not manager
+      // Edit button — client only, only if status is open
+      let editBtn = '';
+      if (user.role === 'client' && task.status === 'open') {
+        editBtn = `<button class="btn btn-outline edit-task-btn" data-task-id="${task.id}" style="padding:6px 12px;font-size:0.8rem;color:var(--color-primary-blue);border-color:var(--color-primary-blue);margin-left:auto;">Edit</button>`;
+      }
+
+      // Delete button — client only, not manager, only if status is open
       let deleteBtn = '';
-      if (user.role === 'client') {
-        deleteBtn = `<button class="btn btn-outline delete-task-btn" data-task-id="${task.id}" style="padding:6px 12px;font-size:0.8rem;color:var(--color-text-muted);border-color:var(--color-border);margin-left:auto;">Delete</button>`;
+      if (user.role === 'client' && task.status === 'open') {
+        deleteBtn = `<button class="btn btn-outline delete-task-btn" data-task-id="${task.id}" style="padding:6px 12px;font-size:0.8rem;color:var(--color-text-muted);border-color:var(--color-border);">Delete</button>`;
       }
 
       return `
@@ -146,11 +203,25 @@ function renderMyGigsClient() {
               </div>
             </div>
             ${actions}
+            ${editBtn}
             ${deleteBtn}
           </div>
         </div>`;
     }).join('')}
   </div>`;
+
+  // Attach edit listeners (client only)
+  container.querySelectorAll('.edit-task-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.taskId;
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      // Store task data in sessionStorage for the edit page
+      sessionStorage.setItem('editingTaskId', id);
+      window.location.href = 'post-gig.html?editId=' + id;
+    });
+  });
 
   // Attach delete listeners (client only)
   container.querySelectorAll('.delete-task-btn').forEach(btn => {
@@ -176,7 +247,24 @@ function renderManagerDashboard() {
   if (!user) return;
 
   const mgr = users.find(u => u.id === user.id);
+  const userNameEl = document.querySelector('.user-name');
+  if (userNameEl) userNameEl.textContent = mgr?.name || user.name || 'Manager';
+
   const clientId = mgr && mgr.clientId ? mgr.clientId : user.id;
+
+  // First-time manager should start with empty dashboard state.
+  if (mgr?.isFirstTimeUser) {
+    const activeBody = document.getElementById('manager-active-tasks-body');
+    if (activeBody) {
+      activeBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No active tasks yet. Your client will assign work soon.</td></tr>`;
+    }
+
+    const pendingBody = document.getElementById('manager-pending-tasks-body');
+    if (pendingBody) {
+      pendingBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No pending tasks yet.</td></tr>`;
+    }
+    return;
+  }
 
   const activeTasks = tasks.filter(t => t.clientId === clientId && (t.status === 'in_progress' || t.status === 'under_review'));
   const pendingTasks = tasks.filter(t => t.clientId === clientId && (t.status === 'open' || t.status === 'completed'));
@@ -281,7 +369,7 @@ function renderExploreTasks() {
           <div class="explore-footer" style="display:flex;gap:var(--spacing-sm);">
             <a href="project-detail.html?taskId=${task.id}" class="btn btn-outline" style="flex:1;text-align:center;text-decoration:none;">View Details</a>
             ${hasApplied
-              ? `<span class="btn btn-outline" style="flex:1;text-align:center;opacity:0.7;cursor:default;">Applied ✓</span>`
+              ? `<button class="btn btn-outline withdraw-app-btn" data-task-id="${task.id}" style="flex:1;color:var(--color-text-muted);">Withdraw ✕</button>`
               : `<button class="btn btn-primary apply-task-btn" data-task-id="${task.id}" style="flex:1;">Apply</button>`
             }
           </div>
@@ -307,6 +395,18 @@ function renderExploreTasks() {
       });
 
       renderExploreTasks(); // re‑render
+    });
+  });
+
+  // Withdraw listeners
+  grid.querySelectorAll('.withdraw-app-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const taskId = btn.dataset.taskId;
+      const idx = applications.findIndex(a => a.taskId === taskId && a.gigId === user.id);
+      if (idx !== -1) {
+        applications.splice(idx, 1);
+        renderExploreTasks(); // re‑render
+      }
     });
   });
 }

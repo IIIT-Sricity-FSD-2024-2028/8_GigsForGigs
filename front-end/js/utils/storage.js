@@ -41,11 +41,16 @@ export function remove(key) {
  */
 export function getUser() {
   try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw === null ? null : JSON.parse(raw);
-  } catch {
-    return null;
-  }
+    const localRaw = localStorage.getItem(USER_KEY);
+    if (localRaw !== null) return JSON.parse(localRaw);
+  } catch {}
+
+  try {
+    const sessionRaw = sessionStorage.getItem(USER_KEY);
+    return sessionRaw === null ? null : JSON.parse(sessionRaw);
+  } catch {}
+
+  return null;
 }
 
 /**
@@ -53,12 +58,48 @@ export function getUser() {
  * Expects at minimum { id, name, role }.
  */
 export function setUser(user) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  const payload = JSON.stringify(user);
+  try {
+    localStorage.setItem(USER_KEY, payload);
+  } catch {}
+
+  try {
+    sessionStorage.setItem(USER_KEY, payload);
+  } catch {}
 }
 
 /**
  * Clear the current session (logout helper).
  */
 export function clearUser() {
-  localStorage.removeItem(USER_KEY);
+  try {
+    localStorage.removeItem(USER_KEY);
+  } catch {}
+
+  try {
+    sessionStorage.removeItem(USER_KEY);
+  } catch {}
+}
+
+/**
+ * Clear all app-scoped persisted state so onboarding can restart cleanly.
+ */
+export function clearAppState() {
+  try {
+    const localKeys = Object.keys(localStorage);
+    for (const key of localKeys) {
+      if (key.startsWith(STORAGE_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {}
+
+  try {
+    const sessionKeys = Object.keys(sessionStorage);
+    for (const key of sessionKeys) {
+      if (key.startsWith(STORAGE_PREFIX) || key === 'isFirstTimeJoin') {
+        sessionStorage.removeItem(key);
+      }
+    }
+  } catch {}
 }
