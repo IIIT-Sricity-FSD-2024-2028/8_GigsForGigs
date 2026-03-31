@@ -8,12 +8,16 @@
 
 import { guardPage } from './modules/auth.js';
 import * as auth from './modules/auth.js';
-import * as tasks from './modules/tasks.js';
-import * as applications from './modules/applications.js';
-import * as deliverables from './modules/deliverables.js';
-import * as managers from './modules/managers.js';
-import * as profile from './modules/profile.js';
-import * as dashboard from './modules/dashboard.js';
+
+const MODULE_LOADERS = {
+  auth: async () => auth,
+  tasks: async () => import('./modules/tasks.js'),
+  applications: async () => import('./modules/applications.js'),
+  deliverables: async () => import('./modules/deliverables.js'),
+  managers: async () => import('./modules/managers.js'),
+  profile: async () => import('./modules/profile.js'),
+  dashboard: async () => import('./modules/dashboard.js')
+};
 
 // ── Page → module mapping ────────────────────────────────────────
 // Pages that do NOT require auth (public pages)
@@ -27,41 +31,42 @@ const PUBLIC_PAGES = [
 // allowedRoles: empty array = any authenticated role
 const PAGE_MAP = {
   // Auth pages (public — no guard)
-  'login.html':                     { module: auth,          public: true },
-  'signup.html':                    { module: auth,          public: true },
-  'role-selection.html':            { module: auth,          public: true },
+  'login.html':                     { moduleKey: 'auth',          public: true },
+  'signup.html':                    { moduleKey: 'auth',          public: true },
+  'role-selection.html':            { moduleKey: 'auth',          public: true },
+  'manager-invite-setup.html':      { moduleKey: 'managers',      public: true },
 
   // Client pages
-  'post-gig.html':                  { module: tasks,         roles: ['client', 'manager'] },
-  'my-gigs-client.html':            { module: tasks,         roles: ['client', 'manager'] },
-  'review-shortlist.html':          { module: applications,  roles: ['client', 'manager'] },
-  'review-deliverables.html':       { module: deliverables,  roles: ['client', 'manager'] },
-  'search-talent.html':             { module: null,          roles: ['client', 'manager'] },
-  'client-dashboard.html':          { module: dashboard,     roles: ['client'] },
-  'client-profile-selection.html':  { module: dashboard,     roles: ['client'] },
-  'add-manager.html':               { module: managers,      roles: ['client'] },
-  'add-manager-flow.html':          { module: managers,      roles: ['client'] },
-  'profile-completion-client.html': { module: profile,       roles: [] },
+  'post-gig.html':                  { moduleKey: 'tasks',         roles: ['client'] },
+  'my-gigs-client.html':            { moduleKey: 'tasks',         roles: ['client', 'manager'] },
+  'review-shortlist.html':          { moduleKey: 'applications',  roles: ['client', 'manager'] },
+  'review-deliverables.html':       { moduleKey: 'deliverables',  roles: ['client', 'manager'] },
+  'search-talent.html':             { moduleKey: null,            roles: ['client', 'manager'] },
+  'client-dashboard.html':          { moduleKey: 'dashboard',     roles: ['client'] },
+  'client-profile-selection.html':  { moduleKey: 'dashboard',     roles: ['client'] },
+  'add-manager.html':               { moduleKey: 'managers',      roles: ['client'] },
+  'add-manager-flow.html':          { moduleKey: 'managers',      roles: ['client'] },
+  'profile-completion-client.html': { moduleKey: 'profile',       roles: [] },
 
   // Manager pages
-  'manager-dashboard.html':         { module: dashboard,     roles: ['manager'] },
+  'manager-dashboard.html':         { moduleKey: 'tasks',         roles: ['manager'] },
 
   // Gig professional pages
-  'gig-dashboard.html':             { module: dashboard,     roles: ['gig'] },
-  'gig-profile.html':               { module: profile,       roles: ['gig'] },
-  'profile-completion-gig.html':    { module: profile,       roles: [] },
-  'explore-tasks.html':             { module: tasks,         roles: ['gig'] },
-  'pending-requests.html':          { module: applications,  roles: ['gig'] },
-  'active-tasks.html':              { module: tasks,         roles: ['gig'] },
-  'completed-projects.html':        { module: deliverables,  roles: ['gig'] },
-  'project-detail.html':            { module: deliverables,  roles: ['gig', 'client', 'manager'] },
-  'post-service.html':              { module: null,          roles: ['gig'] },
-  'total-earnings.html':            { module: dashboard,     roles: ['gig'] }
+  'gig-dashboard.html':             { moduleKey: 'dashboard',     roles: ['gig'] },
+  'gig-profile.html':               { moduleKey: 'profile',       roles: ['gig'] },
+  'profile-completion-gig.html':    { moduleKey: 'profile',       roles: [] },
+  'explore-tasks.html':             { moduleKey: 'tasks',         roles: ['gig'] },
+  'pending-requests.html':          { moduleKey: 'applications',  roles: ['gig'] },
+  'active-tasks.html':              { moduleKey: 'tasks',         roles: ['gig'] },
+  'completed-projects.html':        { moduleKey: 'deliverables',  roles: ['gig'] },
+  'project-detail.html':            { moduleKey: 'deliverables',  roles: ['gig', 'client', 'manager'] },
+  'post-service.html':              { moduleKey: null,            roles: ['gig'] },
+  'total-earnings.html':            { moduleKey: null,            roles: ['gig'] }
 };
 
 // ── Bootstrap ────────────────────────────────────────────────────
 
-function bootstrap() {
+async function bootstrap() {
   const path = window.location.pathname;
 
   // Find which page we're on
@@ -84,9 +89,19 @@ function bootstrap() {
     if (!guardPage(roles)) return; // will redirect
   }
 
-  // Call the module's init() if one is mapped
-  if (config.module && typeof config.module.init === 'function') {
-    config.module.init();
+  // Call the module's init() if one is mapped.
+  if (!config.moduleKey) return;
+
+  const loader = MODULE_LOADERS[config.moduleKey];
+  if (!loader) return;
+
+  try {
+    const module = await loader();
+    if (module && typeof module.init === 'function') {
+      module.init();
+    }
+  } catch (error) {
+    console.error('Module bootstrap failed:', config.moduleKey, error);
   }
 }
 
@@ -106,7 +121,6 @@ function bindLogout() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     bootstrap();
-    bindLogout();
   });
 } else {
   bootstrap();

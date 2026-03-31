@@ -24,18 +24,23 @@ const MIN_BUDGET = 500;
  */
 function showError(fieldId, message) {
   const field = document.getElementById(fieldId);
-  if (!field) return;
+  if (!field) {
+    console.warn('⚠️ Field not found:', fieldId);
+    return;
+  }
 
   field.style.borderColor = 'var(--color-primary-blue)';
+  field.style.backgroundColor = 'rgba(8,75,131,0.05)';
 
   let errEl = document.getElementById(`${fieldId}-error`);
   if (!errEl) {
     errEl = document.createElement('div');
     errEl.id = `${fieldId}-error`;
-    errEl.style.cssText = 'color:var(--color-primary-blue);font-size:0.8rem;margin-top:4px;';
+    errEl.style.cssText = 'color:var(--color-primary-blue);font-size:0.8rem;margin-top:4px;font-weight:500;';
     field.insertAdjacentElement('afterend', errEl);
   }
-  errEl.textContent = message;
+  errEl.textContent = '❌ ' + message;
+  console.log('📍 Error on ' + fieldId + ':', message);
 }
 
 /**
@@ -43,7 +48,10 @@ function showError(fieldId, message) {
  */
 function clearError(fieldId) {
   const field = document.getElementById(fieldId);
-  if (field) field.style.borderColor = '';
+  if (field) {
+    field.style.borderColor = '';
+    field.style.backgroundColor = '';
+  }
 
   const errEl = document.getElementById(`${fieldId}-error`);
   if (errEl) errEl.textContent = '';
@@ -94,14 +102,20 @@ export function validateLoginForm() {
  * Returns `true` when valid.
  */
 export function validateSignupForm() {
-  const fields = ['fullname', 'email', 'password', 'confirm-password'];
+  const fields = ['role', 'fullname', 'email', 'password', 'confirm-password'];
   clearAllErrors(fields);
   let valid = true;
 
+  const role = document.getElementById('role');
   const fullname = document.getElementById('fullname');
   const email = document.getElementById('email');
   const password = document.getElementById('password');
   const confirm = document.getElementById('confirm-password');
+
+  if (!role || !role.value) {
+    showError('role', 'Please select a role.');
+    valid = false;
+  }
 
   if (!fullname || !fullname.value.trim()) {
     showError('fullname', 'Full name is required.');
@@ -130,6 +144,18 @@ export function validateSignupForm() {
   } else if (password && confirm.value !== password.value) {
     showError('confirm-password', 'Passwords do not match.');
     valid = false;
+  }
+
+  // If invalid, log all details for debugging
+  if (!valid) {
+    console.warn('❌ Signup validation failed');
+    console.log('📋 Field values:', {
+      role: role?.value || '(empty)',
+      fullname: fullname?.value || '(empty)',
+      email: email?.value || '(empty)',
+      password: password?.value ? '(filled)' : '(empty)',
+      confirm: confirm?.value ? '(filled)' : '(empty)'
+    });
   }
 
   return valid;

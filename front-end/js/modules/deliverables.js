@@ -83,7 +83,7 @@ function initReviewDeliverables() {
   const revisionLink = document.querySelector('.btn-outline.btn-full');
 
   if (user.role !== 'client') {
-    // Manager cannot approve or release payment
+    // Manager cannot approve or release payment.
     if (approveLink) approveLink.style.display = 'none';
     if (revisionLink) revisionLink.textContent = 'Awaiting Client Approval';
   } else {
@@ -113,6 +113,25 @@ function initReviewDeliverables() {
         }
         window.location.href = 'my-gigs-client.html';
       });
+    }
+
+    // Wire up delete button (for submitted deliverables only)
+    if (revisionLink && deliverable && deliverable.status === 'submitted') {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-outline';
+      deleteBtn.style.cssText = 'color:var(--color-text-muted);border-color:var(--color-border);margin-top:var(--spacing-sm);width:100%;';
+      deleteBtn.textContent = 'Delete Deliverable';
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const idx = deliverables.findIndex(d => d.id === deliverable.id);
+        if (idx !== -1) {
+          deliverables.splice(idx, 1);
+        }
+        window.location.href = 'my-gigs-client.html';
+      });
+      if (revisionLink.parentElement) {
+        revisionLink.parentElement.appendChild(deleteBtn);
+      }
     }
   }
 

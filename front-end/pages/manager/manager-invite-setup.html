@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Invite Setup - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/forms.css">
+  <link rel="stylesheet" href="../../css/auth.css">
+</head>
+<body>
+  <div class="auth-container" style="grid-template-columns: 1fr; min-height: 100vh;">
+    <div class="auth-form-wrapper" style="padding: var(--spacing-xl);">
+      <div class="auth-form-container" style="max-width: 520px; width: 100%;">
+        <div class="auth-header">
+          <h1>Set Your Manager Password</h1>
+          <p id="invite-setup-info">Activate your invite by creating a password.</p>
+        </div>
+
+        <form class="auth-form" id="manager-password-setup-form">
+          <div class="form-group">
+            <label class="form-label" for="manager-email">Invited Email</label>
+            <input type="email" id="manager-email" class="form-input" readonly>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="manager-name">Your Name</label>
+            <input type="text" id="manager-name" class="form-input" placeholder="Manager Name" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">New Password</label>
+            <input type="password" id="password" class="form-input" placeholder="Minimum 8 characters" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="confirm-password">Confirm Password</label>
+            <input type="password" id="confirm-password" class="form-input" placeholder="Re-enter password" required>
+          </div>
+
+          <p id="invite-setup-status" style="margin-top: var(--spacing-md); color: var(--color-primary-blue); font-size: 0.875rem; min-height: 1.25rem;"></p>
+
+          <button type="submit" class="btn btn-primary btn-full" style="margin-top: var(--spacing-sm);">Activate Manager Account</button>
+        </form>
+
+        <div class="auth-footer">
+          Already activated? <a href="../login.html?role=manager">Log In as Manager</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../../js/main.js"></script>
+</body>
+</html>
