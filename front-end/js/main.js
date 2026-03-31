@@ -105,6 +105,18 @@ async function bootstrap() {
   }
 }
 
+// ── Global Logout Handler ────────────────────────────────────────
+// Wire up logout button present in all dashboard sidebars.
+function bindLogout() {
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      auth.logout();
+    });
+  }
+}
+
 // Run on DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -112,4 +124,5 @@ if (document.readyState === 'loading') {
   });
 } else {
   bootstrap();
+  bindLogout();
 }

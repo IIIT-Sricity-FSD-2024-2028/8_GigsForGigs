@@ -146,9 +146,9 @@
         <div style="font-weight: 600;">John Doe</div>
         <div style="color: rgba(240, 246, 246, 0.7); font-size: 0.75rem;">Gig Professional</div>
       </div>
-      <a href="index.html" style="margin-left: auto; color: var(--color-white);" title="Log out">
+      <button id="logout-btn" style="margin-left: auto; background: none; border: none; cursor: pointer; color: var(--color-white);" title="Log out">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-      </a>
+      </button>
     </div>
   </aside>
 
@@ -158,7 +158,7 @@
     <header class="dashboard-topbar">
       <div class="topbar-search" style="width: 400px;">
         <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" placeholder="Search for opportunities across all categories...">
+        <input id="explore-search-input" type="text" placeholder="Search for opportunities across all categories...">
       </div>
       <div style="display: flex; gap: var(--spacing-lg); align-items: center;">
         <button class="btn btn-primary" onclick="window.location.href='post-service.html'">Post a Service</button>
@@ -174,31 +174,31 @@
       
       <!-- Filter Bar -->
       <div class="filter-bar">
-        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
+        <select id="explore-category-filter" class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
           <option value="">All Categories</option>
           <option value="design">Design</option>
           <option value="dev">Development</option>
           <option value="marketing">Marketing</option>
         </select>
         <div style="width: 1px; background-color: var(--color-border); margin: 4px 0;"></div>
-        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
+        <select id="explore-budget-filter" class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
           <option value="">Any Budget</option>
           <option value="1">Under $500</option>
           <option value="2">$500 - $1k</option>
           <option value="3">$1k+</option>
         </select>
         <div style="width: 1px; background-color: var(--color-border); margin: 4px 0;"></div>
-        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
+        <select id="explore-duration-filter" class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
           <option value="">Any Duration</option>
           <option value="1">Less than 1 week</option>
           <option value="2">1 - 4 weeks</option>
           <option value="3">1 month+</option>
         </select>
-        <button class="btn btn-primary" style="padding: 8px 16px;">Filter</button>
+        <button id="explore-filter-btn" class="btn btn-primary" style="padding: 8px 16px;">Filter</button>
       </div>
       
       <!-- Grid -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-xl);">
+      <div id="explore-tasks-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-xl);">
         
         <!-- Task Card 1 -->
         <div class="explore-card">
@@ -263,13 +263,8 @@
       </div>
 
       <!-- Pagination -->
-      <div class="pagination">
-        <a href="#" class="page-btn">&laquo;</a>
+      <div id="explore-pagination" class="pagination">
         <a href="#" class="page-btn active">1</a>
-        <a href="#" class="page-btn">2</a>
-        <a href="#" class="page-btn">3</a>
-        <a href="#" class="page-btn">4</a>
-        <a href="#" class="page-btn">&raquo;</a>
       </div>
 
     </div>
