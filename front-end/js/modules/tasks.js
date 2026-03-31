@@ -4,13 +4,27 @@
 //         explore-tasks.html, active-tasks.html
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, applications } from '../data/mockData.js';
+import { tasks, users, applications, persistApplications } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import { validatePostGigForm } from '../utils/validation.js';
 import {
   formatDate, formatCurrency, generateId,
   truncate, getStatusBadgeClass, humaniseStatus, getInitials
 } from '../utils/helpers.js';
+import {
+  getGigDashboardSummary,
+  markGigTaskComplete,
+  upsertGigRequestFromTask
+} from './gigState.js';
+
+const exploreState = {
+  search: '',
+  category: '',
+  budget: '',
+  duration: '',
+  page: 1,
+  pageSize: 6
+};
 
 // ── Render helpers ───────────────────────────────────────────────
 
@@ -246,15 +260,52 @@ function initManagerDashboard() {
 
 function renderExploreTasks() {
   const user = getUser();
-  if (!user) return;
+  if (!user || user.role !== 'gig') return;
 
   const openTasks = tasks.filter(t => t.status === 'open');
-  const grid = document.querySelector('.dashboard-content .explore-card')?.parentElement
+  const workflowSummary = getGigDashboardSummary(user.id);
+  const requestByTaskId = new Map(
+    workflowSummary.requests.map((request) => [request.sourceTaskId, request])
+  );
+  const grid = document.getElementById('explore-tasks-grid')
+    || document.querySelector('.dashboard-content .explore-card')?.parentElement
     || document.querySelector('.dashboard-content [style*="grid-template-columns"]');
+  const pagination = document.getElementById('explore-pagination');
   if (!grid) return;
 
-  if (openTasks.length === 0) {
-    grid.innerHTML = `<div style="grid-column:1/-1;padding:var(--spacing-xxl);text-align:center;color:var(--color-text-muted);border:1px dashed var(--color-border);border-radius:var(--radius-lg);">No open tasks available right now. Check back soon!</div>`;
+  const filteredTasks = openTasks.filter((task) => {
+    const matchesSearch = !exploreState.search
+      || task.title.toLowerCase().includes(exploreState.search)
+      || (task.description || '').toLowerCase().includes(exploreState.search);
+
+    const matchesCategory = !exploreState.category || task.category === exploreState.category;
+
+    const budget = Number(task.budget) || 0;
+    const matchesBudget = !exploreState.budget
+      || (exploreState.budget === '1' && budget < 500)
+      || (exploreState.budget === '2' && budget >= 500 && budget <= 1000)
+      || (exploreState.budget === '3' && budget > 1000);
+
+    const duration = task.duration || '';
+    const matchesDuration = !exploreState.duration
+      || (exploreState.duration === '1' && ['one-time', 'less-week'].includes(duration))
+      || (exploreState.duration === '2' && ['less-month', '1-4-weeks'].includes(duration))
+      || (exploreState.duration === '3' && ['1-3-months', 'ongoing'].includes(duration));
+
+    return matchesSearch && matchesCategory && matchesBudget && matchesDuration;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / exploreState.pageSize));
+  exploreState.page = Math.min(exploreState.page, totalPages);
+  const startIndex = (exploreState.page - 1) * exploreState.pageSize;
+  const pagedTasks = filteredTasks.slice(startIndex, startIndex + exploreState.pageSize);
+
+  if (pagedTasks.length === 0) {
+    const message = filteredTasks.length === 0
+      ? 'No tasks match your current filters.'
+      : 'No tasks available on this page.';
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:var(--spacing-xxl);text-align:center;color:var(--color-text-muted);border:1px dashed var(--color-border);border-radius:var(--radius-lg);">${message}</div>`;
+    if (pagination) pagination.innerHTML = '';
     return;
   }
 
@@ -265,9 +316,15 @@ function renderExploreTasks() {
     'var(--color-border)'
   ];
 
-  grid.innerHTML = openTasks.map((task, i) => {
+  grid.innerHTML = pagedTasks.map((task, i) => {
     const client = getUserById(task.clientId);
-    const hasApplied = applications.some(a => a.taskId === task.id && a.gigId === user.id);
+    const linkedRequest = requestByTaskId.get(task.id) || null;
+    const existingApp = applications.find((app) => app.taskId === task.id && app.gigId === user.id);
+    const statusLabel = linkedRequest
+      ? humaniseStatus(linkedRequest.status)
+      : existingApp
+        ? humaniseStatus(existingApp.status)
+        : '';
 
     return `
       <div class="explore-card">
@@ -280,8 +337,8 @@ function renderExploreTasks() {
           <div class="explore-price">${formatCurrency(task.budget)}</div>
           <div class="explore-footer" style="display:flex;gap:var(--spacing-sm);">
             <a href="project-detail.html?taskId=${task.id}" class="btn btn-outline" style="flex:1;text-align:center;text-decoration:none;">View Details</a>
-            ${hasApplied
-              ? `<span class="btn btn-outline" style="flex:1;text-align:center;opacity:0.7;cursor:default;">Applied ✓</span>`
+            ${(linkedRequest || existingApp)
+              ? `<span class="btn btn-outline" style="flex:1;text-align:center;opacity:0.85;cursor:default;">${statusLabel}</span>`
               : `<button class="btn btn-primary apply-task-btn" data-task-id="${task.id}" style="flex:1;">Apply</button>`
             }
           </div>
@@ -293,25 +350,88 @@ function renderExploreTasks() {
   grid.querySelectorAll('.apply-task-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const taskId = btn.dataset.taskId;
-      // Enforce one application per gig per task
-      if (applications.some(a => a.taskId === taskId && a.gigId === user.id)) return;
+      if (!taskId) return;
 
-      applications.push({
-        id: generateId('a'),
-        taskId,
-        gigId: user.id,
-        coverLetter: 'I am interested in this project and believe my skills are a great fit.',
-        proposedBudget: tasks.find(t => t.id === taskId)?.budget || 0,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      });
+      const sourceTask = tasks.find((task) => task.id === taskId);
+      if (!sourceTask) return;
+
+      const duplicate = applications.find((app) => app.taskId === taskId && app.gigId === user.id);
+      if (!duplicate) {
+        applications.push({
+          id: generateId('a'),
+          taskId,
+          gigId: user.id,
+          coverLetter: 'Application submitted from Explore Tasks.',
+          proposedBudget: Number(sourceTask.budget) || 0,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
+        persistApplications();
+      }
+
+      upsertGigRequestFromTask(user.id, sourceTask);
 
       renderExploreTasks(); // re‑render
     });
   });
+
+  if (pagination) {
+    const pageButtons = [];
+    const prevDisabled = exploreState.page === 1 ? 'style="opacity:0.5;pointer-events:none;"' : '';
+    pageButtons.push(`<a href="#" class="page-btn" data-page="${Math.max(1, exploreState.page - 1)}" ${prevDisabled}>&laquo;</a>`);
+
+    for (let page = 1; page <= totalPages; page += 1) {
+      pageButtons.push(`<a href="#" class="page-btn ${page === exploreState.page ? 'active' : ''}" data-page="${page}">${page}</a>`);
+    }
+
+    const nextDisabled = exploreState.page === totalPages ? 'style="opacity:0.5;pointer-events:none;"' : '';
+    pageButtons.push(`<a href="#" class="page-btn" data-page="${Math.min(totalPages, exploreState.page + 1)}" ${nextDisabled}>&raquo;</a>`);
+
+    pagination.innerHTML = pageButtons.join('');
+
+    pagination.querySelectorAll('[data-page]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const nextPage = Number(link.getAttribute('data-page'));
+        if (!Number.isFinite(nextPage)) return;
+        exploreState.page = Math.max(1, Math.min(totalPages, nextPage));
+        renderExploreTasks();
+      });
+    });
+  }
 }
 
 function initExploreTasks() {
+  const searchInput = document.getElementById('explore-search-input');
+  const categoryFilter = document.getElementById('explore-category-filter');
+  const budgetFilter = document.getElementById('explore-budget-filter');
+  const durationFilter = document.getElementById('explore-duration-filter');
+  const filterButton = document.getElementById('explore-filter-btn');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      exploreState.search = searchInput.value.trim().toLowerCase();
+      exploreState.page = 1;
+      renderExploreTasks();
+    });
+  }
+
+  const applyFilters = () => {
+    exploreState.category = categoryFilter?.value || '';
+    exploreState.budget = budgetFilter?.value || '';
+    exploreState.duration = durationFilter?.value || '';
+    exploreState.page = 1;
+    renderExploreTasks();
+  };
+
+  if (filterButton) {
+    filterButton.addEventListener('click', applyFilters);
+  }
+
+  if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
+  if (budgetFilter) budgetFilter.addEventListener('change', applyFilters);
+  if (durationFilter) durationFilter.addEventListener('change', applyFilters);
+
   renderExploreTasks();
 }
 
@@ -319,12 +439,13 @@ function initExploreTasks() {
 
 function renderActiveTasks() {
   const user = getUser();
-  if (!user) return;
+  if (!user || user.role !== 'gig') return;
 
   const container = document.getElementById('active-tasks-list');
   if (!container) return;
 
-  const myActive = tasks.filter(t => t.assignedTo === user.id && t.status === 'in_progress');
+  const summary = getGigDashboardSummary(user.id);
+  const myActive = summary.activeTasks;
 
   if (myActive.length === 0) {
     container.innerHTML = `<div style="padding:var(--spacing-xl);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;color:var(--color-text-muted);">No active tasks yet. Browse <a href="explore-tasks.html" style="color:var(--color-primary-blue);">open tasks</a> to find work.</div>`;
@@ -338,9 +459,8 @@ function renderActiveTasks() {
   ];
 
   container.innerHTML = myActive.map((task, i) => {
-    const client = getUserById(task.clientId);
     const daysLeft = Math.max(0, Math.ceil((new Date(task.deadline) - Date.now()) / 86400000));
-    const progress = 45 + (i * 20); // mock progress for visual variety
+    const progress = Math.max(5, Math.min(95, Number(task.progress) || 20));
 
     return `
       <div class="task-card" style="align-items:stretch;">
@@ -355,24 +475,33 @@ function renderActiveTasks() {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--spacing-md);">
             <div class="task-details">
               <h3>${task.title}</h3>
-              <p>${client ? client.company || client.name : 'Client'} • Due in ${daysLeft} days (${formatDate(task.deadline)})</p>
+              <p>${task.clientName || 'Client'} • Due in ${daysLeft} days (${formatDate(task.deadline)})</p>
             </div>
             <div style="font-size:1.25rem;font-weight:700;color:var(--color-secondary);">${formatCurrency(task.budget)}</div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.875rem;color:var(--color-text-muted);">
             <span>Progress: In Development</span>
-            <span style="font-weight:600;color:var(--color-primary-dark);">${Math.min(progress, 95)}%</span>
+            <span style="font-weight:600;color:var(--color-primary-dark);">${progress}%</span>
           </div>
           <div class="progress-container">
-            <div class="progress-bar" style="width:${Math.min(progress, 95)}%;"></div>
+            <div class="progress-bar" style="width:${progress}%;"></div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;justify-content:center;margin-left:var(--spacing-xxl);min-width:140px;">
           <a href="project-detail.html?taskId=${task.id}" class="btn btn-outline btn-full" style="text-align:center;margin-bottom:var(--spacing-sm);text-decoration:none;">View Details</a>
-          <a href="project-detail.html?taskId=${task.id}&submit=1" class="btn btn-primary-blue btn-full" style="text-align:center;text-decoration:none;">Submit Draft</a>
+          <button class="btn btn-primary-blue btn-full mark-complete-btn" data-task-id="${task.id}" style="text-align:center;">Mark Complete</button>
         </div>
       </div>`;
   }).join('');
+
+  container.querySelectorAll('.mark-complete-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const taskId = button.dataset.taskId;
+      if (!taskId) return;
+      markGigTaskComplete(user.id, taskId);
+      renderActiveTasks();
+    });
+  });
 }
 
 function initActiveTasks() {

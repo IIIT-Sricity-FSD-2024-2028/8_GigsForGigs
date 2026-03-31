@@ -89,20 +89,21 @@
         
         <div style="background-color: var(--color-white); border: 2px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--spacing-xxl);">
           <div style="font-size: 0.875rem; text-transform: uppercase; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--spacing-sm);">Total Earnings (YTD)</div>
-          <div style="font-size: 3rem; font-weight: 700; color: var(--color-primary-dark); margin-bottom: var(--spacing-md);">$14,250.00</div>
-          <div style="font-size: 0.875rem; color: var(--color-secondary); font-weight: 500;">+ 12% vs last year</div>
+          <div id="earnings-total-ytd" style="font-size: 3rem; font-weight: 700; color: var(--color-primary-dark); margin-bottom: var(--spacing-md);">$0.00</div>
+          <div style="font-size: 0.875rem; color: var(--color-secondary); font-weight: 500;">Synced with completed projects</div>
         </div>
 
         <div style="background-color: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--spacing-xxl);">
           <div style="font-size: 0.875rem; text-transform: uppercase; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--spacing-sm);">Expected This Month</div>
-          <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary-blue); margin-bottom: var(--spacing-md);">$3,420.00</div>
-          <div style="font-size: 0.875rem; color: var(--color-text-muted); font-weight: 500;">From 4 active milestones</div>
+          <div id="earnings-expected-month" style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary-blue); margin-bottom: var(--spacing-md);">$0.00</div>
+          <div id="earnings-active-milestones" style="font-size: 0.875rem; color: var(--color-text-muted); font-weight: 500;">From 0 active tasks</div>
         </div>
 
         <div style="background-color: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--spacing-xxl);">
           <div style="font-size: 0.875rem; text-transform: uppercase; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--spacing-sm);">Available for Withdrawal</div>
-          <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-text-dark); margin-bottom: var(--spacing-md);">$850.00</div>
-          <button class="btn btn-outline btn-full" style="padding: 8px;">Withdraw Funds</button>
+          <div id="earnings-available-withdrawal" style="font-size: 2.5rem; font-weight: 700; color: var(--color-text-dark); margin-bottom: var(--spacing-md);">$0.00</div>
+          <button id="withdraw-funds-btn" class="btn btn-outline btn-full" style="padding: 8px;">Withdraw Funds</button>
+          <div id="earnings-withdrawn-total" style="margin-top:8px;font-size:0.75rem;color:var(--color-text-muted);"></div>
         </div>
 
       </div>
@@ -113,28 +114,8 @@
           <h2>Monthly Earnings Trend</h2>
         </div>
         
-        <div class="chart-placeholder">
-          <!-- Scaled Mock SVG Line Chart -->
-          <svg viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none">
-            <path class="chart-area" d="M 0 300 L 0 250 L 100 200 L 200 260 L 300 150 L 400 180 L 500 100 L 600 130 L 700 80 L 800 110 L 900 40 L 1000 60 L 1000 300 Z"></path>
-            <path class="chart-line" d="M 0 250 L 100 200 L 200 260 L 300 150 L 400 180 L 500 100 L 600 130 L 700 80 L 800 110 L 900 40 L 1000 60"></path>
-            
-            <!-- Nodes -->
-            <circle cx="100" cy="200" r="5" fill="var(--color-primary-dark)" />
-            <circle cx="200" cy="260" r="5" fill="var(--color-primary-dark)" />
-            <circle cx="300" cy="150" r="5" fill="var(--color-primary-dark)" />
-            <circle cx="400" cy="180" r="5" fill="var(--color-primary-dark)" />
-            <circle cx="500" cy="100" r="5" fill="var(--color-primary-dark)" />
-            <circle cx="600" cy="130" r="5" fill="var(--color-primary-dark)" />
-            <circle cx="700" cy="80"  r="5" fill="var(--color-primary-dark)" />
-            <circle cx="800" cy="110" r="5" fill="var(--color-primary-dark)" />
-            <circle cx="900" cy="40"  r="5" fill="var(--color-primary-dark)" />
-            <circle cx="1000" cy="60" r="5" fill="var(--color-primary-dark)" />
-          </svg>
-          
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; color: var(--color-text-muted); font-size: 0.8rem;">
-            <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span>
-          </div>
+        <div id="earnings-trend-chart" class="chart-placeholder" style="padding:var(--spacing-lg);min-height:240px;">
+          <div style="text-align:center;color:var(--color-text-muted);padding-top:var(--spacing-xl);">Loading earnings trend...</div>
         </div>
       </section>
 
@@ -153,34 +134,9 @@
               <th>Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="earnings-transactions-body">
             <tr>
-              <td>Oct 10, 2024</td>
-              <td>Weekly SEO Audit</td>
-              <td>Vortex Inc</td>
-              <td><span style="color: var(--color-secondary); font-weight: 600;">+$800.00</span></td>
-              <td><span class="badge badge-completed">Paid</span></td>
-            </tr>
-            <tr>
-              <td>Sep 28, 2024</td>
-              <td>Brand Identity Audit</td>
-              <td>Lumina Brands</td>
-              <td><span style="color: var(--color-secondary); font-weight: 600;">+$1,200.00</span></td>
-              <td><span class="badge badge-completed">Paid</span></td>
-            </tr>
-            <tr>
-              <td>Sep 15, 2024</td>
-              <td>Phase 1 Wireframes - Milestone 2</td>
-              <td>Globex</td>
-              <td><span style="color: var(--color-secondary); font-weight: 600;">+$1,750.00</span></td>
-              <td><span class="badge badge-completed">Paid</span></td>
-            </tr>
-            <tr>
-              <td>Sep 01, 2024</td>
-              <td>Earnings Withdrawal</td>
-              <td>Direct to Bank</td>
-              <td><span style="color: var(--color-text-dark); font-weight: 600;">-$3,500.00</span></td>
-              <td><span class="badge badge-completed">Processed</span></td>
+              <td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">Loading transactions...</td>
             </tr>
           </tbody>
         </table>

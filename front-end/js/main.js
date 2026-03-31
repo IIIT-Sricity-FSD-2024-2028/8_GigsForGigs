@@ -56,7 +56,7 @@ const PAGE_MAP = {
   'completed-projects.html':        { module: deliverables,  roles: ['gig'] },
   'project-detail.html':            { module: deliverables,  roles: ['gig', 'client', 'manager'] },
   'post-service.html':              { module: null,          roles: ['gig'] },
-  'total-earnings.html':            { module: null,          roles: ['gig'] }
+  'total-earnings.html':            { module: dashboard,     roles: ['gig'] }
 };
 
 // ── Bootstrap ────────────────────────────────────────────────────

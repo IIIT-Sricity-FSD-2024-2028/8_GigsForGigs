@@ -3,6 +3,31 @@
 // mutates them in‑place — no backend, no fetch, no JSON files.
 // ─────────────────────────────────────────────────────────────────
 
+const APPLICATIONS_STORAGE_KEY = 'gfg_persisted_applications';
+
+function readLocalArray(key, fallback) {
+  if (typeof localStorage === 'undefined') return fallback;
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalArray(key, value) {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore storage failures in private mode/quota exceeded.
+  }
+}
+
 // ── Users ────────────────────────────────────────────────────────
 export const users = [
   {
@@ -224,7 +249,7 @@ export const tasks = [
 // ── Applications ─────────────────────────────────────────────────
 // An application is a gig professional applying to an open task
 // status: pending | shortlisted | rejected
-export const applications = [
+const seededApplications = [
   {
     id: 'a1',
     taskId: 't1',
@@ -253,6 +278,12 @@ export const applications = [
     createdAt: '2024-10-07T15:00:00Z'
   }
 ];
+
+export const applications = readLocalArray(APPLICATIONS_STORAGE_KEY, seededApplications);
+
+export function persistApplications() {
+  writeLocalArray(APPLICATIONS_STORAGE_KEY, applications);
+}
 
 // ── Deliverables ─────────────────────────────────────────────────
 // status: submitted | approved | revision_requested

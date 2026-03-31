@@ -91,15 +91,15 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-title">Active Gigs</div>
-          <div class="metric-value">12</div>
+          <div id="gig-active-count" class="metric-value">0</div>
           <div class="metric-trend trend-up">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-            +2 from last week
+            Live from workflow state
           </div>
         </div>
         <div class="metric-card">
           <div class="metric-title">Pending Requests</div>
-          <div class="metric-value">9</div>
+          <div id="gig-pending-count" class="metric-value">0</div>
           <div class="metric-trend" style="color: var(--color-primary-blue);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             Review needed
@@ -107,7 +107,7 @@
         </div>
         <div class="metric-card">
           <div class="metric-title">Completed Tasks</div>
-          <div class="metric-value">148</div>
+          <div id="gig-completed-count" class="metric-value">0</div>
           <div class="metric-trend trend-up">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             98% on time delivery
@@ -115,7 +115,7 @@
         </div>
         <div class="metric-card">
           <div class="metric-title">Total Earnings</div>
-          <div class="metric-value" style="color: var(--color-secondary);">$14,250</div>
+          <div id="gig-earnings-count" class="metric-value" style="color: var(--color-secondary);">$0</div>
           <div class="metric-trend trend-up">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-right: 4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
             +12% vs last month
@@ -142,34 +142,9 @@
                 <th>Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="gig-dashboard-requests-body">
               <tr>
-                <td><div style="font-weight: 600; color: var(--color-text-dark);">Acme Corp</div></td>
-                <td>Logo Design for Startup</td>
-                <td>Oct 20, 2024</td>
-                <td style="font-weight: 600;">$450</td>
-                <td><span class="badge badge-pending">Pending</span></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight: 600; color: var(--color-text-dark);">TechFlow</div></td>
-                <td>React Frontend Dev</td>
-                <td>Nov 05, 2024</td>
-                <td style="font-weight: 600;">$1,200</td>
-                <td><span class="badge badge-pending">Pending</span></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight: 600; color: var(--color-text-dark);">Jane Studio</div></td>
-                <td>Brand Strategy Session</td>
-                <td>Oct 15, 2024</td>
-                <td style="font-weight: 600;">$250</td>
-                <td><span class="badge badge-active">Active</span></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight: 600; color: var(--color-text-dark);">Vortex Inc</div></td>
-                <td>Weekly SEO Audit</td>
-                <td>Oct 10, 2024</td>
-                <td style="font-weight: 600;">$800</td>
-                <td><span class="badge badge-completed">Completed</span></td>
+                <td colspan="5" style="text-align: center; color: var(--color-text-muted); padding: var(--spacing-xl);">Loading workflow activity...</td>
               </tr>
             </tbody>
           </table>
@@ -186,17 +161,38 @@
                 a 15.9155 15.9155 0 0 1 0 -31.831"
             />
             <path class="circle circle-primary"
+              id="gig-profile-success-circle"
               stroke-dasharray="90, 100"
               d="M18 2.0845
                 a 15.9155 15.9155 0 0 1 0 31.831
                 a 15.9155 15.9155 0 0 1 0 -31.831"
             />
-            <text x="18" y="20.35" class="percentage">90%</text>
+            <text id="gig-profile-success-rate" x="18" y="20.35" class="percentage">0%</text>
           </svg>
           <p style="text-align: center; color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--spacing-lg);">You are in the top 10% of freelancers in your category based on client ratings.</p>
         </section>
 
       </div>
+
+      <section class="dashboard-section">
+        <div class="section-header">
+          <h2>Workflow Snapshot</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--spacing-xl);">
+          <div>
+            <h3 style="font-size:1rem;color:var(--color-primary-dark);margin-bottom:var(--spacing-sm);">Active Tasks</h3>
+            <div id="dashboard-active-preview"></div>
+          </div>
+          <div>
+            <h3 style="font-size:1rem;color:var(--color-primary-dark);margin-bottom:var(--spacing-sm);">Pending Requests</h3>
+            <div id="dashboard-pending-preview"></div>
+          </div>
+          <div>
+            <h3 style="font-size:1rem;color:var(--color-primary-dark);margin-bottom:var(--spacing-sm);">Completed Projects</h3>
+            <div id="dashboard-completed-preview"></div>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 </div>
