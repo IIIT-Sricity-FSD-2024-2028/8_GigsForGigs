@@ -26,6 +26,81 @@ const exploreState = {
   pageSize: 6
 };
 
+const TASKS_KEY = 'gfg_tasks';
+
+function syncTaskMemory(taskList) {
+  tasks.length = 0;
+  taskList.forEach((task) => tasks.push(task));
+}
+
+function persistTaskList(taskList) {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(TASKS_KEY, JSON.stringify(taskList));
+    } catch {}
+  }
+  syncTaskMemory(taskList);
+}
+
+export function getTasks() {
+  const fallback = Array.isArray(tasks) ? tasks.map((task) => ({ ...task })) : [];
+
+  if (typeof localStorage === 'undefined') {
+    return fallback;
+  }
+
+  try {
+    const raw = localStorage.getItem(TASKS_KEY);
+    if (!raw) {
+      localStorage.setItem(TASKS_KEY, JSON.stringify(fallback));
+      return fallback;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return fallback;
+    return parsed;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveTask(data) {
+  if (!data || typeof data !== 'object') {
+    return { ok: false, error: 'Invalid task payload.' };
+  }
+
+  const title = String(data.title || '').trim();
+  const category = String(data.category || '').trim();
+  const description = String(data.description || '').trim();
+  const budget = Number(data.budget);
+
+  if (!title) return { ok: false, error: 'Task title is required.' };
+  if (!category) return { ok: false, error: 'Task category is required.' };
+  if (!description) return { ok: false, error: 'Task description is required.' };
+  if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: 'Task budget must be valid.' };
+
+  const taskList = getTasks();
+  const newTask = {
+    id: generateId('t'),
+    clientId: data.clientId,
+    title,
+    category,
+    duration: data.duration || 'one-time',
+    description,
+    pricing: data.pricing || 'fixed',
+    budget,
+    skills: Array.isArray(data.skills) ? data.skills : [],
+    status: data.status || 'open',
+    assignedTo: data.assignedTo ?? null,
+    deadline: data.deadline || new Date(Date.now() + 30 * 86400000).toISOString(),
+    createdAt: data.createdAt || new Date().toISOString()
+  };
+
+  taskList.push(newTask);
+  persistTaskList(taskList);
+  return { ok: true, task: newTask };
+}
+
 // ── Render helpers ───────────────────────────────────────────────
 
 function getUserById(id) {
@@ -68,7 +143,8 @@ function initPostGig() {
   // Check if editing existing task
   const params = new URLSearchParams(window.location.search);
   const editId = params.get('editId');
-  const editingTask = editId ? tasks.find(t => t.id === editId) : null;
+  const taskList = getTasks();
+  const editingTask = editId ? taskList.find((t) => t.id === editId) : null;
 
   // Pre-fill form if editing
   if (editingTask) {
@@ -115,10 +191,11 @@ function initPostGig() {
         .map(s => s.trim())
         .filter(Boolean);
       editingTask.updatedAt = new Date().toISOString();
+
+      persistTaskList(taskList);
     } else {
       // CREATE mode
-      const newTask = {
-        id: generateId('t'),
+      const result = saveTask({
         clientId: user.id,
         title: document.getElementById('gig-title').value.trim(),
         category: document.getElementById('category').value,
@@ -131,15 +208,11 @@ function initPostGig() {
           .map(s => s.trim())
           .filter(Boolean),
         status: 'open',
-        assignedTo: null,
-        deadline: new Date(Date.now() + 30 * 86400000).toISOString(), // default 30 days
-        createdAt: new Date().toISOString()
-      };
+        assignedTo: null
+      });
 
-      tasks.push(newTask);
+      if (!result.ok) return;
     }
-
-    saveTasks();
 
     // Redirect back to client dashboard
     window.location.href = 'my-gigs-client.html';
@@ -162,7 +235,8 @@ function renderMyGigsClient() {
     if (mgr && mgr.clientId) clientId = mgr.clientId;
   }
 
-  const clientTasks = tasks.filter(t => t.clientId === clientId);
+  const taskList = getTasks();
+  const clientTasks = taskList.filter(t => t.clientId === clientId);
 
   if (clientTasks.length === 0) {
     container.style.textAlign = 'center';
@@ -251,7 +325,7 @@ function renderMyGigsClient() {
   container.querySelectorAll('.edit-task-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.taskId;
-      const task = tasks.find(t => t.id === id);
+      const task = getTasks().find(t => t.id === id);
       if (!task) return;
 
       // Store task data in sessionStorage for the edit page
@@ -264,10 +338,11 @@ function renderMyGigsClient() {
   container.querySelectorAll('.delete-task-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.taskId;
-      const idx = tasks.findIndex(t => t.id === id);
+      const currentTasks = getTasks();
+      const idx = currentTasks.findIndex(t => t.id === id);
       if (idx !== -1) {
-        tasks.splice(idx, 1);
-        saveTasks();
+        currentTasks.splice(idx, 1);
+        persistTaskList(currentTasks);
         renderMyGigsClient(); // re‑render without page reload
       }
     });
@@ -304,8 +379,9 @@ function renderManagerDashboard() {
     return;
   }
 
-  const activeTasks = tasks.filter(t => t.clientId === clientId && (t.status === 'in_progress' || t.status === 'under_review'));
-  const pendingTasks = tasks.filter(t => t.clientId === clientId && (t.status === 'open' || t.status === 'completed'));
+  const taskList = getTasks();
+  const activeTasks = taskList.filter(t => t.clientId === clientId && (t.status === 'in_progress' || t.status === 'under_review'));
+  const pendingTasks = taskList.filter(t => t.clientId === clientId && (t.status === 'open' || t.status === 'completed'));
 
   // Active tasks table body
   const activeBody = document.getElementById('manager-active-tasks-body');
@@ -374,7 +450,8 @@ function renderExploreTasks() {
   const user = getUser();
   if (!user || user.role !== 'gig') return;
 
-  const openTasks = tasks.filter(t => t.status === 'open');
+  const taskList = getTasks();
+  const openTasks = taskList.filter(t => t.status === 'open');
   const workflowSummary = getGigDashboardSummary(user.id);
   const requestByTaskId = new Map(
     workflowSummary.requests.map((request) => [request.sourceTaskId, request])
@@ -466,7 +543,7 @@ function renderExploreTasks() {
       const taskId = btn.dataset.taskId;
       if (!taskId) return;
 
-      const sourceTask = tasks.find((task) => task.id === taskId);
+      const sourceTask = openTasks.find((task) => task.id === taskId);
       if (!sourceTask) return;
 
       const duplicate = applications.find((app) => app.taskId === taskId && app.gigId === user.id);
@@ -630,6 +707,10 @@ function renderActiveTasks() {
 
 function initActiveTasks() {
   renderActiveTasks();
+}
+
+export function renderTasks() {
+  renderExploreTasks();
 }
 
 // ── Public entry point ───────────────────────────────────────────
