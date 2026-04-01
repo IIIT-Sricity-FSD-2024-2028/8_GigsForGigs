@@ -261,6 +261,10 @@ export function renderServices() {
   const selectedSort = document.getElementById('sort-talent')?.value || 'relevance';
 
   const filtered = allServices.filter((service) => {
+    const shouldHideForClient = isClientViewer
+      && ['pending', 'active', 'completed'].includes(service.hireStatus);
+    if (shouldHideForClient) return false;
+
     const provider = service.provider;
     const price = Number(service.startingPrice || provider?.hourlyRate || 0);
     const rating = Number(provider?.avgRating || 0);

@@ -63,6 +63,217 @@ const PAGE_MAP = {
 const SEEDED_CLIENT_IDS = new Set(['u1']);
 const SEARCH_TALENT_CLIENT_IDS = new Set(['u1', 'u7']);
 
+const CLIENT_SIDEBAR_ITEMS = [
+  {
+    key: 'client-dashboard.html',
+    href: 'client-dashboard.html',
+    label: 'Dashboard',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
+  },
+  {
+    key: 'post-gig.html',
+    href: 'post-gig.html',
+    label: 'Post a Gig',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>'
+  },
+  {
+    key: 'search-talent.html',
+    href: 'search-talent.html',
+    label: 'Search Talent',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>'
+  },
+  {
+    key: 'my-gigs-client.html',
+    href: 'my-gigs-client.html',
+    label: 'My Gigs',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>'
+  },
+  {
+    key: 'review-shortlist.html',
+    href: 'review-shortlist.html',
+    label: 'Review Shortlist',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>'
+  },
+  {
+    key: 'review-deliverables.html',
+    href: 'review-deliverables.html',
+    label: 'Review Deliverables',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>'
+  },
+  {
+    key: 'client-profile-selection.html',
+    href: 'client-profile-selection.html',
+    label: 'Supervise Manager',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>'
+  }
+];
+
+const GIG_SIDEBAR_ITEMS = [
+  {
+    key: 'gig-dashboard.html',
+    href: 'gig-dashboard.html',
+    label: 'Dashboard',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'
+  },
+  {
+    key: 'explore-tasks.html',
+    href: 'explore-tasks.html',
+    label: 'Explore Tasks',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>'
+  },
+  {
+    key: 'active-tasks.html',
+    href: 'active-tasks.html',
+    label: 'Active Tasks',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>'
+  },
+  {
+    key: 'pending-requests.html',
+    href: 'pending-requests.html',
+    label: 'Pending Requests',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
+  },
+  {
+    key: 'completed-projects.html',
+    href: 'completed-projects.html',
+    label: 'Completed Projects',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>'
+  },
+  {
+    key: 'total-earnings.html',
+    href: 'total-earnings.html',
+    label: 'Total Earnings',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>'
+  },
+  {
+    key: 'post-service.html',
+    href: 'post-service.html',
+    label: 'Post a Service',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>'
+  },
+  {
+    key: 'gig-profile.html',
+    href: 'gig-profile.html',
+    label: 'My Profile',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'
+  }
+];
+
+const CLIENT_PAGE_ALIASES = {
+  'add-manager.html': 'client-profile-selection.html',
+  'add-manager-flow.html': 'client-profile-selection.html'
+};
+
+const GIG_PAGE_ALIASES = {
+  'project-detail.html': 'active-tasks.html',
+  'submit-deliverables.html': 'active-tasks.html',
+  'submission-success.html': 'active-tasks.html',
+  'service-published.html': 'post-service.html'
+};
+
+function getCurrentPageName() {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  return parts[parts.length - 1] || '';
+}
+
+function getDisplayInitials(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '??';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function renderSidebarNav(navEl, items, activeKey) {
+  if (!navEl) return;
+  navEl.innerHTML = items
+    .map((item) => {
+      const activeClass = item.key === activeKey ? ' active' : '';
+      return `<a href="${item.href}" class="nav-item${activeClass}">${item.icon}${item.label}</a>`;
+    })
+    .join('');
+}
+
+function normalizeSidebarBrand(sidebarEl, role) {
+  if (!sidebarEl) return;
+
+  if (role === 'client' || role === 'manager') {
+    const brand = sidebarEl.querySelector('.client-sidebar-brand');
+    if (!brand) return;
+
+    brand.setAttribute('href', role === 'manager' ? '../manager/manager-dashboard.html' : 'client-dashboard.html');
+    brand.innerHTML = `
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 12l3 3 5-5"></path></svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">GigsForGigs</span>
+        <span class="brand-sub">Client Portal</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (role === 'gig') {
+    const brand = sidebarEl.querySelector('.sidebar-header');
+    if (!brand) return;
+    brand.setAttribute('href', 'gig-dashboard.html');
+    brand.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-white)"><circle cx="12" cy="12" r="10"></circle></svg>GigsForGigs';
+  }
+}
+
+function normalizeSidebarIdentity(sidebarEl, user) {
+  if (!sidebarEl || !user) return;
+
+  if (user.role === 'client' || user.role === 'manager') {
+    const nameEl = sidebarEl.querySelector('.sidebar-user-info .user-name');
+    const roleEl = sidebarEl.querySelector('.sidebar-user-info .user-role');
+    const avatarEl = sidebarEl.querySelector('.sidebar-user-info .user-avatar');
+
+    if (nameEl) nameEl.textContent = user.name || 'Client';
+    if (roleEl) roleEl.textContent = user.role === 'manager' ? 'Manager' : 'Client';
+    if (avatarEl) avatarEl.textContent = getDisplayInitials(user.name || 'Client');
+    return;
+  }
+
+  if (user.role === 'gig') {
+    const miniEl = sidebarEl.querySelector('.sidebar-footer .profile-mini');
+    const metaEl = sidebarEl.querySelector('.sidebar-footer > div[style*="font-size"]');
+    const nameLine = metaEl?.children?.[0] || null;
+    const roleLine = metaEl?.children?.[1] || null;
+
+    if (miniEl) miniEl.textContent = getDisplayInitials(user.name || 'Gig Professional');
+    if (nameLine) nameLine.textContent = user.name || 'Gig Professional';
+    if (roleLine) roleLine.textContent = 'Gig Professional';
+  }
+}
+
+function enforceRoleSidebarConsistency() {
+  const user = getUser();
+  if (!user) return;
+
+  const sidebarEl = document.querySelector('.dashboard-sidebar');
+  const navEl = sidebarEl?.querySelector('.sidebar-nav');
+  if (!sidebarEl || !navEl) return;
+
+  const path = window.location.pathname;
+  const currentPage = getCurrentPageName();
+
+  if ((user.role === 'client' || user.role === 'manager') && path.includes('/pages/client/')) {
+    const activeKey = CLIENT_PAGE_ALIASES[currentPage] || currentPage;
+    renderSidebarNav(navEl, CLIENT_SIDEBAR_ITEMS, activeKey);
+    normalizeSidebarBrand(sidebarEl, user.role);
+    normalizeSidebarIdentity(sidebarEl, user);
+    return;
+  }
+
+  if (user.role === 'gig' && path.includes('/pages/gig/')) {
+    const activeKey = GIG_PAGE_ALIASES[currentPage] || currentPage;
+    renderSidebarNav(navEl, GIG_SIDEBAR_ITEMS, activeKey);
+    normalizeSidebarBrand(sidebarEl, user.role);
+    normalizeSidebarIdentity(sidebarEl, user);
+  }
+}
+
 function getCurrentClientRecord() {
   const sessionUser = getUser();
   if (!sessionUser || sessionUser.role !== 'client') return null;
@@ -238,20 +449,82 @@ function ensureLogoutStyles() {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      height: 36px;
-      padding: 0 14px;
-      border-radius: var(--radius-md, 8px);
-      border: 1px solid var(--color-border, #d6d6d6);
-      background: var(--color-primary-dark, #084b83);
+      flex-shrink: 0;
+      min-width: 72px;
+      height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      background: rgba(255, 255, 255, 0.08);
       color: var(--color-white, #fff);
-      font-size: 0.875rem;
-      font-weight: 600;
-      line-height: 1.1;
-      font-family: inherit;
+      font-family: var(--font-family-sans, inherit);
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      line-height: 1;
       cursor: pointer;
-      text-decoration: none;
-      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .gfg-inline-profile {
+      display: flex !important;
+      align-items: center;
+      flex-wrap: nowrap !important;
+      gap: 8px !important;
+    }
+
+    .gfg-inline-profile > * {
+      flex-shrink: 0;
+    }
+
+    .gfg-inline-profile .user-details {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .gfg-inline-profile .user-name,
+    .gfg-inline-profile .user-role {
+      display: inline;
+      margin: 0;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .gfg-inline-profile .user-name {
+      font-size: 0.76rem;
+    }
+
+    .gfg-inline-profile .user-role {
+      font-size: 0.66rem;
+      opacity: 0.85;
+    }
+
+    .gfg-inline-profile .user-role::before {
+      content: "•";
+      margin-right: 4px;
+      opacity: 0.75;
+    }
+
+    .gfg-inline-profile .online-dot {
+      flex-shrink: 0;
+    }
+
+    .gfg-sidebar-meta {
+      min-width: 0;
+      display: flex !important;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      font-size: 0.76rem !important;
+      line-height: 1.1;
     }
 
     .gfg-logout-btn svg {
@@ -291,14 +564,7 @@ function createAutoLogoutButton() {
   btn.title = 'Log out';
   btn.setAttribute('aria-label', 'Log out');
   btn.classList.add('gfg-logout-btn');
-  btn.innerHTML = `
-    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-      <polyline points="16 17 21 12 16 7"></polyline>
-      <line x1="21" y1="12" x2="9" y2="12"></line>
-    </svg>
-    <span>Log Out</span>
-  `;
+  btn.textContent = 'LOGOUT';
   return btn;
 }
 
@@ -335,22 +601,10 @@ function bindLogout() {
     logoutBtn = createAutoLogoutButton();
   }
 
+  // Keep a consistent LOGOUT control beside profile identity.
   logoutBtn.classList.add('gfg-logout-btn');
-  logoutBtn.classList.remove('btn-logout', 'sidebar-logout-btn');
-  logoutBtn.id = 'logout-btn';
-  logoutBtn.innerHTML = `
-    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-      <polyline points="16 17 21 12 16 7"></polyline>
-      <line x1="21" y1="12" x2="9" y2="12"></line>
-    </svg>
-    <span>Log Out</span>
-  `;
-
-  if (logoutBtn instanceof HTMLButtonElement) {
-    logoutBtn.type = 'button';
-  }
-
+  logoutBtn.classList.remove('gfg-logout-floating');
+  logoutBtn.textContent = 'LOGOUT';
   logoutBtn.removeAttribute('style');
 
   const topbar = document.querySelector('.dashboard-topbar');
@@ -374,6 +628,7 @@ function bindLogout() {
 
 async function startApp() {
   await bootstrap();
+  enforceRoleSidebarConsistency();
   applyClientNoMockDataState();
   bindLogout();
 }
