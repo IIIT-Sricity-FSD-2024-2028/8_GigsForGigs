@@ -233,6 +233,20 @@ function renderPendingRequests() {
   });
 }
 
+function initPendingRequestsPage() {
+  if (!window.__gfgPendingRequestsRealtimeBound) {
+    window.__gfgPendingRequestsRealtimeBound = true;
+    window.addEventListener('gfg:workflow-updated', renderPendingRequests);
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'gfg_gig_workflow_state') {
+        renderPendingRequests();
+      }
+    });
+  }
+
+  renderPendingRequests();
+}
+
 // ── Public entry point ───────────────────────────────────────────
 
 export function init() {
@@ -241,6 +255,6 @@ export function init() {
   if (path.includes('review-shortlist.html')) {
     renderReviewShortlist();
   } else if (path.includes('pending-requests.html')) {
-    renderPendingRequests();
+    initPendingRequestsPage();
   }
 }
