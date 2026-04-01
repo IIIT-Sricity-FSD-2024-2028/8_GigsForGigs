@@ -8,17 +8,13 @@
 
 import { guardPage } from './modules/auth.js';
 import * as auth from './modules/auth.js';
-
-const MODULE_LOADERS = {
-  auth: async () => auth,
-  tasks: async () => import('./modules/tasks.js'),
-  applications: async () => import('./modules/applications.js'),
-  deliverables: async () => import('./modules/deliverables.js'),
-  managers: async () => import('./modules/managers.js'),
-  profile: async () => import('./modules/profile.js'),
-  dashboard: async () => import('./modules/dashboard.js'),
-  marketplace: async () => import('./modules/marketplace.js')
-};
+import * as tasks from './modules/tasks.js';
+import * as applications from './modules/applications.js';
+import * as deliverables from './modules/deliverables.js';
+import * as managers from './modules/managers.js';
+import * as profile from './modules/profile.js';
+import * as dashboard from './modules/dashboard.js';
+import * as services from './modules/services.js';
 
 // ── Page → module mapping ────────────────────────────────────────
 // Pages that do NOT require auth (public pages)
@@ -53,16 +49,19 @@ const PAGE_MAP = {
   'manager-dashboard.html':         { moduleKey: 'tasks',         roles: ['manager'] },
 
   // Gig professional pages
-  'gig-dashboard.html':             { moduleKey: 'dashboard',     roles: ['gig'] },
-  'gig-profile.html':               { moduleKey: 'profile',       roles: ['gig'] },
-  'profile-completion-gig.html':    { moduleKey: 'profile',       roles: [] },
-  'explore-tasks.html':             { moduleKey: 'tasks',         roles: ['gig'] },
-  'pending-requests.html':          { moduleKey: 'applications',  roles: ['gig'] },
-  'active-tasks.html':              { moduleKey: 'tasks',         roles: ['gig'] },
-  'completed-projects.html':        { moduleKey: 'deliverables',  roles: ['gig'] },
-  'project-detail.html':            { moduleKey: 'deliverables',  roles: ['gig', 'client', 'manager'] },
-  'post-service.html':              { moduleKey: 'marketplace',   roles: ['gig'] },
-  'total-earnings.html':            { moduleKey: 'dashboard',     roles: ['gig'] }
+  'gig-dashboard.html':             { module: dashboard,     roles: ['gig'] },
+  'gig-profile.html':               { module: profile,       roles: ['gig'] },
+  'profile-completion-gig.html':    { module: profile,       roles: [] },
+  'explore-tasks.html':             { module: tasks,         roles: ['gig'] },
+  'pending-requests.html':          { module: applications,  roles: ['gig'] },
+  'active-tasks.html':              { module: tasks,         roles: ['gig'] },
+  'completed-projects.html':        { module: deliverables,  roles: ['gig'] },
+  'project-detail.html':            { module: deliverables,  roles: ['gig', 'client', 'manager'] },
+  'post-service.html':              { module: services,      roles: ['gig'] },
+  'service-published.html':         { module: null,          roles: ['gig'] },
+  'total-earnings.html':            { module: null,          roles: ['gig'] },
+  'submit-deliverables.html':       { module: deliverables,  roles: ['gig'] },
+  'submission-success.html':        { module: null,          roles: ['gig'] }
 };
 
 // ── Bootstrap ────────────────────────────────────────────────────

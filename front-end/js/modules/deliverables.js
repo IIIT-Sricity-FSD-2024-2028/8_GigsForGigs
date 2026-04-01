@@ -198,25 +198,7 @@ function initProjectDetail() {
   if (user.role === 'gig' && task.assignedTo === user.id && task.status === 'in_progress') {
     if (acceptBtn) {
       acceptBtn.textContent = 'Submit Deliverable';
-      acceptBtn.href = '#';
-      acceptBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        // Create a deliverable
-        deliverables.push({
-          id: generateId('d'),
-          taskId: task.id,
-          gigId: user.id,
-          title: `${task.title} - Deliverable`,
-          description: 'Deliverable submitted for review.',
-          files: ['deliverable_files.zip'],
-          message: 'Please review the submitted work.',
-          status: 'submitted',
-          submittedAt: new Date().toISOString()
-        });
-        task.status = 'under_review';
-        saveTasks();
-        window.location.href = 'active-tasks.html';
-      });
+      acceptBtn.href = `submit-deliverables.html?taskId=${task.id}`;
     }
     if (declineBtn) declineBtn.style.display = 'none';
   } else if (user.role === 'gig' && task.status === 'open') {
@@ -433,6 +415,167 @@ function renderCompletedProjects() {
   }).join('');
 }
 
+// ── submit-deliverables.html ─────────────────────────────────────
+
+function initSubmitDeliverables() {
+  const user = getUser();
+  if (!user) return;
+
+  // ── Populate sidebar user info ─────────────────────────────────
+  const sidebarAvatar = document.getElementById('sidebar-avatar');
+  const sidebarName = document.getElementById('sidebar-user-name');
+  if (sidebarAvatar && user.name) sidebarAvatar.textContent = getInitials(user.name);
+  if (sidebarName && user.name) sidebarName.textContent = user.name;
+
+  // ── Resolve the project from URL or first in-progress task ─────
+  const taskId = getTaskIdFromUrl();
+  const task = taskId
+    ? getTaskById(taskId)
+    : tasks.find(t => t.status === 'in_progress' && t.assignedTo === user.id);
+
+  if (task) {
+    const client = getUserById(task.clientId);
+    const nameEl = document.getElementById('context-project-name');
+    const clientEl = document.getElementById('context-client-name');
+    const linkEl = document.getElementById('view-project-link');
+
+    if (nameEl) nameEl.textContent = task.title;
+    if (clientEl) {
+      const clientName = client ? (client.company || client.name) : 'Client';
+      clientEl.innerHTML = `
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        Client: ${clientName}`;
+    }
+    if (linkEl) linkEl.href = `project-detail.html?taskId=${task.id}`;
+  }
+
+  // ── Drag-and-drop file upload ──────────────────────────────────
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('file-upload');
+  const fileListEl = document.getElementById('file-list');
+  let selectedFiles = [];
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function renderFileList() {
+    if (!fileListEl) return;
+    fileListEl.innerHTML = selectedFiles.map((file, i) => `
+      <div class="file-item" data-index="${i}">
+        <div class="file-item-icon">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        </div>
+        <div class="file-item-info">
+          <div class="file-item-name">${file.name}</div>
+          <div class="file-item-size">${formatFileSize(file.size)}</div>
+        </div>
+        <button type="button" class="file-item-remove" data-index="${i}" title="Remove file">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    `).join('');
+
+    fileListEl.querySelectorAll('.file-item-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-index'), 10);
+        selectedFiles.splice(idx, 1);
+        renderFileList();
+      });
+    });
+  }
+
+  function addFiles(fileArray) {
+    for (const f of fileArray) {
+      if (!selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
+        selectedFiles.push(f);
+      }
+    }
+    renderFileList();
+  }
+
+  if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('drag-over');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('drag-over');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) {
+        addFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) {
+        addFiles(Array.from(fileInput.files));
+        fileInput.value = '';
+      }
+    });
+  }
+
+  // ── Form submission ────────────────────────────────────────────
+  const form = document.getElementById('submit-deliverables-form');
+  const submitBtn = document.getElementById('submit-work-btn');
+  const toast = document.getElementById('submit-toast');
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const notes = document.getElementById('submission-notes')?.value?.trim() || '';
+      const link = document.getElementById('external-link')?.value?.trim() || '';
+
+      if (!notes && selectedFiles.length === 0 && !link) {
+        alert('Please provide submission notes, upload files, or add an external link before submitting.');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        submitBtn.classList.add('submitting');
+      }
+
+      const fileNames = selectedFiles.map(f => f.name);
+      const newDeliverable = {
+        id: generateId('d'),
+        taskId: task ? task.id : null,
+        gigId: user.id,
+        title: task ? `${task.title} - Deliverable` : 'Deliverable Submission',
+        description: notes,
+        files: fileNames,
+        externalLink: link || null,
+        message: notes || 'Please review the submitted work.',
+        status: 'submitted',
+        submittedAt: new Date().toISOString()
+      };
+
+      deliverables.push(newDeliverable);
+
+      if (task && task.status === 'in_progress') {
+        task.status = 'under_review';
+      }
+
+      if (toast) {
+        toast.classList.add('visible');
+      }
+
+      setTimeout(() => {
+        window.location.href = 'submission-success.html';
+      }, 1800);
+    });
+  }
+}
+
 // ── Public entry point ───────────────────────────────────────────
 
 export function init() {
@@ -444,5 +587,7 @@ export function init() {
     initProjectDetail();
   } else if (path.includes('completed-projects.html')) {
     renderCompletedProjects();
+  } else if (path.includes('submit-deliverables.html')) {
+    initSubmitDeliverables();
   }
 }

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manager Dashboard - GigsForGigs</title>
+  <meta name="description" content="GigsForGigs manager dashboard – oversee projects, search talent, and manage shortlists.">
   <link rel="stylesheet" href="../../css/variables.css">
   <link rel="stylesheet" href="../../css/reset.css">
   <link rel="stylesheet" href="../../css/components.css">
@@ -13,17 +14,22 @@
 <body>
 
 <div class="dashboard-layout">
-  
-  <!-- Sidebar (GigsForGigs) -->
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────── -->
   <aside class="dashboard-sidebar">
     <a href="manager-dashboard.html" class="client-sidebar-brand">
-      <div class="brand-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-blue)"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 12l3 3 5-5"></path>
+        </svg>
+      </div>
       <div class="brand-text">
         <span class="brand-name">GigsForGigs</span>
-        
+        <span class="brand-sub">Manager Dashboard</span>
       </div>
     </a>
-    
+
     <nav class="sidebar-nav">
       <a href="manager-dashboard.html" class="nav-item active">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -31,150 +37,179 @@
       </a>
       <a href="../client/search-talent.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        Find Talent
+        Search Talent
+      </a>
+      <a href="../client/my-gigs-client.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        My Gigs
       </a>
       <a href="../client/review-shortlist.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-        Shortlisted
+        Shortlisted Candidates
       </a>
     </nav>
-    
+
     <div class="sidebar-user-info">
-      <div class="user-avatar" style="background-color: var(--color-primary-blue); color: var(--color-white); font-weight: 700; font-size: 0.875rem;">AR</div>
+      <div class="user-avatar user-avatar-copper">CH</div>
       <div class="user-details">
-        <div class="user-name">Alex Rivera</div>
-        <div class="user-role">Project Manager</div>
+        <div class="user-name">Chaitanya</div>
+        <div class="user-role">Manager Account</div>
       </div>
+      <div class="online-dot"></div>
     </div>
   </aside>
 
-  <!-- Main Content -->
+  <!-- ─── Main Content ────────────────────────────────────────── -->
   <main class="dashboard-main">
-    
+
     <header class="dashboard-topbar">
-      <div class="topbar-search" style="width: 350px;">
+      <div class="topbar-search">
         <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" placeholder="Search projects...">
+        <input type="text" id="manager-search" placeholder="Search tasks, talent, or projects...">
       </div>
-      <div style="display: flex; gap: var(--spacing-md); align-items: center;">
-        <a href="../client/client-profile-selection.html" style="color: var(--color-text-muted); text-decoration: none;" title="Switch Profile">
-          <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-        </a>
+      <div class="topbar-actions">
+        <button class="btn-logout" id="logout-btn" type="button">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Log Out
+        </button>
       </div>
     </header>
 
     <div class="dashboard-content">
-      
-      <!-- Active Tasks Section (Figma: top table with PROFESSIONAL, EST. DEADLINE, QUOTE, STATUS, ACTION) -->
-      <div class="tasks-section" id="manager-active-tasks-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
-          <h2 class="section-title" style="margin-bottom: 0;">Active Tasks</h2>
+
+      <!-- Welcome greeting -->
+      <h1 class="welcome-greeting" id="manager-greeting">Welcome back, Chaitanya!</h1>
+      <p class="welcome-subtitle">Here's a summary of your hiring activity.</p>
+
+      <!-- Metric cards row -->
+      <div class="metrics-row">
+
+        <div class="metric-card">
+          <div class="metric-card-head">
+            <div class="metric-icon metric-icon-seagrass">
+              <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <span class="metric-badge metric-badge-up">+12%</span>
+          </div>
+          <div class="metric-label">Active Projects</div>
+          <div class="metric-value" id="manager-active-projects">8</div>
+          <div class="metric-description">Currently in progress</div>
         </div>
-        
-        <table class="tasks-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>PROFESSIONAL</th>
-              <th>EST. DEADLINE</th>
-              <th>QUOTE</th>
-              <th>STATUS</th>
-              <th>ACTION</th>
-            </tr>
-          </thead>
-          <tbody id="manager-active-tasks-body">
-            <tr>
-              <td>
-                <div style="font-weight: 600; color: var(--color-text-dark);">Logo Refresh - Q4</div>
-                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Brand Identity</div>
-              </td>
-              <td>
-                <div class="pro-cell">
-                  <div class="pro-photo"></div>
-                  Elena Rodriguez
-                </div>
-              </td>
-              <td style="color: var(--color-text-muted);">Nov 05, 2023</td>
-              <td style="font-weight: 600;">$400</td>
-              <td><span class="badge-pending-task">Pending</span></td>
-              <td><a href="../client/review-deliverables.html" class="btn-review-proposal">Review Proposal</a></td>
-            </tr>
-            <tr>
-              <td>
-                <div style="font-weight: 600; color: var(--color-text-dark);">Social Media Copywriting</div>
-                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Content Marketing</div>
-              </td>
-              <td>
-                <div class="pro-cell">
-                  <div class="pro-photo"></div>
-                  James Wilson
-                </div>
-              </td>
-              <td style="color: var(--color-text-muted);">Nov 02, 2023</td>
-              <td style="font-weight: 600;">$250</td>
-              <td><span class="badge-pending-task">Pending</span></td>
-              <td><a href="../client/review-deliverables.html" class="btn-review-proposal">Review Proposal</a></td>
-            </tr>
-          </tbody>
-        </table>
+
+        <div class="metric-card">
+          <div class="metric-card-head">
+            <div class="metric-icon metric-icon-copper">
+              <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+            </div>
+            <span class="metric-badge metric-badge-action">Action Req.</span>
+          </div>
+          <div class="metric-label">Pending Applications</div>
+          <div class="metric-value" id="manager-pending-apps">14</div>
+          <div class="metric-description">Awaiting your review</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-head">
+            <div class="metric-icon metric-icon-blue">
+              <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <span class="metric-badge metric-badge-neutral">Monthly</span>
+          </div>
+          <div class="metric-label">Tasks Posted This Month</div>
+          <div class="metric-value" id="manager-tasks-posted">6</div>
+          <div class="metric-description">Created by you</div>
+        </div>
+
       </div>
 
-      <!-- Pending Tasks Section (Figma: bottom table with TASK TITLE, PROFESSIONAL, DEADLINE, BUDGET, STATUS) -->
-      <div class="tasks-section" id="manager-pending-tasks-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
-          <h2 class="section-title" style="margin-bottom: 0;">Pending Tasks</h2>
-          <a href="#" class="filter-link">
-            <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-            Filter
-          </a>
+      <!-- Recent Project Activity -->
+      <div class="activity-section">
+        <div class="activity-header">
+          <h2 class="activity-title">Recent Project Activity</h2>
+          <a href="../client/my-gigs-client.html" class="activity-link">View All Projects →</a>
         </div>
-        
-        <table class="tasks-table">
+
+        <table class="activity-table" id="manager-activity-table">
           <thead>
             <tr>
-              <th>TASK TITLE</th>
-              <th>PROFESSIONAL</th>
-              <th>DEADLINE</th>
-              <th>BUDGET</th>
-              <th>STATUS</th>
-              <th></th>
+              <th>Project Name</th>
+              <th>Status</th>
+              <th>Progress</th>
+              <th>Budget</th>
+              <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="manager-pending-tasks-body">
+          <tbody>
             <tr>
               <td>
-                <div style="font-weight: 600; color: var(--color-text-dark);">UX Audit for Mobile App</div>
-                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Design System • Phase 1</div>
+                <div class="task-name-cell">Brand Identity Redesign</div>
+                <div class="task-category">Design Systems</div>
               </td>
+              <td><span class="status-badge status-in-progress">In Progress</span></td>
+              <td class="progress-cell">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill progress-bar-fill-blue" style="width: 65%"></div>
+                </div>
+                <div class="progress-label">65%</div>
+              </td>
+              <td class="budget-cell">$2,400</td>
               <td>
-                <div class="pro-cell">
-                  <div class="pro-photo"></div>
-                  Sarah Chen
+                <div class="actions-cell">
+                  <button class="btn-icon-action" title="View" aria-label="View project">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </button>
+                  <button class="more-btn" aria-label="More options">⋮</button>
                 </div>
               </td>
-              <td style="color: var(--color-text-muted);">Oct 24, 2023</td>
-              <td style="font-weight: 600;">$1,200</td>
-              <td><span class="badge-active-task">Active</span></td>
-              <td><button class="more-btn">⋮</button></td>
             </tr>
             <tr>
               <td>
-                <div style="font-weight: 600; color: var(--color-text-dark);">API Documentation Suite</div>
-                <div style="font-size: 0.75rem; color: var(--color-text-muted);">Backend Development</div>
+                <div class="task-name-cell">Mobile App Development</div>
+                <div class="task-category">Technology</div>
               </td>
+              <td><span class="status-badge status-scheduled">Scheduled</span></td>
+              <td class="progress-cell">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill progress-bar-fill-seagrass" style="width: 8%"></div>
+                </div>
+                <div class="progress-label">8%</div>
+              </td>
+              <td class="budget-cell">$5,000</td>
               <td>
-                <div class="pro-cell">
-                  <div class="pro-photo"></div>
-                  Marcus Thorne
+                <div class="actions-cell">
+                  <button class="btn-icon-action" title="View" aria-label="View project">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </button>
+                  <button class="more-btn" aria-label="More options">⋮</button>
                 </div>
               </td>
-              <td style="color: var(--color-text-muted);">Oct 28, 2023</td>
-              <td style="font-weight: 600;">$850</td>
-              <td><span class="badge-active-task">Active</span></td>
-              <td><button class="more-btn">⋮</button></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="task-name-cell">Q3 Marketing Strategy</div>
+                <div class="task-category">Growth</div>
+              </td>
+              <td><span class="status-badge status-review-needed">Review Needed</span></td>
+              <td class="progress-cell">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill progress-bar-fill-copper" style="width: 100%"></div>
+                </div>
+                <div class="progress-label">100%</div>
+              </td>
+              <td class="budget-cell">$1,850</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn-icon-action" title="View" aria-label="View project">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </button>
+                  <button class="more-btn" aria-label="More options">⋮</button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
+
+        <a href="../client/my-gigs-client.html" class="show-more-link">Show More Activity ›</a>
       </div>
 
     </div>
@@ -185,5 +220,3 @@
 
 </body>
 </html>
-
-

@@ -129,8 +129,120 @@
 
         <!-- task list -->
         <section id="active-tasks-list" style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
-          <div class="dashboard-section" style="text-align:center;color:var(--color-text-muted);">
-            Loading active tasks...
+
+          <div class="task-card" style="align-items: stretch;">
+            <div
+              style="width: 120px; background-color: rgba(8, 75, 131, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(8, 75, 131, 0.2); display: flex; align-items: center; justify-content: center; margin-right: var(--spacing-lg);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-dark)"
+                stroke-width="2">
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                </path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+              <div
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
+                <div class="task-details">
+                  <h3>E-commerce Website Redesign</h3>
+                  <p>TechStore Inc. • Due in 5 days (Nov 12, 2024)</p>
+                </div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-secondary);">$2,500</div>
+              </div>
+
+              <div
+                style="display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; color: var(--color-text-muted);">
+                <span>Progress: In Development</span>
+                <span style="font-weight: 600; color: var(--color-primary-dark);">65%</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar" style="width: 65%;"></div>
+              </div>
+            </div>
+
+            <div
+              style="display: flex; flex-direction: column; justify-content: center; margin-left: var(--spacing-xxl); min-width: 140px;">
+              <a href="project-detail.html" class="btn btn-outline btn-full"
+                style="text-align: center; margin-bottom: var(--spacing-sm); text-decoration: none;">View Details</a>
+              <a href="project-detail.html" class="btn btn-primary-blue btn-full"
+                style="text-align: center; text-decoration: none;">Submit Draft</a>
+            </div>
+          </div>
+
+          <div class="task-card" style="align-items: stretch;">
+            <div
+              style="width: 120px; background-color: rgba(191, 105, 0, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(191, 105, 0, 0.2); display: flex; align-items: center; justify-content: center; margin-right: var(--spacing-lg);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-blue)"
+                stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+              <div
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
+                <div class="task-details">
+                  <h3>FinTech Mobile App Assets</h3>
+                  <p>Nova Bank • Due in 12 days (Nov 19, 2024)</p>
+                </div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-secondary);">$1,450</div>
+              </div>
+
+              <div
+                style="display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; color: var(--color-text-muted);">
+                <span>Progress: Requirement Gathering</span>
+                <span style="font-weight: 600; color: var(--color-primary-dark);">15%</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar" style="width: 15%;"></div>
+              </div>
+            </div>
+
+            <div
+              style="display: flex; flex-direction: column; justify-content: center; margin-left: var(--spacing-xxl); min-width: 140px;">
+              <a href="project-detail.html" class="btn btn-outline btn-full"
+                style="text-align: center; text-decoration: none;">View Details</a>
+            </div>
+          </div>
+
+          <div class="task-card" style="align-items: stretch;">
+            <div
+              style="width: 120px; background-color: var(--color-text-dark); border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; margin-right: var(--spacing-lg);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-white)" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+              <div
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
+                <div class="task-details">
+                  <h3>SEO Strategy & Content Plan</h3>
+                  <p>GrowthMetrics • Due Tomorrow (Nov 8, 2024)</p>
+                </div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-secondary);">$900</div>
+              </div>
+
+              <div
+                style="display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; color: var(--color-text-muted);">
+                <span>Progress: Final Review</span>
+                <span style="font-weight: 600; color: var(--color-primary-dark);">90%</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar" style="width: 90%;"></div>
+              </div>
+            </div>
+
+            <div
+              style="display: flex; flex-direction: column; justify-content: center; margin-left: var(--spacing-xxl); min-width: 140px;">
+              <a href="project-detail.html" class="btn btn-outline btn-full"
+                style="text-align: center; margin-bottom: var(--spacing-sm); text-decoration: none;">View Details</a>
+              <a href="project-detail.html" class="btn btn-primary-blue btn-full"
+                style="text-align: center; text-decoration: none;">Submit Final</a>
+            </div>
           </div>
 
         </section>
