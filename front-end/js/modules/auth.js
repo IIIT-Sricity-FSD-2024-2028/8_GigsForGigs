@@ -5,7 +5,13 @@
 
 import { users, saveUsers } from '../data/mockData.js';
 import { getUser, setUser, clearUser, clearAppState } from '../utils/storage.js';
-import { validateLoginForm, validateSignupForm } from '../utils/validation.js';
+import {
+  validateEmail,
+  validateName,
+  validatePassword,
+  showError,
+  clearError
+} from '../utils/validation.js';
 import { generateId } from '../utils/helpers.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -149,6 +155,15 @@ function managerNameFromEmail(email, fallbackName = 'Manager') {
   return prefix || String(fallbackName || '').trim() || 'Manager';
 }
 
+function normalizeInputValue(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function clearAuthError() {
+  const errEl = document.getElementById('auth-error');
+  if (errEl) errEl.remove();
+}
+
 /**
  * Optional hard reset: /pages/signup.html?reset=1 or /pages/login.html?reset=1
  */
@@ -249,6 +264,98 @@ function initLogin() {
   const form = document.getElementById('login-form');
   if (!form) return;
 
+  form.noValidate = true;
+
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const roleSelect = document.getElementById('role');
+
+  function isAdminLogin() {
+    return String(emailInput?.value || '').trim().toLowerCase() === 'admin123@gmail.com';
+  }
+
+  function validateLoginRoleField() {
+    if (!roleSelect) return true;
+
+    if (isAdminLogin()) {
+      clearError('role');
+      return true;
+    }
+
+    if (!roleSelect.value) {
+      showError('role', 'Please select a role.');
+      return false;
+    }
+
+    clearError('role');
+    return true;
+  }
+
+  function validateLoginEmailField() {
+    if (!emailInput) return true;
+    const normalized = normalizeInputValue(emailInput.value);
+    emailInput.value = normalized;
+
+    const error = validateEmail(normalized);
+    if (error) {
+      showError('email', error);
+      return false;
+    }
+
+    clearError('email');
+    return true;
+  }
+
+  function validateLoginPasswordField() {
+    if (!passwordInput) return true;
+
+    const error = validatePassword(passwordInput.value, 'Password');
+    if (error) {
+      showError('password', error);
+      return false;
+    }
+
+    clearError('password');
+    return true;
+  }
+
+  function validateLoginLiveForm() {
+    let valid = true;
+    if (!validateLoginRoleField()) valid = false;
+    if (!validateLoginEmailField()) valid = false;
+    if (!validateLoginPasswordField()) valid = false;
+    return valid;
+  }
+
+  roleSelect?.addEventListener('input', () => {
+    validateLoginRoleField();
+    clearAuthError();
+  });
+  roleSelect?.addEventListener('change', () => {
+    validateLoginRoleField();
+    clearAuthError();
+  });
+
+  emailInput?.addEventListener('input', () => {
+    validateLoginEmailField();
+    validateLoginRoleField();
+    clearAuthError();
+  });
+  emailInput?.addEventListener('change', () => {
+    validateLoginEmailField();
+    validateLoginRoleField();
+    clearAuthError();
+  });
+
+  passwordInput?.addEventListener('input', () => {
+    validateLoginPasswordField();
+    clearAuthError();
+  });
+  passwordInput?.addEventListener('change', () => {
+    validateLoginPasswordField();
+    clearAuthError();
+  });
+
   // Rescue first-time flow if the app lands back on login.
   const hasOnboardingState = sessionStorage.getItem('isFirstTimeJoin') === '1';
   const existingUser = getUser() || getPendingUser() || getWindowUser();
@@ -275,7 +382,7 @@ function initLogin() {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!validateLoginForm()) return;
+    if (!validateLoginLiveForm()) return;
 
     const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value.trim();
@@ -357,7 +464,142 @@ function initSignup() {
     return;
   }
 
+  form.noValidate = true;
+
   console.log('✅ Signup form initialized');
+
+  const roleSelect = document.getElementById('role');
+  const fullname = document.getElementById('fullname');
+  const email = document.getElementById('email');
+  const password = document.getElementById('password');
+  const confirm = document.getElementById('confirm-password');
+
+  function validateSignupRoleField() {
+    if (!roleSelect) return true;
+    if (!roleSelect.value) {
+      showError('role', 'Please select a role.');
+      return false;
+    }
+    clearError('role');
+    return true;
+  }
+
+  function validateSignupNameField() {
+    if (!fullname) return true;
+    const normalized = normalizeInputValue(fullname.value);
+    fullname.value = normalized;
+
+    const error = validateName(normalized);
+    if (error) {
+      showError('fullname', error);
+      return false;
+    }
+
+    clearError('fullname');
+    return true;
+  }
+
+  function validateSignupEmailField() {
+    if (!email) return true;
+    const normalized = normalizeInputValue(email.value);
+    email.value = normalized;
+
+    const error = validateEmail(normalized);
+    if (error) {
+      showError('email', error);
+      return false;
+    }
+
+    clearError('email');
+    return true;
+  }
+
+  function validateSignupPasswordField() {
+    if (!password) return true;
+
+    const error = validatePassword(password.value, 'Password');
+    if (error) {
+      showError('password', error);
+      return false;
+    }
+
+    clearError('password');
+    return true;
+  }
+
+  function validateSignupConfirmField() {
+    if (!confirm) return true;
+
+    if (!confirm.value) {
+      showError('confirm-password', 'Please confirm your password.');
+      return false;
+    }
+
+    if (password && confirm.value !== password.value) {
+      showError('confirm-password', 'Passwords do not match.');
+      return false;
+    }
+
+    clearError('confirm-password');
+    return true;
+  }
+
+  function validateSignupLiveForm() {
+    let valid = true;
+    if (!validateSignupRoleField()) valid = false;
+    if (!validateSignupNameField()) valid = false;
+    if (!validateSignupEmailField()) valid = false;
+    if (!validateSignupPasswordField()) valid = false;
+    if (!validateSignupConfirmField()) valid = false;
+    return valid;
+  }
+
+  roleSelect?.addEventListener('input', () => {
+    validateSignupRoleField();
+    clearAuthError();
+  });
+  roleSelect?.addEventListener('change', () => {
+    validateSignupRoleField();
+    clearAuthError();
+  });
+
+  fullname?.addEventListener('input', () => {
+    validateSignupNameField();
+    clearAuthError();
+  });
+  fullname?.addEventListener('change', () => {
+    validateSignupNameField();
+    clearAuthError();
+  });
+
+  email?.addEventListener('input', () => {
+    validateSignupEmailField();
+    clearAuthError();
+  });
+  email?.addEventListener('change', () => {
+    validateSignupEmailField();
+    clearAuthError();
+  });
+
+  password?.addEventListener('input', () => {
+    validateSignupPasswordField();
+    validateSignupConfirmField();
+    clearAuthError();
+  });
+  password?.addEventListener('change', () => {
+    validateSignupPasswordField();
+    validateSignupConfirmField();
+    clearAuthError();
+  });
+
+  confirm?.addEventListener('input', () => {
+    validateSignupConfirmField();
+    clearAuthError();
+  });
+  confirm?.addEventListener('change', () => {
+    validateSignupConfirmField();
+    clearAuthError();
+  });
 
   // Auto-select role if passed in URL
   const signupParams = new URLSearchParams(window.location.search);
@@ -371,12 +613,6 @@ function initSignup() {
     e.preventDefault();
     console.log('🔍 Signup form submitted');
 
-    const roleSelect = document.getElementById('role');
-    const fullname = document.getElementById('fullname');
-    const email = document.getElementById('email');
-    const password = document.getElementById('password');
-    const confirm = document.getElementById('confirm-password');
-
     // Log all field values for debugging
     console.log('📋 Form values:', {
       role: roleSelect?.value || 'NOT SELECTED',
@@ -386,7 +622,7 @@ function initSignup() {
       confirm: confirm?.value || 'EMPTY'
     });
 
-    if (!validateSignupForm()) {
+    if (!validateSignupLiveForm()) {
       console.log('❌ Validation failed - check error messages on form');
       // Scroll to first error
       const firstError = document.querySelector('[id$="-error"]');

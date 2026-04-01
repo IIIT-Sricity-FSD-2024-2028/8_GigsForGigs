@@ -6,7 +6,7 @@
 
 import { users, saveUsers } from '../data/mockData.js';
 import { getUser, setUser, get, set } from '../utils/storage.js';
-import { validateProfileForm } from '../utils/validation.js';
+import { showError, clearError } from '../utils/validation.js';
 import { getInitials } from '../utils/helpers.js';
 
 // ── profile-completion-client.html ───────────────────────────────
@@ -18,15 +18,144 @@ function initProfileCompletionClient() {
   const form = document.getElementById('client-profile-form');
   if (!form) return;
 
+  const TEXT_ONLY_RE = /^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$/;
+  const ALLOWED_INDUSTRIES = new Set(['tech', 'marketing', 'finance', 'other']);
+  const ALLOWED_COMPANY_SIZES = new Set(['1-10', '11-50', '51-200', '200+']);
+  const currentYear = new Date().getFullYear();
+  const foundedYearInput = document.getElementById('founded');
+  if (foundedYearInput) {
+    foundedYearInput.setAttribute('min', '1900');
+    foundedYearInput.setAttribute('max', String(currentYear));
+    foundedYearInput.setAttribute('step', '1');
+  }
+
+  function normalize(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ');
+  }
+
+  function validateCompanyName(value) {
+    const companyName = normalize(value);
+    if (!companyName) return 'Company Name is required.';
+    if (!TEXT_ONLY_RE.test(companyName)) {
+      return 'Company Name can only contain letters, numbers, and spaces.';
+    }
+    return '';
+  }
+
+  function validateIndustry(value) {
+    if (!value) return 'Industry is required.';
+    if (!ALLOWED_INDUSTRIES.has(value)) return 'Please select a valid industry.';
+    return '';
+  }
+
+  function validateWebsite(value) {
+    const website = String(value || '').trim();
+    if (!website) return '';
+
+    if (!/^https?:\/\//i.test(website)) {
+      return 'Website must start with http:// or https://.';
+    }
+
+    try {
+      new URL(website);
+    } catch {
+      return 'Please enter a valid website URL.';
+    }
+
+    return '';
+  }
+
+  function validateCompanySize(value) {
+    if (!value || !ALLOWED_COMPANY_SIZES.has(value)) {
+      return 'Please select a valid company size.';
+    }
+    return '';
+  }
+
+  function validateFoundedYear(value) {
+    const yearValue = String(value || '').trim();
+    if (!yearValue) return '';
+
+    if (!/^\d{4}$/.test(yearValue)) {
+      return 'Year Founded must be a 4-digit year.';
+    }
+
+    const year = Number(yearValue);
+    if (Number.isNaN(year) || year < 1900 || year > currentYear) {
+      return `Year Founded must be between 1900 and ${currentYear}.`;
+    }
+
+    return '';
+  }
+
+  function validateDescription(value) {
+    const description = normalize(value);
+    if (!description) return '';
+    if (!TEXT_ONLY_RE.test(description)) {
+      return 'Company Description can only contain letters, numbers, and spaces.';
+    }
+    return '';
+  }
+
+  const fieldValidators = {
+    'company-name': validateCompanyName,
+    industry: validateIndustry,
+    website: validateWebsite,
+    'company-size': validateCompanySize,
+    founded: validateFoundedYear,
+    desc: validateDescription
+  };
+
+  function validateField(fieldId) {
+    const el = document.getElementById(fieldId);
+    if (!el) return true;
+
+    const validator = fieldValidators[fieldId];
+    if (!validator) return true;
+
+    const error = validator(el.value);
+    if (error) {
+      showError(fieldId, error);
+      return false;
+    }
+
+    clearError(fieldId);
+    return true;
+  }
+
+  function validateClientProfileForm() {
+    let valid = true;
+    Object.keys(fieldValidators).forEach((fieldId) => {
+      if (!validateField(fieldId)) valid = false;
+    });
+    return valid;
+  }
+
+  form.noValidate = true;
+
+  Object.keys(fieldValidators).forEach((fieldId) => {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+
+    const runFieldValidation = () => validateField(fieldId);
+    el.addEventListener('input', runFieldValidation);
+    el.addEventListener('change', runFieldValidation);
+  });
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const required = [
-      { id: 'company-name', label: 'Company Name' },
-      { id: 'industry', label: 'Industry' }
-    ];
+    if (!validateClientProfileForm()) return;
 
-    if (!validateProfileForm(required)) return;
+    const companyNameInput = document.getElementById('company-name');
+    const websiteInput = document.getElementById('website');
+    const foundedInput = document.getElementById('founded');
+    const descriptionInput = document.getElementById('desc');
+
+    if (companyNameInput) companyNameInput.value = normalize(companyNameInput.value);
+    if (websiteInput) websiteInput.value = websiteInput.value.trim();
+    if (foundedInput) foundedInput.value = foundedInput.value.trim();
+    if (descriptionInput) descriptionInput.value = normalize(descriptionInput.value);
 
     const profileData = {
       companyName: document.getElementById('company-name')?.value.trim() || '',
@@ -70,15 +199,140 @@ function initProfileCompletionGig() {
   const form = document.getElementById('gig-profile-form');
   if (!form) return;
 
+  const TEXT_ONLY_RE = /^[A-Za-z0-9]+(?: [A-Za-z0-9]+)*$/;
+  const SKILLS_RE = /^[A-Za-z0-9 ]+(?:\s*,\s*[A-Za-z0-9 ]+)*$/;
+  const ALLOWED_AVAILABILITY = new Set(['full-time', 'part-time', 'as-needed']);
+
+  function normalize(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ');
+  }
+
+  function validateJobTitle(value) {
+    const title = normalize(value);
+    if (!title) return 'Professional Title is required.';
+    if (!TEXT_ONLY_RE.test(title)) {
+      return 'Professional Title can only contain letters, numbers, and spaces.';
+    }
+    return '';
+  }
+
+  function validateExperience(value) {
+    if (!value) return 'Years of Experience is required.';
+    return '';
+  }
+
+  function validateSkills(value) {
+    const skills = normalize(value);
+    if (!skills) return '';
+    if (!SKILLS_RE.test(skills)) {
+      return 'Skills can only use letters, numbers, spaces, and commas.';
+    }
+    return '';
+  }
+
+  function validatePortfolio(value) {
+    const portfolio = String(value || '').trim();
+    if (!portfolio) return '';
+
+    if (!/^https?:\/\//i.test(portfolio)) {
+      return 'Portfolio URL must start with http:// or https://.';
+    }
+
+    try {
+      new URL(portfolio);
+    } catch {
+      return 'Please enter a valid portfolio URL.';
+    }
+
+    return '';
+  }
+
+  function validateBio(value) {
+    const bio = normalize(value);
+    if (!bio) return '';
+    if (!TEXT_ONLY_RE.test(bio)) {
+      return 'Professional Bio can only contain letters, numbers, and spaces.';
+    }
+    return '';
+  }
+
+  function validateHourlyRate(value) {
+    const rate = String(value || '').trim();
+    if (!rate) return '';
+    const amount = Number(rate);
+    if (Number.isNaN(amount) || amount < 0) {
+      return 'Hourly Rate must be a valid number greater than or equal to 0.';
+    }
+    return '';
+  }
+
+  function validateAvailability(value) {
+    if (!value || !ALLOWED_AVAILABILITY.has(value)) {
+      return 'Please select a valid availability option.';
+    }
+    return '';
+  }
+
+  const fieldValidators = {
+    'job-title': validateJobTitle,
+    experience: validateExperience,
+    skills: validateSkills,
+    portfolio: validatePortfolio,
+    bio: validateBio,
+    'hourly-rate': validateHourlyRate,
+    availability: validateAvailability
+  };
+
+  function validateField(fieldId) {
+    const el = document.getElementById(fieldId);
+    if (!el) return true;
+
+    const validator = fieldValidators[fieldId];
+    if (!validator) return true;
+
+    const error = validator(el.value);
+    if (error) {
+      showError(fieldId, error);
+      return false;
+    }
+
+    clearError(fieldId);
+    return true;
+  }
+
+  function validateGigProfileForm() {
+    let valid = true;
+    Object.keys(fieldValidators).forEach((fieldId) => {
+      if (!validateField(fieldId)) valid = false;
+    });
+    return valid;
+  }
+
+  form.noValidate = true;
+
+  Object.keys(fieldValidators).forEach((fieldId) => {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+
+    const runFieldValidation = () => validateField(fieldId);
+    el.addEventListener('input', runFieldValidation);
+    el.addEventListener('change', runFieldValidation);
+  });
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    const required = [
-      { id: 'job-title', label: 'Professional Title' },
-      { id: 'experience', label: 'Years of Experience' }
-    ];
+    if (!validateGigProfileForm()) return;
 
-    if (!validateProfileForm(required)) return;
+    const titleInput = document.getElementById('job-title');
+    const skillsInput = document.getElementById('skills');
+    const portfolioInput = document.getElementById('portfolio');
+    const bioInput = document.getElementById('bio');
+
+    if (titleInput) titleInput.value = normalize(titleInput.value);
+    if (skillsInput) skillsInput.value = normalize(skillsInput.value);
+    if (portfolioInput) portfolioInput.value = portfolioInput.value.trim();
+    if (bioInput) bioInput.value = normalize(bioInput.value);
 
     const profileData = {
       title: document.getElementById('job-title')?.value.trim() || '',
