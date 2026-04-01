@@ -531,7 +531,6 @@ function bindLogout() {
 async function startApp() {
   await bootstrap();
   enforceRoleSidebarConsistency();
-  applyClientNoMockDataState();
   bindLogout();
 }
 

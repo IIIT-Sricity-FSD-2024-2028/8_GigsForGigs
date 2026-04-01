@@ -13,6 +13,40 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+/**
+ * Read JSON data from localStorage using a raw storage key.
+ * Returns a deep-cloned fallback when key is missing or invalid.
+ */
+export function getFromStorage(key, fallback = null) {
+  if (typeof localStorage === 'undefined') {
+    return fallback === null ? null : deepClone(fallback);
+  }
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback === null ? null : deepClone(fallback);
+    const parsed = JSON.parse(raw);
+    return parsed ?? (fallback === null ? null : deepClone(fallback));
+  } catch {
+    return fallback === null ? null : deepClone(fallback);
+  }
+}
+
+/**
+ * Persist JSON-serializable data to localStorage using a raw storage key.
+ * Returns true on success and false if storage is unavailable or fails.
+ */
+export function saveToStorage(key, data) {
+  if (typeof localStorage === 'undefined') return false;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function normalizeUserRecord(user) {
   if (!user || typeof user !== 'object') return null;
   if (!user.id || !user.email || !user.role) return null;
@@ -76,26 +110,12 @@ export function saveUsers() {
 }
 
 function readLocalArray(key, fallback) {
-  if (typeof localStorage === 'undefined') return fallback;
-
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
+  const parsed = getFromStorage(key, fallback);
+  return Array.isArray(parsed) ? parsed : deepClone(fallback);
 }
 
 function writeLocalArray(key, value) {
-  if (typeof localStorage === 'undefined') return;
-
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Ignore storage failures in private mode/quota exceeded.
-  }
+  saveToStorage(key, value);
 }
 
 function initializeLocalArray(key, seededValue) {

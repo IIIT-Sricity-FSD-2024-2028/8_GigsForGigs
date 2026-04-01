@@ -3,7 +3,7 @@
 // Pages: post-service.html, search-talent.html
 // ─────────────────────────────────────────────────────────────────
 
-import { services as seededServices, users } from '../data/mockData.js';
+import { services as seededServices, users, getFromStorage, saveToStorage } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import { generateId, getInitials, truncate } from '../utils/helpers.js';
 import { createGigHireRequestFromService, getClientContractSummary } from './gigState.js';
@@ -22,11 +22,7 @@ function getServicesFallback() {
 }
 
 function writeServices(list) {
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(SERVICES_KEY, JSON.stringify(list));
-    } catch {}
-  }
+  saveToStorage(SERVICES_KEY, list);
 
   if (Array.isArray(seededServices)) {
     seededServices.length = 0;
@@ -37,23 +33,13 @@ function writeServices(list) {
 export function getServices() {
   const fallback = getServicesFallback();
 
-  if (typeof localStorage === 'undefined') {
+  const parsed = getFromStorage(SERVICES_KEY, null);
+  if (!Array.isArray(parsed)) {
+    saveToStorage(SERVICES_KEY, fallback);
     return fallback;
   }
 
-  try {
-    const raw = localStorage.getItem(SERVICES_KEY);
-    if (!raw) {
-      localStorage.setItem(SERVICES_KEY, JSON.stringify(fallback));
-      return fallback;
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return fallback;
-    return parsed;
-  } catch {
-    return fallback;
-  }
+  return parsed;
 }
 
 function validateServiceInput(data) {
@@ -84,6 +70,19 @@ export function saveService(data) {
     startingPrice: Number(data.startingPrice),
     createdAt: new Date().toISOString()
   };
+
+  // Prevent duplicate services posted by the same gig professional.
+  const isDuplicate = allServices.some((service) => (
+    String(service.gigId || '') === String(normalized.gigId || '')
+    && String(service.title || '').trim().toLowerCase() === normalized.title.toLowerCase()
+    && String(service.category || '').trim().toLowerCase() === normalized.category.toLowerCase()
+    && String(service.description || '').trim().toLowerCase() === normalized.description.toLowerCase()
+    && Number(service.startingPrice) === normalized.startingPrice
+  ));
+
+  if (isDuplicate) {
+    return { ok: false, error: 'Duplicate service detected. A similar service already exists.' };
+  }
 
   allServices.push(normalized);
   writeServices(allServices);
@@ -354,6 +353,15 @@ function initSearchTalent() {
   if (budgetFilter) budgetFilter.addEventListener('change', renderServices);
   if (ratingFilter) ratingFilter.addEventListener('change', renderServices);
   if (sortFilter) sortFilter.addEventListener('change', renderServices);
+
+  if (!window.__gfgSearchTalentRealtimeBound) {
+    window.__gfgSearchTalentRealtimeBound = true;
+    window.addEventListener('storage', (event) => {
+      if (event.key === SERVICES_KEY) {
+        renderServices();
+      }
+    });
+  }
 
   grid.dataset.searchBound = '1';
   renderServices();

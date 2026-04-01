@@ -4,7 +4,16 @@
 //         explore-tasks.html, active-tasks.html
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, applications, deliverables, persistApplications, saveTasks } from '../data/mockData.js';
+import {
+  tasks,
+  users,
+  applications,
+  deliverables,
+  persistApplications,
+  saveTasks,
+  getFromStorage,
+  saveToStorage
+} from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import { validatePostGigForm } from '../utils/validation.js';
 import {
@@ -35,34 +44,20 @@ function syncTaskMemory(taskList) {
 }
 
 function persistTaskList(taskList) {
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(TASKS_KEY, JSON.stringify(taskList));
-    } catch {}
-  }
+  saveToStorage(TASKS_KEY, taskList);
   syncTaskMemory(taskList);
 }
 
 export function getTasks() {
   const fallback = Array.isArray(tasks) ? tasks.map((task) => ({ ...task })) : [];
 
-  if (typeof localStorage === 'undefined') {
+  const parsed = getFromStorage(TASKS_KEY, null);
+  if (!Array.isArray(parsed)) {
+    saveToStorage(TASKS_KEY, fallback);
     return fallback;
   }
 
-  try {
-    const raw = localStorage.getItem(TASKS_KEY);
-    if (!raw) {
-      localStorage.setItem(TASKS_KEY, JSON.stringify(fallback));
-      return fallback;
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return fallback;
-    return parsed;
-  } catch {
-    return fallback;
-  }
+  return parsed;
 }
 
 export function saveTask(data) {
@@ -81,6 +76,21 @@ export function saveTask(data) {
   if (!Number.isFinite(budget) || budget <= 0) return { ok: false, error: 'Task budget must be valid.' };
 
   const taskList = getTasks();
+
+  // Prevent duplicate open tasks created with identical core fields.
+  const isDuplicate = taskList.some((task) => (
+    String(task.clientId || '') === String(data.clientId || '')
+    && String(task.title || '').trim().toLowerCase() === title.toLowerCase()
+    && String(task.category || '').trim().toLowerCase() === category.toLowerCase()
+    && String(task.description || '').trim().toLowerCase() === description.toLowerCase()
+    && Number(task.budget) === budget
+    && String(task.status || 'open') === 'open'
+  ));
+
+  if (isDuplicate) {
+    return { ok: false, error: 'Duplicate task detected. A similar open task already exists.' };
+  }
+
   const newTask = {
     id: generateId('t'),
     clientId: data.clientId,
@@ -108,6 +118,27 @@ function getUserById(id) {
   return users.find(u => u.id === id) || null;
 }
 
+function setPostGigFeedback(form, message, isError = false) {
+  if (!form) return;
+
+  let feedbackEl = document.getElementById('post-gig-feedback');
+  if (!feedbackEl) {
+    feedbackEl = document.createElement('div');
+    feedbackEl.id = 'post-gig-feedback';
+    feedbackEl.style.cssText = 'margin-top:var(--spacing-md);font-size:0.875rem;font-weight:600;';
+
+    const footer = form.querySelector('.form-footer');
+    if (footer && footer.parentElement) {
+      footer.parentElement.insertBefore(feedbackEl, footer);
+    } else {
+      form.appendChild(feedbackEl);
+    }
+  }
+
+  feedbackEl.textContent = message;
+  feedbackEl.style.color = isError ? 'var(--color-primary-blue)' : 'var(--color-secondary)';
+}
+
 // ── post-gig.html  (client creates a task) ───────────────────────
 
 function initPostGig() {
@@ -118,8 +149,10 @@ function initPostGig() {
     return;
   }
 
-  // Find the form — it has no id, select by context
-  const form = document.querySelector('.form-page-container form');
+  // Support both older and current post-gig layouts.
+  const form = document.getElementById('post-gig-form')
+    || document.querySelector('.post-gig-form form')
+    || document.querySelector('.form-page-container form');
   if (!form) return;
 
   const budgetField = document.getElementById('budget');
@@ -212,11 +245,18 @@ function initPostGig() {
         assignedTo: null
       });
 
-      if (!result.ok) return;
+      if (!result.ok) {
+        setPostGigFeedback(form, result.error || 'Unable to publish gig.', true);
+        return;
+      }
     }
 
+    setPostGigFeedback(form, 'Gig published successfully. Redirecting...', false);
+
     // Redirect back to client dashboard
-    window.location.href = 'my-gigs-client.html';
+    setTimeout(() => {
+      window.location.href = 'my-gigs-client.html';
+    }, 100);
   });
 }
 
@@ -671,6 +711,15 @@ function initExploreTasks() {
   if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
   if (budgetFilter) budgetFilter.addEventListener('change', applyFilters);
   if (durationFilter) durationFilter.addEventListener('change', applyFilters);
+
+  if (!window.__gfgExploreTasksRealtimeBound) {
+    window.__gfgExploreTasksRealtimeBound = true;
+    window.addEventListener('storage', (event) => {
+      if (event.key === TASKS_KEY) {
+        renderExploreTasks();
+      }
+    });
+  }
 
   renderExploreTasks();
 }
