@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Managers Management - GigsForGigs Admin</title>
+  <meta name="description" content="GigsForGigs Admin - Manage client manager accounts, permissions, and activity.">
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/super-admin.css">
+  <style>
+    /* ── Managers-specific styles ── */
+    .mgr-search-bar {
+      padding: var(--spacing-md) var(--spacing-xxl);
+      background: var(--color-bg-light);
+      display: flex;
+      align-items: center;
+    }
+    .mgr-search-input {
+      background: rgba(219,223,223,0.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .mgr-search-input input {
+      border: none; background: transparent; width: 100%; outline: none;
+      font-family: inherit; font-size: 0.875rem; color: var(--color-text-dark);
+    }
+
+    /* Action buttons */
+    .mgr-btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: var(--radius-md);
+      border: 1px solid var(--color-primary-dark);
+      background: var(--color-white); color: var(--color-primary-dark);
+      font-family: inherit; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .mgr-btn-outline:hover { background: rgba(8,75,131,0.05); }
+    .mgr-btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: var(--radius-md);
+      border: none; background: var(--color-primary-dark); color: var(--color-white);
+      font-family: inherit; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .mgr-btn-primary:hover { background: #053661; }
+
+    /* KPI */
+    .mgr-kpi-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);
+    }
+    .mgr-kpi-card {
+      background: var(--color-white); border-radius: var(--radius-lg);
+      padding: var(--spacing-xl); border: 1px solid var(--color-border);
+      box-shadow: 0 4px 12px rgba(8,75,131,0.03);
+    }
+    .mgr-kpi-label {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      color: var(--color-text-muted); letter-spacing: 0.05em; margin-bottom: var(--spacing-sm);
+    }
+    .mgr-kpi-value {
+      font-size: 2.25rem; font-weight: 700; color: var(--color-text-dark);
+      display: flex; align-items: baseline; gap: 8px;
+    }
+    .mgr-kpi-trend {
+      font-size: 0.75rem; font-weight: 600; color: var(--color-secondary);
+    }
+    .mgr-kpi-sub {
+      font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500;
+    }
+    .mgr-kpi-action-link {
+      font-size: 0.75rem; color: #d32f2f; font-weight: 600;
+      text-decoration: none;
+    }
+
+    /* Table card */
+    .mgr-table-card {
+      background: var(--color-white); border-radius: var(--radius-lg);
+      padding: var(--spacing-xl); border: 1px solid var(--color-border);
+      margin-bottom: var(--spacing-xl);
+    }
+    .mgr-table-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: var(--spacing-lg);
+    }
+    .mgr-table-title {
+      font-size: 1.125rem; font-weight: 700; color: var(--color-text-dark);
+    }
+    .mgr-showing {
+      font-size: 0.8rem; color: var(--color-text-muted);
+    }
+
+    /* Manager row specific */
+    .mgr-user-cell {
+      display: flex; align-items: center; gap: var(--spacing-md);
+    }
+    .mgr-avatar {
+      width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+      background: var(--color-bg-light);
+    }
+    .mgr-name {
+      font-weight: 700; color: var(--color-text-dark); font-size: 0.875rem;
+    }
+    .mgr-role-sub {
+      font-size: 0.7rem; color: var(--color-text-muted);
+    }
+    .mgr-company-badge {
+      display: inline-flex; padding: 4px 10px; border-radius: var(--radius-sm);
+      font-size: 0.65rem; font-weight: 700; background: var(--color-primary-dark);
+      color: var(--color-white); letter-spacing: 0.02em; line-height: 1.3;
+      text-align: center; max-width: 90px;
+    }
+    .mgr-projects-cell {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mgr-project-count {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(81,158,138,0.12); color: var(--color-secondary);
+      font-size: 0.75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mgr-project-bar {
+      width: 80px; height: 6px; background: var(--color-bg-light);
+      border-radius: var(--radius-pill); overflow: hidden;
+    }
+    .mgr-project-fill {
+      height: 100%; border-radius: var(--radius-pill);
+      background: var(--color-primary-dark);
+    }
+    .mgr-status-active {
+      background: rgba(81,158,138,0.15); color: var(--color-secondary);
+    }
+    .mgr-status-disabled {
+      background: rgba(191,105,0,0.12); color: #bf6900;
+    }
+    .mgr-view-btn {
+      width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--color-border);
+      background: var(--color-white); display: flex; align-items: center;
+      justify-content: center; cursor: pointer; transition: all 0.2s;
+    }
+    .mgr-view-btn:hover {
+      background: var(--color-bg-light); border-color: var(--color-primary-dark);
+    }
+
+    /* Pagination */
+    .mgr-pagination {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: var(--spacing-xl); padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--color-border);
+    }
+    .mgr-page-link {
+      font-size: 0.875rem; font-weight: 600; color: var(--color-text-muted);
+      text-decoration: none; display: flex; align-items: center; gap: 6px;
+    }
+    .mgr-page-link:hover { color: var(--color-primary-dark); }
+    .mgr-page-nums {
+      display: flex; gap: 4px; align-items: center;
+    }
+    .mgr-page-num {
+      width: 32px; height: 32px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 600; color: var(--color-text-dark);
+      border: 1px solid var(--color-border); background: var(--color-white);
+      cursor: pointer; transition: all 0.2s; text-decoration: none;
+    }
+    .mgr-page-num.active {
+      background: var(--color-primary-dark); color: var(--color-white);
+      border-color: var(--color-primary-dark);
+    }
+    .mgr-page-num:hover:not(.active) { background: var(--color-bg-light); }
+
+    /* Bottom grid */
+    .mgr-bot-grid {
+      display: grid; grid-template-columns: 1.4fr 1fr;
+      gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);
+    }
+    .mgr-card {
+      background: var(--color-white); border-radius: var(--radius-lg);
+      padding: var(--spacing-xl); border: 1px solid var(--color-border);
+    }
+    .mgr-card-title {
+      font-size: 1.125rem; font-weight: 700; color: var(--color-text-dark);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    /* Events */
+    .mgr-event {
+      display: flex; align-items: flex-start; gap: var(--spacing-md);
+      padding: var(--spacing-md) 0; border-bottom: 1px solid var(--color-border);
+    }
+    .mgr-event:last-child { border-bottom: none; }
+    .mgr-event-icon {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .mgr-event-text {
+      font-size: 0.8125rem; color: var(--color-text-dark); line-height: 1.5;
+    }
+    .mgr-event-text strong { font-weight: 700; }
+    .mgr-event-time {
+      font-size: 0.7rem; color: var(--color-text-muted); margin-top: 2px;
+    }
+    .mgr-view-all-link {
+      font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted);
+      text-transform: uppercase; text-decoration: none; letter-spacing: 0.05em;
+    }
+    .mgr-view-all-link:hover { color: var(--color-primary-dark); }
+
+    /* Capacity card */
+    .mgr-capacity-card {
+      background: rgba(8,75,131,0.04);
+      border: 1px solid rgba(8,75,131,0.1);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+    }
+    .mgr-capacity-title {
+      font-size: 1.125rem; font-weight: 700; color: var(--color-text-dark);
+      margin-bottom: 4px;
+    }
+    .mgr-capacity-subtitle {
+      font-size: 0.8rem; color: var(--color-text-muted);
+      margin-bottom: var(--spacing-xl);
+    }
+    .mgr-cap-row {
+      margin-bottom: var(--spacing-lg);
+    }
+    .mgr-cap-header {
+      display: flex; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .mgr-cap-label {
+      font-size: 0.8125rem; font-weight: 600; color: var(--color-text-dark);
+    }
+    .mgr-cap-label-sub {
+      font-size: 0.7rem; color: var(--color-text-muted);
+    }
+    .mgr-cap-percent {
+      font-size: 0.875rem; font-weight: 700; color: var(--color-text-dark);
+    }
+    .mgr-cap-bar {
+      height: 8px; background: rgba(8,75,131,0.08);
+      border-radius: var(--radius-pill); overflow: hidden;
+    }
+    .mgr-cap-fill {
+      height: 100%; border-radius: var(--radius-pill);
+    }
+
+    /* Footer */
+    .mgr-footer {
+      padding: var(--spacing-lg) var(--spacing-xxl);
+      border-top: 1px solid var(--color-border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.75rem; color: var(--color-text-muted);
+      background: var(--color-white);
+    }
+    .mgr-footer a {
+      color: var(--color-text-muted); text-decoration: none;
+      margin-left: var(--spacing-lg);
+    }
+    .mgr-footer a:hover { color: var(--color-primary-dark); }
+  </style>
+</head>
+<body>
+
+<div class="admin-sidebar">
+  <div class="admin-sidebar-brand" style="margin-bottom:var(--spacing-md);">
+    <div class="admin-brand-text">
+      <span class="admin-brand-title">GigsForGigs</span>
+      <span class="admin-brand-subtitle" style="font-size:0.65rem;">ADMIN CONSOLE</span>
+    </div>
+  </div>
+  <nav class="admin-nav">
+    <a href="dashboard.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg> Dashboard</a>
+    <a href="gig-professional-management.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Gig Professionals</a>
+    <a href="client-management.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Clients</a>
+    <a href="managers-management.html" class="admin-nav-item active"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg> Managers</a>
+    <a href="projects.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> Projects</a>
+    <a href="payments-revenue.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg> Payments</a>
+    <a href="reviews.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Reviews</a>
+    <a href="disputes-reports.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Reports</a>
+    <a href="admin-analytics.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Analytics</a>
+    <a href="platform-settings.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Settings</a>
+    <a href="admin-management.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Admins</a>
+  </nav>
+  <a href="admin-profile.html" class="admin-sidebar-footer">
+    <div class="admin-footer-avatar" style="background-image:url('https://i.pravatar.cc/150?u=adminp');background-size:cover;"></div>
+    <div class="admin-footer-info">
+      <span class="admin-footer-name">Admin Profile</span>
+      <span class="admin-footer-role" style="text-transform:uppercase;font-size:0.6rem;letter-spacing:0.08em;">Super Admin</span>
+    </div>
+  </a>
+</div>
+
+<main class="admin-main">
+  <!-- Search Bar -->
+  <div class="mgr-search-bar">
+    <div class="mgr-search-input">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" placeholder="Search managers, clients or projects..." id="managers-search">
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <header class="admin-page-header" style="padding-top:var(--spacing-lg);">
+    <div>
+      <h1 class="admin-page-title">Managers Management</h1>
+      <p class="admin-page-desc">Oversee and configure client-level sub-profiles and access.</p>
+    </div>
+    <div class="admin-header-actions">
+      <button class="mgr-btn-outline" id="filter-company-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        Filter by Client Company
+      </button>
+      <button class="mgr-btn-primary" id="add-manager-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+        Add New Manager
+      </button>
+    </div>
+  </header>
+
+  <div style="padding:0 var(--spacing-xxl);">
+
+    <!-- KPI Cards -->
+    <div class="mgr-kpi-grid">
+      <div class="mgr-kpi-card" style="border-left:3px solid var(--color-primary-dark);">
+        <div class="mgr-kpi-label">TOTAL MANAGERS</div>
+        <div class="mgr-kpi-value">1,284 <span class="mgr-kpi-trend">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> +12%</span>
+        </div>
+      </div>
+      <div class="mgr-kpi-card">
+        <div class="mgr-kpi-label">ACTIVE NOW</div>
+        <div class="mgr-kpi-value">942</div>
+        <div class="mgr-kpi-sub">73% of total</div>
+      </div>
+      <div class="mgr-kpi-card">
+        <div class="mgr-kpi-label">AVG PROJECTS</div>
+        <div class="mgr-kpi-value">5.8</div>
+        <div class="mgr-kpi-sub">Per manager</div>
+      </div>
+      <div class="mgr-kpi-card">
+        <div class="mgr-kpi-label">DISABLED ACCOUNTS</div>
+        <div class="mgr-kpi-value">42</div>
+        <a href="#" class="mgr-kpi-action-link">Action needed</a>
+      </div>
+    </div>
+
+    <!-- Registered Managers Table -->
+    <div class="mgr-table-card">
+      <div class="mgr-table-header">
+        <h3 class="mgr-table-title">Registered Managers</h3>
+        <div style="display:flex;align-items:center;gap:var(--spacing-lg);">
+          <span class="mgr-showing">Showing 1-10 of 1,284 entries</span>
+          <div class="mgr-page-nums">
+            <a href="#" class="mgr-page-num" style="width:auto;padding:0 10px;">&lt;</a>
+            <a href="#" class="mgr-page-num active">1</a>
+            <a href="#" class="mgr-page-num">2</a>
+            <a href="#" class="mgr-page-num" style="width:auto;padding:0 10px;">&gt;</a>
+          </div>
+        </div>
+      </div>
+
+      <table class="admin-table" id="managers-table">
+        <thead>
+          <tr>
+            <th>MANAGER NAME</th>
+            <th>CLIENT COMPANY</th>
+            <th>EMAIL ADDRESS</th>
+            <th>PROJECTS</th>
+            <th>STATUS</th>
+            <th>CREATED DATE</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="mgr-user-cell">
+                <img src="https://i.pravatar.cc/150?u=sarah_m" alt="Sarah Miller" class="mgr-avatar">
+                <div>
+                  <div class="mgr-name">Sarah Miller</div>
+                  <div class="mgr-role-sub">Senior Operations</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="mgr-company-badge">TechNova Solutions</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">s.miller@technova.com</td>
+            <td>
+              <div class="mgr-projects-cell">
+                <span class="mgr-project-count">12</span>
+                <div class="mgr-project-bar"><div class="mgr-project-fill" style="width:60%;"></div></div>
+              </div>
+            </td>
+            <td><span class="admin-tag mgr-status-active">ACTIVE</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Oct 24, 2023</td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="admin-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="admin-action-btn" title="Edit"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Disable" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Delete" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="mgr-user-cell">
+                <img src="https://i.pravatar.cc/150?u=james_c" alt="James Chen" class="mgr-avatar">
+                <div>
+                  <div class="mgr-name">James Chen</div>
+                  <div class="mgr-role-sub">Project Lead</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="mgr-company-badge" style="background:#519e8a;">Global Logistics Co.</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">j.chen@globallogistics.org</td>
+            <td>
+              <div class="mgr-projects-cell">
+                <span class="mgr-project-count">4</span>
+                <div class="mgr-project-bar"><div class="mgr-project-fill" style="width:20%;background:var(--color-text-muted);"></div></div>
+              </div>
+            </td>
+            <td><span class="admin-tag mgr-status-disabled">DISABLED</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Dec 12, 2023</td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="admin-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="admin-action-btn" title="Edit"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Disable" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Delete" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="mgr-user-cell">
+                <img src="https://i.pravatar.cc/150?u=alisa_w" alt="Alisa Wagner" class="mgr-avatar">
+                <div>
+                  <div class="mgr-name">Alisa Wagner</div>
+                  <div class="mgr-role-sub">HR Manager</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="mgr-company-badge" style="background:#bf6900;">GreenWay Energy</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">a.wagner@greenway.io</td>
+            <td>
+              <div class="mgr-projects-cell">
+                <span class="mgr-project-count">8</span>
+                <div class="mgr-project-bar"><div class="mgr-project-fill" style="width:40%;"></div></div>
+              </div>
+            </td>
+            <td><span class="admin-tag mgr-status-active">ACTIVE</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Jan 05, 2024</td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="admin-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="admin-action-btn" title="Edit"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Disable" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Delete" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="mgr-user-cell">
+                <img src="https://i.pravatar.cc/150?u=robert_b" alt="Robert Brown" class="mgr-avatar">
+                <div>
+                  <div class="mgr-name">Robert Brown</div>
+                  <div class="mgr-role-sub">Fleet Director</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="mgr-company-badge" style="background:#502419;">Rapid Trans Group</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">r.brown@rapidtrans.com</td>
+            <td>
+              <div class="mgr-projects-cell">
+                <span class="mgr-project-count">21</span>
+                <div class="mgr-project-bar"><div class="mgr-project-fill" style="width:95%;"></div></div>
+              </div>
+            </td>
+            <td><span class="admin-tag mgr-status-active">ACTIVE</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Feb 15, 2024</td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="admin-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="admin-action-btn" title="Edit"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Disable" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></button>
+                <button class="admin-action-btn admin-action-btn-danger" title="Delete" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="mgr-pagination">
+        <a href="#" class="mgr-page-link">← Previous</a>
+        <div class="mgr-page-nums">
+          <a href="#" class="mgr-page-num active">1</a>
+          <a href="#" class="mgr-page-num">2</a>
+          <a href="#" class="mgr-page-num">3</a>
+          <span style="color:var(--color-text-muted);">...</span>
+          <a href="#" class="mgr-page-num">129</a>
+        </div>
+        <a href="#" class="mgr-page-link">Next →</a>
+      </div>
+    </div>
+
+    <!-- Bottom: Events + Capacity -->
+    <div class="mgr-bot-grid">
+      <div class="mgr-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-lg);">
+          <h3 class="mgr-card-title" style="margin-bottom:0;">Recent Management Events</h3>
+          <a href="#" class="mgr-view-all-link">VIEW ALL ACTIVITY</a>
+        </div>
+
+        <div class="mgr-event">
+          <div class="mgr-event-icon" style="background:rgba(81,158,138,0.12);">
+            <svg width="14" height="14" fill="none" stroke="#519e8a" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          </div>
+          <div>
+            <div class="mgr-event-text"><strong>Admin Sarah</strong> added Michael Scott as a Manager for <strong>Dunder Mifflin Inc.</strong></div>
+            <div class="mgr-event-time">2 hours ago</div>
+          </div>
+        </div>
+
+        <div class="mgr-event">
+          <div class="mgr-event-icon" style="background:rgba(211,47,47,0.1);">
+            <svg width="14" height="14" fill="none" stroke="#d32f2f" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          </div>
+          <div>
+            <div class="mgr-event-text">Manager accounts for <strong>Initech Corp</strong> were disabled due to subscription lapse.</div>
+            <div class="mgr-event-time">5 hours ago</div>
+          </div>
+        </div>
+
+        <div class="mgr-event">
+          <div class="mgr-event-icon" style="background:rgba(191,105,0,0.1);">
+            <svg width="14" height="14" fill="none" stroke="#bf6900" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </div>
+          <div>
+            <div class="mgr-event-text">Permissions updated for <strong>Jessica Pearson</strong> (Pearson Hardman).</div>
+            <div class="mgr-event-time">Yesterday at 4:30 PM</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mgr-capacity-card">
+        <h3 class="mgr-capacity-title">Manager Capacity</h3>
+        <p class="mgr-capacity-subtitle">Overview of workload distribution across all client managers.</p>
+
+        <div class="mgr-cap-row">
+          <div class="mgr-cap-header">
+            <div>
+              <span class="mgr-cap-label">High</span>
+              <span class="mgr-cap-label-sub"> (10+ Projects)</span>
+            </div>
+            <span class="mgr-cap-percent">18%</span>
+          </div>
+          <div class="mgr-cap-bar"><div class="mgr-cap-fill" style="width:18%;background:var(--color-primary-dark);"></div></div>
+        </div>
+        <div class="mgr-cap-row">
+          <div class="mgr-cap-header">
+            <div>
+              <span class="mgr-cap-label">Medium</span>
+              <span class="mgr-cap-label-sub"> (4-9 Projects)</span>
+            </div>
+            <span class="mgr-cap-percent">64%</span>
+          </div>
+          <div class="mgr-cap-bar"><div class="mgr-cap-fill" style="width:64%;background:#084b83;"></div></div>
+        </div>
+        <div class="mgr-cap-row">
+          <div class="mgr-cap-header">
+            <div>
+              <span class="mgr-cap-label">Low</span>
+              <span class="mgr-cap-label-sub"> (1-3 Projects)</span>
+            </div>
+            <span class="mgr-cap-percent">18%</span>
+          </div>
+          <div class="mgr-cap-bar"><div class="mgr-cap-fill" style="width:18%;background:#084b83;"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="mgr-footer">
+    <span>© 2024 GigsForGigs Platform Admin. All rights reserved.</span>
+    <div>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+      <a href="#">System Status</a>
+    </div>
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,322 @@
+/* super-admin.css: Dedicated styles for the Platform Admin Portal (Section 9) */
+
+/* Core Sidebar Override */
+.admin-sidebar {
+  width: 280px;
+  background-color: var(--color-primary-dark);
+  color: var(--color-white);
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  border-right: none;
+}
+
+.admin-sidebar-brand {
+  padding: var(--spacing-xxl) var(--spacing-xl) var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  text-decoration: none;
+  color: var(--color-white);
+}
+.admin-brand-logo {
+  width: 36px;
+  height: 36px;
+  background-color: rgba(240, 246, 246, 0.1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f0f6f6ff;
+}
+.admin-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+.admin-brand-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.admin-brand-subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Nav Items */
+.admin-nav {
+  padding: var(--spacing-xl) 0;
+  flex: 1;
+  overflow-y: auto;
+}
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 12px var(--spacing-xl);
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin: 4px var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+.admin-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-white);
+}
+.admin-nav-item.active {
+  background-color: #053661; /* Darker Yale Blue for pill */
+  color: var(--color-white);
+}
+
+/* User Profile Footer */
+.admin-sidebar-footer {
+  padding: var(--spacing-md) var(--spacing-xl);
+  margin: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+  background-color: #053661;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  text-decoration: none;
+}
+.admin-footer-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-primary-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: white;
+}
+.admin-footer-info {
+  display: flex;
+  flex-direction: column;
+}
+.admin-footer-name {
+  color: var(--color-white);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.admin-footer-role {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+}
+
+/* Admin Main Content Layout */
+.admin-main {
+  flex: 1;
+  margin-left: 280px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-light); 
+}
+
+/* Common Page Header */
+.admin-page-header {
+  padding: var(--spacing-xxl) var(--spacing-xxl) var(--spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.admin-breadcrumbs {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.admin-breadcrumbs a {
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  font-weight: 500;
+}
+.admin-page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+.admin-page-desc {
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+.admin-header-actions {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+/* Data Tables inside Admin */
+.admin-card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 6px rgba(8, 75, 131, 0.02);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+.admin-table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+.admin-table-filters {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.admin-table th {
+  text-align: left;
+  padding: var(--spacing-md) var(--spacing-sm);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--color-border);
+}
+.admin-table td {
+  padding: var(--spacing-md) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  font-size: 0.875rem;
+  color: var(--color-text-dark);
+}
+.admin-table tr:hover td {
+  background-color: rgba(240, 246, 246, 0.4);
+}
+
+/* Tags and Badges */
+.admin-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background-color: rgba(240, 246, 246, 1);
+  color: var(--color-text-dark);
+}
+.admin-badge-verified, .admin-badge-active {
+  background-color: rgba(81, 158, 138, 0.15);
+  color: var(--color-secondary);
+}
+.admin-badge-pending {
+  background-color: rgba(191, 105, 0, 0.15);
+  color: var(--color-primary-blue);
+}
+.admin-badge-suspended, .admin-badge-critical {
+  background-color: rgba(211, 47, 47, 0.1);
+  color: #d32f2f;
+}
+
+/* Specific Page Grids */
+.admin-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xxl);
+}
+.admin-metric-card {
+  background: var(--color-white);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 12px rgba(8, 75, 131, 0.03);
+}
+.admin-metric-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  justify-content: space-between;
+}
+.admin-metric-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  margin-bottom: 4px;
+}
+.admin-metric-footer {
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.admin-trend-up {
+  color: var(--color-secondary);
+}
+
+/* Profile Form Layouts */
+.admin-profile-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--spacing-lg);
+}
+
+/* Toggle Switch */
+.admin-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.admin-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.admin-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--color-border);
+  transition: .4s;
+  border-radius: 24px;
+}
+.admin-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+.admin-toggle input:checked + .admin-toggle-slider {
+  background-color: var(--color-primary-dark);
+}
+.admin-toggle input:checked + .admin-toggle-slider:before {
+  transform: translateX(20px);
+}

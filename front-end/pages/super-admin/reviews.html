@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reviews & Ratings - GigsForGigs Admin</title>
+  <meta name="description" content="GigsForGigs Admin - Monitor community feedback and moderate platform integrity.">
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/super-admin.css">
+  <style>
+    /* ── Reviews-specific styles ── */
+    .rev-search-bar {
+      padding: var(--spacing-md) var(--spacing-xxl);
+      background: var(--color-bg-light);
+      display: flex; align-items: center;
+    }
+    .rev-search-input {
+      background: rgba(219,223,223,0.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px; width: 100%; max-width: 500px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .rev-search-input input {
+      border: none; background: transparent; width: 100%; outline: none;
+      font-family: inherit; font-size: 0.875rem; color: var(--color-text-dark);
+    }
+
+    .rev-btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: var(--radius-md);
+      border: none; background: var(--color-primary-dark); color: var(--color-white);
+      font-family: inherit; font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .rev-btn-primary:hover { background: #053661; }
+
+    /* KPI Grid */
+    .rev-kpi-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);
+    }
+    .rev-kpi-card {
+      background: var(--color-white); border-radius: var(--radius-lg);
+      padding: var(--spacing-xl); border: 1px solid var(--color-border);
+      box-shadow: 0 4px 12px rgba(8,75,131,0.03);
+      display: flex; align-items: flex-start; gap: var(--spacing-md);
+      position: relative;
+    }
+    .rev-kpi-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .rev-kpi-label {
+      font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: 4px;
+    }
+    .rev-kpi-value {
+      font-size: 2rem; font-weight: 700; color: var(--color-text-dark);
+      letter-spacing: -0.02em;
+    }
+    .rev-kpi-value-sub {
+      font-size: 1rem; font-weight: 400; color: var(--color-text-muted);
+    }
+    .rev-kpi-badge {
+      position: absolute; top: var(--spacing-xl); right: var(--spacing-xl);
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: var(--radius-pill);
+      font-size: 0.7rem; font-weight: 600;
+    }
+    .rev-badge-green { background: rgba(81,158,138,0.1); color: var(--color-secondary); }
+    .rev-badge-red { background: rgba(211,47,47,0.1); color: #d32f2f; }
+    .rev-stars {
+      color: #bf6900; font-size: 0.8rem; letter-spacing: 2px;
+    }
+
+    /* Filter tabs */
+    .rev-filter-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--spacing-md) var(--spacing-xl);
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+    .rev-filter-left {
+      display: flex; align-items: center; gap: var(--spacing-md);
+    }
+    .rev-filter-label {
+      font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .rev-filter-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--radius-pill);
+      border: 1px solid var(--color-border); background: var(--color-white);
+      font-family: inherit; font-size: 0.8125rem; font-weight: 600;
+      color: var(--color-text-dark); cursor: pointer; transition: all 0.2s;
+    }
+    .rev-filter-btn:hover { border-color: var(--color-primary-dark); }
+    .rev-filter-btn.active {
+      background: var(--color-primary-dark); color: var(--color-white);
+      border-color: var(--color-primary-dark);
+    }
+    .rev-filter-btn.active.reported-tab {
+      background: rgba(191,105,0,0.1); color: #bf6900;
+      border-color: rgba(191,105,0,0.3);
+    }
+    .rev-filter-right {
+      display: flex; align-items: center; gap: var(--spacing-md);
+      font-size: 0.8rem; color: var(--color-text-muted);
+    }
+    .rev-filter-arrow {
+      width: 28px; height: 28px; border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border); background: var(--color-white);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--color-text-muted); text-decoration: none;
+      transition: all 0.2s;
+    }
+    .rev-filter-arrow:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
+
+    /* Reviews table */
+    .rev-table-card {
+      background: var(--color-white); border-radius: var(--radius-lg);
+      padding: var(--spacing-xl); border: 1px solid var(--color-border);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    /* User cell */
+    .rev-user-cell {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .rev-avatar-stack {
+      position: relative; width: 40px; height: 40px;
+    }
+    .rev-avatar {
+      width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+      background: var(--color-bg-light); border: 2px solid var(--color-white);
+    }
+    .rev-avatar-main {
+      position: relative; z-index: 2;
+    }
+    .rev-avatar-sub {
+      position: absolute; bottom: -4px; right: -8px; width: 24px; height: 24px;
+      border-radius: 50%; z-index: 3; border: 2px solid var(--color-white);
+    }
+    .rev-reviewer-name {
+      font-weight: 700; font-size: 0.875rem; color: var(--color-text-dark);
+    }
+    .rev-reviewed-sub {
+      font-size: 0.7rem; color: var(--color-text-muted);
+    }
+
+    /* Role tags */
+    .rev-role-tag {
+      display: inline-block; padding: 3px 10px; border-radius: var(--radius-sm);
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .rev-role-gig, .rev-role-client { background: var(--color-bg-light); color: var(--color-text-dark); border: 1px solid var(--color-border); }
+
+    /* Rating */
+    .rev-rating {
+      font-weight: 700; font-size: 0.875rem; color: var(--color-text-dark);
+      display: flex; align-items: center; gap: 2px;
+    }
+    .rev-star { color: #bf6900; font-size: 0.75rem; }
+
+    /* Feedback */
+    .rev-feedback {
+      font-size: 0.8rem; color: var(--color-text-muted);
+      font-style: italic;
+      max-width: 220px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Status badges */
+    .rev-status {
+      display: inline-block; padding: 4px 10px; border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .rev-status-verified { background: rgba(81,158,138,0.15); color: var(--color-secondary); }
+    .rev-status-reported { background: rgba(191,105,0,0.15); color: #bf6900; }
+    .rev-status-pending { background: var(--color-bg-light); color: var(--color-text-muted); border: 1px solid var(--color-border); }
+
+    /* Action icons */
+    .rev-action-btn {
+      width: 26px; height: 26px; border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border); background: var(--color-white);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; color: var(--color-text-muted);
+    }
+    .rev-action-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
+    .rev-action-btn-warn { border-color: rgba(191,105,0,0.3); color: #bf6900; }
+    .rev-action-btn-warn:hover { background: rgba(191,105,0,0.05); }
+    .rev-action-btn-danger { border-color: rgba(211,47,47,0.3); color: #d32f2f; }
+    .rev-action-btn-danger:hover { background: rgba(211,47,47,0.05); }
+
+    /* Highlighted row */
+    .rev-row-flagged {
+      background: rgba(191,105,0,0.03);
+      border-left: 3px solid #bf6900;
+    }
+
+    /* Bottom grid */
+    .rev-bot-grid {
+      display: grid; grid-template-columns: 1.4fr 1fr;
+      gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);
+    }
+    .rev-card {
+      background: var(--color-white); border-radius: var(--radius-lg);
+      padding: var(--spacing-xl); border: 1px solid var(--color-border);
+    }
+    .rev-card-title {
+      font-size: 1.125rem; font-weight: 700; color: var(--color-primary-dark);
+    }
+
+    /* Rating distribution bars */
+    .rev-dist-row {
+      display: flex; align-items: center; gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+    .rev-dist-label {
+      font-size: 0.8125rem; font-weight: 600; color: var(--color-text-dark);
+      width: 50px; text-align: right; flex-shrink: 0;
+    }
+    .rev-dist-track {
+      flex: 1; height: 10px; background: var(--color-bg-light);
+      border-radius: var(--radius-pill); overflow: hidden;
+    }
+    .rev-dist-fill {
+      height: 100%; border-radius: var(--radius-pill);
+    }
+    .rev-dist-pct {
+      font-size: 0.8125rem; font-weight: 700; color: var(--color-text-dark);
+      width: 36px; text-align: right; flex-shrink: 0;
+    }
+    .rev-dist-select {
+      padding: 6px 30px 6px 12px; border-radius: var(--radius-pill);
+      border: 1px solid var(--color-border); background: var(--color-white);
+      font-family: inherit; font-size: 0.8rem; font-weight: 500;
+      color: var(--color-text-dark); cursor: pointer;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23805c54' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+
+    /* Sentiment Analysis */
+    .rev-sentiment-card {
+      background: var(--color-primary-dark); border-radius: var(--radius-lg);
+      padding: var(--spacing-xl); color: var(--color-white);
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .rev-sentiment-title {
+      font-size: 1.125rem; font-weight: 700; margin-bottom: var(--spacing-xl);
+      align-self: flex-start;
+    }
+    .rev-gauge-container {
+      position: relative; width: 160px; height: 160px; margin-bottom: var(--spacing-xl);
+    }
+    .rev-gauge-circle {
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: conic-gradient(
+        var(--color-secondary) 0% 92%,
+        rgba(255,255,255,0.15) 92% 100%
+      );
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rev-gauge-inner {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: var(--color-primary-dark);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .rev-gauge-value {
+      font-size: 2rem; font-weight: 700;
+    }
+    .rev-gauge-label {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      color: var(--color-secondary); letter-spacing: 0.1em;
+    }
+    .rev-sentiment-stats {
+      display: flex; gap: var(--spacing-md); width: 100%;
+    }
+    .rev-sentiment-stat {
+      flex: 1; text-align: center;
+      background: rgba(255,255,255,0.08);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-md);
+    }
+    .rev-sentiment-stat-label {
+      font-size: 0.6rem; color: rgba(255,255,255,0.6);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .rev-sentiment-stat-value {
+      font-size: 0.9375rem; font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-sidebar">
+  <div class="admin-sidebar-brand" style="margin-bottom:var(--spacing-md);">
+    <div class="admin-brand-text">
+      <span class="admin-brand-title">GigsForGigs</span>
+      <span class="admin-brand-subtitle" style="font-size:0.65rem;">ADMIN CONSOLE</span>
+    </div>
+  </div>
+  <nav class="admin-nav">
+    <a href="dashboard.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg> Dashboard</a>
+    <a href="gig-professional-management.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Gig Professionals</a>
+    <a href="client-management.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Clients</a>
+    <a href="managers-management.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg> Managers</a>
+    <a href="projects.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> Projects</a>
+    <a href="payments-revenue.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg> Payments</a>
+    <a href="reviews.html" class="admin-nav-item active"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Reviews</a>
+    <a href="disputes-reports.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Reports</a>
+    <a href="admin-analytics.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Analytics</a>
+    <a href="platform-settings.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Settings</a>
+    <a href="admin-management.html" class="admin-nav-item"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Admins</a>
+  </nav>
+  <a href="admin-profile.html" class="admin-sidebar-footer">
+    <div class="admin-footer-avatar" style="background-image:url('https://i.pravatar.cc/150?u=alexr');background-size:cover;"></div>
+    <div class="admin-footer-info">
+      <span class="admin-footer-name">Alex Rivera</span>
+      <span class="admin-footer-role" style="text-transform:uppercase;font-size:0.6rem;letter-spacing:0.08em;">Super Admin</span>
+    </div>
+  </a>
+</div>
+
+<main class="admin-main">
+  <!-- Search Bar -->
+  <div class="rev-search-bar">
+    <div class="rev-search-input">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" placeholder="Search reviews or users..." id="reviews-search">
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <header class="admin-page-header" style="padding-top:var(--spacing-lg);">
+    <div>
+      <h1 class="admin-page-title" style="color:var(--color-primary-dark);">Reviews & Ratings</h1>
+      <p class="admin-page-desc">Monitor community feedback and moderate platform integrity.</p>
+    </div>
+    <div class="admin-header-actions">
+      <button class="rev-btn-primary" id="export-data-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Export Data
+      </button>
+    </div>
+  </header>
+
+  <div style="padding:0 var(--spacing-xxl);">
+
+    <!-- KPI Cards -->
+    <div class="rev-kpi-grid">
+      <div class="rev-kpi-card">
+        <div class="rev-kpi-icon" style="background:rgba(8,75,131,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#084b83" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </div>
+        <div>
+          <div class="rev-kpi-label">Total Reviews</div>
+          <div class="rev-kpi-value">24,592</div>
+        </div>
+        <div class="rev-kpi-badge rev-badge-green">+12% vs last month</div>
+      </div>
+
+      <div class="rev-kpi-card">
+        <div class="rev-kpi-icon" style="background:rgba(191,105,0,0.08);">
+          <svg width="20" height="20" fill="#bf6900" stroke="none" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <div>
+          <div class="rev-kpi-label">Average Platform Rating</div>
+          <div class="rev-kpi-value">4.82<span class="rev-kpi-value-sub">/5.0</span></div>
+        </div>
+        <div class="rev-kpi-badge" style="background:transparent;">
+          <span class="rev-stars">★★★★★</span>
+        </div>
+      </div>
+
+      <div class="rev-kpi-card">
+        <div class="rev-kpi-icon" style="background:rgba(191,105,0,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#bf6900" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <div>
+          <div class="rev-kpi-label">Pending Reports</div>
+          <div class="rev-kpi-value">43</div>
+        </div>
+        <div class="rev-kpi-badge rev-badge-red">Critical: 8</div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="rev-filter-bar">
+      <div class="rev-filter-left">
+        <span class="rev-filter-label">FILTER BY:</span>
+        <button class="rev-filter-btn">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          Low Ratings
+        </button>
+        <button class="rev-filter-btn active reported-tab">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+          Reported Reviews
+        </button>
+        <button class="rev-filter-btn">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Recent Reviews
+        </button>
+      </div>
+      <div class="rev-filter-right">
+        <span>Displaying 1-10 of 43 pending items</span>
+        <a href="#" class="rev-filter-arrow">&lt;</a>
+        <a href="#" class="rev-filter-arrow">&gt;</a>
+      </div>
+    </div>
+
+    <!-- Reviews Table -->
+    <div class="rev-table-card">
+      <table class="admin-table" id="reviews-table">
+        <thead>
+          <tr>
+            <th>REVIEWER & SUBJECT</th>
+            <th>ROLE</th>
+            <th>RATING</th>
+            <th>FEEDBACK SNIPPET</th>
+            <th>DATE</th>
+            <th>STATUS</th>
+            <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="rev-user-cell">
+                <div class="rev-avatar-stack">
+                  <img src="https://i.pravatar.cc/150?u=sarah_j2" alt="Sarah Jenkins" class="rev-avatar rev-avatar-main">
+                  <img src="https://i.pravatar.cc/150?u=marcus_v" alt="Marcus V." class="rev-avatar rev-avatar-sub">
+                </div>
+                <div style="margin-left:6px;">
+                  <div class="rev-reviewer-name">Sarah Jenkins</div>
+                  <div class="rev-reviewed-sub">reviewed Marcus V.</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="rev-role-tag rev-role-gig">GIG PRO</span></td>
+            <td><span class="rev-rating">5.0 <span class="rev-star">★</span></span></td>
+            <td><span class="rev-feedback">"Absolutely professional and on time. W..."</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Oct 24, 2023</td>
+            <td><span class="rev-status rev-status-verified">VERIFIED</span></td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="rev-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="rev-action-btn rev-action-btn-danger" title="Remove" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="rev-row-flagged">
+            <td>
+              <div class="rev-user-cell">
+                <div class="rev-avatar-stack">
+                  <img src="https://i.pravatar.cc/150?u=alext2" alt="Alex Thompson" class="rev-avatar rev-avatar-main">
+                  <img src="https://i.pravatar.cc/150?u=elena_g2" alt="Elena G." class="rev-avatar rev-avatar-sub">
+                </div>
+                <div style="margin-left:6px;">
+                  <div class="rev-reviewer-name">Alex Thompson</div>
+                  <div class="rev-reviewed-sub">reviewed Elena G.</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="rev-role-tag rev-role-client">CLIENT</span></td>
+            <td><span class="rev-rating">1.0 <span class="rev-star">★</span></span></td>
+            <td><span class="rev-feedback">"INAPPROPRIATE BEHAVIOR. Use extr..."</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Oct 23, 2023</td>
+            <td><span class="rev-status rev-status-reported"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:2px; vertical-align:middle; margin-bottom:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> REPORTED</span></td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="rev-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="rev-action-btn rev-action-btn-danger" title="Remove" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="rev-user-cell">
+                <div class="rev-avatar-stack">
+                  <img src="https://i.pravatar.cc/150?u=jessica_w" alt="Jessica Wu" class="rev-avatar rev-avatar-main">
+                  <img src="https://i.pravatar.cc/150?u=david_k2" alt="David K." class="rev-avatar rev-avatar-sub">
+                </div>
+                <div style="margin-left:6px;">
+                  <div class="rev-reviewer-name">Jessica Wu</div>
+                  <div class="rev-reviewed-sub">reviewed David K.</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="rev-role-tag rev-role-gig">GIG PRO</span></td>
+            <td><span class="rev-rating">4.0 <span class="rev-star">★</span></span></td>
+            <td><span class="rev-feedback">"Great work overall, but communication..."</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Oct 22, 2023</td>
+            <td><span class="rev-status rev-status-pending">PENDING</span></td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="rev-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="rev-action-btn rev-action-btn-danger" title="Remove" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="rev-user-cell">
+                <div class="rev-avatar-stack">
+                  <img src="https://i.pravatar.cc/150?u=kevin_m" alt="Kevin Miller" class="rev-avatar rev-avatar-main">
+                  <img src="https://i.pravatar.cc/150?u=rachel_s" alt="Rachel S." class="rev-avatar rev-avatar-sub">
+                </div>
+                <div style="margin-left:6px;">
+                  <div class="rev-reviewer-name">Kevin Miller</div>
+                  <div class="rev-reviewed-sub">reviewed Rachel S.</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="rev-role-tag rev-role-client">CLIENT</span></td>
+            <td><span class="rev-rating">5.0 <span class="rev-star">★</span></span></td>
+            <td><span class="rev-feedback">"Unbelievable quality of work. Highly re..."</span></td>
+            <td style="font-size:0.8rem;color:var(--color-text-muted);">Oct 21, 2023</td>
+            <td><span class="rev-status rev-status-verified">VERIFIED</span></td>
+            <td>
+              <div style="display:flex;gap:4px;">
+                <button class="rev-action-btn" title="View"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="rev-action-btn rev-action-btn-danger" title="Remove" style="color:#d32f2f;"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bottom: Rating Distribution + Sentiment Analysis -->
+    <div class="rev-bot-grid">
+      <div class="rev-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-xl);">
+          <h3 class="rev-card-title">Rating Distribution</h3>
+          <select class="rev-dist-select" id="dist-timeframe">
+            <option>Last 30 Days</option>
+            <option>Last 90 Days</option>
+            <option>All Time</option>
+          </select>
+        </div>
+
+        <div class="rev-dist-row">
+          <span class="rev-dist-label">5 Star</span>
+          <div class="rev-dist-track"><div class="rev-dist-fill" style="width:78%;background:var(--color-primary-dark);"></div></div>
+          <span class="rev-dist-pct">78%</span>
+        </div>
+        <div class="rev-dist-row">
+          <span class="rev-dist-label">4 Star</span>
+          <div class="rev-dist-track"><div class="rev-dist-fill" style="width:15%;background:var(--color-primary-dark);"></div></div>
+          <span class="rev-dist-pct">15%</span>
+        </div>
+        <div class="rev-dist-row">
+          <span class="rev-dist-label">3 Star</span>
+          <div class="rev-dist-track"><div class="rev-dist-fill" style="width:4%;background:var(--color-primary-dark);opacity:0.6;"></div></div>
+          <span class="rev-dist-pct">4%</span>
+        </div>
+        <div class="rev-dist-row">
+          <span class="rev-dist-label">2 Star</span>
+          <div class="rev-dist-track"><div class="rev-dist-fill" style="width:2%;background:#bf6900;"></div></div>
+          <span class="rev-dist-pct">2%</span>
+        </div>
+        <div class="rev-dist-row">
+          <span class="rev-dist-label">1 Star</span>
+          <div class="rev-dist-track"><div class="rev-dist-fill" style="width:1%;background:#d32f2f;"></div></div>
+          <span class="rev-dist-pct">1%</span>
+        </div>
+      </div>
+
+      <div class="rev-sentiment-card">
+        <h3 class="rev-sentiment-title">Sentiment Analysis</h3>
+        <div class="rev-gauge-container">
+          <div class="rev-gauge-circle">
+            <div class="rev-gauge-inner">
+              <div class="rev-gauge-value">92%</div>
+              <div class="rev-gauge-label">POSITIVE</div>
+            </div>
+          </div>
+        </div>
+        <div class="rev-sentiment-stats">
+          <div class="rev-sentiment-stat">
+            <div class="rev-sentiment-stat-label">Reliability</div>
+            <div class="rev-sentiment-stat-value">Excellent</div>
+          </div>
+          <div class="rev-sentiment-stat">
+            <div class="rev-sentiment-stat-label">Skill Level</div>
+            <div class="rev-sentiment-stat-value">High</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

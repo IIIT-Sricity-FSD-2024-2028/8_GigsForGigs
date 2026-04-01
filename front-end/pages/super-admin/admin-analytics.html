@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Analytics - GigsForGigs</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/super-admin.css">
+  <style>
+    .analytics-top-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+    .kpi-card {
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      border: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .kpi-icon { margin-bottom: var(--spacing-md); color: var(--color-primary-dark); }
+    .kpi-label { font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-text-dark); margin-bottom: var(--spacing-md); }
+    .kpi-trend { position: absolute; top: var(--spacing-xl); right: var(--spacing-xl); font-size: 0.75rem; font-weight: 700; }
+    .trend-pos { color: var(--color-secondary); }
+    .trend-neg { color: #d32f2f; }
+    
+    .mini-bar-chart {
+      display: flex;
+      gap: 4px;
+      height: 40px;
+      align-items: flex-end;
+    }
+    .mini-bar {
+      flex: 1;
+      background: rgba(8, 75, 131, 0.1);
+      border-radius: 2px;
+    }
+    .mini-bar.active { background: var(--color-primary-dark); }
+
+    .analytics-mid-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+    .chart-card {
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      border: 1px solid var(--color-border);
+    }
+    
+    .skill-bar-row { margin-bottom: var(--spacing-md); }
+    .skill-label { display: flex; justify-content: space-between; font-size: 0.875rem; font-weight: 700; margin-bottom: 6px; }
+    .skill-track { height: 6px; background: var(--color-bg-light); border-radius: 99px; overflow: hidden; }
+    .skill-fill { height: 100%; background: var(--color-primary-dark); border-radius: 99px; }
+
+    .analytics-bot-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .funnel-stage {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: var(--spacing-md);
+    }
+    .funnel-stage-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .funnel-stage-bar {
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--color-primary-dark);
+    }
+
+    .health-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+    .health-metric {
+      background: rgba(240, 246, 246, 0.5);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-md);
+      text-align: center;
+    }
+    
+    .ai-prediction-card {
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      text-align: center;
+      background: var(--color-white);
+    }
+
+    .segment-control {
+      display: inline-flex;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+    }
+    .segment-btn {
+      padding: 6px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      border: none;
+      background: transparent;
+    }
+    .segment-btn.active {
+      background: var(--color-white);
+      color: var(--color-primary-dark);
+      box-shadow: var(--shadow-sm);
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-sidebar">
+  <div class="admin-sidebar-brand" style="margin-bottom:var(--spacing-md);">
+    <div class="admin-brand-logo">
+      <svg fill="currentColor" width="20" height="20" viewBox="0 0 24 24"><path d="M4 19h16v2H4zm2-4h12v2H6zm-2-4h16v2H4zm2-4h12v2H6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="admin-brand-text">
+      <span class="admin-brand-title">GigsForGigs</span>
+      <span class="admin-brand-subtitle" style="font-size:0.65rem;">ADMIN CONSOLE</span>
+    </div>
+  </div>
+
+  <nav class="admin-nav">
+    <a href="dashboard.html" class="admin-nav-item">Dashboard</a>
+    <a href="gig-professional-management.html" class="admin-nav-item">Gig Professionals</a>
+    <a href="client-management.html" class="admin-nav-item">Clients</a>
+    <a href="managers-management.html" class="admin-nav-item">Managers</a>
+    <a href="projects.html" class="admin-nav-item">Projects</a>
+    <a href="payments-revenue.html" class="admin-nav-item">Payments</a>
+    <a href="reviews.html" class="admin-nav-item">Reviews</a>
+    <a href="disputes-reports.html" class="admin-nav-item">Reports</a>
+    <a href="admin-analytics.html" class="admin-nav-item active">Analytics</a>
+    <a href="platform-settings.html" class="admin-nav-item">Settings</a>
+    <a href="admin-management.html" class="admin-nav-item">Admins</a>
+  </nav>
+
+  <a href="admin-profile.html" class="admin-sidebar-footer">
+    <div class="admin-footer-avatar" style="background-image:url('https://i.pravatar.cc/150?u=alexr');background-size:cover;"></div>
+    <div class="admin-footer-info">
+      <span class="admin-footer-name">Alex Rivera</span>
+      <span class="admin-footer-role">Super Admin</span>
+    </div>
+  </a>
+</div>
+
+<main class="admin-main">
+  <!-- Top Search Bar -->
+  <header style="padding:var(--spacing-md) var(--spacing-xxl);background:var(--color-bg-light);display:flex;justify-content:flex-start;">
+    <div style="background:rgba(219, 223, 223, 0.4);border-radius:var(--radius-sm);padding:8px 16px;width:100%;max-width:500px;display:flex;align-items:center;gap:12px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" placeholder="Search analytics, jobs, or users..." style="border:none;background:transparent;width:100%;outline:none;font-family:inherit;color:var(--color-text-dark);">
+    </div>
+  </header>
+
+  <header class="admin-page-header" style="padding-top:var(--spacing-lg);">
+    <div>
+      <h1 class="admin-page-title" style="color:var(--color-text-dark);">Admin Analytics</h1>
+      <p class="admin-page-desc">Comprehensive platform performance oversight for GigsForGigs.</p>
+    </div>
+    <div class="admin-header-actions">
+      <div class="segment-control">
+        <button class="segment-btn active">12 Months</button>
+        <button class="segment-btn">30 Days</button>
+        <button class="segment-btn">7 Days</button>
+      </div>
+    </div>
+  </header>
+
+  <div style="padding:0 var(--spacing-xxl);">
+    
+    <!-- Top KPIs -->
+    <div class="analytics-top-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+        <div class="kpi-label">MONTHLY ACTIVE USERS</div>
+        <div class="kpi-value">42,890</div>
+        <div class="kpi-trend trend-pos">↗ +12.5%</div>
+        <div class="mini-bar-chart">
+          <div class="mini-bar" style="height:30%;"></div><div class="mini-bar" style="height:40%;"></div><div class="mini-bar" style="height:55%;"></div><div class="mini-bar" style="height:70%;"></div><div class="mini-bar active" style="height:100%;"></div>
+        </div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-icon" style="color:var(--color-primary-blue);"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></div>
+        <div class="kpi-label">CONVERSION RATE</div>
+        <div class="kpi-value">18.4%</div>
+        <div class="kpi-trend trend-pos">↗ +3.2%</div>
+        <div class="mini-bar-chart">
+          <div class="mini-bar" style="height:40%;background:rgba(191,105,0,0.1);"></div><div class="mini-bar" style="height:50%;background:rgba(191,105,0,0.1);"></div><div class="mini-bar" style="height:45%;background:rgba(191,105,0,0.1);"></div><div class="mini-bar" style="height:35%;background:rgba(191,105,0,0.1);"></div><div class="mini-bar" style="height:100%;background:var(--color-primary-blue);"></div>
+        </div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-icon" style="color:var(--color-secondary);"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></div>
+        <div class="kpi-label">NET REVENUE</div>
+        <div class="kpi-value">$1.24M</div>
+        <div class="kpi-trend trend-pos">↗ +24%</div>
+        <div class="mini-bar-chart">
+          <div class="mini-bar" style="height:30%;background:rgba(81,158,138,0.2);"></div><div class="mini-bar" style="height:35%;background:rgba(81,158,138,0.2);"></div><div class="mini-bar" style="height:55%;background:rgba(81,158,138,0.2);"></div><div class="mini-bar" style="height:80%;background:rgba(81,158,138,0.2);"></div><div class="mini-bar active" style="height:100%;background:#034A3E;"></div>
+        </div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-icon" style="color:#084b83;"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+        <div class="kpi-label">AVG. PROJECT VALUE</div>
+        <div class="kpi-value">$4,250</div>
+        <div class="kpi-trend trend-neg">↘ -1.5%</div>
+        <div class="mini-bar-chart">
+          <div class="mini-bar" style="height:80%;"></div><div class="mini-bar" style="height:70%;"></div><div class="mini-bar" style="height:75%;"></div><div class="mini-bar" style="height:90%;"></div><div class="mini-bar active" style="height:70%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle Charts -->
+    <div class="analytics-mid-grid">
+      <div class="chart-card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:var(--spacing-xl);">
+          <div>
+            <h3 style="font-size:1.125rem;font-weight:700;color:var(--color-text-dark);">User Acquisition Trend</h3>
+            <div style="font-size:0.875rem;color:var(--color-text-muted);">Last 12 months growth by segment</div>
+          </div>
+          <div style="display:flex;gap:16px;font-size:0.75rem;font-weight:600;align-items:center;">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--color-primary-dark);border-radius:50%;"></span> Client</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--color-primary-blue);border-radius:50%;"></span> Professional</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--color-secondary);border-radius:50%;"></span> Manager</span>
+          </div>
+        </div>
+        
+        <!-- Mock Line Chart CSS -->
+        <div style="height:220px;position:relative;">
+          <svg style="width:100%;height:100%;" preserveAspectRatio="none" viewBox="0 0 100 100">
+            <!-- Grid lines -->
+            <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(0,0,0,0.05)" stroke-width="0.5"/>
+            <line x1="0" y1="40" x2="100" y2="40" stroke="rgba(0,0,0,0.05)" stroke-width="0.5"/>
+            <line x1="0" y1="60" x2="100" y2="60" stroke="rgba(0,0,0,0.05)" stroke-width="0.5"/>
+            <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(0,0,0,0.05)" stroke-width="0.5"/>
+            
+            <!-- Lines -->
+            <!-- Client (Dark Blue) -->
+            <path d="M0,80 Q20,70 40,65 T80,35 T100,45" fill="none" stroke="var(--color-primary-dark)" stroke-width="1.5" stroke-linecap="round"/>
+            <!-- Professional (Copperwood) -->
+            <path d="M0,90 Q30,80 50,75 T90,55 T100,50" fill="none" stroke="var(--color-primary-blue)" stroke-width="1.5" stroke-linecap="round"/>
+            <!-- Manager (Seagrass) -->
+            <path d="M0,95 Q40,90 60,85 T90,80 T100,75" fill="none" stroke="var(--color-secondary)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;font-weight:700;color:var(--color-text-muted);margin-top:8px;">
+            <span>JAN</span><span>MAR</span><span>MAY</span><span>JUL</span><span>SEP</span><span>NOV</span><span>DEC</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--color-text-dark);margin-bottom:var(--spacing-xl);">In-Demand Skills</h3>
+        
+        <div class="skill-bar-row">
+          <div class="skill-label"><span>UI/UX Design</span><span style="color:var(--color-primary-dark);">88% Match</span></div>
+          <div class="skill-track"><div class="skill-fill" style="width:88%;"></div></div>
+        </div>
+        <div class="skill-bar-row">
+          <div class="skill-label"><span>React/Next.js</span><span style="color:var(--color-primary-dark);">76% Match</span></div>
+          <div class="skill-track"><div class="skill-fill" style="width:76%;"></div></div>
+        </div>
+        <div class="skill-bar-row">
+          <div class="skill-label"><span>Cloud Architecture</span><span style="color:var(--color-primary-dark);">64% Match</span></div>
+          <div class="skill-track"><div class="skill-fill" style="width:64%;"></div></div>
+        </div>
+        <div class="skill-bar-row">
+          <div class="skill-label"><span>Data Science</span><span style="color:var(--color-primary-dark);">52% Match</span></div>
+          <div class="skill-track"><div class="skill-fill" style="width:52%;"></div></div>
+        </div>
+        <div class="skill-bar-row" style="margin-bottom:var(--spacing-xl);">
+          <div class="skill-label"><span>Product Strategy</span><span style="color:var(--color-primary-dark);">48% Match</span></div>
+          <div class="skill-track"><div class="skill-fill" style="width:48%;"></div></div>
+        </div>
+        
+        <div style="border-top:1px dashed var(--color-border);padding-top:var(--spacing-md);">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:8px;">PLATFORM DISTRIBUTION</div>
+          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:8px;">
+            <div style="background:var(--color-primary-blue);width:40%;"></div>
+            <div style="background:var(--color-primary-dark);width:35%;"></div>
+            <div style="background:var(--color-secondary);width:25%;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--color-text-muted);">
+            <span>Design</span><span>Engineering</span><span>Management</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Metrics -->
+    <div class="analytics-bot-grid">
+      
+      <!-- Funnel -->
+      <div class="chart-card">
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--color-text-dark);margin-bottom:var(--spacing-xl);">Hiring Velocity Funnel</h3>
+        
+        <div class="funnel-stage">
+          <div class="funnel-stage-header"><span>Jobs Posted</span><span style="color:var(--color-primary-dark);">12,400</span></div>
+          <div class="funnel-stage-bar" style="width:100%;background:rgba(8, 75, 131, 0.1);">BASELINE (100%)</div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-stage-header"><span>Applications</span><span style="color:var(--color-primary-blue);">8,200</span></div>
+          <div class="funnel-stage-bar" style="width:80%;background:rgba(191,105,0,0.1);color:var(--color-primary-blue);">66% CONVERSION</div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-stage-header"><span>Hires</span><span style="color:var(--color-secondary);">3,100</span></div>
+          <div class="funnel-stage-bar" style="width:60%;background:rgba(81,158,138,0.2);color:#034A3E;">38% CONVERSION</div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-stage-header"><span>Completions</span><span style="color:var(--color-primary-dark);">2,850</span></div>
+          <div class="funnel-stage-bar" style="width:50%;background:rgba(8, 75, 131, 0.1);">92% COMPLETION RATE</div>
+        </div>
+      </div>
+
+      <!-- Cash Flow -->
+      <div class="chart-card" style="display:flex;flex-direction:column;">
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--color-text-dark);margin-bottom:4px;">Cash Flow Analysis</h3>
+        <div style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:auto;">Gross Revenue vs. Pro Payouts</div>
+        
+        <div style="height:150px;display:flex;align-items:flex-end;justify-content:space-around;padding-top:20px;">
+          <!-- Mock Chart -->
+          <div style="display:flex;gap:4px;height:100%;align-items:flex-end;">
+            <div style="width:16px;height:40%;background:var(--color-primary-dark);border-radius:2px;"></div>
+            <div style="width:16px;height:30%;background:var(--color-bg-light);border-radius:2px;"></div>
+          </div>
+          <div style="display:flex;gap:4px;height:100%;align-items:flex-end;">
+            <div style="width:16px;height:55%;background:var(--color-primary-dark);border-radius:2px;"></div>
+            <div style="width:16px;height:45%;background:var(--color-bg-light);border-radius:2px;"></div>
+          </div>
+          <div style="display:flex;gap:4px;height:100%;align-items:flex-end;">
+            <div style="width:16px;height:65%;background:var(--color-primary-dark);border-radius:2px;"></div>
+            <div style="width:16px;height:50%;background:var(--color-bg-light);border-radius:2px;"></div>
+          </div>
+          <div style="display:flex;gap:4px;height:100%;align-items:flex-end;">
+            <div style="width:16px;height:95%;background:var(--color-secondary);border-radius:2px;"></div>
+            <div style="width:16px;height:70%;background:var(--color-bg-light);border-radius:2px;"></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-around;font-size:0.65rem;font-weight:700;color:var(--color-text-muted);margin:8px 0 var(--spacing-lg) 0;">
+          <span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span>
+        </div>
+        
+        <div style="display:flex;gap:var(--spacing-md);">
+          <div style="background:var(--color-bg-light);padding:var(--spacing-sm) var(--spacing-md);border-radius:var(--radius-sm);flex:1;text-align:center;">
+            <div style="font-size:0.65rem;color:var(--color-text-dark);font-weight:700;margin-bottom:4px;">PLATFORM TAKE</div>
+            <div style="font-weight:700;color:var(--color-primary-dark);">15.4%</div>
+          </div>
+          <div style="background:rgba(81,158,138,0.1);padding:var(--spacing-sm) var(--spacing-md);border-radius:var(--radius-sm);flex:1;text-align:center;">
+            <div style="font-size:0.65rem;color:var(--color-text-dark);font-weight:700;margin-bottom:4px;">GROWTH YOY</div>
+            <div style="font-weight:700;color:var(--color-secondary);">+12.8%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Health -->
+      <div class="chart-card">
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--color-text-dark);margin-bottom:var(--spacing-lg);">System Health Index</h3>
+        
+        <div class="health-grid">
+          <div class="health-metric">
+            <div style="font-size:0.65rem;font-weight:700;color:var(--color-text-muted);margin-bottom:4px;">DISPUTE RATE</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#d32f2f;">0.42%</div>
+            <div style="font-size:0.65rem;color:var(--color-secondary);">↓ -0.1%</div>
+          </div>
+          <div class="health-metric">
+            <div style="font-size:0.65rem;font-weight:700;color:var(--color-text-muted);margin-bottom:4px;">AVG TIME TO HIRE</div>
+            <div style="font-size:1.25rem;font-weight:700;color:var(--color-text-dark);">4.2d</div>
+            <div style="font-size:0.65rem;color:var(--color-secondary);">↓ -0.8d</div>
+          </div>
+          <div class="health-metric">
+            <div style="font-size:0.65rem;font-weight:700;color:var(--color-text-muted);margin-bottom:4px;">CSAT SCORE</div>
+            <div style="font-size:1.25rem;font-weight:700;color:var(--color-primary-dark);">4.8 ★</div>
+            <div style="font-size:0.65rem;color:var(--color-primary-blue);">↑ Stable</div>
+          </div>
+          <div class="health-metric">
+            <div style="font-size:0.65rem;font-weight:700;color:var(--color-text-muted);margin-bottom:4px;">SUPPORT TAT</div>
+            <div style="font-size:1.25rem;font-weight:700;color:var(--color-text-dark);">24m</div>
+            <div style="font-size:0.65rem;color:var(--color-secondary);">↓ -4m</div>
+          </div>
+        </div>
+
+        <div class="ai-prediction-card">
+          <div style="color:var(--color-primary-blue);margin-bottom:8px;">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"></path></svg>
+          </div>
+          <h4 style="font-size:0.875rem;font-weight:700;color:var(--color-text-dark);margin-bottom:4px;">AI Health Prediction</h4>
+          <p style="font-size:0.75rem;color:var(--color-text-muted);">Growth forecasted to reach 22% in Q3 based on current professional signup velocity.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Anomalous Activity Log -->
+    <div class="admin-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-lg);">
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--color-text-dark);">Anomalous Activity Monitor</h3>
+        <a href="#" style="font-size:0.875rem;font-weight:600;color:var(--color-primary-dark);text-decoration:none;">View Audit Log →</a>
+      </div>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>EVENT TYPE</th>
+            <th>CONTEXT</th>
+            <th>IMPACT</th>
+            <th>TIMESTAMP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="16" height="16" fill="none" stroke="#d32f2f" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <div style="font-weight:700;color:var(--color-text-dark);">High-Value Dispute</div>
+              </div>
+            </td>
+            <td>Project: "AI Enterprise Scale" ($24k)</td>
+            <td><span class="admin-badge-critical admin-tag" style="background:#d32f2f;color:white;">CRITICAL</span></td>
+            <td>2 mins ago</td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="16" height="16" fill="none" stroke="var(--color-primary-blue)" stroke-width="2" viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>
+                <div style="font-weight:700;color:var(--color-text-dark);">Rapid Pro Signups</div>
+              </div>
+            </td>
+            <td>Region: South East Asia (+400%)</td>
+            <td><span class="admin-badge-pending admin-tag">NOTABLE</span></td>
+            <td>5 hours ago</td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="16" height="16" fill="none" stroke="var(--color-secondary)" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <div style="font-weight:700;color:var(--color-text-dark);">Large Scale Hire</div>
+              </div>
+            </td>
+            <td>Client: TechGlobal Inc (12 positions)</td>
+            <td><span class="admin-badge-verified admin-tag">POSITIVE</span></td>
+            <td>1 hour ago</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>
