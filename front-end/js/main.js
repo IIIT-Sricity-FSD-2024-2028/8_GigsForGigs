@@ -17,36 +17,30 @@ import * as dashboard from './modules/dashboard.js';
 import * as services from './modules/services.js';
 
 // ── Page → module mapping ────────────────────────────────────────
-// Pages that do NOT require auth (public pages)
-const PUBLIC_PAGES = [
-  'login.html',
-  'signup.html',
-  'role-selection.html'
-];
 
 // Page → { module, allowedRoles }
 // allowedRoles: empty array = any authenticated role
 const PAGE_MAP = {
   // Auth pages (public — no guard)
-  'login.html':                     { moduleKey: 'auth',          public: true },
-  'signup.html':                    { moduleKey: 'auth',          public: true },
-  'role-selection.html':            { moduleKey: 'auth',          public: true },
-  'manager-invite-setup.html':      { moduleKey: 'managers',      public: true },
+  'login.html':                     { module: auth,          public: true },
+  'signup.html':                    { module: auth,          public: true },
+  'role-selection.html':            { module: auth,          public: true },
+  'manager-invite-setup.html':      { module: managers,      public: true },
 
   // Client pages
-  'post-gig.html':                  { moduleKey: 'tasks',         roles: ['client'] },
-  'my-gigs-client.html':            { moduleKey: 'tasks',         roles: ['client', 'manager'] },
-  'review-shortlist.html':          { moduleKey: 'applications',  roles: ['client', 'manager'] },
-  'review-deliverables.html':       { moduleKey: 'deliverables',  roles: ['client', 'manager'] },
-  'search-talent.html':             { moduleKey: 'marketplace',   roles: ['client', 'manager'] },
-  'client-dashboard.html':          { moduleKey: 'dashboard',     roles: ['client'] },
-  'client-profile-selection.html':  { moduleKey: 'dashboard',     roles: ['client'] },
-  'add-manager.html':               { moduleKey: 'managers',      roles: ['client'] },
-  'add-manager-flow.html':          { moduleKey: 'managers',      roles: ['client'] },
-  'profile-completion-client.html': { moduleKey: 'profile',       roles: [] },
+  'post-gig.html':                  { module: tasks,         roles: ['client'] },
+  'my-gigs-client.html':            { module: tasks,         roles: ['client', 'manager'] },
+  'review-shortlist.html':          { module: applications,  roles: ['client', 'manager'] },
+  'review-deliverables.html':       { module: deliverables,  roles: ['client', 'manager'] },
+  'search-talent.html':             { module: null,          roles: ['client', 'manager'] },
+  'client-dashboard.html':          { module: dashboard,     roles: ['client'] },
+  'client-profile-selection.html':  { module: dashboard,     roles: ['client'] },
+  'add-manager.html':               { module: managers,      roles: ['client'] },
+  'add-manager-flow.html':          { module: managers,      roles: ['client'] },
+  'profile-completion-client.html': { module: profile,       roles: [] },
 
   // Manager pages
-  'manager-dashboard.html':         { moduleKey: 'tasks',         roles: ['manager'] },
+  'manager-dashboard.html':         { module: tasks,         roles: ['manager'] },
 
   // Gig professional pages
   'gig-dashboard.html':             { module: dashboard,     roles: ['gig'] },
@@ -90,18 +84,15 @@ async function bootstrap() {
   }
 
   // Call the module's init() if one is mapped.
-  if (!config.moduleKey) return;
-
-  const loader = MODULE_LOADERS[config.moduleKey];
-  if (!loader) return;
+  const mod = config.module;
+  if (!mod) return;
 
   try {
-    const module = await loader();
-    if (module && typeof module.init === 'function') {
-      module.init();
+    if (typeof mod.init === 'function') {
+      mod.init();
     }
   } catch (error) {
-    console.error('Module bootstrap failed:', config.moduleKey, error);
+    console.error('Module bootstrap failed:', matchedKey, error);
   }
 }
 
