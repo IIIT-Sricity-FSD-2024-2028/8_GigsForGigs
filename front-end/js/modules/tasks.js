@@ -46,6 +46,25 @@ function initPostGig() {
   const form = document.querySelector('.form-page-container form');
   if (!form) return;
 
+  const budgetField = document.getElementById('budget');
+  const budgetPreviewEl = document.getElementById('budget-inr-preview');
+
+  const syncBudgetPreview = () => {
+    if (!budgetField || !budgetPreviewEl) return;
+
+    const rawValue = Number(budgetField.value);
+    if (!budgetField.value || isNaN(rawValue) || rawValue <= 0) {
+      budgetPreviewEl.textContent = 'Budget preview: ₹0.00';
+      return;
+    }
+
+    budgetPreviewEl.textContent = `Budget preview: ${formatCurrency(rawValue)}`;
+  };
+
+  if (budgetField) {
+    budgetField.addEventListener('input', syncBudgetPreview);
+  }
+
   // Check if editing existing task
   const params = new URLSearchParams(window.location.search);
   const editId = params.get('editId');
@@ -58,14 +77,14 @@ function initPostGig() {
     const durationField = document.getElementById('duration');
     const descField = document.getElementById('description');
     const pricingRadios = document.querySelectorAll('input[name="pricing"]');
-    const budgetField = document.getElementById('budget');
+    const editBudgetField = document.getElementById('budget');
     const skillsField = document.getElementById('skills');
 
     if (titleField) titleField.value = editingTask.title;
     if (categoryField) categoryField.value = editingTask.category;
     if (durationField) durationField.value = editingTask.duration;
     if (descField) descField.value = editingTask.description;
-    if (budgetField) budgetField.value = editingTask.budget;
+    if (editBudgetField) editBudgetField.value = editingTask.budget;
     if (skillsField) skillsField.value = editingTask.skills.join(', ');
 
     pricingRadios.forEach(radio => {
@@ -76,6 +95,8 @@ function initPostGig() {
     const pageTitle = document.querySelector('.page-title');
     if (pageTitle) pageTitle.textContent = 'Edit Task';
   }
+
+  syncBudgetPreview();
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
