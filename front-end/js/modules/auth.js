@@ -56,6 +56,27 @@ function loginPath() {
   return resolvePagePath('login.html');
 }
 
+/** Resolve absolute path to landing page index.html */
+function landingPath() {
+  const currentPath = window.location.pathname;
+  const pagesMarker = '/pages/';
+  const pagesIndex = currentPath.indexOf(pagesMarker);
+
+  if (pagesIndex !== -1) {
+    const appBase = currentPath.slice(0, pagesIndex);
+    return `${appBase}/index.html`;
+  }
+
+  const appMarker = '/front-end/';
+  const appIndex = currentPath.indexOf(appMarker);
+  if (appIndex !== -1) {
+    const appBase = currentPath.slice(0, appIndex + appMarker.length);
+    return `${appBase}index.html`;
+  }
+
+  return '/front-end/index.html';
+}
+
 function setPendingUser(user) {
   try {
     sessionStorage.setItem(PENDING_USER_KEY, JSON.stringify(user));
@@ -201,7 +222,7 @@ export function logout() {
   clearOnboardingRole();
   clearWindowUser();
   sessionStorage.removeItem('isFirstTimeJoin');
-  window.location.href = loginPath();
+  window.location.href = landingPath();
 }
 
 // ── Init per page ────────────────────────────────────────────────
