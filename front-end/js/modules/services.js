@@ -6,6 +6,7 @@
 import { services as seededServices, users } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import { generateId, getInitials, truncate } from '../utils/helpers.js';
+import { createGigHireRequestFromService, getClientContractSummary } from './gigState.js';
 
 const SERVICES_KEY = 'gfg_services';
 
@@ -113,6 +114,70 @@ function toRating(value) {
   return Number.isFinite(num) ? num : 0;
 }
 
+function getClientHireStatusMap(clientId) {
+  if (!clientId) return new Map();
+
+  const priority = {
+    active: 4,
+    pending: 3,
+    completed: 2,
+    declined: 1
+  };
+
+  const contracts = getClientContractSummary(clientId);
+  const byServiceId = new Map();
+
+  contracts.forEach((contract) => {
+    if (!contract?.sourceServiceId) return;
+
+    const currentStatus = byServiceId.get(contract.sourceServiceId);
+    if (!currentStatus) {
+      byServiceId.set(contract.sourceServiceId, contract.status);
+      return;
+    }
+
+    const currentRank = priority[currentStatus] || 0;
+    const nextRank = priority[contract.status] || 0;
+    if (nextRank > currentRank) {
+      byServiceId.set(contract.sourceServiceId, contract.status);
+    }
+  });
+
+  return byServiceId;
+}
+
+function showTalentActionToast(message, isError = false) {
+  let toast = document.getElementById('talent-hire-toast');
+
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'talent-hire-toast';
+    toast.style.cssText = [
+      'position:fixed',
+      'right:16px',
+      'bottom:16px',
+      'z-index:2200',
+      'padding:10px 14px',
+      'border-radius:10px',
+      'font-size:0.875rem',
+      'font-weight:600',
+      'box-shadow:0 14px 30px rgba(7,20,37,0.2)',
+      'border:1px solid var(--color-border)',
+      'max-width:min(420px,calc(100vw - 32px))'
+    ].join(';');
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.style.background = isError ? 'rgba(8,75,131,0.12)' : 'rgba(81,158,138,0.16)';
+  toast.style.color = isError ? 'var(--color-primary-dark)' : 'var(--color-secondary)';
+
+  clearTimeout(showTalentActionToast._timer);
+  showTalentActionToast._timer = setTimeout(() => {
+    if (toast?.parentElement) toast.remove();
+  }, 2000);
+}
+
 function buildServiceCard(service, index) {
   const provider = service.provider;
   const providerName = provider?.name || 'Gig Professional';
@@ -124,6 +189,21 @@ function buildServiceCard(service, index) {
     ? provider.skills.slice(0, 3)
     : [service.category];
   const bannerClass = ['talent-banner-blue', 'talent-banner-gold', 'talent-banner-green', 'talent-banner-pink'][index % 4];
+
+  const hireStatus = service.hireStatus || '';
+  const canHire = service.canHire === true;
+
+  let hireAction = `<button type="button" class="btn-hire" disabled title="Only clients can hire">Hire</button>`;
+  if (canHire && hireStatus === 'pending') {
+    hireAction = `<button type="button" class="btn-hire" disabled title="Waiting for gig professional response">Request Sent</button>`;
+  } else if (canHire && hireStatus === 'active') {
+    hireAction = `<button type="button" class="btn-hire" disabled title="Contract is already active">Active</button>`;
+  } else if (canHire && hireStatus === 'completed') {
+    hireAction = `<button type="button" class="btn-hire" disabled title="This contract is completed">Completed</button>`;
+  } else if (canHire) {
+    const label = hireStatus === 'declined' ? 'Hire Again' : 'Hire';
+    hireAction = `<a href="#" class="btn-hire" data-service-id="${service.id}">${label}</a>`;
+  }
 
   return `
     <div class="talent-card" data-service-id="${service.id}">
@@ -140,13 +220,16 @@ function buildServiceCard(service, index) {
         <div class="talent-rating">
           <span class="star">★</span> ${rating > 0 ? rating.toFixed(1) : 'New'} <span class="review-count">(${reviews} reviews)</span>
         </div>
+        ${hireStatus
+          ? `<div style="margin-top:8px;font-size:0.75rem;color:var(--color-text-muted);">Contract Status: ${hireStatus === 'active' ? 'Active' : hireStatus === 'pending' ? 'Pending' : hireStatus === 'completed' ? 'Completed' : 'Declined'}</div>`
+          : ''}
         <p style="margin-top:8px;color:var(--color-text-muted);font-size:0.8rem;line-height:1.4;">${truncate(service.title, 64)}</p>
         <div class="talent-skills">
           ${chips.map((chip) => `<span class="skill-chip">${chip}</span>`).join('')}
         </div>
         <div class="talent-actions">
           <a href="#" class="btn-view-profile" data-provider-id="${provider?.id || ''}">View Profile</a>
-          <a href="#" class="btn-hire" data-service-id="${service.id}">Hire</a>
+          ${hireAction}
         </div>
       </div>
     </div>
@@ -157,9 +240,18 @@ export function renderServices() {
   const grid = document.getElementById('talent-grid');
   if (!grid) return;
 
+  const currentUser = getUser();
+  const isClientViewer = currentUser?.role === 'client';
+  const hireStatusByService = isClientViewer ? getClientHireStatusMap(currentUser.id) : new Map();
+
   const allServices = getServices().map((service) => {
     const provider = getProvider(service.gigId);
-    return { ...service, provider };
+    return {
+      ...service,
+      provider,
+      canHire: isClientViewer,
+      hireStatus: hireStatusByService.get(service.id) || ''
+    };
   });
 
   const searchTerm = (document.getElementById('talent-search')?.value || '').trim().toLowerCase();
@@ -205,6 +297,37 @@ export function renderServices() {
     `;
   } else {
     grid.innerHTML = filtered.map((service, index) => buildServiceCard(service, index)).join('');
+  }
+
+  if (isClientViewer) {
+    grid.querySelectorAll('.btn-hire[data-service-id]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+
+        const serviceId = button.dataset.serviceId;
+        if (!serviceId) return;
+
+        const service = allServices.find((item) => item.id === serviceId);
+        if (!service) {
+          showTalentActionToast('Unable to create request for this service.', true);
+          return;
+        }
+
+        const result = createGigHireRequestFromService(currentUser.id, service);
+        if (!result?.request) {
+          showTalentActionToast('Unable to create request for this service.', true);
+          return;
+        }
+
+        if (result.isNew) {
+          showTalentActionToast('Hiring request sent. It is now visible in Active Contracts and gig Pending Requests.');
+        } else {
+          showTalentActionToast('A request already exists for this service.');
+        }
+
+        renderServices();
+      });
+    });
   }
 
   const pagination = document.querySelector('.pagination');

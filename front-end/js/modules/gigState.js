@@ -56,6 +56,30 @@ function getClientDetails(clientId) {
 	};
 }
 
+function getGigDetails(gigId) {
+	const gig = users.find((user) => user.id === gigId);
+	if (!gig) {
+		return {
+			gigId,
+			gigName: 'Gig Professional',
+			gigTitle: 'Service Provider'
+		};
+	}
+
+	return {
+		gigId: gig.id,
+		gigName: gig.name || 'Gig Professional',
+		gigTitle: gig.title || 'Service Provider'
+	};
+}
+
+function getClientContractStatus(request, task) {
+	if (task?.status === 'completed') return 'completed';
+	if (request?.status === 'accepted' || task?.status === 'active') return 'active';
+	if (request?.status === 'declined') return 'declined';
+	return 'pending';
+}
+
 function inferTaskProgress(task, index = 0) {
 	if (task.status === 'completed') return 100;
 
@@ -267,6 +291,10 @@ function readRoot() {
 
 function writeRoot(root) {
 	set(STORAGE_KEY, root);
+
+	if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+		window.dispatchEvent(new CustomEvent('gfg:workflow-updated'));
+	}
 }
 
 function ensureGigState(root, gigId) {
@@ -444,6 +472,104 @@ export function upsertGigRequestFromTask(gigId, taskLike) {
 		gigState.requests.push(newRequest);
 		return newRequest;
 	});
+}
+
+export function createGigHireRequestFromService(clientId, serviceLike) {
+	if (!clientId || !serviceLike || !serviceLike.gigId || !serviceLike.id) return null;
+
+	const response = mutateGigState(serviceLike.gigId, (gigState) => {
+		const existing = gigState.requests.find(
+			(request) =>
+				request.clientId === clientId &&
+				request.sourceServiceId === serviceLike.id &&
+				(request.status === 'pending' || request.status === 'accepted')
+		);
+
+		if (existing) {
+			return { request: existing, isNew: false };
+		}
+
+		const clientInfo = getClientDetails(clientId);
+		const defaultDeadline = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+		const newRequest = {
+			id: generateId('gr'),
+			sourceTaskId: null,
+			sourceServiceId: serviceLike.id,
+			sourceType: 'service_hire',
+			title: serviceLike.title || 'Service Engagement',
+			description: serviceLike.description || 'Client initiated a service hire request.',
+			budget: toNumber(serviceLike.startingPrice, 0),
+			deadline: serviceLike.deadline || defaultDeadline,
+			clientId: clientInfo.clientId,
+			clientName: clientInfo.clientName,
+			clientInitials: clientInfo.clientInitials,
+			status: 'pending',
+			createdAt: nowIso(),
+			updatedAt: nowIso(),
+			acceptedAt: null,
+			declinedAt: null
+		};
+
+		gigState.requests.push(newRequest);
+		return { request: newRequest, isNew: true };
+	});
+
+	return response;
+}
+
+export function getClientContractSummary(clientId) {
+	if (!clientId) return [];
+
+	const root = readRoot();
+	const gigIds = users.filter((user) => user.role === 'gig').map((user) => user.id);
+	gigIds.forEach((gigId) => ensureGigState(root, gigId));
+
+	const contracts = [];
+
+	Object.entries(root.gigs).forEach(([gigId, gigState]) => {
+		normalizeGigState(gigState);
+
+		const gigInfo = getGigDetails(gigId);
+		const taskByRequestId = new Map(
+			(gigState.tasks || [])
+				.filter((task) => Boolean(task?.requestId))
+				.map((task) => [task.requestId, task])
+		);
+
+		(gigState.requests || []).forEach((request) => {
+			if (request.clientId !== clientId) return;
+
+			const linkedTask = taskByRequestId.get(request.id) || null;
+			const status = getClientContractStatus(request, linkedTask);
+			const progress = status === 'completed'
+				? 100
+				: status === 'active'
+					? Math.max(15, toNumber(linkedTask?.progress, 35))
+					: 0;
+
+			contracts.push({
+				id: request.id,
+				requestId: request.id,
+				taskId: linkedTask?.id || null,
+				title: request.title,
+				description: request.description,
+				budget: toNumber(request.budget, toNumber(linkedTask?.budget, 0)),
+				deadline: request.deadline || linkedTask?.deadline || null,
+				status,
+				progress,
+				gigId: gigInfo.gigId,
+				gigName: gigInfo.gigName,
+				gigTitle: gigInfo.gigTitle,
+				sourceTaskId: request.sourceTaskId || linkedTask?.sourceTaskId || null,
+				sourceServiceId: request.sourceServiceId || null,
+				createdAt: request.createdAt || linkedTask?.createdAt || nowIso(),
+				updatedAt: request.updatedAt || linkedTask?.updatedAt || nowIso()
+			});
+		});
+	});
+
+	writeRoot(root);
+	return sortByCreatedAtDesc(contracts);
 }
 
 export function getProjectDetailRecord(gigId, queryString) {

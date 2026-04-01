@@ -14,7 +14,8 @@ import {
 import {
   getGigDashboardSummary,
   markGigTaskComplete,
-  upsertGigRequestFromTask
+  upsertGigRequestFromTask,
+  getClientContractSummary
 } from './gigState.js';
 
 const exploreState = {
@@ -225,8 +226,9 @@ function renderMyGigsClient() {
   const user = getUser();
   if (!user) return;
 
-  const container = document.getElementById('active-contracts-content');
-  if (!container) return;
+  const cardContainer = document.getElementById('active-contracts-content');
+  const tableBody = document.querySelector('#active-contracts-table tbody');
+  if (!cardContainer && !tableBody) return;
 
   // Client sees own tasks; manager linked to client sees same tasks
   let clientId = user.id;
@@ -235,121 +237,158 @@ function renderMyGigsClient() {
     if (mgr && mgr.clientId) clientId = mgr.clientId;
   }
 
-  const taskList = getTasks();
-  const clientTasks = taskList.filter(t => t.clientId === clientId);
+  const searchInput = document.getElementById('gigs-search');
+  const query = String(searchInput?.value || '').trim().toLowerCase();
 
-  if (clientTasks.length === 0) {
-    container.style.textAlign = 'center';
-    container.style.padding = 'var(--spacing-xxl)';
-    container.style.color = 'var(--color-text-muted)';
-    container.innerHTML = 'No active contracts yet. <a href="post-gig.html" style="color:var(--color-primary-blue);">Post a task</a> to get started.';
+  const contracts = getClientContractSummary(clientId).filter((contract) => contract.status !== 'declined');
+  const sourceTaskIds = new Set(
+    contracts.map((contract) => contract.sourceTaskId).filter(Boolean)
+  );
+
+  const taskList = getTasks();
+  const legacyLinkedTasks = taskList
+    .filter((task) => task.clientId === clientId && task.assignedTo && !sourceTaskIds.has(task.id))
+    .map((task) => {
+      const gigUser = getUserById(task.assignedTo);
+      const normalizedStatus = task.status === 'completed'
+        ? 'completed'
+        : task.status === 'open'
+          ? 'pending'
+          : 'active';
+
+      const progress = normalizedStatus === 'completed'
+        ? 100
+        : normalizedStatus === 'active'
+          ? 45
+          : 0;
+
+      return {
+        id: task.id,
+        requestId: null,
+        taskId: task.id,
+        title: task.title,
+        gigName: gigUser?.name || 'Not assigned',
+        gigTitle: gigUser?.title || 'Professional',
+        status: normalizedStatus,
+        progress,
+        budget: Number(task.budget) || 0,
+        deadline: task.deadline,
+        createdAt: task.createdAt || new Date().toISOString()
+      };
+    });
+
+  const normalizedContracts = contracts.map((contract) => ({
+    id: contract.id,
+    requestId: contract.requestId,
+    taskId: contract.taskId,
+    title: contract.title,
+    gigName: contract.gigName,
+    gigTitle: contract.gigTitle,
+    status: contract.status,
+    progress: Number(contract.progress) || 0,
+    budget: Number(contract.budget) || 0,
+    deadline: contract.deadline,
+    createdAt: contract.createdAt || new Date().toISOString()
+  }));
+
+  const combinedContracts = [...normalizedContracts, ...legacyLinkedTasks]
+    .filter((item) => {
+      if (!query) return true;
+      const haystack = `${item.title} ${item.gigName} ${item.gigTitle}`.toLowerCase();
+      return haystack.includes(query);
+    })
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+  if (combinedContracts.length === 0) {
+    if (cardContainer) {
+      cardContainer.style.textAlign = 'center';
+      cardContainer.style.padding = 'var(--spacing-xxl)';
+      cardContainer.style.color = 'var(--color-text-muted)';
+      cardContainer.innerHTML = 'No active contracts yet. <a href="search-talent.html" style="color:var(--color-primary-blue);">Hire talent</a> to start your pipeline.';
+    }
+
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">
+            No active contracts yet. <a href="search-talent.html" style="color:var(--color-primary-blue);">Hire talent</a> to get started.
+          </td>
+        </tr>
+      `;
+    }
+
     return;
   }
 
-  container.style.textAlign = '';
-  container.style.padding = '0';
-  container.style.color = '';
-  container.style.border = 'none';
+  if (cardContainer) {
+    cardContainer.style.textAlign = '';
+    cardContainer.style.padding = '0';
+    cardContainer.style.color = '';
+    cardContainer.style.border = 'none';
+  }
 
-  container.innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--spacing-xl);">
-    ${clientTasks.map(task => {
-      const assignee = task.assignedTo ? getUserById(task.assignedTo) : null;
-      const progress = task.status === 'completed' ? 100
-        : task.status === 'under_review' ? 90
-        : task.status === 'in_progress' ? 45 : 0;
-      const progressLabel = humaniseStatus(task.status);
+  if (tableBody) {
+    tableBody.innerHTML = combinedContracts.map((contract) => {
+      const statusClass = getStatusBadgeClass(contract.status);
+      const statusLabel = humaniseStatus(contract.status);
+      const progressValue = Math.max(0, Math.min(100, Number(contract.progress) || 0));
 
-      // Action buttons — role‑gated
-      let actions = '';
-      if (task.status === 'under_review') {
-        actions = `<a href="review-deliverables.html?taskId=${task.id}" class="btn btn-primary" style="background-color:var(--color-secondary);border-color:var(--color-secondary);text-decoration:none;">Review Deliverables →</a>`;
-      } else if (task.status === 'in_progress' && assignee) {
-        actions = `<span class="btn btn-outline" style="cursor:default;">In Progress</span>`;
-      }
-
-      // Edit button — client only, only if status is open
-      let editBtn = '';
-      if (user.role === 'client' && task.status === 'open') {
-        editBtn = `<button class="btn btn-outline edit-task-btn" data-task-id="${task.id}" style="padding:6px 12px;font-size:0.8rem;color:var(--color-primary-blue);border-color:var(--color-primary-blue);margin-left:auto;">Edit</button>`;
-      }
-
-      // Delete button — client only, not manager, only if status is open
-      let deleteBtn = '';
-      if (user.role === 'client' && task.status === 'open') {
-        deleteBtn = `<button class="btn btn-outline delete-task-btn" data-task-id="${task.id}" style="padding:6px 12px;font-size:0.8rem;color:var(--color-text-muted);border-color:var(--color-border);">Delete</button>`;
+      let actionMarkup = '<span style="color:var(--color-text-muted);font-size:0.8125rem;">Awaiting gig response</span>';
+      if (contract.status === 'active' || contract.status === 'completed') {
+        const queryParam = contract.requestId
+          ? `requestId=${contract.requestId}`
+          : `taskId=${contract.taskId}`;
+        actionMarkup = `<a href="../gig/project-detail.html?${queryParam}" class="btn-review-proposal">View</a>`;
       }
 
       return `
-        <div class="dashboard-section" ${task.status === 'under_review' ? 'style="border:2px solid var(--color-secondary);"' : ''}>
-          <div style="display:flex;justify-content:space-between;margin-bottom:var(--spacing-md);">
-            <div>
-              <div style="display:flex;align-items:center;gap:var(--spacing-sm);margin-bottom:4px;">
-                <span class="${getStatusBadgeClass(task.status)}">${humaniseStatus(task.status)}</span>
-                <span style="font-size:0.875rem;color:var(--color-text-muted);">Due ${formatDate(task.deadline)}</span>
-              </div>
-              <h2 style="font-size:1.25rem;font-weight:700;color:var(--color-primary-dark);">${task.title}</h2>
+        <tr>
+          <td>
+            <div class="task-name-cell">${contract.title}</div>
+            <div class="task-category">${contract.gigTitle || 'Professional Service'}</div>
+          </td>
+          <td>
+            <div class="pro-cell">
+              <div class="pro-photo">${getInitials(contract.gigName || 'GP')}</div>
+              ${contract.gigName || 'Gig Professional'}
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:0.875rem;color:var(--color-text-muted);text-transform:uppercase;">Total Budget</div>
-              <div style="font-weight:700;color:var(--color-primary-dark);font-size:1.125rem;">${formatCurrency(task.budget)}</div>
+          </td>
+          <td><span class="${statusClass}">${statusLabel}</span></td>
+          <td class="progress-cell">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill progress-bar-fill-blue" style="width: ${progressValue}%"></div>
             </div>
-          </div>
-          <div style="display:flex;gap:var(--spacing-xl);padding-top:var(--spacing-md);border-top:1px solid var(--color-border);align-items:center;">
-            ${assignee ? `
-              <div style="display:flex;align-items:center;gap:var(--spacing-sm);">
-                <div class="talent-avatar" style="width:48px;height:48px;font-size:1rem;color:var(--color-white);background-color:var(--color-primary-dark);">${getInitials(assignee.name)}</div>
-                <div>
-                  <div style="font-weight:600;color:var(--color-text-dark);">${assignee.name}</div>
-                  <div style="font-size:0.75rem;color:var(--color-text-muted);">${assignee.title || 'Professional'}</div>
-                </div>
-              </div>
-            ` : `<div style="font-size:0.875rem;color:var(--color-text-muted);">No professional assigned yet</div>`}
-            <div style="flex:1;">
-              <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:8px;">
-                <span style="font-weight:600;color:var(--color-text-dark);">Project Progress</span>
-                <span style="color:var(--color-primary-blue);">${progressLabel} (${progress}%)</span>
-              </div>
-              <div class="progress-container">
-                <div class="progress-bar" style="width:${progress}%;"></div>
-              </div>
+            <div class="progress-label">${contract.status === 'pending' ? 'Pending' : `${progressValue}%`}</div>
+          </td>
+          <td class="budget-cell">${formatCurrency(contract.budget)}</td>
+          <td>
+            <div class="actions-cell">
+              ${actionMarkup}
             </div>
-            ${actions}
-            ${editBtn}
-            ${deleteBtn}
-          </div>
-        </div>`;
-    }).join('')}
-  </div>`;
-
-  // Attach edit listeners (client only)
-  container.querySelectorAll('.edit-task-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.taskId;
-      const task = getTasks().find(t => t.id === id);
-      if (!task) return;
-
-      // Store task data in sessionStorage for the edit page
-      sessionStorage.setItem('editingTaskId', id);
-      window.location.href = 'post-gig.html?editId=' + id;
-    });
-  });
-
-  // Attach delete listeners (client only)
-  container.querySelectorAll('.delete-task-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.taskId;
-      const currentTasks = getTasks();
-      const idx = currentTasks.findIndex(t => t.id === id);
-      if (idx !== -1) {
-        currentTasks.splice(idx, 1);
-        persistTaskList(currentTasks);
-        renderMyGigsClient(); // re‑render without page reload
-      }
-    });
-  });
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
 }
 
 function initMyGigsClient() {
+  const searchInput = document.getElementById('gigs-search');
+  if (searchInput && searchInput.dataset.boundContractsSearch !== '1') {
+    searchInput.dataset.boundContractsSearch = '1';
+    searchInput.addEventListener('input', renderMyGigsClient);
+  }
+
+  if (!window.__gfgClientContractsRealtimeBound) {
+    window.__gfgClientContractsRealtimeBound = true;
+    window.addEventListener('gfg:workflow-updated', renderMyGigsClient);
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'gfg_gig_workflow_state') {
+        renderMyGigsClient();
+      }
+    });
+  }
+
   renderMyGigsClient();
 }
 
@@ -1296,6 +1335,16 @@ function renderActiveTasks() {
 }
 
 function initActiveTasks() {
+  if (!window.__gfgActiveTasksRealtimeBound) {
+    window.__gfgActiveTasksRealtimeBound = true;
+    window.addEventListener('gfg:workflow-updated', renderActiveTasks);
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'gfg_gig_workflow_state') {
+        renderActiveTasks();
+      }
+    });
+  }
+
   renderActiveTasks();
 }
 
