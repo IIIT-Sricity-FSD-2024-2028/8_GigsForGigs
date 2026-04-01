@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Spent - GigsForGigs</title>
+  <meta name="description" content="Track total spending, trends, and transactions for your client account.">
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/dashboard.css">
+  <link rel="stylesheet" href="../../css/client-dashboard.css">
+  <style>
+    .spent-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .spent-hero {
+      background: linear-gradient(125deg, #0b4f8f 0%, #2566a5 100%);
+      border-radius: var(--radius-lg);
+      color: var(--color-white);
+      padding: var(--spacing-xl);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .spent-hero::after {
+      content: '';
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      right: -30px;
+      bottom: -60px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .spent-kicker {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.78;
+      font-weight: 600;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .spent-total {
+      font-size: clamp(1.9rem, 3.6vw, 3rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .spent-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xl);
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      padding-top: var(--spacing-md);
+    }
+
+    .spent-meta-block .label {
+      font-size: 0.72rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .spent-meta-block .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .spent-meta-block .sub {
+      font-size: 0.78rem;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .spent-budget {
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .spent-budget-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .spent-budget-head h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      color: var(--color-text-dark);
+    }
+
+    .spent-pill {
+      font-size: 0.68rem;
+      background: rgba(191, 105, 0, 0.14);
+      color: var(--color-primary-blue);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+
+    .spent-budget-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: var(--spacing-sm);
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
+    }
+
+    .spent-budget-row strong {
+      color: var(--color-text-dark);
+      font-size: 1rem;
+    }
+
+    .spent-progress {
+      width: 100%;
+      height: 10px;
+      background: rgba(8, 75, 131, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .spent-progress > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #bf6900 0%, #d6841b 100%);
+      transition: width 0.3s ease;
+    }
+
+    .spent-budget-note {
+      font-size: 0.84rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+
+    .spent-budget-note strong {
+      color: var(--color-secondary);
+    }
+
+    .spent-section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .spent-section-head h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: var(--color-text-dark);
+    }
+
+    .spent-section-sub {
+      margin-top: 4px;
+      font-size: 0.86rem;
+      color: var(--color-text-muted);
+    }
+
+    .spent-select {
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      color: var(--color-text-muted);
+      background: var(--color-white);
+    }
+
+    .spent-chart-box {
+      min-height: 300px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-sm);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(242, 248, 252, 0.35) 100%);
+    }
+
+    .spent-table-wrap {
+      margin-top: var(--spacing-lg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--color-white);
+    }
+
+    .spent-table-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-bottom: 1px solid var(--color-border);
+      background: rgba(8, 75, 131, 0.03);
+    }
+
+    .spent-table-head h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      color: var(--color-text-dark);
+    }
+
+    .spent-table-link {
+      font-size: 0.9rem;
+      color: var(--color-primary-blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    @media (max-width: 960px) {
+      .spent-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .spent-meta {
+        gap: var(--spacing-lg);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-layout">
+  <aside class="dashboard-sidebar">
+    <a href="client-dashboard.html" class="client-sidebar-brand">
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 12l3 3 5-5"></path></svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">GigsForGigs</span>
+        <span class="brand-sub">Client Portal</span>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav"></nav>
+
+    <div class="sidebar-user-info">
+      <div class="user-avatar user-avatar-seagrass">CL</div>
+      <div class="user-details">
+        <div class="user-name">Client</div>
+        <div class="user-role">Client</div>
+      </div>
+      <div class="online-dot"></div>
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    <header class="dashboard-topbar">
+      <div class="topbar-search">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search transactions...">
+      </div>
+      <div class="topbar-actions">
+        <a href="post-gig.html" class="btn-post-gig">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Post a Task
+        </a>
+      </div>
+    </header>
+
+    <div class="dashboard-content">
+      <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+        <h1 class="page-title">Total Spent</h1>
+      </div>
+
+      <section class="spent-layout">
+        <article class="spent-hero">
+          <div class="spent-kicker">Total Expenditure</div>
+          <div class="spent-total" id="client-spent-total">₹0.00</div>
+          <div class="spent-meta">
+            <div class="spent-meta-block">
+              <div class="label">This Month</div>
+              <div class="value" id="client-spent-month">₹0.00</div>
+              <div class="sub">+8.2%</div>
+            </div>
+            <div class="spent-meta-block">
+              <div class="label">Open Projects</div>
+              <div class="value" id="client-spent-active-projects">0 Active</div>
+              <div class="sub">Across active categories</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="spent-budget">
+          <div class="spent-budget-head">
+            <h3>Budget Outlook</h3>
+            <span class="spent-pill">Q4 Analysis</span>
+          </div>
+          <div class="spent-budget-row">
+            <span>Quarterly Budget</span>
+            <strong id="client-quarter-budget">₹0.00</strong>
+          </div>
+          <div class="spent-progress">
+            <span id="client-budget-usage-bar"></span>
+          </div>
+          <p class="spent-budget-note">
+            You have used <strong id="client-budget-usage">0%</strong> of your allocated budget for this quarter.
+            Based on current trends, you are <strong>on track</strong>.
+          </p>
+        </article>
+      </section>
+
+      <section class="dashboard-section">
+        <div class="spent-section-head">
+          <div>
+            <h2>Spending Trends</h2>
+            <div class="spent-section-sub">Monthly expenditure across all active contracts</div>
+          </div>
+          <select class="spent-select" aria-label="Select spending range">
+            <option selected>Last 6 Months</option>
+            <option>Last 12 Months</option>
+          </select>
+        </div>
+        <div class="spent-chart-box" id="client-spending-trend-chart">
+          <div style="text-align:center;color:var(--color-text-muted);padding-top:56px;">Loading trend data...</div>
+        </div>
+      </section>
+
+      <section class="spent-table-wrap">
+        <div class="spent-table-head">
+          <h3>Recent Transactions</h3>
+          <a href="#" class="spent-table-link">View All</a>
+        </div>
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Project Name</th>
+              <th>Professional</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="client-spent-transactions-body">
+            <tr>
+              <td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">Loading transactions...</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>

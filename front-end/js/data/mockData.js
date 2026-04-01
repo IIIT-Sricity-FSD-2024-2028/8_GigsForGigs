@@ -166,7 +166,47 @@ const seedUsers = [
     clientId: 'u1',               // linked to the root client
     createdAt: '2024-03-10T09:00:00Z',
     isProfileComplete: true,
-    tasksManaged: 6
+    tasksManaged: 6,
+    deleted: false
+  },
+  {
+    id: 'u8',
+    name: 'Priya Nair',
+    email: 'priya.nair@acmecorp.com',
+    password: 'password8',
+    role: 'manager',
+    isFirstTimeUser: false,
+    clientId: 'u1',
+    createdAt: '2024-05-22T09:30:00Z',
+    isProfileComplete: true,
+    tasksManaged: 3,
+    deleted: false
+  },
+  {
+    id: 'u9',
+    name: 'Rohan Mehta',
+    email: 'rohan.mehta@acmecorp.com',
+    password: 'password9',
+    role: 'manager',
+    isFirstTimeUser: false,
+    clientId: 'u1',
+    createdAt: '2024-06-10T12:15:00Z',
+    isProfileComplete: true,
+    tasksManaged: 4,
+    deleted: false
+  },
+  {
+    id: 'u10',
+    name: 'Ananya Shah',
+    email: 'ananya.shah@acmecorp.com',
+    password: 'password10',
+    role: 'manager',
+    isFirstTimeUser: false,
+    clientId: 'u1',
+    createdAt: '2024-07-01T08:20:00Z',
+    isProfileComplete: true,
+    tasksManaged: 2,
+    deleted: false
   },
   {
     id: 'u3',

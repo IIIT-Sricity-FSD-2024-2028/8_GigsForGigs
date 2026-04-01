@@ -7,9 +7,7 @@
 import {
   tasks,
   users,
-  applications,
   deliverables,
-  persistApplications,
   saveTasks,
   getFromStorage,
   saveToStorage
@@ -23,6 +21,7 @@ import {
 import {
   getGigDashboardSummary,
   markGigTaskComplete,
+  acceptGigRequest,
   upsertGigRequestFromTask,
   getClientContractSummary
 } from './gigState.js';
@@ -246,16 +245,16 @@ function initPostGig() {
       });
 
       if (!result.ok) {
-        setPostGigFeedback(form, result.error || 'Unable to publish gig.', true);
+        setPostGigFeedback(form, result.error || 'Unable to publish task.', true);
         return;
       }
     }
 
-    setPostGigFeedback(form, 'Gig published successfully. Redirecting...', false);
+    setPostGigFeedback(form, 'Task published successfully. Redirecting...', false);
 
-    // Redirect back to client dashboard
+    // Redirect to client dashboard where newly posted tasks are listed.
     setTimeout(() => {
-      window.location.href = 'my-gigs-client.html';
+      window.location.href = 'client-dashboard.html';
     }, 100);
   });
 }
@@ -340,18 +339,23 @@ function renderMyGigsClient() {
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   if (combinedContracts.length === 0) {
+    const emptyStateLink = user.role === 'manager'
+      ? '../manager/manager-dashboard.html'
+      : 'search-talent.html';
+    const emptyStateAction = user.role === 'manager' ? 'Return to dashboard' : 'Hire talent';
+
     if (cardContainer) {
       cardContainer.style.textAlign = 'center';
       cardContainer.style.padding = 'var(--spacing-xxl)';
       cardContainer.style.color = 'var(--color-text-muted)';
-      cardContainer.innerHTML = 'No active contracts yet. <a href="search-talent.html" style="color:var(--color-primary-blue);">Hire talent</a> to start your pipeline.';
+      cardContainer.innerHTML = `No active contracts yet. <a href="${emptyStateLink}" style="color:var(--color-primary-blue);">${emptyStateAction}</a> to continue.`;
     }
 
     if (tableBody) {
       tableBody.innerHTML = `
         <tr>
           <td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">
-            No active contracts yet. <a href="search-talent.html" style="color:var(--color-primary-blue);">Hire talent</a> to get started.
+            No active contracts yet. <a href="${emptyStateLink}" style="color:var(--color-primary-blue);">${emptyStateAction}</a> to continue.
           </td>
         </tr>
       `;
@@ -439,8 +443,15 @@ function renderManagerDashboard() {
   if (!user) return;
 
   const mgr = users.find(u => u.id === user.id);
+  const managerEmail = String(mgr?.email || user.email || '').trim();
+  const managerName = managerEmail.includes('@')
+    ? managerEmail.split('@')[0]
+    : (mgr?.name || user.name || 'Manager');
   const userNameEl = document.querySelector('.user-name');
-  if (userNameEl) userNameEl.textContent = mgr?.name || user.name || 'Manager';
+  if (userNameEl) userNameEl.textContent = managerName;
+
+  const greetingEl = document.getElementById('manager-greeting');
+  if (greetingEl) greetingEl.textContent = `Welcome back, ${managerName}!`;
 
   const clientId = mgr && mgr.clientId ? mgr.clientId : user.id;
 
@@ -484,7 +495,7 @@ function renderManagerDashboard() {
           <td style="color:var(--color-text-muted);">${formatDate(task.deadline)}</td>
           <td style="font-weight:600;">${formatCurrency(task.budget)}</td>
           <td><span class="${getStatusBadgeClass(task.status)}">${humaniseStatus(task.status)}</span></td>
-          <td><a href="../client/review-deliverables.html?taskId=${task.id}" class="btn-review-proposal">Review</a></td>
+          <td><a href="../gig/project-detail.html?taskId=${task.id}" class="btn-review-proposal">Review</a></td>
         </tr>`;
       }).join('');
     }
@@ -523,7 +534,7 @@ function initManagerDashboard() {
   renderManagerDashboard();
 }
 
-// ── explore-tasks.html  (gig sees open tasks, apply button) ──────
+// ── explore-tasks.html  (gig sees open tasks, take-task action) ──
 
 function renderExploreTasks() {
   const user = getUser();
@@ -587,13 +598,7 @@ function renderExploreTasks() {
   grid.innerHTML = pagedTasks.map((task, i) => {
     const client = getUserById(task.clientId);
     const linkedRequest = requestByTaskId.get(task.id) || null;
-    const existingApp = applications.find((app) => app.taskId === task.id && app.gigId === user.id);
-    const hasApplied = Boolean(linkedRequest || existingApp);
-    const statusLabel = linkedRequest
-      ? humaniseStatus(linkedRequest.status)
-      : existingApp
-        ? humaniseStatus(existingApp.status)
-        : '';
+    const statusLabel = linkedRequest ? humaniseStatus(linkedRequest.status) : '';
 
     return `
       <div class="explore-card">
@@ -607,54 +612,34 @@ function renderExploreTasks() {
           ${statusLabel ? `<div style="font-size:0.75rem;color:var(--color-text-muted);margin-bottom:var(--spacing-sm);">Application: ${statusLabel}</div>` : ''}
           <div class="explore-footer" style="display:flex;gap:var(--spacing-sm);">
             <a href="project-detail.html?taskId=${task.id}" class="btn btn-outline" style="flex:1;text-align:center;text-decoration:none;">View Details</a>
-            ${hasApplied
-              ? `<button class="btn btn-outline withdraw-app-btn" data-task-id="${task.id}" style="flex:1;color:var(--color-text-muted);">Withdraw ✕</button>`
-              : `<button class="btn btn-primary apply-task-btn" data-task-id="${task.id}" style="flex:1;">Apply</button>`
-            }
+            <button class="btn btn-primary apply-task-btn" data-task-id="${task.id}" style="flex:1;">Take Task</button>
           </div>
         </div>
       </div>`;
   }).join('');
 
-  // Apply listeners
+  // Accept listeners: taking a task immediately moves it into active workflow.
   grid.querySelectorAll('.apply-task-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const taskId = btn.dataset.taskId;
       if (!taskId) return;
 
-      const sourceTask = openTasks.find((task) => task.id === taskId);
+      const latestTasks = getTasks();
+      const sourceTask = latestTasks.find((task) => task.id === taskId && task.status === 'open');
       if (!sourceTask) return;
 
-      const duplicate = applications.find((app) => app.taskId === taskId && app.gigId === user.id);
-      if (!duplicate) {
-        applications.push({
-          id: generateId('a'),
-          taskId,
-          gigId: user.id,
-          coverLetter: 'Application submitted from Explore Tasks.',
-          proposedBudget: Number(sourceTask.budget) || 0,
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        });
-        persistApplications();
+      const request = upsertGigRequestFromTask(user.id, sourceTask);
+      if (request?.id) {
+        acceptGigRequest(user.id, request.id);
+      } else {
+        // Fallback to direct task assignment if workflow request cannot be created.
+        sourceTask.assignedTo = user.id;
+        sourceTask.status = 'in_progress';
+        sourceTask.updatedAt = new Date().toISOString();
+        persistTaskList(latestTasks);
       }
-
-      upsertGigRequestFromTask(user.id, sourceTask);
 
       renderExploreTasks(); // re‑render
-    });
-  });
-
-  // Withdraw listeners
-  grid.querySelectorAll('.withdraw-app-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const taskId = btn.dataset.taskId;
-      const idx = applications.findIndex(a => a.taskId === taskId && a.gigId === user.id);
-      if (idx !== -1) {
-        applications.splice(idx, 1);
-        persistApplications();
-        renderExploreTasks(); // re‑render
-      }
     });
   });
 

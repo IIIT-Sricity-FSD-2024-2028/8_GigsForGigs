@@ -3,12 +3,95 @@
 // Displays the user's stats based on mock data.
 // ─────────────────────────────────────────────────────────────────
 
-import { users } from '../data/mockData.js';
+import { users, saveUsers } from '../data/mockData.js';
 import { get, getUser, set } from '../utils/storage.js';
 import { formatDate, formatCurrency, getStatusBadgeClass, humaniseStatus } from '../utils/helpers.js';
-import { getGigDashboardSummary } from './gigState.js';
+import { getGigDashboardSummary, getClientContractSummary } from './gigState.js';
+import { getTasks } from './tasks.js';
 
 const WITHDRAWAL_HISTORY_KEY = 'gig_withdrawal_history';
+
+function renderClientPostedTasks(clientId) {
+  const postedBody = document.querySelector('#client-posted-tasks-table tbody');
+  const postedCount = document.getElementById('client-posted-count');
+  if (!postedBody) return;
+
+  const openTasks = getTasks()
+    .filter((task) => task.clientId === clientId && task.status === 'open')
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+  if (postedCount) postedCount.textContent = String(openTasks.length);
+
+  if (openTasks.length === 0) {
+    postedBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">
+          No posted tasks yet. Use Post a Task to publish new work.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  postedBody.innerHTML = openTasks.map((task) => `
+    <tr>
+      <td>
+        <div class="task-name-cell">${task.title}</div>
+        <div class="task-category">${task.category || 'General'}</div>
+      </td>
+      <td>${formatDate(task.createdAt || new Date().toISOString())}</td>
+      <td class="budget-cell">${formatCurrency(Number(task.budget) || 0)}</td>
+      <td>
+        <a href="post-gig.html?editId=${task.id}" class="btn-review-proposal">Edit</a>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderClientActivityTable(clientId) {
+  const activityBody = document.querySelector('#client-activity-table tbody');
+  if (!activityBody) return;
+
+  const contracts = getClientContractSummary(clientId)
+    .filter((contract) => contract.status === 'active' || contract.status === 'completed')
+    .slice(0, 6);
+
+  if (contracts.length === 0) {
+    activityBody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">
+          No active contract activity yet.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  activityBody.innerHTML = contracts.map((contract) => {
+    const progressValue = Math.max(0, Math.min(100, Number(contract.progress) || 0));
+    return `
+      <tr>
+        <td>
+          <div class="task-name-cell">${contract.title}</div>
+          <div class="task-category">${contract.gigTitle || 'Professional Service'}</div>
+        </td>
+        <td><span class="${getStatusBadgeClass(contract.status)}">${humaniseStatus(contract.status)}</span></td>
+        <td class="progress-cell">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill progress-bar-fill-blue" style="width: ${progressValue}%"></div>
+          </div>
+          <div class="progress-label">${progressValue}%</div>
+        </td>
+        <td class="budget-cell">${formatCurrency(contract.budget)}</td>
+        <td>
+          <div class="actions-cell">
+            <a href="my-gigs-client.html" class="btn-review-proposal">View</a>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
 
 // ── Client Dashboard ──────────────────────────────────────────────
 
@@ -27,25 +110,33 @@ function initClientDashboard() {
   const greetingEl = document.getElementById('client-greeting');
   if (greetingEl) greetingEl.textContent = `Welcome back, ${fullUser.name}!`;
 
-  // Update dashboard stats
-  const totalSpentEl = document.getElementById('total-spent-value');
-  const thisMonthEl = document.getElementById('this-month-value');
-  const activeBudgetEl = document.getElementById('active-budget-value');
+  const rerenderClientDashboard = () => {
+    const totalSpentEl = document.getElementById('client-total-spent');
+    const activeTasksEl = document.getElementById('client-active-tasks');
+    const pendingTasksEl = document.getElementById('client-pending-tasks');
 
-  if (fullUser.isFirstTimeUser) {
-    // First-time user: show 0s
-    if (totalSpentEl) totalSpentEl.textContent = '₹0.00';
-    if (thisMonthEl) thisMonthEl.textContent = '₹0.00';
-    if (activeBudgetEl) activeBudgetEl.textContent = '-';
-  } else {
-    // Existing user: show their mock data
-    const totalSpent = fullUser.totalSpent || 0;
-    const thisMonth = Math.floor(totalSpent * 0.3); // Mock: assume 30% of total is this month
-    const activeBudget = fullUser.activeProjects > 0 ? `${fullUser.activeProjects} active` : '-';
+    const contracts = getClientContractSummary(fullUser.id);
+    const activeCount = contracts.filter((contract) => contract.status === 'active').length;
+    const pendingCount = contracts.filter((contract) => contract.status === 'pending').length;
 
-    if (totalSpentEl) totalSpentEl.textContent = `₹${totalSpent.toLocaleString('en-IN')}`;
-    if (thisMonthEl) thisMonthEl.textContent = `₹${thisMonth.toLocaleString('en-IN')}`;
-    if (activeBudgetEl) activeBudgetEl.textContent = activeBudget;
+    if (activeTasksEl) activeTasksEl.textContent = String(activeCount);
+    if (pendingTasksEl) pendingTasksEl.textContent = String(pendingCount);
+    if (totalSpentEl) totalSpentEl.textContent = formatCurrency(Number(fullUser.totalSpent) || 0);
+
+    renderClientPostedTasks(fullUser.id);
+    renderClientActivityTable(fullUser.id);
+  };
+
+  rerenderClientDashboard();
+
+  if (!window.__gfgClientDashboardRealtimeBound) {
+    window.__gfgClientDashboardRealtimeBound = true;
+    window.addEventListener('gfg:workflow-updated', rerenderClientDashboard);
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'gfg_tasks' || event.key === 'gfg_gig_workflow_state') {
+        rerenderClientDashboard();
+      }
+    });
   }
 }
 
@@ -348,6 +439,7 @@ function initGigTotalEarnings() {
 function initClientProfileSelection() {
   const currentUser = getUser();
   if (!currentUser) return;
+  if (currentUser.role !== 'client') return;
 
   const fullUser = users.find(u => u.id === currentUser.id);
   if (!fullUser) return;
@@ -363,7 +455,9 @@ function initClientProfileSelection() {
     managersContainer.innerHTML = ''; // Empty container = no managers shown
   } else {
     // Existing user: populate with their actual managers
-    const clientManagers = users.filter(u => u.role === 'manager' && u.clientId === fullUser.id);
+    const clientManagers = users.filter(
+      (u) => u.role === 'manager' && u.clientId === fullUser.id && !u.deleted
+    );
 
     if (clientManagers.length === 0) {
       // No managers added yet
@@ -378,23 +472,91 @@ function initClientProfileSelection() {
         const initials = manager.name.split(' ').map(n => n[0]).join('').toUpperCase();
         const bgColor = colors[index % colors.length];
         html += `
-          <a class="manager-profile-link" href="../manager/manager-dashboard.html" data-manager-id="${manager.id}" style="text-decoration: none;">
-            <button class="profile-avatar-btn" type="button">
-              <div class="avatar-square" style="color: var(--color-white); background-color: ${bgColor};">
-                ${initials}
-              </div>
-              <div style="display: flex; flex-direction: column; align-items: center;">
-                <span class="avatar-name">${manager.name}</span>
-              </div>
-            </button>
-          </a>
+          <div class="manager-profile-card" data-manager-id="${manager.id}" data-manager-name="${manager.name}">
+            <a class="manager-profile-link" href="../manager/manager-dashboard.html" data-manager-id="${manager.id}">
+              <button class="profile-avatar-btn" type="button">
+                <div class="avatar-square" style="color: var(--color-white); background-color: ${bgColor};">
+                  ${initials}
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                  <span class="avatar-name">${manager.name}</span>
+                </div>
+              </button>
+            </a>
+            <div class="manager-action-zone">
+              <button class="manager-delete-icon-btn" type="button" data-manager-id="${manager.id}" data-manager-name="${manager.name}" aria-label="Delete manager ${manager.name}" title="Delete manager">
+                <svg class="manager-delete-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+              </button>
+            </div>
+          </div>
         `;
       });
 
       managersContainer.innerHTML = html;
       if (noteEl) noteEl.style.display = 'none';
+      bindDeleteManagerButtons(fullUser.id);
     }
   }
+}
+
+function removeManagerSessionIfActive(managerId) {
+  if (!managerId) return;
+
+  try {
+    const localRaw = localStorage.getItem('gfg_user');
+    if (localRaw) {
+      const parsed = JSON.parse(localRaw);
+      if (parsed?.id === managerId) {
+        localStorage.removeItem('gfg_user');
+      }
+    }
+  } catch {}
+
+  try {
+    const sessionRaw = sessionStorage.getItem('gfg_user');
+    if (sessionRaw) {
+      const parsed = JSON.parse(sessionRaw);
+      if (parsed?.id === managerId) {
+        sessionStorage.removeItem('gfg_user');
+      }
+    }
+  } catch {}
+}
+
+function bindDeleteManagerButtons(clientId) {
+  const deleteButtons = document.querySelectorAll('.manager-delete-icon-btn');
+  if (!deleteButtons.length) return;
+
+  deleteButtons.forEach((button) => {
+    if (button.dataset.boundDeleteTrigger === '1') return;
+    button.dataset.boundDeleteTrigger = '1';
+
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const managerId = button.getAttribute('data-manager-id');
+      const managerName = button.getAttribute('data-manager-name') || 'this manager';
+      if (!managerId) return;
+
+      const confirmed = window.confirm(
+        `Are you sure you want to delete manager ${managerName}?`
+      );
+      if (!confirmed) return;
+
+      const manager = users.find(
+        (user) => user.id === managerId && user.role === 'manager' && user.clientId === clientId && !user.deleted
+      );
+      if (!manager) return;
+
+      manager.deleted = true;
+      manager.deletedAt = new Date().toISOString();
+      saveUsers();
+      removeManagerSessionIfActive(managerId);
+
+      initClientProfileSelection();
+    });
+  });
 }
 
 // ── Main Init ─────────────────────────────────────────────────────

@@ -30,11 +30,11 @@ const PAGE_MAP = {
   'manager-invite-setup.html':      { module: managers,      public: true },
 
   // Client pages
-  'post-gig.html':                  { module: tasks,         roles: ['client', 'manager'] },
+  'post-gig.html':                  { module: tasks,         roles: ['client'] },
   'my-gigs-client.html':            { module: tasks,         roles: ['client', 'manager'] },
-  'review-shortlist.html':          { module: applications,  roles: ['client', 'manager'] },
-  'review-deliverables.html':       { module: deliverables,  roles: ['client', 'manager'] },
-  'search-talent.html':             { module: services,      roles: ['client', 'manager'] },
+  'review-shortlist.html':          { module: applications,  roles: ['client'] },
+  'review-deliverables.html':       { module: deliverables,  roles: ['client'] },
+  'search-talent.html':             { module: services,      roles: ['client'] },
   'client-dashboard.html':          { module: dashboard,     roles: ['client'] },
   'client-profile-selection.html':  { module: dashboard,     roles: ['client'] },
   'add-manager.html':               { module: managers,      roles: ['client'] },
@@ -73,7 +73,7 @@ const CLIENT_SIDEBAR_ITEMS = [
   {
     key: 'post-gig.html',
     href: 'post-gig.html',
-    label: 'Post a Gig',
+    label: 'Post a Task',
     icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>'
   },
   {
@@ -85,7 +85,7 @@ const CLIENT_SIDEBAR_ITEMS = [
   {
     key: 'my-gigs-client.html',
     href: 'my-gigs-client.html',
-    label: 'My Gigs',
+    label: 'Active Contracts',
     icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>'
   },
   {
@@ -105,6 +105,27 @@ const CLIENT_SIDEBAR_ITEMS = [
     href: 'client-profile-selection.html',
     label: 'Supervise Manager',
     icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>'
+  }
+];
+
+const MANAGER_SIDEBAR_ITEMS = [
+  {
+    key: 'manager-dashboard.html',
+    href: 'manager-dashboard.html',
+    label: 'Dashboard',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
+  },
+  {
+    key: 'my-gigs-client.html',
+    href: '../client/my-gigs-client.html',
+    label: 'Active Contracts',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>'
+  },
+  {
+    key: 'manager-dashboard-pending',
+    href: 'manager-dashboard.html#pending-activity',
+    label: 'Pending Queue',
+    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
   }
 ];
 
@@ -183,6 +204,13 @@ function getDisplayInitials(name = '') {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
+function getManagerDisplayName(user) {
+  if (!user) return 'Manager';
+  const emailPrefix = String(user.email || '').trim().split('@')[0];
+  if (user.role === 'manager' && emailPrefix) return emailPrefix;
+  return String(user.name || '').trim() || 'Manager';
+}
+
 function renderSidebarNav(navEl, items, activeKey) {
   if (!navEl) return;
   navEl.innerHTML = items
@@ -207,7 +235,7 @@ function normalizeSidebarBrand(sidebarEl, role) {
       </div>
       <div class="brand-text">
         <span class="brand-name">GigsForGigs</span>
-        <span class="brand-sub">Client Portal</span>
+        <span class="brand-sub">${role === 'manager' ? 'Manager Portal' : 'Client Portal'}</span>
       </div>
     `;
     return;
@@ -224,14 +252,19 @@ function normalizeSidebarBrand(sidebarEl, role) {
 function normalizeSidebarIdentity(sidebarEl, user) {
   if (!sidebarEl || !user) return;
 
+  const fullUser = users.find((existingUser) => existingUser.id === user.id) || user;
+
   if (user.role === 'client' || user.role === 'manager') {
     const nameEl = sidebarEl.querySelector('.sidebar-user-info .user-name');
     const roleEl = sidebarEl.querySelector('.sidebar-user-info .user-role');
     const avatarEl = sidebarEl.querySelector('.sidebar-user-info .user-avatar');
+    const displayName = user.role === 'manager'
+      ? getManagerDisplayName(fullUser)
+      : (fullUser.name || user.name || 'Client');
 
-    if (nameEl) nameEl.textContent = user.name || 'Client';
+    if (nameEl) nameEl.textContent = displayName;
     if (roleEl) roleEl.textContent = user.role === 'manager' ? 'Manager' : 'Client';
-    if (avatarEl) avatarEl.textContent = getDisplayInitials(user.name || 'Client');
+    if (avatarEl) avatarEl.textContent = getDisplayInitials(displayName);
     return;
   }
 
@@ -269,20 +302,31 @@ function enforceRoleSidebarConsistency() {
     }
 
     if (user.role === 'manager') {
-      const managerItems = CLIENT_SIDEBAR_ITEMS
-        .filter(item => item.key !== 'client-profile-selection.html')
-        .map(item => {
-          if (item.key === 'client-dashboard.html') {
-            return { ...item, key: 'manager-dashboard.html', href: '../manager/manager-dashboard.html' };
-          }
-          return item;
-        });
+      const managerOnClientItems = MANAGER_SIDEBAR_ITEMS.map((item) => {
+        if (item.key === 'manager-dashboard.html') {
+          return { ...item, href: '../manager/manager-dashboard.html' };
+        }
+        if (item.key === 'my-gigs-client.html') {
+          return { ...item, href: 'my-gigs-client.html' };
+        }
+        return { ...item, href: `../manager/${item.href}` };
+      });
 
-      renderSidebarNav(navEl, managerItems, activeKey);
+      renderSidebarNav(navEl, managerOnClientItems, currentPage);
       normalizeSidebarBrand(sidebarEl, user.role);
       normalizeSidebarIdentity(sidebarEl, user);
       return;
     }
+  }
+
+  if (user.role === 'manager' && path.includes('/pages/manager/')) {
+    let activeKey = 'manager-dashboard.html';
+    if (window.location.hash === '#pending-activity') activeKey = 'manager-dashboard-pending';
+
+    renderSidebarNav(navEl, MANAGER_SIDEBAR_ITEMS, activeKey);
+    normalizeSidebarBrand(sidebarEl, user.role);
+    normalizeSidebarIdentity(sidebarEl, user);
+    return;
   }
 
   if (user.role === 'gig' && path.includes('/pages/gig/')) {
@@ -548,6 +592,13 @@ async function startApp() {
   await bootstrap();
   enforceRoleSidebarConsistency();
   bindLogout();
+
+  if (!window.__gfgSidebarHashBound) {
+    window.__gfgSidebarHashBound = true;
+    window.addEventListener('hashchange', () => {
+      enforceRoleSidebarConsistency();
+    });
+  }
 }
 
 // Run on DOM ready
