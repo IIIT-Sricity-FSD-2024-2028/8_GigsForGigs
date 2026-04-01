@@ -356,10 +356,7 @@ function initSignup() {
     console.log('✅ Validation passed');
     console.log('📝 Creating user:', { name, emailVal, role });
 
-    // Check duplicate email
-    const existingUser = users.find(u => u.email === emailVal);
-    if (existingUser) {
-      console.log('⚠️ Email already exists:', emailVal);
+    const showSignupError = (message) => {
       let errEl = document.getElementById('auth-error');
       if (!errEl) {
         errEl = document.createElement('div');
@@ -367,50 +364,82 @@ function initSignup() {
         errEl.style.cssText = 'color:var(--color-primary-blue);font-size:0.875rem;margin-bottom:var(--spacing-md);text-align:center;font-weight:600;padding:var(--spacing-sm);background-color:rgba(8,75,131,0.1);border-radius:var(--radius-sm);';
         form.insertBefore(errEl, form.firstChild);
       }
-      errEl.textContent = '⚠️ An account with this email already exists. Try logging in instead.';
+      errEl.textContent = message;
+    };
+
+    // Check duplicate email
+    const existingUser = users.find(u => u.email === emailVal);
+    const canClaimSeededU7 = existingUser
+      && existingUser.id === 'u7'
+      && existingUser.role === 'client'
+      && existingUser.isFirstTimeUser === true
+      && existingUser.isProfileComplete === false;
+
+    if (existingUser && !canClaimSeededU7) {
+      console.log('⚠️ Email already exists:', emailVal);
+      showSignupError('⚠️ An account with this email already exists. Try logging in instead.');
       return;
     }
 
-    // Create user stub
-    const newUser = {
-      id: generateId('u'),
-      name,
-      email: emailVal,
-      password: passwordVal,
-      role: role,
-      isFirstTimeUser: true,
-      isProfileComplete: false,
-      createdAt: new Date().toISOString()
-    };
-
-    // Add role-specific stats initialized to 0
-    if (role === 'client') {
-      newUser.tasksPosted = 0;
-      newUser.activeProjects = 0;
-      newUser.totalSpent = 0;
-    } else if (role === 'manager') {
-      newUser.tasksManaged = 0;
-    } else if (role === 'gig') {
-      newUser.completedTasks = 0;
-      newUser.totalEarnings = 0;
-      newUser.avgRating = 0;
-      newUser.totalRatings = 0;
-      newUser.profileViews = 0;
+    if (canClaimSeededU7 && role !== 'client') {
+      showSignupError('⚠️ This seeded account can only be created as a client account.');
+      return;
     }
 
-    users.push(newUser);
-    saveUsers();
-    console.log('✅ User created:', newUser);
-    console.log('📊 Total users in DB:', users.length);
+    let accountUser;
 
-    const sessionUser = { id: newUser.id, name: newUser.name, role: newUser.role };
+    if (canClaimSeededU7) {
+      existingUser.name = name;
+      existingUser.password = passwordVal;
+      existingUser.tasksPosted = Number(existingUser.tasksPosted) || 0;
+      existingUser.activeProjects = Number(existingUser.activeProjects) || 0;
+      existingUser.totalSpent = Number(existingUser.totalSpent) || 0;
+      accountUser = existingUser;
+      console.log('✅ Seeded user claimed:', accountUser.id);
+    } else {
+      // Create user stub
+      const newUser = {
+        id: generateId('u'),
+        name,
+        email: emailVal,
+        password: passwordVal,
+        role: role,
+        isFirstTimeUser: true,
+        isProfileComplete: false,
+        createdAt: new Date().toISOString()
+      };
+
+      // Add role-specific stats initialized to 0
+      if (role === 'client') {
+        newUser.tasksPosted = 0;
+        newUser.activeProjects = 0;
+        newUser.totalSpent = 0;
+      } else if (role === 'manager') {
+        newUser.tasksManaged = 0;
+      } else if (role === 'gig') {
+        newUser.completedTasks = 0;
+        newUser.totalEarnings = 0;
+        newUser.avgRating = 0;
+        newUser.totalRatings = 0;
+        newUser.profileViews = 0;
+      }
+
+      users.push(newUser);
+      accountUser = newUser;
+      console.log('✅ User created:', accountUser);
+      console.log('📊 Total users in DB:', users.length);
+    }
+
+    saveUsers();
+
+    const sessionUser = { id: accountUser.id, name: accountUser.name, role: accountUser.role };
     setUser(sessionUser);
     setPendingUser(sessionUser);
     setWindowUser(sessionUser);
     sessionStorage.setItem('isFirstTimeJoin', '1');
-    setOnboardingRole(newUser.role);
+    setOnboardingRole(accountUser.role);
 
-    const dest = dashboardPathForRole(newUser.role, newUser.isProfileComplete);
+    const dest = dashboardPathForRole(accountUser.role, accountUser.isProfileComplete);
     console.log('🚀 Redirecting to:', dest);
     console.log('📍 Current page:', window.location.pathname);
     try {

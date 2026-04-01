@@ -15,6 +15,8 @@ import * as managers from './modules/managers.js';
 import * as profile from './modules/profile.js';
 import * as dashboard from './modules/dashboard.js';
 import * as services from './modules/services.js';
+import { getUser } from './utils/storage.js';
+import { users } from './data/mockData.js';
 
 // ── Page → module mapping ────────────────────────────────────────
 
@@ -32,7 +34,7 @@ const PAGE_MAP = {
   'my-gigs-client.html':            { module: tasks,         roles: ['client', 'manager'] },
   'review-shortlist.html':          { module: applications,  roles: ['client', 'manager'] },
   'review-deliverables.html':       { module: deliverables,  roles: ['client', 'manager'] },
-  'search-talent.html':             { module: null,          roles: ['client', 'manager'] },
+  'search-talent.html':             { module: services,      roles: ['client', 'manager'] },
   'client-dashboard.html':          { module: dashboard,     roles: ['client'] },
   'client-profile-selection.html':  { module: dashboard,     roles: ['client'] },
   'add-manager.html':               { module: managers,      roles: ['client'] },
@@ -57,6 +59,117 @@ const PAGE_MAP = {
   'submit-deliverables.html':       { module: deliverables,  roles: ['gig'] },
   'submission-success.html':        { module: null,          roles: ['gig'] }
 };
+
+const SEEDED_CLIENT_IDS = new Set(['u1']);
+const SEARCH_TALENT_CLIENT_IDS = new Set(['u1', 'u7']);
+
+function getCurrentClientRecord() {
+  const sessionUser = getUser();
+  if (!sessionUser || sessionUser.role !== 'client') return null;
+  return users.find((user) => user.id === sessionUser.id) || null;
+}
+
+function shouldHideMockClientData() {
+  const client = getCurrentClientRecord();
+  if (!client) return false;
+  return !SEEDED_CLIENT_IDS.has(client.id);
+}
+
+function canUseSearchTalentMockData(client) {
+  if (!client) return false;
+  return SEARCH_TALENT_CLIENT_IDS.has(client.id);
+}
+
+function applyEmptyStateToTable(tableId, message, colSpan = 6) {
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  if (!tbody) return;
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="${colSpan}" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">
+        ${message}
+      </td>
+    </tr>
+  `;
+}
+
+function applyClientNoMockDataState() {
+  if (!shouldHideMockClientData()) return;
+
+  const client = getCurrentClientRecord();
+  const path = window.location.pathname;
+
+  if (client?.name) {
+    document.querySelectorAll('.user-name').forEach((el) => {
+      el.textContent = client.name;
+    });
+  }
+
+  if (path.includes('client-dashboard.html')) {
+    const greetingEl = document.getElementById('client-greeting');
+    if (greetingEl && client?.name) greetingEl.textContent = `Welcome, ${client.name}!`;
+
+    const subtitleEl = document.querySelector('.welcome-subtitle');
+    if (subtitleEl) subtitleEl.textContent = 'Start by posting your first gig to build activity.';
+
+    const activeTasksEl = document.getElementById('client-active-tasks');
+    if (activeTasksEl) activeTasksEl.textContent = '0';
+
+    const pendingTasksEl = document.getElementById('client-pending-tasks');
+    if (pendingTasksEl) pendingTasksEl.textContent = '0';
+
+    const totalSpentEl = document.getElementById('client-total-spent');
+    if (totalSpentEl) totalSpentEl.textContent = '₹0.00';
+
+    applyEmptyStateToTable(
+      'client-activity-table',
+      'No activity yet. Post your first gig to start tracking progress.',
+      5
+    );
+  }
+
+  if (path.includes('my-gigs-client.html')) {
+    applyEmptyStateToTable(
+      'active-contracts-table',
+      'No active contracts yet. Post your first gig to get started.',
+      6
+    );
+  }
+
+  if (path.includes('review-shortlist.html')) {
+    applyEmptyStateToTable(
+      'shortlist-table',
+      'No shortlisted candidates yet. Shortlists will appear here once professionals apply.',
+      6
+    );
+  }
+
+  if (path.includes('review-deliverables.html')) {
+    const reviewLayout = document.querySelector('.review-layout');
+    if (reviewLayout) {
+      reviewLayout.innerHTML = `
+        <div style="padding:var(--spacing-xxl);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;color:var(--color-text-muted);">
+          No deliverables to review yet. Deliverables will appear here after work is submitted.
+        </div>
+      `;
+    }
+  }
+
+  if (path.includes('search-talent.html')) {
+    if (!canUseSearchTalentMockData(client)) {
+      const grid = document.getElementById('talent-grid');
+      if (grid) {
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;padding:var(--spacing-xxl);text-align:center;color:var(--color-text-muted);border:1px dashed var(--color-border);border-radius:var(--radius-lg);">
+            No talent data to show yet for this new account.
+          </div>
+        `;
+      }
+
+      const pagination = document.querySelector('.pagination');
+      if (pagination) pagination.style.display = 'none';
+    }
+  }
+}
 
 // ── Bootstrap ────────────────────────────────────────────────────
 
@@ -290,13 +403,17 @@ function bindLogout() {
   });
 }
 
+async function startApp() {
+  await bootstrap();
+  applyClientNoMockDataState();
+  bindLogout();
+}
+
 // Run on DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    bootstrap();
-    bindLogout();
+    startApp();
   });
 } else {
-  bootstrap();
-  bindLogout();
+  startApp();
 }

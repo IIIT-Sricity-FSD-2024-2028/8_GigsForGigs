@@ -235,6 +235,25 @@ const seedUsers = [
     tasksPosted: 0,
     activeProjects: 0,
     totalSpent: 0
+  },
+  {
+    id: 'u7',
+    name: 'Nisha Verma',
+    email: 'nisha@freshclient.com',
+    password: 'password7',
+    role: 'client',
+    isFirstTimeUser: true,
+    company: null,
+    industry: null,
+    website: null,
+    companySize: null,
+    founded: null,
+    description: null,
+    createdAt: '2026-04-01T09:00:00Z',
+    isProfileComplete: false,
+    tasksPosted: 0,
+    activeProjects: 0,
+    totalSpent: 0
   }
 ];
 
