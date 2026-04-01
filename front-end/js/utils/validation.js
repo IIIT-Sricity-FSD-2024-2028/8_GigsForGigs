@@ -1,17 +1,14 @@
-// ─── validation.js ──────────────────────────────────────────────
-// Form validation helpers.  Targets existing form fields and
-// inline error elements by id.  Validates on submit only.
-//
-// Rules
-//   • required fields    → non‑empty after trim
-//   • email              → regex
-//   • password           → min 8 chars
-//   • confirm‑password   → must match password
-//   • budget             → numeric, min ₹500
-//   • deadline / dates   → must be a future date
-// ─────────────────────────────────────────────────────────────────
+// validation.js
+// Shared form validation helpers for auth and dashboard forms.
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Standard email format regex.
+// Accepts common addresses such as name@gmail.com and name.surname+tag@domain.co.
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+// Name regex: letters and single spaces between words only.
+// Rejects numbers and special characters.
+const NAME_RE = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+
 const MIN_PASSWORD_LENGTH = 8;
 const MIN_BUDGET = 500;
 
@@ -25,7 +22,7 @@ const MIN_BUDGET = 500;
 function showError(fieldId, message) {
   const field = document.getElementById(fieldId);
   if (!field) {
-    console.warn('⚠️ Field not found:', fieldId);
+    console.warn('Field not found:', fieldId);
     return;
   }
 
@@ -39,8 +36,7 @@ function showError(fieldId, message) {
     errEl.style.cssText = 'color:var(--color-primary-blue);font-size:0.8rem;margin-top:4px;font-weight:500;';
     field.insertAdjacentElement('afterend', errEl);
   }
-  errEl.textContent = '❌ ' + message;
-  console.log('📍 Error on ' + fieldId + ':', message);
+  errEl.textContent = message;
 }
 
 /**
@@ -64,6 +60,64 @@ function clearAllErrors(fieldIds) {
   fieldIds.forEach(clearError);
 }
 
+function normalizeInput(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * Validate email format.
+ * Returns an empty string when valid, otherwise a meaningful error message.
+ */
+export function validateEmail(value, fieldLabel = 'Email') {
+  const email = normalizeInput(value);
+
+  if (!email) {
+    return `${fieldLabel} is required.`;
+  }
+
+  if (!EMAIL_RE.test(email)) {
+    return 'Please enter a valid email address (example: name@gmail.com).';
+  }
+
+  return '';
+}
+
+/**
+ * Validate full name.
+ * Rule: alphabets and spaces only after trimming.
+ */
+export function validateName(value, fieldLabel = 'Full name') {
+  const name = normalizeInput(value);
+
+  if (!name) {
+    return `${fieldLabel} is required.`;
+  }
+
+  if (!NAME_RE.test(name)) {
+    return `${fieldLabel} must contain only letters (A-Z) and spaces.`;
+  }
+
+  return '';
+}
+
+/**
+ * Validate password.
+ * Rule: required and minimum length of 8 characters.
+ */
+export function validatePassword(value, fieldLabel = 'Password') {
+  const password = String(value || '');
+
+  if (!password.trim()) {
+    return `${fieldLabel} is required.`;
+  }
+
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `${fieldLabel} must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
+
+  return '';
+}
+
 // ── Public API ───────────────────────────────────────────────────
 
 /**
@@ -78,19 +132,18 @@ export function validateLoginForm() {
   const email = document.getElementById('email');
   const password = document.getElementById('password');
 
-  if (!email || !email.value.trim()) {
-    showError('email', 'Email is required.');
-    valid = false;
-  } else if (!EMAIL_RE.test(email.value.trim())) {
-    showError('email', 'Please enter a valid email address.');
+  const normalizedEmail = normalizeInput(email?.value);
+  if (email) email.value = normalizedEmail;
+
+  const emailError = validateEmail(normalizedEmail);
+  if (emailError) {
+    showError('email', emailError);
     valid = false;
   }
 
-  if (!password || !password.value) {
-    showError('password', 'Password is required.');
-    valid = false;
-  } else if (password.value.length < MIN_PASSWORD_LENGTH) {
-    showError('password', `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+  const passwordError = validatePassword(password?.value, 'Password');
+  if (passwordError) {
+    showError('password', passwordError);
     valid = false;
   }
 
@@ -112,29 +165,32 @@ export function validateSignupForm() {
   const password = document.getElementById('password');
   const confirm = document.getElementById('confirm-password');
 
+  const normalizedName = normalizeInput(fullname?.value);
+  if (fullname) fullname.value = normalizedName;
+
+  const normalizedEmail = normalizeInput(email?.value);
+  if (email) email.value = normalizedEmail;
+
   if (!role || !role.value) {
     showError('role', 'Please select a role.');
     valid = false;
   }
 
-  if (!fullname || !fullname.value.trim()) {
-    showError('fullname', 'Full name is required.');
+  const nameError = validateName(normalizedName);
+  if (nameError) {
+    showError('fullname', nameError);
     valid = false;
   }
 
-  if (!email || !email.value.trim()) {
-    showError('email', 'Email is required.');
-    valid = false;
-  } else if (!EMAIL_RE.test(email.value.trim())) {
-    showError('email', 'Please enter a valid email address.');
+  const emailError = validateEmail(normalizedEmail);
+  if (emailError) {
+    showError('email', emailError);
     valid = false;
   }
 
-  if (!password || !password.value) {
-    showError('password', 'Password is required.');
-    valid = false;
-  } else if (password.value.length < MIN_PASSWORD_LENGTH) {
-    showError('password', `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+  const passwordError = validatePassword(password?.value, 'Password');
+  if (passwordError) {
+    showError('password', passwordError);
     valid = false;
   }
 
@@ -144,18 +200,6 @@ export function validateSignupForm() {
   } else if (password && confirm.value !== password.value) {
     showError('confirm-password', 'Passwords do not match.');
     valid = false;
-  }
-
-  // If invalid, log all details for debugging
-  if (!valid) {
-    console.warn('❌ Signup validation failed');
-    console.log('📋 Field values:', {
-      role: role?.value || '(empty)',
-      fullname: fullname?.value || '(empty)',
-      email: email?.value || '(empty)',
-      password: password?.value ? '(filled)' : '(empty)',
-      confirm: confirm?.value ? '(filled)' : '(empty)'
-    });
   }
 
   return valid;
@@ -214,11 +258,12 @@ export function validateManagerInviteForm() {
 
   const email = document.getElementById(fieldId);
 
-  if (!email || !email.value.trim()) {
-    showError(fieldId, 'Email is required.');
-    valid = false;
-  } else if (!EMAIL_RE.test(email.value.trim())) {
-    showError(fieldId, 'Please enter a valid email address.');
+  const normalizedEmail = normalizeInput(email?.value);
+  if (email) email.value = normalizedEmail;
+
+  const emailError = validateEmail(normalizedEmail);
+  if (emailError) {
+    showError(fieldId, emailError);
     valid = false;
   }
 

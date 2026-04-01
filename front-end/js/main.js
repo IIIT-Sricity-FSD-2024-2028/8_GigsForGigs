@@ -227,111 +227,57 @@ function ensureLogoutStyles() {
   const style = document.createElement('style');
   style.id = 'gfg-logout-style';
   style.textContent = `
+    .gfg-topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm, 8px);
+      margin-left: auto;
+    }
+
     .gfg-logout-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 32px;
-      height: 26px;
-      padding: 0 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.32);
-      background: rgba(255, 255, 255, 0.08);
+      gap: 6px;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: var(--radius-md, 8px);
+      border: 1px solid var(--color-border, #d6d6d6);
+      background: var(--color-primary-dark, #084b83);
       color: var(--color-white, #fff);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: 0.88rem;
-      font-weight: 700;
-      line-height: 1;
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1.1;
+      font-family: inherit;
       cursor: pointer;
-      transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      text-decoration: none;
+      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .gfg-inline-profile {
-      flex-wrap: nowrap !important;
-      gap: 8px !important;
-    }
-
-    .gfg-inline-profile .user-details {
-      min-width: 0;
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-
-    .gfg-inline-profile .user-name,
-    .gfg-inline-profile .user-role {
-      display: inline;
-      margin: 0;
-      line-height: 1.1;
-      white-space: nowrap;
-    }
-
-    .gfg-inline-profile .user-name {
-      font-size: 0.76rem;
-    }
-
-    .gfg-inline-profile .user-role {
-      font-size: 0.66rem;
-      opacity: 0.85;
-    }
-
-    .gfg-inline-profile .user-role::before {
-      content: "•";
-      margin-right: 4px;
-      opacity: 0.75;
-    }
-
-    .gfg-sidebar-meta {
-      min-width: 0;
-      display: flex !important;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-      font-size: 0.76rem !important;
-      line-height: 1.1;
-    }
-
-    .gfg-sidebar-meta > div {
-      display: inline;
-      margin: 0;
-      white-space: nowrap;
-    }
-
-    .gfg-sidebar-meta > div:last-child::before {
-      content: "•";
-      margin-right: 4px;
-      opacity: 0.75;
+    .gfg-logout-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      flex-shrink: 0;
     }
 
     .gfg-logout-btn:hover {
-      background: rgba(255, 255, 255, 0.18);
-      border-color: rgba(255, 255, 255, 0.45);
-      transform: translateY(-1px);
+      background: var(--color-primary-blue, #bf6900);
+      border-color: var(--color-primary-blue, #bf6900);
     }
 
     .gfg-logout-btn:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25), 0 0 0 4px rgba(8, 75, 131, 0.45);
+      box-shadow: 0 0 0 2px rgba(8, 75, 131, 0.2);
     }
 
-    .gfg-logout-btn.gfg-logout-floating {
-      position: fixed;
-      left: 16px;
-      bottom: 16px;
-      z-index: 1000;
-      border: 1px solid var(--color-border, #d6d6d6);
-      background: var(--color-white, #fff);
-      color: var(--color-primary-dark, #084b83);
-      box-shadow: 0 8px 24px rgba(8, 75, 131, 0.16);
+    .dashboard-topbar .gfg-logout-btn {
+      margin-left: 0;
     }
 
-    .gfg-logout-btn.gfg-logout-floating:hover {
-      background: #f3f7fb;
-      border-color: #b8c9da;
+    .sidebar-footer .gfg-logout-btn,
+    .sidebar-user-info .gfg-logout-btn {
+      display: none;
     }
   `;
 
@@ -345,8 +291,35 @@ function createAutoLogoutButton() {
   btn.title = 'Log out';
   btn.setAttribute('aria-label', 'Log out');
   btn.classList.add('gfg-logout-btn');
-  btn.innerHTML = '|-&gt;';
+  btn.innerHTML = `
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+      <polyline points="16 17 21 12 16 7"></polyline>
+      <line x1="21" y1="12" x2="9" y2="12"></line>
+    </svg>
+    <span>Log Out</span>
+  `;
   return btn;
+}
+
+function getTopbarActionsContainer(topbar) {
+  if (!topbar) return null;
+
+  const explicitContainer = topbar.querySelector(':scope > .topbar-actions, :scope > .gfg-topbar-actions');
+  if (explicitContainer) return explicitContainer;
+
+  const inlineFlexContainer = Array.from(topbar.children).find((child) => {
+    if (!(child instanceof HTMLElement) || child.classList.contains('topbar-search')) return false;
+    const inlineStyle = child.getAttribute('style') || '';
+    return inlineStyle.includes('display: flex') && inlineStyle.includes('align-items');
+  });
+
+  if (inlineFlexContainer) return inlineFlexContainer;
+
+  const container = document.createElement('div');
+  container.className = 'gfg-topbar-actions';
+  topbar.appendChild(container);
+  return container;
 }
 
 function bindLogout() {
@@ -355,42 +328,38 @@ function bindLogout() {
 
   ensureLogoutStyles();
 
-  let logoutBtn = document.getElementById('logout-btn');
+  let logoutBtn = document.getElementById('logout-btn')
+    || document.querySelector('button[title="Log out"], a[title="Log out"], button[title="Logout"], a[title="Logout"]');
+
   if (!logoutBtn) {
     logoutBtn = createAutoLogoutButton();
   }
 
-  // Keep a consistent "|->" control beside profile identity.
   logoutBtn.classList.add('gfg-logout-btn');
-  logoutBtn.classList.remove('gfg-logout-floating');
-  logoutBtn.innerHTML = '|-&gt;';
+  logoutBtn.classList.remove('btn-logout', 'sidebar-logout-btn');
+  logoutBtn.id = 'logout-btn';
+  logoutBtn.innerHTML = `
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+      <polyline points="16 17 21 12 16 7"></polyline>
+      <line x1="21" y1="12" x2="9" y2="12"></line>
+    </svg>
+    <span>Log Out</span>
+  `;
+
+  if (logoutBtn instanceof HTMLButtonElement) {
+    logoutBtn.type = 'button';
+  }
+
   logoutBtn.removeAttribute('style');
 
-  const sidebarUserInfo = document.querySelector('.sidebar-user-info');
-  const sidebarFooter = document.querySelector('.sidebar-footer');
+  const topbar = document.querySelector('.dashboard-topbar');
+  if (topbar) {
+    const actionsContainer = getTopbarActionsContainer(topbar);
+    actionsContainer.classList.add('gfg-topbar-actions');
 
-  if (sidebarUserInfo) {
-    sidebarUserInfo.classList.add('gfg-inline-profile');
-
-    const userDetails = sidebarUserInfo.querySelector('.user-details');
-    if (userDetails) {
-      userDetails.insertAdjacentElement('afterend', logoutBtn);
-    } else {
-      sidebarUserInfo.appendChild(logoutBtn);
-    }
-    logoutBtn.style.marginLeft = '8px';
-  } else if (sidebarFooter) {
-    sidebarFooter.classList.add('gfg-inline-profile');
-    const profileMeta = sidebarFooter.querySelector('div[style*="font-size"]');
-    if (profileMeta) profileMeta.classList.add('gfg-sidebar-meta');
-
-    sidebarFooter.appendChild(logoutBtn);
-    logoutBtn.style.marginLeft = 'auto';
-  } else {
-    logoutBtn.classList.add('gfg-logout-floating');
-    logoutBtn.style.marginLeft = '';
-    if (!document.body.contains(logoutBtn)) {
-      document.body.appendChild(logoutBtn);
+    if (!actionsContainer.contains(logoutBtn)) {
+      actionsContainer.appendChild(logoutBtn);
     }
   }
 
