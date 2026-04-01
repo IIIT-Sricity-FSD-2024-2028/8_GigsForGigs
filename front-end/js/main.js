@@ -441,116 +441,18 @@ function ensureLogoutStyles() {
     .gfg-topbar-actions {
       display: flex;
       align-items: center;
-      gap: var(--spacing-sm, 8px);
+      gap: var(--spacing-md, 12px);
       margin-left: auto;
     }
 
     .gfg-logout-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       flex-shrink: 0;
-      min-width: 72px;
-      height: 24px;
-      padding: 0 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.32);
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--color-white, #fff);
-      font-family: var(--font-family-sans, inherit);
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
       white-space: nowrap;
-      line-height: 1;
-      cursor: pointer;
-      transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .gfg-inline-profile {
-      display: flex !important;
-      align-items: center;
-      flex-wrap: nowrap !important;
-      gap: 8px !important;
-    }
-
-    .gfg-inline-profile > * {
-      flex-shrink: 0;
-    }
-
-    .gfg-inline-profile .user-details {
-      min-width: 0;
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-
-    .gfg-inline-profile .user-name,
-    .gfg-inline-profile .user-role {
-      display: inline;
-      margin: 0;
-      line-height: 1.1;
-      white-space: nowrap;
-    }
-
-    .gfg-inline-profile .user-name {
-      font-size: 0.76rem;
-    }
-
-    .gfg-inline-profile .user-role {
-      font-size: 0.66rem;
-      opacity: 0.85;
-    }
-
-    .gfg-inline-profile .user-role::before {
-      content: "•";
-      margin-right: 4px;
-      opacity: 0.75;
-    }
-
-    .gfg-inline-profile .online-dot {
-      flex-shrink: 0;
-    }
-
-    .gfg-sidebar-meta {
-      min-width: 0;
-      display: flex !important;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-      font-size: 0.76rem !important;
-      line-height: 1.1;
-    }
-
-    .gfg-logout-btn svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      flex-shrink: 0;
-    }
-
-    .gfg-logout-btn:hover {
-      background: var(--color-primary-blue, #bf6900);
-      border-color: var(--color-primary-blue, #bf6900);
-    }
-
-    .gfg-logout-btn:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(8, 75, 131, 0.2);
+      text-decoration: none;
     }
 
     .dashboard-topbar .gfg-logout-btn {
       margin-left: 0;
-    }
-
-    .sidebar-footer .gfg-logout-btn,
-    .sidebar-user-info .gfg-logout-btn {
-      display: none;
     }
   `;
 
@@ -563,8 +465,8 @@ function createAutoLogoutButton() {
   btn.type = 'button';
   btn.title = 'Log out';
   btn.setAttribute('aria-label', 'Log out');
-  btn.classList.add('gfg-logout-btn');
-  btn.textContent = 'LOGOUT';
+  btn.classList.add('btn', 'btn-primary', 'gfg-logout-btn');
+  btn.textContent = 'Log Out';
   return btn;
 }
 
@@ -602,9 +504,9 @@ function bindLogout() {
   }
 
   // Keep a consistent LOGOUT control beside profile identity.
-  logoutBtn.classList.add('gfg-logout-btn');
+  logoutBtn.classList.add('btn', 'btn-primary', 'gfg-logout-btn');
   logoutBtn.classList.remove('gfg-logout-floating');
-  logoutBtn.textContent = 'LOGOUT';
+  logoutBtn.textContent = 'Log Out';
   logoutBtn.removeAttribute('style');
 
   const topbar = document.querySelector('.dashboard-topbar');
