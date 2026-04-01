@@ -305,13 +305,12 @@ function initGigProjectDetail(user) {
   }
 
   if (status === 'active' && task) {
-    actionPrimary.textContent = 'Mark Complete';
+    actionPrimary.textContent = 'Submit Deliverable';
     actionSecondary.textContent = 'Back to Active Tasks';
 
     actionPrimary.onclick = (event) => {
       event.preventDefault();
-      markGigTaskComplete(user.id, task.id);
-      window.location.href = 'completed-projects.html';
+      window.location.href = `submit-deliverables.html?taskId=${task.id}`;
     };
 
     actionSecondary.onclick = (event) => {

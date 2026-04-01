@@ -4,7 +4,7 @@
 //         explore-tasks.html, active-tasks.html
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, applications, persistApplications, saveTasks } from '../data/mockData.js';
+import { tasks, users, applications, deliverables, persistApplications, saveTasks } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import { validatePostGigForm } from '../utils/validation.js';
 import {
@@ -638,6 +638,592 @@ function initExploreTasks() {
 
 // ── active-tasks.html  (gig sees in_progress tasks) ──────────────
 
+/* ── Submission Modal + Success Overlay (injected once) ─────────── */
+
+function injectSubmitModalStyles() {
+  if (document.getElementById('gfg-submit-modal-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'gfg-submit-modal-styles';
+  style.textContent = `
+    /* ── BACKDROP ──────────────────────────────────────────────── */
+    .submit-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: rgba(80, 36, 25, 0.45);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .submit-modal-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── MODAL PANEL ──────────────────────────────────────────── */
+    .submit-modal-panel {
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 64px rgba(8, 75, 131, 0.22);
+      width: 96%;
+      max-width: 640px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: var(--spacing-xxl);
+      transform: translateY(24px) scale(0.97);
+      transition: transform 0.3s ease;
+    }
+    .submit-modal-backdrop.visible .submit-modal-panel {
+      transform: translateY(0) scale(1);
+    }
+    .submit-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--spacing-xl);
+    }
+    .submit-modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      margin-bottom: 4px;
+    }
+    .submit-modal-subtitle {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+    .submit-modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      transition: color 0.2s, background 0.2s;
+      flex-shrink: 0;
+      margin-left: var(--spacing-md);
+    }
+    .submit-modal-close:hover {
+      color: var(--color-text-dark);
+      background: var(--color-bg-light);
+    }
+
+    /* ── PROJECT CONTEXT (inside modal) ───────────────────────── */
+    .modal-project-context {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-lg);
+      background: var(--color-bg-light);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+    .modal-project-preview {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .modal-preview-page {
+      width: 60px;
+      height: 74px;
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      border-radius: 3px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .modal-preview-page:nth-child(2) { margin-top: 6px; }
+    .modal-preview-hdr { width:100%; height:18px; background:var(--color-primary-dark); border-radius:2px; opacity:0.8; }
+    .modal-preview-hdr-alt { width:100%; height:18px; background:linear-gradient(135deg, var(--color-primary-dark) 60%, var(--color-secondary)); border-radius:2px; opacity:0.7; }
+    .modal-preview-line { width:100%; height:3px; background:var(--color-border); border-radius:2px; }
+    .modal-preview-line-thick { width:65%; height:5px; background:var(--color-border); border-radius:2px; }
+    .modal-project-info { flex:1; min-width:0; }
+    .modal-project-label {
+      display:inline-block; font-size:0.6rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.08em;
+      color:var(--color-secondary); margin-bottom:2px;
+    }
+    .modal-project-name {
+      font-size:1.1rem; font-weight:700;
+      color:var(--color-text-dark); margin-bottom:2px;
+    }
+    .modal-project-client {
+      display:flex; align-items:center; gap:4px;
+      font-size:0.8rem; color:var(--color-text-muted);
+    }
+
+    /* ── FORM FIELDS (reused from submit-deliverables) ─────────── */
+    .modal-form-section {
+      border-top: 1px solid var(--color-border);
+      padding-top: var(--spacing-xl);
+    }
+    .modal-form-section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      margin-bottom: var(--spacing-lg);
+    }
+    .modal-field { margin-bottom: var(--spacing-lg); }
+    .modal-label {
+      display:block; font-size:0.875rem; font-weight:600;
+      color:var(--color-text-dark); margin-bottom:var(--spacing-sm);
+    }
+    .modal-textarea {
+      width:100%; padding:var(--spacing-md);
+      border:1px solid var(--color-border); border-radius:var(--radius-md);
+      font-family:var(--font-family-sans); font-size:0.9375rem;
+      color:var(--color-text-dark); background:var(--color-white);
+      resize:vertical; min-height:100px; line-height:1.5;
+      transition:border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .modal-textarea::placeholder { color:var(--color-text-muted); }
+    .modal-textarea:focus {
+      border-color:var(--color-primary-dark); outline:none;
+      box-shadow:0 0 0 3px rgba(8,75,131,0.08);
+    }
+    .modal-dropzone {
+      border:2px dashed var(--color-primary-blue);
+      border-radius:var(--radius-lg);
+      padding:var(--spacing-xl) var(--spacing-lg);
+      text-align:center; cursor:pointer;
+      background:rgba(191,105,0,0.03);
+      transition:all 0.25s ease; position:relative;
+    }
+    .modal-dropzone:hover {
+      border-color:var(--color-primary-dark);
+      background:rgba(8,75,131,0.04);
+    }
+    .modal-dropzone.drag-over {
+      border-color:var(--color-secondary);
+      background:rgba(81,158,138,0.06);
+      transform:scale(1.01);
+    }
+    .modal-dropzone-icon {
+      display:flex; align-items:center; justify-content:center;
+      width:48px; height:48px; border-radius:50%;
+      background:rgba(8,75,131,0.08); color:var(--color-primary-dark);
+      margin:0 auto var(--spacing-sm);
+    }
+    .modal-dropzone-text { font-size:0.875rem; font-weight:600; color:var(--color-text-dark); margin-bottom:2px; }
+    .modal-dropzone-hint { font-size:0.75rem; color:var(--color-text-muted); }
+    .modal-dropzone-input {
+      position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;
+    }
+    .modal-file-list {
+      display:flex; flex-direction:column; gap:var(--spacing-sm); margin-top:var(--spacing-sm);
+    }
+    .modal-file-list:empty { display:none; }
+    .modal-file-item {
+      display:flex; align-items:center; gap:var(--spacing-sm);
+      padding:6px var(--spacing-md); background:var(--color-bg-light);
+      border:1px solid var(--color-border); border-radius:var(--radius-md);
+      animation:slideIn 0.25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform:translateY(-8px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+    .modal-file-item-icon {
+      display:flex; align-items:center; justify-content:center;
+      width:30px; height:30px; border-radius:var(--radius-sm);
+      background:rgba(8,75,131,0.1); color:var(--color-primary-dark); flex-shrink:0;
+    }
+    .modal-file-item-info { flex:1; min-width:0; }
+    .modal-file-item-name { font-size:0.8rem; font-weight:600; color:var(--color-text-dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .modal-file-item-size { font-size:0.7rem; color:var(--color-text-muted); }
+    .modal-file-item-remove {
+      background:none; border:none; cursor:pointer; color:var(--color-text-muted);
+      padding:4px; border-radius:var(--radius-sm); transition:color 0.2s;
+      display:flex; align-items:center;
+    }
+    .modal-file-item-remove:hover { color:#d32f2f; }
+    .modal-link-wrap {
+      display:flex; align-items:center; gap:var(--spacing-sm);
+      padding:var(--spacing-sm) var(--spacing-md);
+      border:1px solid var(--color-border); border-radius:var(--radius-md);
+      background:var(--color-white); transition:border-color 0.2s;
+    }
+    .modal-link-wrap:focus-within {
+      border-color:var(--color-primary-dark);
+      box-shadow:0 0 0 3px rgba(8,75,131,0.08);
+    }
+    .modal-link-field {
+      flex:1; border:none; background:transparent;
+      font-family:var(--font-family-sans); font-size:0.9375rem;
+      color:var(--color-text-dark); outline:none;
+    }
+    .modal-link-field::placeholder { color:var(--color-text-muted); }
+
+    /* ── SUBMIT BUTTON ────────────────────────────────────────── */
+    .modal-submit-footer { display:flex; justify-content:flex-end; margin-top:var(--spacing-lg); }
+    .modal-btn-submit {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:14px 32px; background:var(--color-primary-blue);
+      color:var(--color-white); border:none; border-radius:var(--radius-md);
+      font-family:var(--font-family-sans); font-size:1rem; font-weight:600;
+      cursor:pointer; transition:all 0.2s ease;
+      box-shadow:0 2px 8px rgba(191,105,0,0.25);
+    }
+    .modal-btn-submit:hover {
+      background:#a65b00;
+      box-shadow:0 4px 12px rgba(191,105,0,0.35);
+      transform:translateY(-1px);
+    }
+    .modal-btn-submit:active { transform:translateY(0); }
+    .modal-btn-submit:disabled { opacity:0.6; cursor:not-allowed; transform:none; box-shadow:none; }
+
+    /* ── SUCCESS OVERLAY ──────────────────────────────────────── */
+    .submit-success-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9500;
+      background: rgba(80, 36, 25, 0.45);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      pointer-events: none;
+    }
+    .submit-success-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .submit-success-card {
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xxl) 3rem;
+      max-width: 520px;
+      width: 92%;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(8, 75, 131, 0.18);
+      animation: successFadeIn 0.5s ease;
+    }
+    @keyframes successFadeIn {
+      from { opacity:0; transform:translateY(24px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+    .success-confetti-icon {
+      font-size: 2rem;
+      margin-bottom: var(--spacing-md);
+      animation: confettiBounce 0.6s ease 0.3s both;
+    }
+    @keyframes confettiBounce {
+      0% { transform:scale(0); }
+      50% { transform:scale(1.3); }
+      100% { transform:scale(1); }
+    }
+    .success-check-wrap {
+      display:flex; align-items:center; justify-content:center;
+      width:88px; height:88px; border-radius:50%;
+      background:rgba(81,158,138,0.12);
+      margin:0 auto var(--spacing-xl);
+      animation:checkPop 0.4s ease 0.2s both;
+    }
+    @keyframes checkPop {
+      0% { transform:scale(0.5); opacity:0; }
+      70% { transform:scale(1.1); }
+      100% { transform:scale(1); opacity:1; }
+    }
+    .success-check-wrap svg { color:var(--color-secondary); }
+    .success-heading {
+      font-size:1.75rem; font-weight:700;
+      color:var(--color-text-dark); margin-bottom:var(--spacing-sm);
+    }
+    .success-text {
+      font-size:0.9375rem; color:var(--color-text-muted);
+      line-height:1.6; margin-bottom:var(--spacing-xxl);
+    }
+    .success-dashboard-btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      gap:var(--spacing-sm); padding:14px 32px;
+      background:var(--color-primary-dark); color:var(--color-white);
+      border:none; border-radius:var(--radius-md);
+      font-family:var(--font-family-sans); font-size:1rem; font-weight:600;
+      cursor:pointer; text-decoration:none;
+      transition:all 0.2s ease;
+      box-shadow:0 2px 8px rgba(8,75,131,0.25);
+    }
+    .success-dashboard-btn:hover {
+      background:#063a66;
+      box-shadow:0 4px 14px rgba(8,75,131,0.35);
+      transform:translateY(-1px);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function createSubmitModal(task, clientName) {
+  // Remove any existing modal
+  const existing = document.getElementById('gfg-submit-modal');
+  if (existing) existing.remove();
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'gfg-submit-modal';
+  backdrop.className = 'submit-modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="submit-modal-panel">
+      <!-- Header -->
+      <div class="submit-modal-header">
+        <div>
+          <div class="submit-modal-title">Submit Project Deliverables</div>
+          <div class="submit-modal-subtitle">Complete your project milestones by submitting your high-quality work for review.</div>
+        </div>
+        <button class="submit-modal-close" id="modal-close-btn" aria-label="Close">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="22" height="22" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <!-- Project context -->
+      <div class="modal-project-context">
+        <div class="modal-project-preview">
+          <div class="modal-preview-page">
+            <div class="modal-preview-hdr"></div>
+            <div class="modal-preview-line-thick"></div>
+            <div class="modal-preview-line"></div>
+            <div class="modal-preview-line"></div>
+          </div>
+          <div class="modal-preview-page">
+            <div class="modal-preview-hdr-alt"></div>
+            <div class="modal-preview-line-thick"></div>
+            <div class="modal-preview-line"></div>
+          </div>
+        </div>
+        <div class="modal-project-info">
+          <span class="modal-project-label">Active Project</span>
+          <div class="modal-project-name">${task.title}</div>
+          <div class="modal-project-client">
+            <svg fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Client: ${clientName}
+          </div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="modal-form-section">
+        <div class="modal-form-section-title">Submission Details</div>
+        <form id="modal-submit-form">
+          <div class="modal-field">
+            <label class="modal-label" for="modal-submission-notes">Submission Notes</label>
+            <textarea id="modal-submission-notes" class="modal-textarea" rows="4" placeholder="Provide a brief description of the deliverables or instructions for the client..."></textarea>
+          </div>
+
+          <div class="modal-field">
+            <label class="modal-label">Upload Deliverables (ZIP, PDF, JPG, etc.)</label>
+            <div class="modal-dropzone" id="modal-dropzone">
+              <div class="modal-dropzone-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+              </div>
+              <p class="modal-dropzone-text">Click to upload or drag and drop</p>
+              <span class="modal-dropzone-hint">Maximum file size: 500MB</span>
+              <input type="file" id="modal-file-upload" class="modal-dropzone-input" multiple accept=".zip,.pdf,.jpg,.png,.psd,.ai,.fig">
+            </div>
+            <div id="modal-file-list" class="modal-file-list"></div>
+          </div>
+
+          <div class="modal-field">
+            <label class="modal-label" for="modal-external-link">External Link (e.g., Figma, GitHub)</label>
+            <div class="modal-link-wrap">
+              <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <input type="url" id="modal-external-link" class="modal-link-field" placeholder="https://www.figma.com/file/...">
+            </div>
+          </div>
+
+          <div class="modal-submit-footer">
+            <button type="submit" class="modal-btn-submit" id="modal-submit-btn">Submit Final Work</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(backdrop);
+
+  // Show with animation
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  return backdrop;
+}
+
+function createSuccessOverlay() {
+  const existing = document.getElementById('gfg-success-overlay');
+  if (existing) existing.remove();
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'gfg-success-overlay';
+  backdrop.className = 'submit-success-backdrop';
+  backdrop.innerHTML = `
+    <div class="submit-success-card">
+      <div class="success-confetti-icon">🎉</div>
+      <div class="success-check-wrap">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="44" height="44" viewBox="0 0 24 24">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      </div>
+      <h1 class="success-heading">Task Submitted Successfully!</h1>
+      <p class="success-text">Your deliverable has been submitted and is now under review by the client. You'll be notified once the client reviews your work.</p>
+      <a href="gig-dashboard.html" class="success-dashboard-btn" id="success-back-btn">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        Back to Dashboard
+      </a>
+    </div>
+  `;
+
+  document.body.appendChild(backdrop);
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  return backdrop;
+}
+
+function openSubmitModal(task, user) {
+  injectSubmitModalStyles();
+
+  const client = getUserById(task.clientId);
+  const clientName = client ? (client.company || client.name) : (task.clientName || 'Client');
+  const backdrop = createSubmitModal(task, clientName);
+
+  // ── Close behaviour ─────────────────────────────────────────────
+  const closeBtn = backdrop.querySelector('#modal-close-btn');
+  const closeModal = () => {
+    backdrop.classList.remove('visible');
+    setTimeout(() => backdrop.remove(), 300);
+  };
+  closeBtn.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeModal();
+  });
+
+  // ── Drag & drop file upload ─────────────────────────────────────
+  const dropzone = backdrop.querySelector('#modal-dropzone');
+  const fileInput = backdrop.querySelector('#modal-file-upload');
+  const fileListEl = backdrop.querySelector('#modal-file-list');
+  let selectedFiles = [];
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function renderFiles() {
+    if (!fileListEl) return;
+    fileListEl.innerHTML = selectedFiles.map((f, i) => `
+      <div class="modal-file-item" data-idx="${i}">
+        <div class="modal-file-item-icon">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        </div>
+        <div class="modal-file-item-info">
+          <div class="modal-file-item-name">${f.name}</div>
+          <div class="modal-file-item-size">${fmtSize(f.size)}</div>
+        </div>
+        <button type="button" class="modal-file-item-remove" data-idx="${i}" title="Remove">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    `).join('');
+
+    fileListEl.querySelectorAll('.modal-file-item-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedFiles.splice(parseInt(btn.dataset.idx, 10), 1);
+        renderFiles();
+      });
+    });
+  }
+
+  function addFiles(files) {
+    for (const f of files) {
+      if (!selectedFiles.some(s => s.name === f.name && s.size === f.size)) {
+        selectedFiles.push(f);
+      }
+    }
+    renderFiles();
+  }
+
+  if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('drag-over'); });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) addFiles(Array.from(e.dataTransfer.files));
+    });
+  }
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) { addFiles(Array.from(fileInput.files)); fileInput.value = ''; }
+    });
+  }
+
+  // ── Form submission ─────────────────────────────────────────────
+  const form = backdrop.querySelector('#modal-submit-form');
+  const submitBtn = backdrop.querySelector('#modal-submit-btn');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const notes = backdrop.querySelector('#modal-submission-notes')?.value?.trim() || '';
+    const link = backdrop.querySelector('#modal-external-link')?.value?.trim() || '';
+
+    if (!notes && selectedFiles.length === 0 && !link) {
+      alert('Please provide submission notes, upload files, or add an external link before submitting.');
+      return;
+    }
+
+    // Disable button
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+    }
+
+    // Create deliverable record
+    const fileNames = selectedFiles.map(f => f.name);
+    const newDeliverable = {
+      id: generateId('d'),
+      taskId: task.id,
+      gigId: user.id,
+      title: `${task.title} - Deliverable`,
+      description: notes,
+      files: fileNames,
+      externalLink: link || null,
+      message: notes || 'Please review the submitted work.',
+      status: 'submitted',
+      submittedAt: new Date().toISOString()
+    };
+
+    // Push to deliverables array (imported at top of file)
+    deliverables.push(newDeliverable);
+
+    // Update task status to under_review
+    markGigTaskComplete(user.id, task.id);
+
+    // Close modal, show success overlay
+    backdrop.classList.remove('visible');
+    setTimeout(() => {
+      backdrop.remove();
+      createSuccessOverlay();
+    }, 300);
+  });
+}
+
 function renderActiveTasks() {
   const user = getUser();
   if (!user || user.role !== 'gig') return;
@@ -688,19 +1274,23 @@ function renderActiveTasks() {
             <div class="progress-bar" style="width:${progress}%;"></div>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;justify-content:center;margin-left:var(--spacing-xxl);min-width:140px;">
+        <div style="display:flex;flex-direction:column;justify-content:center;margin-left:var(--spacing-xxl);min-width:160px;">
           <a href="project-detail.html?taskId=${task.id}" class="btn btn-outline btn-full" style="text-align:center;margin-bottom:var(--spacing-sm);text-decoration:none;">View Details</a>
-          <button class="btn btn-primary-blue btn-full mark-complete-btn" data-task-id="${task.id}" style="text-align:center;">Mark Complete</button>
+          <button class="btn btn-primary-blue btn-full submit-deliverable-btn" data-task-id="${task.id}" style="text-align:center;">Submit Deliverable</button>
         </div>
       </div>`;
   }).join('');
 
-  container.querySelectorAll('.mark-complete-btn').forEach((button) => {
+  container.querySelectorAll('.submit-deliverable-btn').forEach((button) => {
     button.addEventListener('click', () => {
       const taskId = button.dataset.taskId;
       if (!taskId) return;
-      markGigTaskComplete(user.id, taskId);
-      renderActiveTasks();
+
+      // Find the task object from summary
+      const taskObj = myActive.find(t => t.id === taskId);
+      if (!taskObj) return;
+
+      openSubmitModal(taskObj, user);
     });
   });
 }
