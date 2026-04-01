@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Active Contracts - GigsForGigs</title>
+  <title>My Gigs - GigsForGigs</title>
+  <meta name="description" content="Manage your active contracts and gig projects on GigsForGigs.">
   <link rel="stylesheet" href="../../css/variables.css">
   <link rel="stylesheet" href="../../css/reset.css">
   <link rel="stylesheet" href="../../css/components.css">
@@ -13,69 +14,183 @@
 <body>
 
 <div class="dashboard-layout">
-  
-  <!-- Sidebar (GigsForGigs) -->
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────── -->
   <aside class="dashboard-sidebar">
     <a href="client-dashboard.html" class="client-sidebar-brand">
-      <div class="brand-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-blue)"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 12l3 3 5-5"></path></svg>
+      </div>
       <div class="brand-text">
-        <span class="brand-name">GigsForGigs</span>
-        
+        <span class="brand-name">GigFlow</span>
+        <span class="brand-sub">Client Portal</span>
       </div>
     </a>
-    
+
     <nav class="sidebar-nav">
       <a href="client-dashboard.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         Dashboard
       </a>
-      <a href="my-gigs-client.html" class="nav-item active">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-        Active Contracts
-      </a>
-      <a href="review-shortlist.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-        Approve Shortlists
-      </a>
       <a href="search-talent.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         Search Talent
       </a>
-      <a href="post-gig.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Post a Gig
+      <a href="my-gigs-client.html" class="nav-item active">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        My Gigs
+      </a>
+      <a href="client-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Total Spent
+      </a>
+      <a href="client-profile-selection.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        Supervise Manager
       </a>
     </nav>
-    
+
     <div class="sidebar-user-info">
-      <div class="user-avatar" style="background-color: var(--color-secondary); color: var(--color-white); font-weight: 700; font-size: 0.875rem;">AJ</div>
+      <div class="user-avatar user-avatar-seagrass">AJ</div>
       <div class="user-details">
-        <div class="user-name">Alex Johnson</div>
-        <div class="user-role">CLIENT PROFILE</div>
+        <div class="user-name">Aditya</div>
+        <div class="user-role">Premium Account</div>
       </div>
-      <div style="margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-secondary);"></div>
+      <div class="online-dot"></div>
     </div>
   </aside>
 
-  <!-- Main Content -->
+  <!-- ─── Main Content ────────────────────────────────────────── -->
   <main class="dashboard-main">
-    
+
     <header class="dashboard-topbar">
-      <div class="topbar-search" style="width: 400px;">
+      <div class="topbar-search">
         <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" placeholder="Search active contracts...">
+        <input type="text" id="gigs-search" placeholder="Search active contracts...">
+      </div>
+      <div class="topbar-actions">
+        <a href="post-gig.html" class="btn-post-gig">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Post a Gig
+        </a>
+        <button class="btn-logout" id="logout-btn" type="button">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Log Out
+        </button>
       </div>
     </header>
 
-    <div class="dashboard-content container">
-      
-      <div style="margin-bottom: var(--spacing-xl);">
-        <h1 class="page-title" style="margin-bottom: var(--spacing-sm);">Active Contracts (My Gigs)</h1>
-        <p style="color: var(--color-text-muted);">Your active contracts will appear here once you hire talent.</p>
+    <div class="dashboard-content">
+
+      <div class="page-header">
+        <h1 class="page-title">Active Projects</h1>
+        <p class="page-subtitle">Track and manage all your ongoing contracts.</p>
       </div>
 
-      <div id="active-contracts-content" class="dashboard-section" style="text-align: center; padding: var(--spacing-xxl); color: var(--color-text-muted);">
-        No active contracts yet.
+      <!-- Active projects table -->
+      <div class="activity-section">
+        <div class="activity-header">
+          <h2 class="activity-title">All Contracts</h2>
+          <a href="#" class="filter-link">
+            <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            Filter
+          </a>
+        </div>
+
+        <table class="activity-table" id="active-contracts-table">
+          <thead>
+            <tr>
+              <th>Project Name</th>
+              <th>Professional</th>
+              <th>Status</th>
+              <th>Progress</th>
+              <th>Budget</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="task-name-cell">Brand Identity Redesign</div>
+                <div class="task-category">Design Systems</div>
+              </td>
+              <td>
+                <div class="pro-cell">
+                  <div class="pro-photo"></div>
+                  Elena Rodriguez
+                </div>
+              </td>
+              <td><span class="status-badge status-in-progress">In Progress</span></td>
+              <td class="progress-cell">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill progress-bar-fill-blue" style="width: 65%"></div>
+                </div>
+                <div class="progress-label">65%</div>
+              </td>
+              <td class="budget-cell">$2,400</td>
+              <td>
+                <div class="actions-cell">
+                  <a href="review-deliverables.html" class="btn-review-proposal">Review</a>
+                  <button class="more-btn" aria-label="More options">⋮</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="task-name-cell">Mobile App Development</div>
+                <div class="task-category">Technology</div>
+              </td>
+              <td>
+                <div class="pro-cell">
+                  <div class="pro-photo"></div>
+                  David Lau
+                </div>
+              </td>
+              <td><span class="status-badge status-scheduled">Scheduled</span></td>
+              <td class="progress-cell">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill progress-bar-fill-seagrass" style="width: 8%"></div>
+                </div>
+                <div class="progress-label">8%</div>
+              </td>
+              <td class="budget-cell">$5,000</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn-icon-action" title="View" aria-label="View project">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </button>
+                  <button class="more-btn" aria-label="More options">⋮</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="task-name-cell">Q3 Marketing Strategy</div>
+                <div class="task-category">Growth</div>
+              </td>
+              <td>
+                <div class="pro-cell">
+                  <div class="pro-photo"></div>
+                  Sarah Jenkins
+                </div>
+              </td>
+              <td><span class="status-badge status-review-needed">Review Needed</span></td>
+              <td class="progress-cell">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill progress-bar-fill-copper" style="width: 100%"></div>
+                </div>
+                <div class="progress-label">100%</div>
+              </td>
+              <td class="budget-cell">$1,850</td>
+              <td>
+                <div class="actions-cell">
+                  <a href="review-deliverables.html" class="btn-review-proposal">Review</a>
+                  <button class="more-btn" aria-label="More options">⋮</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
     </div>
@@ -86,5 +201,3 @@
 
 </body>
 </html>
-
-

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Deliverables - GigsForGigs</title>
+  <meta name="description" content="Submit your project deliverables for client review on GigsForGigs.">
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/dashboard.css">
+  <link rel="stylesheet" href="../../css/submit-deliverables.css">
+</head>
+<body>
+
+<div class="dashboard-layout">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────── -->
+  <aside class="dashboard-sidebar">
+    <a href="gig-dashboard.html" class="sidebar-header">
+      <div class="sidebar-brand-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+        </svg>
+      </div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">Gig Professional</span>
+        <span class="sidebar-brand-sub">Professional Dashboard</span>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav">
+      <a href="gig-dashboard.html" class="nav-item" id="nav-dashboard">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Dashboard
+      </a>
+      <a href="active-tasks.html" class="nav-item active" id="nav-projects">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        Projects
+      </a>
+      <a href="total-earnings.html" class="nav-item" id="nav-earnings">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Earnings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="profile-mini" id="sidebar-avatar">AK</div>
+      <div class="sidebar-footer-info">
+        <div class="sidebar-footer-name" id="sidebar-user-name">Arham Kansal</div>
+        <div class="sidebar-footer-role">Premium Member</div>
+      </div>
+      <button id="logout-btn" class="sidebar-logout-btn" title="Log out">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ─── Main Content ────────────────────────────────────────── -->
+  <main class="dashboard-main">
+
+    <header class="dashboard-topbar">
+      <div class="topbar-label">
+        <svg fill="none" stroke="var(--color-primary-dark)" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        <span>Deliverables Submission</span>
+      </div>
+      <div class="topbar-search">
+        <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="submit-search" placeholder="Search projects...">
+      </div>
+    </header>
+
+    <div class="dashboard-content">
+
+      <!-- Page title -->
+      <h1 class="submit-page-title">Submit Project Deliverables</h1>
+      <p class="submit-page-subtitle">Complete your project milestones by submitting your high-quality work for review.</p>
+
+      <!-- Active project card -->
+      <div class="project-context-card" id="project-context-card">
+        <div class="project-context-preview">
+          <div class="project-preview-page">
+            <div class="preview-page-header"></div>
+            <div class="preview-page-line-thick"></div>
+            <div class="preview-page-line"></div>
+            <div class="preview-page-line"></div>
+          </div>
+          <div class="project-preview-page project-preview-page-offset">
+            <div class="preview-page-header-alt"></div>
+            <div class="preview-page-line-thick"></div>
+            <div class="preview-page-line"></div>
+            <div class="preview-page-line-short"></div>
+          </div>
+        </div>
+        <div class="project-context-info">
+          <span class="project-context-label">Active Project</span>
+          <h2 class="project-context-name" id="context-project-name">E-commerce Website Redesign</h2>
+          <div class="project-context-client" id="context-client-name">
+            <svg fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Client: Priya Sharma
+          </div>
+          <a href="project-detail.html" class="project-context-link" id="view-project-link">
+            View Project Details
+            <svg fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Submission form -->
+      <div class="submission-form-card">
+        <h2 class="submission-form-title">Submission Details</h2>
+
+        <form id="submit-deliverables-form">
+
+          <!-- Submission notes -->
+          <div class="submit-field">
+            <label class="submit-label" for="submission-notes">Submission Notes</label>
+            <textarea id="submission-notes" class="submit-textarea" rows="5" placeholder="Provide a brief description of the deliverables or instructions for the client..."></textarea>
+          </div>
+
+          <!-- File upload -->
+          <div class="submit-field">
+            <label class="submit-label">Upload Deliverables (ZIP, PDF, JPG, etc.)</label>
+            <div class="submit-dropzone" id="dropzone">
+              <div class="dropzone-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" viewBox="0 0 24 24">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="12" y1="18" x2="12" y2="12"></line>
+                  <polyline points="9 15 12 12 15 15"></polyline>
+                </svg>
+              </div>
+              <p class="dropzone-text">Click to upload or drag and drop</p>
+              <span class="dropzone-hint">Maximum file size: 500MB</span>
+              <input type="file" id="file-upload" class="dropzone-input" multiple accept=".zip,.pdf,.jpg,.png,.psd,.ai,.fig">
+            </div>
+            <!-- File list preview -->
+            <div id="file-list" class="file-list"></div>
+          </div>
+
+          <!-- External link -->
+          <div class="submit-field">
+            <label class="submit-label" for="external-link">External Link (e.g., Figma, GitHub)</label>
+            <div class="submit-link-input">
+              <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <input type="url" id="external-link" class="link-input-field" placeholder="https://www.figma.com/file/...">
+            </div>
+          </div>
+
+          <!-- Submit button -->
+          <div class="submit-footer">
+            <button type="submit" class="btn-submit-work" id="submit-work-btn">Submit Final Work</button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Success toast (hidden initially) -->
+      <div class="submit-toast" id="submit-toast">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <span>Deliverable submitted successfully!</span>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script type="module" src="../../js/main.js"></script>
+
+</body>
+</html>

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Search Talent - GigsForGigs</title>
+  <meta name="description" content="Find and hire vetted professionals on GigsForGigs.">
   <link rel="stylesheet" href="../../css/variables.css">
   <link rel="stylesheet" href="../../css/reset.css">
   <link rel="stylesheet" href="../../css/components.css">
@@ -13,17 +14,22 @@
 <body>
 
 <div class="dashboard-layout">
-  
-  <!-- Sidebar (GigsForGigs) -->
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────── -->
   <aside class="dashboard-sidebar">
     <a href="client-dashboard.html" class="client-sidebar-brand">
-      <div class="brand-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-primary-blue)"><circle cx="12" cy="12" r="10"/></svg></div>
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 12l3 3 5-5"></path>
+        </svg>
+      </div>
       <div class="brand-text">
         <span class="brand-name">GigsForGigs</span>
-        
+        <span class="brand-sub">Client Dashboard</span>
       </div>
     </a>
-    
+
     <nav class="sidebar-nav">
       <a href="client-dashboard.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -31,77 +37,259 @@
       </a>
       <a href="my-gigs-client.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-        Active Contracts
+        My Gigs
       </a>
-      <a href="review-shortlist.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-        Approve Shortlists
-      </a>
-      <a href="search-talent.html" class="nav-item active">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        Search Talent
-      </a>
-      <a href="post-gig.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Post a Gig
+      <a href="client-dashboard.html" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Total Spent
       </a>
     </nav>
-    
+
     <div class="sidebar-user-info">
-      <div class="user-avatar" style="background-color: var(--color-secondary); color: var(--color-white); font-weight: 700; font-size: 0.875rem;">AJ</div>
+      <div class="user-avatar user-avatar-seagrass">JW</div>
       <div class="user-details">
-        <div class="user-name">Alex Johnson</div>
-        <div class="user-role">CLIENT PROFILE</div>
+        <div class="user-name">James Wilson</div>
+        <div class="user-role">Enterprise Client</div>
       </div>
-      <div style="margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-secondary);"></div>
+      <div class="online-dot"></div>
     </div>
   </aside>
 
-  <!-- Main Content -->
+  <!-- ─── Main Content ────────────────────────────────────────── -->
   <main class="dashboard-main">
-    
+
     <header class="dashboard-topbar">
-      <div class="topbar-search" style="width: 400px;">
+      <div class="topbar-search">
         <svg fill="none" stroke="var(--color-text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" placeholder="Search professionals by name, skill, or role...">
+        <input type="text" id="talent-search" placeholder="Search talent, skills, or projects...">
+      </div>
+      <div class="topbar-actions">
+        <a href="post-gig.html" class="btn-post-task" id="post-task-btn">
+          <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Post Task
+        </a>
       </div>
     </header>
 
-    <div class="dashboard-content container">
-      
-      <div style="margin-bottom: var(--spacing-lg);">
-        <h1 class="page-title" style="margin-bottom: var(--spacing-sm);">Search Talent</h1>
-        <p id="search-talent-subtitle" style="color: var(--color-text-muted);">Saved candidates are empty. Start searching to build your shortlist.</p>
+    <div class="dashboard-content">
+
+      <div class="page-header">
+        <h1 class="page-title">Find the Best Talent</h1>
+        <p class="page-subtitle">Browse through our vetted professionals to get your project started.</p>
       </div>
-      
-      <!-- Filter Bar -->
-      <div class="filter-bar" style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-xl); background-color: var(--color-white); padding: var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--color-border); align-items: center;">
-        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
-          <option value="">Any Category</option>
-          <option value="dev" selected>Software Development</option>
-          <option value="design">Design</option>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <span class="filter-label">Filters:</span>
+        <select class="filter-select" id="filter-skill">
+          <option value="">Skill ▾</option>
+          <option value="react">React</option>
+          <option value="design">UI/UX Design</option>
+          <option value="node">Node.js</option>
+          <option value="marketing">Marketing</option>
         </select>
-        <div style="width: 1px; height: 24px; background-color: var(--color-border);"></div>
-        
-        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
-          <option value="">Hourly Rate</option>
-          <option value="1">Under $30/hr</option>
-          <option value="2">$30 - $60/hr</option>
-          <option value="3">$60+/hr</option>
+        <select class="filter-select" id="filter-budget">
+          <option value="">Budget ▾</option>
+          <option value="30">Under $30/hr</option>
+          <option value="60">$30 – $60/hr</option>
+          <option value="100">$60 – $100/hr</option>
+          <option value="100+">$100+/hr</option>
         </select>
-        <div style="width: 1px; height: 24px; background-color: var(--color-border);"></div>
-        
-        <select class="form-input" style="flex: 1; border: none; background: transparent; padding: 0 var(--spacing-sm);">
-          <option value="">Success Score</option>
-          <option value="90" selected>90% & Up</option>
-          <option value="80">80% & Up</option>
+        <select class="filter-select" id="filter-rating">
+          <option value="">Rating ▾</option>
+          <option value="4.5">4.5+ Stars</option>
+          <option value="4">4+ Stars</option>
+          <option value="3">3+ Stars</option>
         </select>
-        
-        <button class="btn btn-outline" style="padding: 6px 16px;">Clear</button>
+        <div class="sort-wrapper">
+          <span class="sort-label">Sort by:</span>
+          <select class="filter-select" id="sort-talent">
+            <option value="relevance">Relevance</option>
+            <option value="rating">Highest Rated</option>
+            <option value="rate-low">Price: Low → High</option>
+            <option value="rate-high">Price: High → Low</option>
+          </select>
+        </div>
       </div>
-      
-      <div id="talent-results-content" class="dashboard-section" style="text-align: center; padding: var(--spacing-xxl); color: var(--color-text-muted);">
-        No talents found yet. Saved candidates: 0.
+
+      <!-- Talent Cards Grid (3x2) -->
+      <div class="talent-grid" id="talent-grid">
+
+        <!-- Card 1 — Alex Rivera -->
+        <div class="talent-card">
+          <div class="talent-banner talent-banner-blue">
+            <span class="talent-vetted-badge">✓ Vetted</span>
+          </div>
+          <div class="talent-body">
+            <div class="talent-photo">
+              <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#c4d6e4"/><text x="32" y="38" text-anchor="middle" fill="#084b83" font-size="20" font-weight="700">AR</text></svg>
+            </div>
+            <div class="talent-header">
+              <span class="talent-name">Alex Rivera</span>
+              <span class="talent-rate">$85<span>/hr</span></span>
+            </div>
+            <div class="talent-title">Full Stack Developer</div>
+            <div class="talent-rating">
+              <span class="star">★</span> 4.9 <span class="review-count">(134 reviews)</span>
+            </div>
+            <div class="talent-skills">
+              <span class="skill-chip">React</span>
+              <span class="skill-chip">Node.js</span>
+              <span class="skill-chip">AWS</span>
+            </div>
+            <div class="talent-actions">
+              <a href="#" class="btn-view-profile">View Profile</a>
+              <a href="#" class="btn-hire">Hire</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 — Marcus Chen -->
+        <div class="talent-card">
+          <div class="talent-banner talent-banner-gold"></div>
+          <div class="talent-body">
+            <div class="talent-photo">
+              <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#e8dcc8"/><text x="32" y="38" text-anchor="middle" fill="#502419" font-size="20" font-weight="700">MC</text></svg>
+            </div>
+            <div class="talent-header">
+              <span class="talent-name">Marcus Chen</span>
+              <span class="talent-rate">$70<span>/hr</span></span>
+            </div>
+            <div class="talent-title">Senior UI/UX Designer</div>
+            <div class="talent-rating">
+              <span class="star">★</span> 5.0 <span class="review-count">(89 reviews)</span>
+            </div>
+            <div class="talent-skills">
+              <span class="skill-chip">Figma</span>
+              <span class="skill-chip">Design Systems</span>
+              <span class="skill-chip">Prototyping</span>
+            </div>
+            <div class="talent-actions">
+              <a href="#" class="btn-view-profile">View Profile</a>
+              <a href="#" class="btn-hire">Hire</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 — Elena Rodriguez -->
+        <div class="talent-card">
+          <div class="talent-banner talent-banner-gold"></div>
+          <div class="talent-body">
+            <div class="talent-photo">
+              <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#d9e7df"/><text x="32" y="38" text-anchor="middle" fill="#519e8a" font-size="20" font-weight="700">ER</text></svg>
+            </div>
+            <div class="talent-header">
+              <span class="talent-name">Elena Rodriguez</span>
+              <span class="talent-rate">$55<span>/hr</span></span>
+            </div>
+            <div class="talent-title">Technical Content Writer</div>
+            <div class="talent-rating">
+              <span class="star">★</span> 4.8 <span class="review-count">(210 reviews)</span>
+            </div>
+            <div class="talent-skills">
+              <span class="skill-chip">Copywriting</span>
+              <span class="skill-chip">SEO</span>
+              <span class="skill-chip">Strategy</span>
+            </div>
+            <div class="talent-actions">
+              <a href="#" class="btn-view-profile">View Profile</a>
+              <a href="#" class="btn-hire">Hire</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 — Jordan Smith -->
+        <div class="talent-card">
+          <div class="talent-banner talent-banner-blue"></div>
+          <div class="talent-body">
+            <div class="talent-photo">
+              <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#c4d6e4"/><text x="32" y="38" text-anchor="middle" fill="#084b83" font-size="20" font-weight="700">JS</text></svg>
+            </div>
+            <div class="talent-header">
+              <span class="talent-name">Jordan Smith</span>
+              <span class="talent-rate">$95<span>/hr</span></span>
+            </div>
+            <div class="talent-title">DevOps Engineer</div>
+            <div class="talent-rating">
+              <span class="star">★</span> 4.9 <span class="review-count">(84 reviews)</span>
+            </div>
+            <div class="talent-skills">
+              <span class="skill-chip">Kubernetes</span>
+              <span class="skill-chip">Terraform</span>
+              <span class="skill-chip">Docker</span>
+            </div>
+            <div class="talent-actions">
+              <a href="#" class="btn-view-profile">View Profile</a>
+              <a href="#" class="btn-hire">Hire</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5 — Sarah Jenkins -->
+        <div class="talent-card">
+          <div class="talent-banner talent-banner-pink"></div>
+          <div class="talent-body">
+            <div class="talent-photo">
+              <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#e8d4d4"/><text x="32" y="38" text-anchor="middle" fill="#bf6900" font-size="20" font-weight="700">SJ</text></svg>
+            </div>
+            <div class="talent-header">
+              <span class="talent-name">Sarah Jenkins</span>
+              <span class="talent-rate">$60<span>/hr</span></span>
+            </div>
+            <div class="talent-title">Digital Marketing Specialist</div>
+            <div class="talent-rating">
+              <span class="star">★</span> 4.7 <span class="review-count">(145 reviews)</span>
+            </div>
+            <div class="talent-skills">
+              <span class="skill-chip">Ads</span>
+              <span class="skill-chip">Social Media</span>
+              <span class="skill-chip">Analytics</span>
+            </div>
+            <div class="talent-actions">
+              <a href="#" class="btn-view-profile">View Profile</a>
+              <a href="#" class="btn-hire">Hire</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 6 — David Lau -->
+        <div class="talent-card">
+          <div class="talent-banner talent-banner-green"></div>
+          <div class="talent-body">
+            <div class="talent-photo">
+              <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#d0e2dc"/><text x="32" y="38" text-anchor="middle" fill="#084b83" font-size="20" font-weight="700">DL</text></svg>
+            </div>
+            <div class="talent-header">
+              <span class="talent-name">David Lau</span>
+              <span class="talent-rate">$80<span>/hr</span></span>
+            </div>
+            <div class="talent-title">Mobile App Developer</div>
+            <div class="talent-rating">
+              <span class="star">★</span> 4.9 <span class="review-count">(112 reviews)</span>
+            </div>
+            <div class="talent-skills">
+              <span class="skill-chip">Flutter</span>
+              <span class="skill-chip">Swift</span>
+              <span class="skill-chip">Firebase</span>
+            </div>
+            <div class="talent-actions">
+              <a href="#" class="btn-view-profile">View Profile</a>
+              <a href="#" class="btn-hire">Hire</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <a href="#" class="pagination-btn" aria-label="Previous page">‹</a>
+        <a href="#" class="pagination-btn active">1</a>
+        <a href="#" class="pagination-btn">2</a>
+        <a href="#" class="pagination-btn">3</a>
+        <span class="pagination-ellipsis">…</span>
+        <a href="#" class="pagination-btn">12</a>
+        <a href="#" class="pagination-btn" aria-label="Next page">›</a>
       </div>
 
     </div>
@@ -112,5 +300,3 @@
 
 </body>
 </html>
-
-

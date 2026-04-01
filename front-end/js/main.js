@@ -14,6 +14,7 @@ import * as deliverables from './modules/deliverables.js';
 import * as managers from './modules/managers.js';
 import * as profile from './modules/profile.js';
 import * as dashboard from './modules/dashboard.js';
+import * as services from './modules/services.js';
 
 // ── Page → module mapping ────────────────────────────────────────
 // Pages that do NOT require auth (public pages)
@@ -55,8 +56,11 @@ const PAGE_MAP = {
   'active-tasks.html':              { module: tasks,         roles: ['gig'] },
   'completed-projects.html':        { module: deliverables,  roles: ['gig'] },
   'project-detail.html':            { module: deliverables,  roles: ['gig', 'client', 'manager'] },
-  'post-service.html':              { module: null,          roles: ['gig'] },
-  'total-earnings.html':            { module: null,          roles: ['gig'] }
+  'post-service.html':              { module: services,      roles: ['gig'] },
+  'service-published.html':         { module: null,          roles: ['gig'] },
+  'total-earnings.html':            { module: null,          roles: ['gig'] },
+  'submit-deliverables.html':       { module: deliverables,  roles: ['gig'] },
+  'submission-success.html':        { module: null,          roles: ['gig'] }
 };
 
 // ── Bootstrap ────────────────────────────────────────────────────
