@@ -19,7 +19,7 @@ const MIN_BUDGET = 500;
  * Looks for an element with id  `${fieldId}-error`; if it doesn't
  * exist one is created immediately after the field.
  */
-function showError(fieldId, message) {
+export function showError(fieldId, message) {
   const field = document.getElementById(fieldId);
   if (!field) {
     console.warn('Field not found:', fieldId);
@@ -42,7 +42,7 @@ function showError(fieldId, message) {
 /**
  * Clear an error for a given field id.
  */
-function clearError(fieldId) {
+export function clearError(fieldId) {
   const field = document.getElementById(fieldId);
   if (field) {
     field.style.borderColor = '';
@@ -56,7 +56,7 @@ function clearError(fieldId) {
 /**
  * Clear all errors that were previously set on the form.
  */
-function clearAllErrors(fieldIds) {
+export function clearAllErrors(fieldIds) {
   fieldIds.forEach(clearError);
 }
 

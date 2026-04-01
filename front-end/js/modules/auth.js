@@ -353,7 +353,6 @@ function initSignup() {
 
     if (!validateSignupForm()) {
       console.log('❌ Validation failed - check error messages on form');
-      alert('❌ Please fix the errors above');
       // Scroll to first error
       const firstError = document.querySelector('[id$="-error"]');
       if (firstError) {

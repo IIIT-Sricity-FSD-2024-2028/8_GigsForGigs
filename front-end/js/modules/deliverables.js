@@ -17,6 +17,7 @@ import {
   getProjectDetailRecord,
   markGigTaskComplete
 } from './gigState.js';
+import { showError, clearError } from '../utils/validation.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -533,8 +534,9 @@ function initSubmitDeliverables() {
       const notes = document.getElementById('submission-notes')?.value?.trim() || '';
       const link = document.getElementById('external-link')?.value?.trim() || '';
 
+      clearError('submission-notes');
       if (!notes && selectedFiles.length === 0 && !link) {
-        alert('Please provide submission notes, upload files, or add an external link before submitting.');
+        showError('submission-notes', 'Please provide submission notes, upload files, or add an external link before submitting.');
         return;
       }
 

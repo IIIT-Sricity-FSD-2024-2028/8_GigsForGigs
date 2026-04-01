@@ -15,7 +15,7 @@ import {
   saveToStorage
 } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
-import { validatePostGigForm } from '../utils/validation.js';
+import { validatePostGigForm, showError, clearError } from '../utils/validation.js';
 import {
   formatDate, formatCurrency, generateId,
   truncate, getStatusBadgeClass, humaniseStatus, getInitials
@@ -1271,8 +1271,9 @@ function openSubmitModal(task, user) {
     const notes = backdrop.querySelector('#modal-submission-notes')?.value?.trim() || '';
     const link = backdrop.querySelector('#modal-external-link')?.value?.trim() || '';
 
+    clearError('modal-submission-notes');
     if (!notes && selectedFiles.length === 0 && !link) {
-      alert('Please provide submission notes, upload files, or add an external link before submitting.');
+      showError('modal-submission-notes', 'Please provide submission notes, upload files, or add an external link before submitting.');
       return;
     }
 
