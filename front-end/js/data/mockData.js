@@ -3,8 +3,120 @@
 // mutates them in‑place — no backend, no fetch, no JSON files.
 // ─────────────────────────────────────────────────────────────────
 
+const STORAGE_PREFIX = 'gfg_';
+const USERS_STORAGE_KEY = `${STORAGE_PREFIX}users`;
+const APPLICATIONS_STORAGE_KEY = 'gfg_persisted_applications';
+const TASKS_STORAGE_KEY = 'gfg_tasks';
+const SERVICES_STORAGE_KEY = 'gfg_services';
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeUserRecord(user) {
+  if (!user || typeof user !== 'object') return null;
+  if (!user.id || !user.email || !user.role) return null;
+  return user;
+}
+
+function mergeSeedUsersWithStored(seedUsers, storedUsers) {
+  if (!Array.isArray(storedUsers) || storedUsers.length === 0) {
+    return deepClone(seedUsers);
+  }
+
+  const mergedById = new Map();
+
+  seedUsers.forEach((seedUser) => {
+    mergedById.set(seedUser.id, deepClone(seedUser));
+  });
+
+  storedUsers.forEach((storedUser) => {
+    const safeUser = normalizeUserRecord(storedUser);
+    if (!safeUser) return;
+
+    const existing = mergedById.get(safeUser.id);
+    if (existing) {
+      // Keep persisted profile fields but preserve seeded login identity.
+      mergedById.set(safeUser.id, {
+        ...existing,
+        ...safeUser,
+        email: existing.email,
+        password: existing.password,
+        role: existing.role
+      });
+      return;
+    }
+
+    mergedById.set(safeUser.id, deepClone(safeUser));
+  });
+
+  return [...mergedById.values()];
+}
+
+function loadUsersFromStorage(seedUsers) {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return deepClone(seedUsers);
+    }
+
+    const raw = localStorage.getItem(USERS_STORAGE_KEY);
+    if (!raw) return deepClone(seedUsers);
+
+    const parsed = JSON.parse(raw);
+    return mergeSeedUsersWithStored(seedUsers, parsed);
+  } catch {
+    return deepClone(seedUsers);
+  }
+}
+
+export function saveUsers() {
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  } catch {}
+}
+
+function readLocalArray(key, fallback) {
+  if (typeof localStorage === 'undefined') return fallback;
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalArray(key, value) {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore storage failures in private mode/quota exceeded.
+  }
+}
+
+function initializeLocalArray(key, seededValue) {
+  if (typeof localStorage === 'undefined') return deepClone(seededValue);
+
+  try {
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      const parsed = JSON.parse(existing);
+      return Array.isArray(parsed) ? parsed : deepClone(seededValue);
+    }
+
+    const snapshot = deepClone(seededValue);
+    writeLocalArray(key, snapshot);
+    return snapshot;
+  } catch {
+    return deepClone(seededValue);
+  }
+}
 // ── Users ────────────────────────────────────────────────────────
-export const users = [
+const seedUsers = [
   {
     id: 'u1',
     name: 'Alex Johnson',
@@ -126,9 +238,11 @@ export const users = [
   }
 ];
 
+export const users = loadUsersFromStorage(seedUsers);
+
 // ── Tasks ────────────────────────────────────────────────────────
 // Statuses: open | in_progress | under_review | completed
-export const tasks = [
+const seededTasks = [
   {
     id: 't1',
     clientId: 'u1',
@@ -221,10 +335,16 @@ export const tasks = [
   }
 ];
 
+export const tasks = initializeLocalArray(TASKS_STORAGE_KEY, seededTasks);
+
+export function saveTasks() {
+  writeLocalArray(TASKS_STORAGE_KEY, tasks);
+}
+
 // ── Applications ─────────────────────────────────────────────────
 // An application is a gig professional applying to an open task
 // status: pending | shortlisted | rejected
-export const applications = [
+const seededApplications = [
   {
     id: 'a1',
     taskId: 't1',
@@ -253,6 +373,12 @@ export const applications = [
     createdAt: '2024-10-07T15:00:00Z'
   }
 ];
+
+export const applications = readLocalArray(APPLICATIONS_STORAGE_KEY, seededApplications);
+
+export function persistApplications() {
+  writeLocalArray(APPLICATIONS_STORAGE_KEY, applications);
+}
 
 // ── Deliverables ─────────────────────────────────────────────────
 // status: submitted | approved | revision_requested
@@ -296,7 +422,7 @@ export const deliverables = [
 ];
 
 // ── Services (posted by gig professionals) ───────────────────────
-export const services = [
+const seededServices = [
   {
     id: 's1',
     gigId: 'u3',
@@ -325,3 +451,9 @@ export const services = [
     createdAt: '2024-08-20T12:00:00Z'
   }
 ];
+
+export const services = initializeLocalArray(SERVICES_STORAGE_KEY, seededServices);
+
+export function saveServices() {
+  writeLocalArray(SERVICES_STORAGE_KEY, services);
+}

@@ -93,14 +93,14 @@
         <div>
           <section class="dashboard-section" style="margin-bottom: var(--spacing-lg);">
             <div style="display: flex; gap: var(--spacing-sm); align-items: center; margin-bottom: var(--spacing-md);">
-              <span class="badge badge-pending">Pending Approval</span>
+              <span id="project-detail-status-badge" class="badge badge-pending">Pending Approval</span>
             </div>
             
-            <h2 style="font-size: 1.75rem; color: var(--color-text-dark); margin-bottom: var(--spacing-sm); font-weight: 700;">Logo Design for Startup</h2>
-            <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: var(--spacing-xl);">Posted 2 days ago by Acme Corp</p>
+            <h2 id="project-detail-title" style="font-size: 1.75rem; color: var(--color-text-dark); margin-bottom: var(--spacing-sm); font-weight: 700;">Logo Design for Startup</h2>
+            <p id="project-detail-subtitle" style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: var(--spacing-xl);">Posted 2 days ago by Acme Corp</p>
             
             <h3 style="font-size: 1.125rem; color: var(--color-primary-dark); margin-bottom: var(--spacing-md); border-bottom: 2px solid var(--color-bg-light); padding-bottom: 8px;">Project Description</h3>
-            <p style="line-height: 1.6; color: var(--color-text-dark); margin-bottom: var(--spacing-md);">We are looking for a modern, minimalist logo design for our new sustainable packaging startup, EcoPack. The logo needs to communicate environmental responsibility while looking premium and trustworthy to B2B clients.</p>
+            <p id="project-detail-description" style="line-height: 1.6; color: var(--color-text-dark); margin-bottom: var(--spacing-md);">We are looking for a modern, minimalist logo design for our new sustainable packaging startup, EcoPack. The logo needs to communicate environmental responsibility while looking premium and trustworthy to B2B clients.</p>
             <p style="line-height: 1.6; color: var(--color-text-dark); margin-bottom: var(--spacing-xl);">Deliverables must include:</p>
             <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.6; color: var(--color-text-dark); margin-bottom: var(--spacing-xxl);">
               <li>3 initial concept sketches.</li>
@@ -128,27 +128,27 @@
           <div class="dashboard-section" style="padding: var(--spacing-xl); margin-bottom: var(--spacing-lg);">
             <div style="margin-bottom: var(--spacing-xl);">
               <div style="font-size: 0.875rem; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase;">Budget</div>
-              <div style="font-size: 2rem; font-weight: 700; color: var(--color-secondary);">$450.00</div>
+              <div id="project-detail-budget" style="font-size: 2rem; font-weight: 700; color: var(--color-secondary);">$450.00</div>
               <div style="font-size: 0.875rem; color: var(--color-text-muted);">Fixed Price</div>
             </div>
             
             <div style="margin-bottom: var(--spacing-lg);">
               <div style="font-size: 0.875rem; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase;">Deadline</div>
-              <div style="font-size: 1.25rem; font-weight: 600; color: var(--color-text-dark);">Nov 15, 2024</div>
+              <div id="project-detail-deadline" style="font-size: 1.25rem; font-weight: 600; color: var(--color-text-dark);">Nov 15, 2024</div>
             </div>
 
             <!-- Contextual action blocks -->
-            <a href="active-tasks.html" class="btn btn-primary-blue btn-full" style="text-align: center; margin-top: var(--spacing-lg); text-decoration: none;">Accept Request</a>
-            <a href="decline-request.html" class="btn btn-outline btn-full" style="text-align: center; margin-top: var(--spacing-md); text-decoration: none;">Decline</a>
+            <a id="project-detail-primary-action" href="active-tasks.html" class="btn btn-primary-blue btn-full" style="text-align: center; margin-top: var(--spacing-lg); text-decoration: none;">Accept Request</a>
+            <a id="project-detail-secondary-action" href="decline-request.html" class="btn btn-outline btn-full" style="text-align: center; margin-top: var(--spacing-md); text-decoration: none;">Decline</a>
           </div>
 
           <!-- Client Card -->
           <div class="dashboard-section" style="padding: var(--spacing-xl);">
             <h3 style="font-size: 1rem; color: var(--color-primary-dark); margin-bottom: var(--spacing-lg); font-weight: 700;">About the Client</h3>
             <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
-              <div style="width: 40px; height: 40px; background-color: var(--color-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--color-primary-dark);">AC</div>
+              <div id="project-detail-client-initials" style="width: 40px; height: 40px; background-color: var(--color-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--color-primary-dark);">AC</div>
               <div>
-                <div style="font-weight: 600; font-size: 1rem;">Acme Corp</div>
+                <div id="project-detail-client-name" style="font-weight: 600; font-size: 1rem;">Acme Corp</div>
                 <div style="font-size: 0.875rem; color: var(--color-text-muted);">Member since 2022</div>
               </div>
             </div>

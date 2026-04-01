@@ -3,12 +3,13 @@
 // Gig side     → pending-requests.html : list service requests, accept / decline
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, applications } from '../data/mockData.js';
+import { tasks, users, applications, persistApplications, saveTasks } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import {
   formatDate, formatCurrency, getStatusBadgeClass,
   humaniseStatus, getInitials
 } from '../utils/helpers.js';
+import { acceptGigRequest, declineGigRequest, getGigDashboardSummary } from './gigState.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ function renderReviewShortlist() {
       const app = applications.find(a => a.id === btn.dataset.appId);
       if (app) {
         app.status = 'shortlisted';
+        persistApplications();
         renderReviewShortlist();
       }
     });
@@ -121,6 +123,7 @@ function renderReviewShortlist() {
       const app = applications.find(a => a.id === btn.dataset.appId);
       if (app) {
         app.status = 'rejected';
+        persistApplications();
         renderReviewShortlist();
       }
     });
@@ -137,12 +140,14 @@ function renderReviewShortlist() {
         if (task) {
           task.assignedTo = app.gigId;
           task.status = 'in_progress';
+          saveTasks();
         }
         // Reject other pending applications for this task
         applications
           .filter(a => a.taskId === app.taskId && a.id !== app.id && a.status === 'pending')
           .forEach(a => { a.status = 'rejected'; });
         app.status = 'shortlisted'; // keep as shortlisted (hired)
+        persistApplications();
         window.location.href = 'my-gigs-client.html';
       }
     });
@@ -153,25 +158,27 @@ function renderReviewShortlist() {
 
 function renderPendingRequests() {
   const user = getUser();
-  if (!user) return;
+  if (!user || user.role !== 'gig') return;
 
   const container = document.getElementById('pending-requests-list');
   if (!container) return;
 
-  // Tasks where this gig professional has pending applications
-  const myPendingApps = applications.filter(
-    a => a.gigId === user.id && a.status === 'pending'
-  );
+  const summary = getGigDashboardSummary(user.id);
+  const pendingRequests = summary.pendingRequests;
+  const declinedRequests = summary.declinedRequests;
+  const allRequests = [...pendingRequests, ...declinedRequests].sort((a, b) => {
+    const aTime = new Date(a.createdAt || 0).getTime();
+    const bTime = new Date(b.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
 
-  if (myPendingApps.length === 0) {
-    container.innerHTML = `<div style="padding:var(--spacing-xl);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;color:var(--color-text-muted);">No pending requests yet. Invitations from clients will appear here.</div>`;
+  if (allRequests.length === 0) {
+    container.innerHTML = `<div style="padding:var(--spacing-xl);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;color:var(--color-text-muted);">No request history yet. Invitations from clients will appear here.</div>`;
     return;
   }
 
-  container.innerHTML = myPendingApps.map(app => {
-    const task = getTaskById(app.taskId);
-    if (!task) return '';
-    const client = getUserById(task.clientId);
+  container.innerHTML = allRequests.map((request) => {
+    const isPending = request.status === 'pending';
 
     return `
       <div class="task-card" style="align-items:flex-start;padding:var(--spacing-xl);">
@@ -179,53 +186,49 @@ function renderPendingRequests() {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--spacing-md);">
             <div class="task-details">
               <div style="display:flex;align-items:center;gap:var(--spacing-sm);margin-bottom:var(--spacing-sm);">
-                <div style="width:32px;height:32px;background-color:var(--color-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.875rem;">${client ? getInitials(client.company || client.name) : '??'}</div>
-                <span style="font-weight:500;color:var(--color-text-dark);">${client ? client.company || client.name : 'Client'}</span>
-                <span class="badge badge-pending" style="font-size:0.7rem;padding:2px 8px;">Pending Review</span>
+                <div style="width:32px;height:32px;background-color:var(--color-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.875rem;">${request.clientInitials || getInitials(request.clientName || 'Client')}</div>
+                <span style="font-weight:500;color:var(--color-text-dark);">${request.clientName || 'Client'}</span>
+                <span class="${getStatusBadgeClass(request.status)}" style="font-size:0.7rem;padding:2px 8px;">${humaniseStatus(request.status)}</span>
               </div>
-              <h3 style="font-size:1.25rem;">${task.title}</h3>
-              <p style="margin-top:var(--spacing-sm);line-height:1.5;max-width:800px;">${task.description || ''}</p>
+              <h3 style="font-size:1.25rem;">${request.title}</h3>
+              <p style="margin-top:var(--spacing-sm);line-height:1.5;max-width:800px;">${request.description || ''}</p>
+              <p style="margin-top:8px;font-size:0.8rem;color:var(--color-text-muted);">Deadline: ${formatDate(request.deadline)}</p>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:1.5rem;font-weight:700;color:var(--color-secondary);">${formatCurrency(task.budget)}</div>
+              <div style="font-size:1.5rem;font-weight:700;color:var(--color-secondary);">${formatCurrency(request.budget)}</div>
               <div style="font-size:0.875rem;color:var(--color-text-muted);margin-top:4px;">Proposed Budget</div>
             </div>
           </div>
           <div style="margin-top:var(--spacing-lg);padding-top:var(--spacing-lg);border-top:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;">
-            <a href="project-detail.html?taskId=${task.id}" style="color:var(--color-primary-blue);font-size:0.875rem;font-weight:500;text-decoration:none;">View Full Details →</a>
-            <div style="display:flex;gap:var(--spacing-md);">
-              <button class="btn btn-outline decline-req-btn" data-app-id="${app.id}" style="min-width:120px;text-align:center;color:var(--color-text-dark);border-color:var(--color-border);">Decline</button>
-              <button class="btn btn-primary-blue accept-req-btn" data-app-id="${app.id}" style="min-width:120px;text-align:center;">Accept</button>
-            </div>
+            <a href="project-detail.html?requestId=${request.id}" style="color:var(--color-primary-blue);font-size:0.875rem;font-weight:500;text-decoration:none;">View Full Details →</a>
+            ${isPending ? `
+              <div style="display:flex;gap:var(--spacing-md);">
+                <button class="btn btn-outline decline-req-btn" data-request-id="${request.id}" style="min-width:120px;text-align:center;color:var(--color-text-dark);border-color:var(--color-border);">Decline</button>
+                <button class="btn btn-primary-blue accept-req-btn" data-request-id="${request.id}" style="min-width:120px;text-align:center;">Accept</button>
+              </div>
+            ` : '<span style="font-size:0.875rem;color:var(--color-text-muted);">This request has been declined.</span>'}
           </div>
         </div>
       </div>`;
   }).join('');
 
-  // Accept handler — move task to in_progress, assign gig
+  // Accept handler — request moves to active task in shared workflow state.
   container.querySelectorAll('.accept-req-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const app = applications.find(a => a.id === btn.dataset.appId);
-      if (app) {
-        const task = getTaskById(app.taskId);
-        if (task) {
-          task.assignedTo = app.gigId;
-          task.status = 'in_progress';
-        }
-        app.status = 'shortlisted';
-        renderPendingRequests();
-      }
+      const requestId = btn.dataset.requestId;
+      if (!requestId) return;
+      acceptGigRequest(user.id, requestId);
+      renderPendingRequests();
     });
   });
 
-  // Decline handler
+  // Decline handler — keep a visible declined history.
   container.querySelectorAll('.decline-req-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const app = applications.find(a => a.id === btn.dataset.appId);
-      if (app) {
-        app.status = 'rejected';
-        renderPendingRequests();
-      }
+      const requestId = btn.dataset.requestId;
+      if (!requestId) return;
+      declineGigRequest(user.id, requestId);
+      renderPendingRequests();
     });
   });
 }

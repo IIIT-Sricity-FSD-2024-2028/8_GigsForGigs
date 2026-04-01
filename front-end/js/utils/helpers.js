@@ -55,11 +55,14 @@ export function getStatusBadgeClass(status) {
   const map = {
     open:               'badge badge-pending',
     pending:            'badge badge-pending',
+    accepted:           'badge badge-active',
     in_progress:        'badge badge-active',
+    active:             'badge badge-active',
     under_review:       'badge badge-warning',
     completed:          'badge badge-completed',
     approved:           'badge badge-success',
     rejected:           'badge badge-completed',
+    declined:           'badge badge-declined',
     shortlisted:        'badge badge-active',
     submitted:          'badge badge-warning',
     revision_requested: 'badge badge-pending'

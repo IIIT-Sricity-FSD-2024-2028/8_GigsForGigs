@@ -4,7 +4,7 @@
 // gig-profile.html              → display and inline‑edit saved profile
 // ─────────────────────────────────────────────────────────────────
 
-import { users } from '../data/mockData.js';
+import { users, saveUsers } from '../data/mockData.js';
 import { getUser, setUser, get, set } from '../utils/storage.js';
 import { validateProfileForm } from '../utils/validation.js';
 import { getInitials } from '../utils/helpers.js';
@@ -45,12 +45,17 @@ function initProfileCompletionClient() {
       const u = users.find(x => x.id === user.id);
       if (u) {
         Object.assign(u, profileData);
-        u.isFirstTimeUser = false;  // Mark as no longer first-time after profile completion
+        u.isFirstTimeUser = false;
+        u.isProfileComplete = true;
+        saveUsers();
       }
     }
 
     // Navigate to profile selection
     const isFirstTime = sessionStorage.getItem('isFirstTimeJoin') === '1';
+    sessionStorage.removeItem('isFirstTimeJoin');
+    sessionStorage.removeItem('gfg_onboarding_role');
+    sessionStorage.removeItem('gfg_pending_user');
     window.location.href = isFirstTime
       ? 'client-profile-selection.html?firstTime=1'
       : 'client-profile-selection.html';
@@ -94,14 +99,18 @@ function initProfileCompletionGig() {
     // Update in‑memory user record
     if (user) {
       const u = users.find(x => x.id === user.id);
-      if (u) Object.assign(u, profileData);
+      if (u) {
+        Object.assign(u, profileData);
+        u.isFirstTimeUser = false;
+        u.isProfileComplete = true;
+        saveUsers();
+      }
       setUser({ ...user, name: user.name }); // refresh session
     }
 
-    const isFirstTime = sessionStorage.getItem('isFirstTimeJoin') === '1';
-    if (isFirstTime) {
-      sessionStorage.setItem('isFirstTimeJoin', '1');
-    }
+    sessionStorage.removeItem('isFirstTimeJoin');
+    sessionStorage.removeItem('gfg_onboarding_role');
+    sessionStorage.removeItem('gfg_pending_user');
 
     // Determine correct redirect based on page depth
     const path = window.location.pathname;

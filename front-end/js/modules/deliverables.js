@@ -4,12 +4,19 @@
 // completed-projects.html   → lists completed tasks
 // ─────────────────────────────────────────────────────────────────
 
-import { tasks, users, deliverables } from '../data/mockData.js';
+import { tasks, users, deliverables, saveTasks } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
 import {
   formatDate, formatCurrency, generateId,
   getStatusBadgeClass, humaniseStatus, getInitials
 } from '../utils/helpers.js';
+import {
+  acceptGigRequest,
+  declineGigRequest,
+  getGigDashboardSummary,
+  getProjectDetailRecord,
+  markGigTaskComplete
+} from './gigState.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -23,6 +30,10 @@ function getTaskById(id) {
 
 function getTaskIdFromUrl() {
   return new URLSearchParams(window.location.search).get('taskId');
+}
+
+function getRequestIdFromUrl() {
+  return new URLSearchParams(window.location.search).get('requestId');
 }
 
 // ── review-deliverables.html ─────────────────────────────────────
@@ -72,7 +83,7 @@ function initReviewDeliverables() {
   const revisionLink = document.querySelector('.btn-outline.btn-full');
 
   if (user.role !== 'client') {
-    // Manager cannot approve or release payment
+    // Manager cannot approve or release payment.
     if (approveLink) approveLink.style.display = 'none';
     if (revisionLink) revisionLink.textContent = 'Awaiting Client Approval';
   } else {
@@ -87,6 +98,7 @@ function initReviewDeliverables() {
           deliverable.paymentReleased = true;
         }
         task.status = 'completed';
+        saveTasks();
         window.location.href = 'my-gigs-client.html';
       });
     }
@@ -100,8 +112,28 @@ function initReviewDeliverables() {
           deliverable.status = 'revision_requested';
           deliverable.revisionNote = 'Client requested changes.';
         }
+        saveTasks();
         window.location.href = 'my-gigs-client.html';
       });
+    }
+
+    // Wire up delete button (for submitted deliverables only)
+    if (revisionLink && deliverable && deliverable.status === 'submitted') {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-outline';
+      deleteBtn.style.cssText = 'color:var(--color-text-muted);border-color:var(--color-border);margin-top:var(--spacing-sm);width:100%;';
+      deleteBtn.textContent = 'Delete Deliverable';
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const idx = deliverables.findIndex(d => d.id === deliverable.id);
+        if (idx !== -1) {
+          deliverables.splice(idx, 1);
+        }
+        window.location.href = 'my-gigs-client.html';
+      });
+      if (revisionLink.parentElement) {
+        revisionLink.parentElement.appendChild(deleteBtn);
+      }
     }
   }
 
@@ -118,6 +150,11 @@ function initReviewDeliverables() {
 function initProjectDetail() {
   const user = getUser();
   if (!user) return;
+
+  if (user.role === 'gig') {
+    initGigProjectDetail(user);
+    return;
+  }
 
   const taskId = getTaskIdFromUrl();
   const task = taskId ? getTaskById(taskId) : tasks.find(t => t.status === 'open');
@@ -172,6 +209,7 @@ function initProjectDetail() {
         e.preventDefault();
         task.assignedTo = user.id;
         task.status = 'in_progress';
+        saveTasks();
         window.location.href = 'active-tasks.html';
       });
     }
@@ -189,19 +227,152 @@ function initProjectDetail() {
   }
 }
 
+function initGigProjectDetail(user) {
+  const context = getProjectDetailRecord(user.id, window.location.search);
+  const request = context.request;
+  const task = context.task;
+
+  if (!request && !task) {
+    const content = document.querySelector('.dashboard-content');
+    if (content) {
+      content.innerHTML = '<div style="padding:var(--spacing-xl);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;color:var(--color-text-muted);">No project selected. Open a request or active task to view details.</div>';
+    }
+    return;
+  }
+
+  const record = task || request;
+  const status = task
+    ? task.status
+    : request?.status === 'accepted'
+      ? 'active'
+      : request?.status;
+
+  const titleEl = document.getElementById('project-detail-title') || document.querySelector('.dashboard-content h2');
+  if (titleEl) titleEl.textContent = record.title;
+
+  const subtitleEl = document.getElementById('project-detail-subtitle');
+  if (subtitleEl) {
+    subtitleEl.textContent = `Client: ${record.clientName || 'Client'} • Deadline: ${formatDate(record.deadline)}`;
+  }
+
+  const descEl = document.getElementById('project-detail-description') || document.querySelector('.dashboard-content p[style*="line-height: 1.6"]');
+  if (descEl) descEl.textContent = record.description || 'No description provided.';
+
+  const badgeEl = document.getElementById('project-detail-status-badge') || document.querySelector('.badge');
+  if (badgeEl) {
+    badgeEl.className = getStatusBadgeClass(status);
+    badgeEl.textContent = humaniseStatus(status);
+  }
+
+  const budgetEl = document.getElementById('project-detail-budget') || document.querySelector('.dashboard-section [style*="font-size: 2rem"]');
+  if (budgetEl) budgetEl.textContent = formatCurrency(record.budget);
+
+  const deadlineEl = document.getElementById('project-detail-deadline') || document.querySelector('.dashboard-section [style*="font-size: 1.25rem"][style*="font-weight: 600"]');
+  if (deadlineEl) deadlineEl.textContent = formatDate(record.deadline);
+
+  const clientNameEl = document.getElementById('project-detail-client-name') || document.querySelector('.dashboard-section [style*="font-weight: 600"][style*="font-size: 1rem"]');
+  if (clientNameEl) clientNameEl.textContent = record.clientName || 'Client';
+
+  const clientInitialsEl = document.getElementById('project-detail-client-initials');
+  if (clientInitialsEl) clientInitialsEl.textContent = record.clientInitials || getInitials(record.clientName || 'Client');
+
+  const actionPrimary = document.getElementById('project-detail-primary-action') || document.querySelector('.btn-primary-blue.btn-full');
+  const actionSecondary = document.getElementById('project-detail-secondary-action') || document.querySelector('.btn-outline.btn-full');
+
+  if (!actionPrimary || !actionSecondary) return;
+
+  actionPrimary.style.display = '';
+  actionSecondary.style.display = '';
+  actionPrimary.href = '#';
+  actionSecondary.href = '#';
+
+  if (status === 'pending' && request) {
+    actionPrimary.textContent = 'Accept Request';
+    actionSecondary.textContent = 'Decline Request';
+
+    actionPrimary.onclick = (event) => {
+      event.preventDefault();
+      acceptGigRequest(user.id, request.id);
+      window.location.href = 'active-tasks.html';
+    };
+
+    actionSecondary.onclick = (event) => {
+      event.preventDefault();
+      declineGigRequest(user.id, request.id);
+      window.location.href = 'pending-requests.html';
+    };
+    return;
+  }
+
+  if (status === 'active' && task) {
+    actionPrimary.textContent = 'Mark Complete';
+    actionSecondary.textContent = 'Back to Active Tasks';
+
+    actionPrimary.onclick = (event) => {
+      event.preventDefault();
+      markGigTaskComplete(user.id, task.id);
+      window.location.href = 'completed-projects.html';
+    };
+
+    actionSecondary.onclick = (event) => {
+      event.preventDefault();
+      window.location.href = 'active-tasks.html';
+    };
+    return;
+  }
+
+  if (status === 'completed') {
+    actionPrimary.textContent = 'View Completed Projects';
+    actionSecondary.textContent = 'Back to Dashboard';
+
+    actionPrimary.onclick = (event) => {
+      event.preventDefault();
+      window.location.href = 'completed-projects.html';
+    };
+
+    actionSecondary.onclick = (event) => {
+      event.preventDefault();
+      window.location.href = 'gig-dashboard.html';
+    };
+    return;
+  }
+
+  if (status === 'declined') {
+    actionPrimary.textContent = 'Back to Pending Requests';
+    actionSecondary.textContent = 'Go to Dashboard';
+
+    actionPrimary.onclick = (event) => {
+      event.preventDefault();
+      window.location.href = 'pending-requests.html';
+    };
+
+    actionSecondary.onclick = (event) => {
+      event.preventDefault();
+      window.location.href = 'gig-dashboard.html';
+    };
+    return;
+  }
+
+  actionPrimary.textContent = 'Back to Dashboard';
+  actionSecondary.style.display = 'none';
+  actionPrimary.onclick = (event) => {
+    event.preventDefault();
+    window.location.href = 'gig-dashboard.html';
+  };
+}
+
 // ── completed-projects.html (lists completed tasks) ──────────────
 
 function renderCompletedProjects() {
   const user = getUser();
-  if (!user) return;
+  if (!user || user.role !== 'gig') return;
 
   const grid = document.getElementById('completed-projects-grid');
   const countEl = document.getElementById('completed-total-count');
   if (!grid) return;
 
-  const completedTasks = tasks.filter(
-    t => t.status === 'completed' && t.assignedTo === user.id
-  );
+  const summary = getGigDashboardSummary(user.id);
+  const completedTasks = summary.completedTasks;
 
   if (countEl) countEl.textContent = completedTasks.length;
 
@@ -218,18 +389,20 @@ function renderCompletedProjects() {
   ];
 
   grid.innerHTML = completedTasks.map((task, i) => {
-    const client = getUserById(task.clientId);
-    const deliverable = deliverables.find(d => d.taskId === task.id && d.status === 'approved');
-    const stars = '★ ★ ★ ★ ★';
+    const completedOn = task.completedAt || task.updatedAt || task.deadline;
+    const stars = task.rating && task.rating < 5
+      ? `${'★ '.repeat(task.rating).trim()} <span class="star-empty">${'★ '.repeat(5 - task.rating).trim()}</span>`
+      : '★ ★ ★ ★ ★';
+    const projectId = task.id;
 
     return `
       <div class="task-card" style="flex-direction:column;align-items:flex-start;">
         <div style="width:100%;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--spacing-md);">
           <div style="display:flex;gap:var(--spacing-md);align-items:center;">
-            <div style="width:48px;height:48px;background-color:${bgColors[i % bgColors.length]};border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--color-primary-dark);">${client ? getInitials(client.company || client.name) : '??'}</div>
+            <div style="width:48px;height:48px;background-color:${bgColors[i % bgColors.length]};border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--color-primary-dark);">${task.clientInitials || getInitials(task.clientName || 'Client')}</div>
             <div>
               <h3 style="font-size:1.125rem;font-weight:600;color:var(--color-text-dark);margin-bottom:2px;">${task.title}</h3>
-              <p style="font-size:0.875rem;color:var(--color-text-muted);">${client ? client.company || client.name : 'Client'} • Completed ${formatDate(deliverable?.approvedAt || task.deadline)}</p>
+              <p style="font-size:0.875rem;color:var(--color-text-muted);">${task.clientName || 'Client'} • Completed ${formatDate(completedOn)}</p>
             </div>
           </div>
         </div>
@@ -237,6 +410,7 @@ function renderCompletedProjects() {
           <div class="star-rating">${stars}</div>
           <div style="font-weight:700;font-size:1.25rem;color:var(--color-secondary);">${formatCurrency(task.budget)}</div>
         </div>
+        <a href="project-detail.html?taskId=${projectId}" style="margin-top:var(--spacing-md);color:var(--color-primary-blue);font-size:0.875rem;font-weight:600;text-decoration:none;">View Project Details →</a>
       </div>`;
   }).join('');
 }
