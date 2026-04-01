@@ -259,14 +259,24 @@ function initLogin() {
     e.preventDefault();
     if (!validateLoginForm()) return;
 
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value.trim();
     const roleSelect = document.getElementById('role');
     const role = roleSelect ? roleSelect.value : null;
 
-    const matched = users.find(
-      u => u.email === email && u.password === password && (!role || u.role === role)
+    const matchedWithSelectedRole = users.find(
+      (u) => String(u.email || '').toLowerCase() === email
+        && String(u.password || '') === password
+        && (!role || u.role === role)
     );
+
+    // Fallback: allow login by valid credentials even if wrong role is selected.
+    const matchedByCredentials = matchedWithSelectedRole || users.find(
+      (u) => String(u.email || '').toLowerCase() === email
+        && String(u.password || '') === password
+    );
+
+    const matched = matchedByCredentials;
 
     if (!matched) {
       let errEl = document.getElementById('auth-error');
@@ -278,6 +288,10 @@ function initLogin() {
       }
       errEl.textContent = 'Invalid credentials for the selected role.';
       return;
+    }
+
+    if (roleSelect && roleSelect.value !== matched.role) {
+      roleSelect.value = matched.role;
     }
 
     // Store session
