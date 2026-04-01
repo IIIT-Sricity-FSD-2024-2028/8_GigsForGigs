@@ -30,7 +30,7 @@ const PAGE_MAP = {
   'manager-invite-setup.html':      { module: managers,      public: true },
 
   // Client pages
-  'post-gig.html':                  { module: tasks,         roles: ['client'] },
+  'post-gig.html':                  { module: tasks,         roles: ['client', 'manager'] },
   'my-gigs-client.html':            { module: tasks,         roles: ['client', 'manager'] },
   'review-shortlist.html':          { module: applications,  roles: ['client', 'manager'] },
   'review-deliverables.html':       { module: deliverables,  roles: ['client', 'manager'] },
