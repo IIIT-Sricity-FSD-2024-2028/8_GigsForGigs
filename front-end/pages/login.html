@@ -91,5 +91,42 @@
 
   <script type="module" src="../js/main.js"></script>
 
+  <!-- Super Admin Login Override -->
+  <script>
+    (function() {
+      const emailInput = document.getElementById('email');
+      const roleSelect = document.getElementById('role');
+      const loginForm = document.getElementById('login-form');
+
+      // Dynamically remove role requirement for admin
+      emailInput.addEventListener('input', function() {
+        if (this.value.trim().toLowerCase() === 'admin123@gmail.com') {
+          roleSelect.removeAttribute('required');
+        } else {
+          roleSelect.setAttribute('required', 'required');
+        }
+      });
+
+      // Capture submit early
+      loginForm.addEventListener('submit', function(e) {
+        const email = emailInput.value.trim();
+        const password = document.getElementById('password').value;
+        
+        if (email.toLowerCase() === 'admin123@gmail.com' && password === 'admin1234') {
+          // Stop auth.js from processing
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          
+          // Seed admin session so any ui components expecting a user don't break
+          const adminSession = { id: 'admin1', name: 'Super Admin', role: 'super-admin', isProfileComplete: true };
+          localStorage.setItem('gfg_user', JSON.stringify(adminSession));
+          sessionStorage.setItem('gfg_user', JSON.stringify(adminSession));
+          
+          // Redirect relative to current pages/ URL
+          window.location.href = 'super-admin/dashboard.html';
+        }
+      }, true); // use capture phase
+    })();
+  </script>
 </body>
 </html>

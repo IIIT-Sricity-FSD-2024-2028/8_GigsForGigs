@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Overview - GigsForGigs Admin</title>
+  <meta name="description" content="GigsForGigs Super Admin Dashboard - Monitor platform health, engagement, and key metrics.">
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/super-admin.css">
+  <style>
+    /* ── Dashboard-specific styles ── */
+    .dash-search-bar {
+      padding: var(--spacing-md) var(--spacing-xxl);
+      background: var(--color-bg-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .dash-search-input {
+      background: rgba(219,223,223,0.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .dash-search-input input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      outline: none;
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: var(--color-text-dark);
+    }
+    .dash-logout-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-white);
+      color: var(--color-text-dark);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .dash-logout-btn:hover {
+      background: var(--color-bg-light);
+      border-color: var(--color-primary-dark);
+      color: var(--color-primary-dark);
+    }
+
+    /* KPI Grid */
+    .dash-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+    .dash-kpi-card {
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: 0 4px 12px rgba(8,75,131,0.03);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .dash-kpi-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--spacing-md);
+    }
+    .dash-kpi-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+    }
+    .dash-kpi-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      letter-spacing: -0.02em;
+    }
+    .dash-kpi-badge {
+      position: absolute;
+      top: var(--spacing-xl);
+      right: var(--spacing-xl);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-trend-up {
+      background: rgba(81,158,138,0.1);
+      color: var(--color-secondary);
+    }
+    .badge-live {
+      background: rgba(8,75,131,0.08);
+      color: var(--color-primary-dark);
+    }
+    .badge-urgent {
+      background: rgba(211,47,47,0.1);
+      color: #d32f2f;
+    }
+    .badge-action {
+      background: rgba(191,105,0,0.1);
+      color: #bf6900;
+    }
+
+    /* Middle section */
+    .dash-mid-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+    .dash-card {
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: 0 4px 12px rgba(8,75,131,0.03);
+    }
+    .dash-card-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      margin-bottom: 4px;
+    }
+    .dash-card-subtitle {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    /* Segment control */
+    .segment-control {
+      display: inline-flex;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+    }
+    .segment-btn {
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .segment-btn.active {
+      background: var(--color-primary-dark);
+      color: var(--color-white);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Chart area */
+    .dash-chart-area {
+      height: 240px;
+      display: flex;
+      align-items: flex-end;
+      gap: 18px;
+      padding: 20px 0 0 0;
+      position: relative;
+    }
+    .dash-bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .dash-bar-pair {
+      display: flex;
+      gap: 4px;
+      align-items: flex-end;
+      width: 100%;
+      justify-content: center;
+      flex: 1;
+    }
+    .dash-bar {
+      width: 28px;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.6s ease;
+    }
+    .dash-bar-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* System Feed */
+    .feed-item {
+      display: flex;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .feed-text { flex: 1; }
+    .feed-title {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      margin-bottom: 2px;
+    }
+    .feed-desc {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      line-height: 1.4;
+    }
+    .feed-time {
+      font-size: 0.65rem;
+      color: var(--color-text-muted);
+      margin-top: 4px;
+    }
+    .feed-view-all {
+      display: block;
+      text-align: center;
+      padding: var(--spacing-md) 0 var(--spacing-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-primary-dark);
+      text-decoration: none;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      margin-top: var(--spacing-md);
+      transition: all 0.2s;
+    }
+    .feed-view-all:hover {
+      background: var(--color-bg-light);
+    }
+
+    /* Bottom section */
+    .dash-bot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    /* Ecosystem Growth */
+    .eco-bar-row {
+      margin-bottom: var(--spacing-lg);
+    }
+    .eco-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text-dark);
+      margin-bottom: 8px;
+    }
+    .eco-bar-track {
+      height: 8px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+    .eco-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-pill);
+      transition: width 0.8s ease;
+    }
+    .eco-stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-xl);
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--color-border);
+    }
+    .eco-stat-box {
+      text-align: center;
+      padding: var(--spacing-md);
+      background: var(--color-bg-light);
+      border-radius: var(--radius-md);
+    }
+    .eco-stat-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .eco-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+    }
+
+    /* New Entrants */
+    .entrant-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .entrant-item:last-child { border-bottom: none; }
+    .entrant-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--color-bg-light);
+    }
+    .entrant-info { flex: 1; }
+    .entrant-name {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-text-dark);
+    }
+    .entrant-role-label {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+    .entrant-badge {
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .entrant-badge-pro {
+      background: rgba(8,75,131,0.1);
+      color: var(--color-primary-dark);
+    }
+    .entrant-badge-client {
+      background: rgba(211,47,47,0.1);
+      color: #d32f2f;
+    }
+    .entrant-badge-manager {
+      background: rgba(191,105,0,0.1);
+      color: #bf6900;
+    }
+    .manage-all-link {
+      display: block;
+      text-align: center;
+      padding: var(--spacing-md) 0 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .manage-all-link:hover { color: var(--color-primary-dark); }
+  </style>
+</head>
+<body>
+
+<div class="admin-sidebar">
+  <div class="admin-sidebar-brand" style="margin-bottom:var(--spacing-md);">
+    <div class="admin-brand-text">
+      <span class="admin-brand-title">GigsForGigs</span>
+      <span class="admin-brand-subtitle" style="font-size:0.65rem;">Platform Admin</span>
+    </div>
+  </div>
+
+  <nav class="admin-nav">
+    <a href="dashboard.html" class="admin-nav-item active">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+      Dashboard
+    </a>
+    <a href="gig-professional-management.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      Gig Professionals
+    </a>
+    <a href="client-management.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      Clients
+    </a>
+    <a href="managers-management.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      Managers
+    </a>
+    <a href="#" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      Projects
+    </a>
+    <a href="payments-revenue.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+      Payments
+    </a>
+    <a href="#" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      Reviews
+    </a>
+    <a href="disputes-reports.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+      Reports
+    </a>
+    <a href="admin-analytics.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      Analytics
+    </a>
+    <a href="platform-settings.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      Settings
+    </a>
+    <a href="admin-management.html" class="admin-nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      Admins
+    </a>
+  </nav>
+
+  <a href="admin-profile.html" class="admin-sidebar-footer">
+    <div class="admin-footer-avatar" style="background-image:url('https://i.pravatar.cc/150?u=alexr');background-size:cover;"></div>
+    <div class="admin-footer-info">
+      <span class="admin-footer-name">Alex Rivera</span>
+      <span class="admin-footer-role" style="text-transform:uppercase;font-size:0.6rem;letter-spacing:0.08em;">SUPER ADMIN</span>
+    </div>
+  </a>
+</div>
+
+<main class="admin-main">
+  <!-- Top Search Bar -->
+  <div class="dash-search-bar">
+    <div class="dash-search-input">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" placeholder="Search across gigs, users, or transactions..." id="dashboard-search">
+    </div>
+    <button class="dash-logout-btn" id="dash-logout-btn">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      Log Out
+    </button>
+  </div>
+
+  <!-- Page Header -->
+  <header class="admin-page-header" style="padding-top:var(--spacing-lg);">
+    <div>
+      <h1 class="admin-page-title">System Overview</h1>
+      <p class="admin-page-desc">Monitoring GigsForGigs Platform Health & Engagement</p>
+    </div>
+  </header>
+
+  <div style="padding:0 var(--spacing-xxl);">
+
+    <!-- Top KPI Row 1 -->
+    <div class="dash-kpi-grid">
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(8,75,131,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#084b83" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+        <div class="dash-kpi-label">Total Clients</div>
+        <div class="dash-kpi-value">12,482</div>
+        <div class="dash-kpi-badge badge-trend-up">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          +12%
+        </div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(8,75,131,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#084b83" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+        </div>
+        <div class="dash-kpi-label">Total Managers</div>
+        <div class="dash-kpi-value">843</div>
+        <div class="dash-kpi-badge badge-trend-up">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          +5%
+        </div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(81,158,138,0.1);">
+          <svg width="20" height="20" fill="none" stroke="#519e8a" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div class="dash-kpi-label">Total Gig Professionals</div>
+        <div class="dash-kpi-value">45,102</div>
+        <div class="dash-kpi-badge badge-trend-up">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          +24%
+        </div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(8,75,131,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#084b83" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+        </div>
+        <div class="dash-kpi-label">Active Jobs</div>
+        <div class="dash-kpi-value">1,894</div>
+        <div class="dash-kpi-badge badge-live">
+          <span style="width:6px;height:6px;border-radius:50%;background:#084b83;display:inline-block;"></span>
+          LIVE NOW
+        </div>
+      </div>
+    </div>
+
+    <!-- Top KPI Row 2 -->
+    <div class="dash-kpi-grid">
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(81,158,138,0.1);">
+          <svg width="20" height="20" fill="none" stroke="#519e8a" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
+        <div class="dash-kpi-label">Completed Jobs</div>
+        <div class="dash-kpi-value">142,509</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(191,105,0,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#bf6900" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <div class="dash-kpi-label">Pending Disputes</div>
+        <div class="dash-kpi-value">18</div>
+        <div class="dash-kpi-badge badge-urgent">URGENT</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(8,75,131,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#084b83" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        </div>
+        <div class="dash-kpi-label">Total Platform Revenue</div>
+        <div class="dash-kpi-value">$4.2M</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-icon" style="background:rgba(191,105,0,0.08);">
+          <svg width="20" height="20" fill="none" stroke="#bf6900" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
+        <div class="dash-kpi-label">Pending Approvals</div>
+        <div class="dash-kpi-value">342</div>
+        <div class="dash-kpi-badge badge-action">ACTION REQUIRED</div>
+      </div>
+    </div>
+
+    <!-- Middle: Platform Growth + System Feed -->
+    <div class="dash-mid-grid">
+      <div class="dash-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-md);">
+          <div>
+            <h3 class="dash-card-title">Platform Growth</h3>
+            <p class="dash-card-subtitle" style="margin-bottom:0;">Revenue and gig completion trends over 6 months.</p>
+          </div>
+          <div class="segment-control">
+            <button class="segment-btn">Daily</button>
+            <button class="segment-btn active">Monthly</button>
+          </div>
+        </div>
+
+        <div class="dash-chart-area">
+          <div class="dash-bar-group">
+            <div class="dash-bar-pair">
+              <div class="dash-bar" style="height:35%;background:rgba(8,75,131,0.15);"></div>
+              <div class="dash-bar" style="height:28%;background:rgba(191,105,0,0.15);"></div>
+            </div>
+            <div class="dash-bar-label">JAN</div>
+          </div>
+          <div class="dash-bar-group">
+            <div class="dash-bar-pair">
+              <div class="dash-bar" style="height:42%;background:rgba(8,75,131,0.15);"></div>
+              <div class="dash-bar" style="height:35%;background:rgba(191,105,0,0.15);"></div>
+            </div>
+            <div class="dash-bar-label">FEB</div>
+          </div>
+          <div class="dash-bar-group">
+            <div class="dash-bar-pair">
+              <div class="dash-bar" style="height:55%;background:rgba(8,75,131,0.2);"></div>
+              <div class="dash-bar" style="height:48%;background:rgba(191,105,0,0.2);"></div>
+            </div>
+            <div class="dash-bar-label">MAR</div>
+          </div>
+          <div class="dash-bar-group">
+            <div class="dash-bar-pair">
+              <div class="dash-bar" style="height:60%;background:rgba(8,75,131,0.2);"></div>
+              <div class="dash-bar" style="height:70%;background:#bf6900;"></div>
+            </div>
+            <div class="dash-bar-label">APR</div>
+          </div>
+          <div class="dash-bar-group">
+            <div class="dash-bar-pair">
+              <div class="dash-bar" style="height:85%;background:#084b83;"></div>
+              <div class="dash-bar" style="height:55%;background:rgba(191,105,0,0.2);"></div>
+            </div>
+            <div class="dash-bar-label">MAY</div>
+          </div>
+          <div class="dash-bar-group">
+            <div class="dash-bar-pair">
+              <div class="dash-bar" style="height:75%;background:#084b83;"></div>
+              <div class="dash-bar" style="height:50%;background:rgba(191,105,0,0.15);"></div>
+            </div>
+            <div class="dash-bar-label">JUN</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Feed -->
+      <div class="dash-card">
+        <h3 class="dash-card-title" style="margin-bottom:var(--spacing-lg);">System Feed</h3>
+
+        <div class="feed-item">
+          <div class="feed-icon" style="background:rgba(81,158,138,0.12);">
+            <svg width="16" height="16" fill="none" stroke="#519e8a" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          </div>
+          <div class="feed-text">
+            <div class="feed-title">Payout Released</div>
+            <div class="feed-desc">Manager #902 processed $1,240 to Gig Pro #12</div>
+            <div class="feed-time">7 mins ago</div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-icon" style="background:rgba(211,47,47,0.1);">
+            <svg width="16" height="16" fill="none" stroke="#d32f2f" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <div class="feed-text">
+            <div class="feed-title">Dispute Opened</div>
+            <div class="feed-desc">User #4,203 flagged Job ID: GIS-9321</div>
+            <div class="feed-time">16 mins ago</div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-icon" style="background:rgba(8,75,131,0.08);">
+            <svg width="16" height="16" fill="none" stroke="#084b83" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
+          <div class="feed-text">
+            <div class="feed-title">New Pro Registration</div>
+            <div class="feed-desc">David K. (Electrician) submitted credentials.</div>
+            <div class="feed-time">45 mins ago</div>
+          </div>
+        </div>
+
+        <a href="#" class="feed-view-all">View All Activities</a>
+      </div>
+    </div>
+
+    <!-- Bottom: Ecosystem Growth + New Entrants -->
+    <div class="dash-bot-grid">
+      <div class="dash-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--spacing-xl);">
+          <h3 class="dash-card-title">Ecosystem Growth</h3>
+          <div class="segment-control">
+            <button class="segment-btn active">Monthly</button>
+            <button class="segment-btn">Yearly</button>
+          </div>
+        </div>
+
+        <div class="eco-bar-row">
+          <div class="eco-bar-label"><span>Clients</span><span>78%</span></div>
+          <div class="eco-bar-track"><div class="eco-bar-fill" style="width:78%;background:#084b83;"></div></div>
+        </div>
+        <div class="eco-bar-row">
+          <div class="eco-bar-label"><span>Gig Professionals</span><span>92%</span></div>
+          <div class="eco-bar-track"><div class="eco-bar-fill" style="width:92%;background:#519e8a;"></div></div>
+        </div>
+        <div class="eco-bar-row">
+          <div class="eco-bar-label"><span>Managers</span><span>45%</span></div>
+          <div class="eco-bar-track"><div class="eco-bar-fill" style="width:45%;background:#bf6900;"></div></div>
+        </div>
+
+        <div class="eco-stats-row">
+          <div class="eco-stat-box">
+            <div class="eco-stat-label">RETENTION RATE</div>
+            <div class="eco-stat-value">88.4%</div>
+          </div>
+          <div class="eco-stat-box">
+            <div class="eco-stat-label">ACQUISITION COST</div>
+            <div class="eco-stat-value">$14.20 / User</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <h3 class="dash-card-title" style="margin-bottom:var(--spacing-lg);">New Entrants</h3>
+
+        <div class="entrant-item">
+          <img src="https://i.pravatar.cc/150?u=julianna" alt="Julianna Doe" class="entrant-avatar">
+          <div class="entrant-info">
+            <div class="entrant-name">Julianna Doe</div>
+            <div class="entrant-role-label">UX Consultant</div>
+          </div>
+          <span class="entrant-badge entrant-badge-pro">PROFESSIONAL</span>
+        </div>
+
+        <div class="entrant-item">
+          <img src="https://i.pravatar.cc/150?u=marcus_s" alt="Marcus Sterling" class="entrant-avatar">
+          <div class="entrant-info">
+            <div class="entrant-name">Marcus Sterling</div>
+            <div class="entrant-role-label">Corp Real Estate</div>
+          </div>
+          <span class="entrant-badge entrant-badge-client">CLIENT</span>
+        </div>
+
+        <div class="entrant-item">
+          <img src="https://i.pravatar.cc/150?u=leo_h" alt="Leo Hudson" class="entrant-avatar">
+          <div class="entrant-info">
+            <div class="entrant-name">Leo Hudson</div>
+            <div class="entrant-role-label">Project Lead</div>
+          </div>
+          <span class="entrant-badge entrant-badge-manager">MANAGER</span>
+        </div>
+
+        <div class="entrant-item">
+          <img src="https://i.pravatar.cc/150?u=elena_t" alt="Elena Torres" class="entrant-avatar">
+          <div class="entrant-info">
+            <div class="entrant-name">Elena Torres</div>
+            <div class="entrant-role-label">Python Developer</div>
+          </div>
+          <span class="entrant-badge entrant-badge-pro">PROFESSIONAL</span>
+        </div>
+
+        <a href="client-management.html" class="manage-all-link">Manage All Users ›</a>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>
