@@ -130,8 +130,79 @@
 .profile-grid {
   display: flex;
   gap: 2rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: var(--spacing-sm);
+}
+
+#managers-container {
+  display: contents;
+}
+
+.manager-profile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 170px;
+}
+
+.manager-profile-link {
+  text-decoration: none;
+}
+
+.manager-action-zone {
+  margin-top: var(--spacing-md);
+  min-height: 30px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.manager-delete-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(162, 69, 69, 0.2);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #a24545;
+  line-height: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.manager-delete-icon {
+  flex-shrink: 0;
+}
+
+.manager-delete-icon-btn:hover {
+  color: #812f2f;
+  border-color: rgba(129, 47, 47, 0.35);
+  background-color: rgba(162, 69, 69, 0.1);
+}
+
+.manager-delete-icon-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.manager-delete-icon-btn:focus-visible,
+.manager-delete-icon-btn:focus-visible {
+  outline: 2px solid #a24545;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .profile-grid {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
 }
 
 .profile-avatar-btn {

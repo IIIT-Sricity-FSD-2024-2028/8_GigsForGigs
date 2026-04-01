@@ -144,6 +144,11 @@ function clearWindowUser() {
   } catch {}
 }
 
+function managerNameFromEmail(email, fallbackName = 'Manager') {
+  const prefix = String(email || '').trim().split('@')[0];
+  return prefix || String(fallbackName || '').trim() || 'Manager';
+}
+
 /**
  * Optional hard reset: /pages/signup.html?reset=1 or /pages/login.html?reset=1
  */
@@ -207,6 +212,19 @@ export function guardPage(allowedRoles = []) {
     window.location.replace(loginPath());
     return false;
   }
+
+  const userExists = users.some(
+    (account) => account.id === user.id && account.role === user.role && !account.deleted
+  );
+  if (!userExists) {
+    clearUser();
+    clearPendingUser();
+    clearOnboardingRole();
+    clearWindowUser();
+    window.location.replace(loginPath());
+    return false;
+  }
+
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     window.location.replace(loginPath());
     return false;
@@ -267,6 +285,7 @@ function initLogin() {
     const matchedWithSelectedRole = users.find(
       (u) => String(u.email || '').toLowerCase() === email
         && String(u.password || '') === password
+        && !u.deleted
         && (!role || u.role === role)
     );
 
@@ -274,6 +293,7 @@ function initLogin() {
     const matchedByCredentials = matchedWithSelectedRole || users.find(
       (u) => String(u.email || '').toLowerCase() === email
         && String(u.password || '') === password
+        && !u.deleted
     );
 
     const matched = matchedByCredentials;
@@ -294,8 +314,23 @@ function initLogin() {
       roleSelect.value = matched.role;
     }
 
+    let sessionName = matched.name;
+    if (matched.role === 'manager') {
+      const derivedManagerName = managerNameFromEmail(matched.email, matched.name);
+      sessionName = derivedManagerName;
+      if (matched.name !== derivedManagerName) {
+        matched.name = derivedManagerName;
+        saveUsers();
+      }
+    }
+
     // Store session
-    const sessionUser = { id: matched.id, name: matched.name, role: matched.role };
+    const sessionUser = {
+      id: matched.id,
+      name: sessionName,
+      role: matched.role,
+      email: matched.email
+    };
     setUser(sessionUser);
     setPendingUser(sessionUser);
     setWindowUser(sessionUser);
@@ -365,6 +400,7 @@ function initSignup() {
     const emailVal = email.value.trim();
     const passwordVal = password.value;
     const role = roleSelect?.value || 'gig';
+    const managerDerivedName = managerNameFromEmail(emailVal, name);
 
     console.log('✅ Validation passed');
     console.log('📝 Creating user:', { name, emailVal, role });
@@ -413,7 +449,7 @@ function initSignup() {
       // Create user stub
       const newUser = {
         id: generateId('u'),
-        name,
+        name: role === 'manager' ? managerDerivedName : name,
         email: emailVal,
         password: passwordVal,
         role: role,
@@ -445,7 +481,14 @@ function initSignup() {
 
     saveUsers();
 
-    const sessionUser = { id: accountUser.id, name: accountUser.name, role: accountUser.role };
+    const sessionUser = {
+      id: accountUser.id,
+      name: accountUser.role === 'manager'
+        ? managerNameFromEmail(accountUser.email, accountUser.name)
+        : accountUser.name,
+      role: accountUser.role,
+      email: accountUser.email
+    };
     setUser(sessionUser);
     setPendingUser(sessionUser);
     setWindowUser(sessionUser);

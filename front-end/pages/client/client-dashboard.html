@@ -41,7 +41,7 @@
       </a>
       <a href="my-gigs-client.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-        My Gigs
+        Active Contracts
       </a>
       <a href="client-dashboard.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
@@ -70,7 +70,7 @@
       <div class="topbar-actions">
         <a href="post-gig.html" class="btn-post-gig" id="post-gig-btn">
           <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          Post a Gig
+          Post a Task
         </a>
       </div>
     </header>
@@ -120,6 +120,30 @@
           <div class="metric-description">Across 8 active projects</div>
         </div>
 
+      </div>
+
+      <!-- Posted Tasks (open gigs awaiting acceptance) -->
+      <div class="activity-section">
+        <div class="activity-header">
+          <h2 class="activity-title">Posted Tasks <span id="client-posted-count" style="font-size:0.8rem;color:var(--color-text-muted);font-weight:600;">0</span></h2>
+          <a href="post-gig.html" class="activity-link">Post New Task →</a>
+        </div>
+
+        <table class="activity-table" id="client-posted-tasks-table">
+          <thead>
+            <tr>
+              <th>Task Name</th>
+              <th>Posted On</th>
+              <th>Budget</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">Loading posted tasks...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <!-- Task Activity -->

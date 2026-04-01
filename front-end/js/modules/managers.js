@@ -83,9 +83,19 @@ function handleInviteCreation(currentUser, emailField, emailRaw) {
   const email = normalizeEmail(emailRaw);
   if (!email) return;
 
-  const existingUser = users.find(u => normalizeEmail(u.email) === email);
-  if (existingUser) {
+  const existingActiveUser = users.find(
+    (u) => normalizeEmail(u.email) === email && !u.deleted
+  );
+  if (existingActiveUser) {
     showFieldError(emailField, `${emailField.id}-error`, 'A user with this email already exists.');
+    return;
+  }
+
+  const deletedManager = users.find(
+    (u) => normalizeEmail(u.email) === email && u.role === 'manager' && u.deleted
+  );
+  if (deletedManager && deletedManager.clientId !== currentUser.id) {
+    showFieldError(emailField, `${emailField.id}-error`, 'This manager email is linked to another client account.');
     return;
   }
 
@@ -202,19 +212,34 @@ function initManagerInviteSetup() {
       return;
     }
 
-    const existingUser = users.find(u => normalizeEmail(u.email) === normalizeEmail(invite.email));
+    const existingUser = users.find(
+      (u) => normalizeEmail(u.email) === normalizeEmail(invite.email) && !u.deleted
+    );
+    const deletedManager = users.find(
+      (u) => normalizeEmail(u.email) === normalizeEmail(invite.email) && u.role === 'manager' && u.deleted
+    );
 
     if (existingUser && (existingUser.role !== 'manager' || existingUser.clientId !== invite.clientId)) {
       if (statusEl) statusEl.textContent = 'This email is already used by another account.';
       return;
     }
 
-    if (existingUser) {
-      existingUser.password = password;
-      existingUser.name = name || existingUser.name;
-      existingUser.isFirstTimeUser = true;
-      existingUser.isProfileComplete = false;
-      existingUser.tasksManaged = existingUser.tasksManaged || 0;
+    if (deletedManager && deletedManager.clientId !== invite.clientId) {
+      if (statusEl) statusEl.textContent = 'This email is already linked to another client account.';
+      return;
+    }
+
+    const managerAccount = existingUser || deletedManager;
+
+    if (managerAccount) {
+      managerAccount.password = password;
+      managerAccount.name = name || managerAccount.name || invite.email.split('@')[0];
+      managerAccount.isFirstTimeUser = true;
+      managerAccount.isProfileComplete = false;
+      managerAccount.tasksManaged = managerAccount.tasksManaged || 0;
+      managerAccount.clientId = invite.clientId;
+      managerAccount.deleted = false;
+      delete managerAccount.deletedAt;
     } else {
       users.push({
         id: generateId('u'),
@@ -226,7 +251,8 @@ function initManagerInviteSetup() {
         isProfileComplete: false,
         clientId: invite.clientId,
         createdAt: new Date().toISOString(),
-        tasksManaged: 0
+        tasksManaged: 0,
+        deleted: false
       });
     }
 

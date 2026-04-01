@@ -35,24 +35,20 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         Dashboard
       </a>
-      <a href="../client/search-talent.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        Search Talent
-      </a>
       <a href="../client/my-gigs-client.html" class="nav-item">
         <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-        My Gigs
+        Active Contracts
       </a>
-      <a href="../client/review-shortlist.html" class="nav-item">
-        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-        Shortlisted Candidates
+      <a href="manager-dashboard.html#pending-activity" class="nav-item">
+        <svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        Pending Queue
       </a>
     </nav>
 
     <div class="sidebar-user-info">
       <div class="user-avatar user-avatar-copper">CH</div>
       <div class="user-details">
-        <div class="user-name">Chaitanya</div>
+        <div class="user-name">manager</div>
         <div class="user-role">Manager Account</div>
       </div>
       <div class="online-dot"></div>
@@ -70,7 +66,7 @@
     <div class="dashboard-content">
 
       <!-- Welcome greeting -->
-      <h1 class="welcome-greeting" id="manager-greeting">Welcome back, Chaitanya!</h1>
+      <h1 class="welcome-greeting" id="manager-greeting">Welcome back, manager!</h1>
       <p class="welcome-subtitle">Here's a summary of your hiring activity.</p>
 
       <!-- Metric cards row -->
@@ -115,10 +111,10 @@
       </div>
 
       <!-- Recent Project Activity -->
-      <div class="activity-section">
+      <div class="activity-section" id="active-activity">
         <div class="activity-header">
           <h2 class="activity-title">Recent Project Activity</h2>
-          <a href="../client/my-gigs-client.html" class="activity-link">View All Projects →</a>
+          <a href="manager-dashboard.html#pending-activity" class="activity-link">Go to Pending Queue →</a>
         </div>
 
         <table class="activity-table" id="manager-activity-table">
@@ -201,7 +197,16 @@
           </tbody>
         </table>
 
-        <a href="../client/my-gigs-client.html" class="show-more-link">Show More Activity ›</a>
+        <a href="manager-dashboard.html#pending-activity" class="show-more-link">Show Pending Queue ›</a>
+      </div>
+
+      <div class="activity-section" id="pending-activity">
+        <div class="activity-header">
+          <h2 class="activity-title">Pending Queue</h2>
+        </div>
+        <div style="padding:var(--spacing-xl);border:1px dashed var(--color-border);border-radius:var(--radius-lg);color:var(--color-text-muted);">
+          Pending queue items will appear here as assignments and approvals come in.
+        </div>
       </div>
 
     </div>
