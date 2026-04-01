@@ -24,6 +24,9 @@ function initClientDashboard() {
   const userNameEl = document.querySelector('.user-name');
   if (userNameEl) userNameEl.textContent = fullUser.name;
 
+  const greetingEl = document.getElementById('client-greeting');
+  if (greetingEl) greetingEl.textContent = `Welcome back, ${fullUser.name}!`;
+
   // Update dashboard stats
   const totalSpentEl = document.getElementById('total-spent-value');
   const thisMonthEl = document.getElementById('this-month-value');
@@ -58,6 +61,9 @@ function initManagerDashboard() {
   // Update sidebar with dynamic user name
   const userNameEl = document.querySelector('.user-name');
   if (userNameEl) userNameEl.textContent = fullUser.name;
+
+  const greetingEl = document.getElementById('manager-greeting');
+  if (greetingEl) greetingEl.textContent = `Welcome back, ${fullUser.name}!`;
 
   // Manager-specific stats if needed
 }

@@ -258,12 +258,31 @@ function enforceRoleSidebarConsistency() {
   const path = window.location.pathname;
   const currentPage = getCurrentPageName();
 
-  if ((user.role === 'client' || user.role === 'manager') && path.includes('/pages/client/')) {
+  if (path.includes('/pages/client/')) {
     const activeKey = CLIENT_PAGE_ALIASES[currentPage] || currentPage;
-    renderSidebarNav(navEl, CLIENT_SIDEBAR_ITEMS, activeKey);
-    normalizeSidebarBrand(sidebarEl, user.role);
-    normalizeSidebarIdentity(sidebarEl, user);
-    return;
+
+    if (user.role === 'client') {
+      renderSidebarNav(navEl, CLIENT_SIDEBAR_ITEMS, activeKey);
+      normalizeSidebarBrand(sidebarEl, user.role);
+      normalizeSidebarIdentity(sidebarEl, user);
+      return;
+    }
+
+    if (user.role === 'manager') {
+      const managerItems = CLIENT_SIDEBAR_ITEMS
+        .filter(item => item.key !== 'client-profile-selection.html')
+        .map(item => {
+          if (item.key === 'client-dashboard.html') {
+            return { ...item, key: 'manager-dashboard.html', href: '../manager/manager-dashboard.html' };
+          }
+          return item;
+        });
+
+      renderSidebarNav(navEl, managerItems, activeKey);
+      normalizeSidebarBrand(sidebarEl, user.role);
+      normalizeSidebarIdentity(sidebarEl, user);
+      return;
+    }
   }
 
   if (user.role === 'gig' && path.includes('/pages/gig/')) {
@@ -316,9 +335,6 @@ function applyClientNoMockDataState() {
   }
 
   if (path.includes('client-dashboard.html')) {
-    const greetingEl = document.getElementById('client-greeting');
-    if (greetingEl && client?.name) greetingEl.textContent = `Welcome, ${client.name}!`;
-
     const subtitleEl = document.querySelector('.welcome-subtitle');
     if (subtitleEl) subtitleEl.textContent = 'Start by posting your first gig to build activity.';
 
