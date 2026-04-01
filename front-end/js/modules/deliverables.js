@@ -13,6 +13,7 @@ import {
 import {
   acceptGigRequest,
   declineGigRequest,
+  getClientContractSummary,
   getGigDashboardSummary,
   getProjectDetailRecord,
   markGigTaskComplete
@@ -157,35 +158,61 @@ function initProjectDetail() {
     return;
   }
 
-  const taskId = getTaskIdFromUrl();
-  const task = taskId ? getTaskById(taskId) : tasks.find(t => t.status === 'open');
-  if (!task) return;
+  const query = new URLSearchParams(window.location.search);
+  const requestId = query.get('requestId');
+  const taskId = query.get('taskId');
+
+  let clientId = user.id;
+  if (user.role === 'manager') {
+    const managerRecord = users.find((candidate) => candidate.id === user.id);
+    if (managerRecord?.clientId) clientId = managerRecord.clientId;
+  }
+
+  const clientContracts = getClientContractSummary(clientId);
+  const contractRecord = clientContracts.find((contract) => {
+    if (requestId && contract.requestId === requestId) return true;
+    if (taskId && (contract.taskId === taskId || contract.sourceTaskId === taskId)) return true;
+    return false;
+  }) || null;
+
+  const fallbackTask = taskId
+    ? getTaskById(taskId)
+    : tasks.find((task) => task.clientId === clientId && task.status === 'open');
+
+  const task = fallbackTask || null;
+  if (!contractRecord && !task) return;
+
+  const recordTitle = contractRecord?.title || task?.title || 'Project';
+  const recordBudget = contractRecord?.budget ?? task?.budget ?? 0;
+  const recordDeadline = contractRecord?.deadline || task?.deadline || new Date().toISOString();
+  const recordDescription = contractRecord?.description || task?.description || '';
+  const recordStatus = contractRecord?.status || task?.status || 'pending';
 
   // Update task title
   const titleEl = document.querySelector('.dashboard-content h2[style*="font-size: 1.75rem"]');
-  if (titleEl) titleEl.textContent = task.title;
+  if (titleEl) titleEl.textContent = recordTitle;
 
   // Update budget
   const budgetEl = document.querySelector('.dashboard-section [style*="font-size: 2rem"]');
-  if (budgetEl) budgetEl.textContent = formatCurrency(task.budget);
+  if (budgetEl) budgetEl.textContent = formatCurrency(recordBudget);
 
   // Update deadline
   const deadlineEl = document.querySelector('.dashboard-section [style*="font-size: 1.25rem"][style*="font-weight: 600"]');
-  if (deadlineEl) deadlineEl.textContent = formatDate(task.deadline);
+  if (deadlineEl) deadlineEl.textContent = formatDate(recordDeadline);
 
   // Update description
   const descEls = document.querySelectorAll('.dashboard-content p[style*="line-height: 1.6"]');
-  if (descEls.length > 0) descEls[0].textContent = task.description || '';
+  if (descEls.length > 0) descEls[0].textContent = recordDescription;
 
   // Update status badge
   const badgeEl = document.querySelector('.badge');
   if (badgeEl) {
-    badgeEl.className = getStatusBadgeClass(task.status);
-    badgeEl.textContent = humaniseStatus(task.status);
+    badgeEl.className = getStatusBadgeClass(recordStatus);
+    badgeEl.textContent = humaniseStatus(recordStatus);
   }
 
   // Client info
-  const client = getUserById(task.clientId);
+  const client = getUserById(clientId);
   if (client) {
     const clientNameEl = document.querySelector('.dashboard-section [style*="font-weight: 600"][style*="font-size: 1rem"]');
     if (clientNameEl) clientNameEl.textContent = client.company || client.name;
@@ -222,9 +249,25 @@ function initProjectDetail() {
       });
     }
   } else if (user.role === 'client' || user.role === 'manager') {
-    // Client/manager viewing — hide accept/decline
-    if (acceptBtn) acceptBtn.style.display = 'none';
-    if (declineBtn) declineBtn.style.display = 'none';
+    const sourceTaskId = contractRecord?.sourceTaskId || contractRecord?.taskId || task?.id || null;
+
+    if (acceptBtn) {
+      if (user.role === 'client' && sourceTaskId && (recordStatus === 'active' || recordStatus === 'completed')) {
+        acceptBtn.style.display = '';
+        acceptBtn.textContent = 'Review Deliverables';
+        acceptBtn.href = `../client/review-deliverables.html?taskId=${sourceTaskId}`;
+      } else {
+        acceptBtn.style.display = 'none';
+      }
+    }
+
+    if (declineBtn) {
+      declineBtn.style.display = '';
+      declineBtn.textContent = user.role === 'manager' ? 'Back to Dashboard' : 'Back to Active Contracts';
+      declineBtn.href = user.role === 'manager'
+        ? '../manager/manager-dashboard.html'
+        : '../client/my-gigs-client.html';
+    }
   }
 }
 

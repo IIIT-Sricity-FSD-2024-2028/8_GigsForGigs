@@ -95,12 +95,6 @@ const CLIENT_SIDEBAR_ITEMS = [
     icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>'
   },
   {
-    key: 'review-deliverables.html',
-    href: 'review-deliverables.html',
-    label: 'Review Deliverables',
-    icon: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>'
-  },
-  {
     key: 'client-profile-selection.html',
     href: 'client-profile-selection.html',
     label: 'Supervise Manager',
@@ -225,10 +219,23 @@ function normalizeSidebarBrand(sidebarEl, role) {
   if (!sidebarEl) return;
 
   if (role === 'client' || role === 'manager') {
-    const brand = sidebarEl.querySelector('.client-sidebar-brand');
+    let brand = sidebarEl.querySelector('.client-sidebar-brand');
+    if (!brand) {
+      const fallbackBrand = sidebarEl.querySelector('.sidebar-header');
+      if (fallbackBrand) {
+        const replacement = document.createElement('a');
+        replacement.className = 'client-sidebar-brand';
+        fallbackBrand.replaceWith(replacement);
+        brand = replacement;
+      }
+    }
     if (!brand) return;
 
-    brand.setAttribute('href', role === 'manager' ? '../manager/manager-dashboard.html' : 'client-dashboard.html');
+    const onGigPage = window.location.pathname.includes('/pages/gig/');
+    const clientHref = onGigPage ? '../client/client-dashboard.html' : 'client-dashboard.html';
+    const managerHref = onGigPage ? '../manager/manager-dashboard.html' : '../manager/manager-dashboard.html';
+
+    brand.setAttribute('href', role === 'manager' ? managerHref : clientHref);
     brand.innerHTML = `
       <div class="brand-icon">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 12l3 3 5-5"></path></svg>
@@ -255,9 +262,28 @@ function normalizeSidebarIdentity(sidebarEl, user) {
   const fullUser = users.find((existingUser) => existingUser.id === user.id) || user;
 
   if (user.role === 'client' || user.role === 'manager') {
-    const nameEl = sidebarEl.querySelector('.sidebar-user-info .user-name');
-    const roleEl = sidebarEl.querySelector('.sidebar-user-info .user-role');
-    const avatarEl = sidebarEl.querySelector('.sidebar-user-info .user-avatar');
+    let identityWrap = sidebarEl.querySelector('.sidebar-user-info');
+    if (!identityWrap) {
+      const fallbackFooter = sidebarEl.querySelector('.sidebar-footer');
+      if (fallbackFooter) {
+        const replacement = document.createElement('div');
+        replacement.className = 'sidebar-user-info';
+        replacement.innerHTML = `
+          <div class="user-avatar user-avatar-seagrass">CL</div>
+          <div class="user-details">
+            <div class="user-name">Client</div>
+            <div class="user-role">Client</div>
+          </div>
+          <div class="online-dot"></div>
+        `;
+        fallbackFooter.replaceWith(replacement);
+        identityWrap = replacement;
+      }
+    }
+
+    const nameEl = identityWrap?.querySelector('.user-name');
+    const roleEl = identityWrap?.querySelector('.user-role');
+    const avatarEl = identityWrap?.querySelector('.user-avatar');
     const displayName = user.role === 'manager'
       ? getManagerDisplayName(fullUser)
       : (fullUser.name || user.name || 'Client');
@@ -313,6 +339,34 @@ function enforceRoleSidebarConsistency() {
       });
 
       renderSidebarNav(navEl, managerOnClientItems, currentPage);
+      normalizeSidebarBrand(sidebarEl, user.role);
+      normalizeSidebarIdentity(sidebarEl, user);
+      return;
+    }
+  }
+
+  if (path.includes('/pages/gig/project-detail.html')) {
+    if (user.role === 'client') {
+      const clientOnGigItems = CLIENT_SIDEBAR_ITEMS.map((item) => ({
+        ...item,
+        href: `../client/${item.href}`
+      }));
+
+      renderSidebarNav(navEl, clientOnGigItems, 'my-gigs-client.html');
+      normalizeSidebarBrand(sidebarEl, user.role);
+      normalizeSidebarIdentity(sidebarEl, user);
+      return;
+    }
+
+    if (user.role === 'manager') {
+      const managerOnGigItems = MANAGER_SIDEBAR_ITEMS.map((item) => {
+        if (item.key === 'my-gigs-client.html') {
+          return { ...item, href: '../client/my-gigs-client.html' };
+        }
+        return { ...item, href: `../manager/${item.href}` };
+      });
+
+      renderSidebarNav(navEl, managerOnGigItems, 'my-gigs-client.html');
       normalizeSidebarBrand(sidebarEl, user.role);
       normalizeSidebarIdentity(sidebarEl, user);
       return;
