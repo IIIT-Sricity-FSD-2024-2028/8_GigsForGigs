@@ -305,6 +305,7 @@ function renderMyGigsClient() {
         id: task.id,
         requestId: null,
         taskId: task.id,
+        sourceTaskId: task.id,
         title: task.title,
         gigName: gigUser?.name || 'Not assigned',
         gigTitle: gigUser?.title || 'Professional',
@@ -320,6 +321,7 @@ function renderMyGigsClient() {
     id: contract.id,
     requestId: contract.requestId,
     taskId: contract.taskId,
+    sourceTaskId: contract.sourceTaskId,
     title: contract.title,
     gigName: contract.gigName,
     gigTitle: contract.gigTitle,
@@ -382,7 +384,20 @@ function renderMyGigsClient() {
         const queryParam = contract.requestId
           ? `requestId=${contract.requestId}`
           : `taskId=${contract.taskId}`;
-        actionMarkup = `<a href="../gig/project-detail.html?${queryParam}" class="btn-review-proposal">View</a>`;
+
+        if (user.role === 'client') {
+          const reviewTaskId = contract.sourceTaskId || contract.taskId;
+          const reviewHref = reviewTaskId
+            ? `review-deliverables.html?taskId=${reviewTaskId}`
+            : 'review-deliverables.html';
+
+          actionMarkup = `
+            <a href="${reviewHref}" class="btn-review-proposal">Review Deliverables</a>
+            <a href="../gig/project-detail.html?${queryParam}" class="btn-review-proposal" style="margin-left:var(--spacing-xs);">View</a>
+          `;
+        } else {
+          actionMarkup = `<a href="../gig/project-detail.html?${queryParam}" class="btn-review-proposal">View</a>`;
+        }
       }
 
       return `
