@@ -112,17 +112,16 @@
         const email = emailInput.value.trim();
         const password = document.getElementById('password').value;
         
-        if (email.toLowerCase() === 'admin123@gmail.com' && password === 'admin1234') {
+        if (email.toLowerCase() === 'admin123@gmail.com' && password === 'admin123') {
           // Stop auth.js from processing
           e.preventDefault();
           e.stopImmediatePropagation();
           
-          // Seed admin session so any ui components expecting a user don't break
-          const adminSession = { id: 'admin1', name: 'Super Admin', role: 'super-admin', isProfileComplete: true };
-          localStorage.setItem('gfg_user', JSON.stringify(adminSession));
-          sessionStorage.setItem('gfg_user', JSON.stringify(adminSession));
+          // Set admin session (matches adminAuth.js format)
+          const adminSession = { id: 'sa_root', name: 'Alex Rivera', email: 'admin123@gmail.com', role: 'super_admin' };
+          localStorage.setItem('gfg_admin_user', JSON.stringify(adminSession));
           
-          // Redirect relative to current pages/ URL
+          // Redirect to admin dashboard
           window.location.href = 'super-admin/dashboard.html';
         }
       }, true); // use capture phase

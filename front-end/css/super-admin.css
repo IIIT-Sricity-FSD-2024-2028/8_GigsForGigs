@@ -320,3 +320,21 @@
 .admin-toggle input:checked + .admin-toggle-slider:before {
   transform: translateX(20px);
 }
+
+/* ── Action Buttons (used by admin JS modules) ── */
+.admin-action-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; color: var(--color-text-muted);
+}
+.admin-action-btn:hover {
+  color: var(--color-primary-dark);
+  background: var(--color-bg-light);
+}
+
+/* Toast animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
