@@ -1,0 +1,88 @@
+GigsForGigs - Revision Notes (frontend + Nest initialization)
+Date: 2026-05-02
+
+OVERVIEW
+- Project has a static front-end (HTML/CSS/JS) with localStorage-backed mock data.
+- Backend is a NestJS scaffold with stub controllers/services and DTOs.
+
+FRONT-END STRUCTURE
+- Entry landing page: front-end/index.html with hero, trust bar, services, how-it-works, features, testimonials, CTA, footer.
+- Auth pages: front-end/pages/login.html and front-end/pages/signup.html.
+- Client pages: front-end/pages/client/*.html (dashboard, post-gig, review shortlist, deliverables review, search talent, profile completion, etc.).
+- Manager pages: front-end/pages/manager/*.html (manager dashboard, invite setup).
+- Gig pages: front-end/pages/gig/*.html (dashboard, explore tasks, active tasks, deliverables submission, profile, etc.).
+- Super admin pages: front-end/pages/super-admin/*.html (admin dashboard, management, analytics, settings).
+
+FRONT-END CORE LOGIC
+- Page bootstrapping: front-end/js/main.js maps each HTML page to a JS module and role guard.
+  - Uses guardPage() to enforce role-based access for protected pages.
+  - Defines sidebar item sets for client, manager, and gig.
+- Auth module: front-end/js/modules/auth.js
+  - Login, signup, logout, role selection, onboarding flow.
+  - Uses sessionStorage/window.name for handoff; supports reset via ?reset=1.
+  - Super admin login is hard-coded in login.html (admin123@gmail.com / admin123) with gfg_admin_user localStorage key.
+- Tasks module: front-end/js/modules/tasks.js
+  - CRUD for tasks using localStorage; post-gig form supports create/edit.
+  - Explore tasks page supports search, filters, pagination.
+  - Active tasks and manager dashboards render data from tasks + gig workflow state.
+- Applications module: front-end/js/modules/applications.js
+  - Review shortlist (client/manager): shortlist, reject, approve hire.
+  - Pending requests (gig): accept/decline service requests.
+- Deliverables module: front-end/js/modules/deliverables.js
+  - Review deliverables (client) approve/revision flow, release payment state.
+  - Project detail page shows task context; gig can submit deliverables.
+- Managers module: front-end/js/modules/managers.js
+  - Add manager single form + multi-step invite flow.
+  - Invite setup page activates manager account and password.
+- Profile module: front-end/js/modules/profile.js
+  - Client and gig profile completion forms with field validation and persistence.
+  - Gig profile display with inline edit support.
+- Gig workflow state: front-end/js/modules/gigState.js
+  - Normalizes and syncs gig requests/tasks to localStorage state.
+  - Handles accept/decline/completion updates across tasks/applications.
+- Services module: front-end/js/modules/services.js
+  - Search talent page with filters and success score.
+  - Post service flow with local storage and preview of posted services.
+
+FRONT-END DATA AND UTILITIES
+- Mock data and persistence: front-end/js/data/mockData.js
+  - Seeded users, tasks, applications, deliverables, services.
+  - Data loads from localStorage when present and merges seed users by id.
+- Storage helpers: front-end/js/utils/storage.js
+  - gfg_ prefixed localStorage/sessionStorage helpers and auth state storage.
+- Helpers: front-end/js/utils/helpers.js
+  - Format dates/currency, status badges, humanized status, initials.
+- Validation: front-end/js/utils/validation.js
+  - Login, signup, post-gig, manager invite validation rules.
+
+FRONT-END STYLING
+- Tokens: front-end/css/variables.css (Inter font, palette, spacing, radii, shadows).
+- Shared layout: front-end/css/layout.css (header, footer, grids, responsive).
+- Components: front-end/css/components.css (buttons, inputs, cards, pills).
+- Landing: front-end/css/landing.css (hero, trust bar, services, tabs).
+- Auth: front-end/css/auth.css (split layout, responsive).
+- Dashboard: front-end/css/dashboard.css (sidebar, metrics, tables, badges).
+- Client/manager dashboard: front-end/css/client-dashboard.css.
+- Forms: front-end/css/forms.css (form layouts, selection cards).
+- Modals and profile chooser: front-end/css/modals.css.
+- Deliverables submit: front-end/css/submit-deliverables.css.
+- Super admin: front-end/css/super-admin.css.
+
+NESTJS INITIALIZATION (BACK-END)
+- Nest app bootstrap: back-end/src/main.ts
+  - Enables CORS for localhost:5500 and 127.0.0.1:5500.
+  - Global ValidationPipe with whitelist, forbidNonWhitelisted, transform.
+  - App listens on PORT or 3000.
+- Module wiring: back-end/src/app.module.ts
+  - Imports Auth, Users, Tasks, Applications, Deliverables, Managers, Payments, Reviews.
+- Controllers and services are stubbed with placeholder responses:
+  - AuthController/AuthService: register/login/logout/refresh/change password/reset flows.
+  - TasksController/TasksService: CRUD endpoints + marketplace/applications/deliverables.
+  - ApplicationsController/ApplicationsService: create, shortlist, hire, accept/decline, withdraw.
+- Scripts and dependencies: back-end/package.json
+  - Standard Nest scripts: start, start:dev, build, test, lint.
+  - Uses @nestjs/*, class-validator, class-transformer, rxjs.
+
+QUICK REMINDERS
+- Front-end is fully localStorage-driven; no fetch or backend integration yet.
+- Backend endpoints are stubs; safe to wire later without breaking UI if you keep shapes consistent.
