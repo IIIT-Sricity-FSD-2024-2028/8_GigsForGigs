@@ -1,0 +1,12 @@
+export { CreateUserDto } from './create-user.dto';
+export { UpdateUserDto } from './update-user.dto';
+export { CreateClientDto } from './create-client.dto';
+export { CreateManagerDto } from './create-manager.dto';
+export { CreateGigProfileDto } from './create-gig-profile.dto';
+export { CreateTaskDto } from './create-task.dto';
+export { UpdateTaskDto } from './update-task.dto';
+export { CreateApplicationDto } from './create-application.dto';
+export { CreateAssignmentDto } from './create-assignment.dto';
+export { CreateDeliverableDto } from './create-deliverable.dto';
+export { CreatePaymentDto } from './create-payment.dto';
+export { CreateReviewDto } from './create-review.dto';

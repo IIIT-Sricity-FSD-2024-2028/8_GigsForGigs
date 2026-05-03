@@ -1,60 +1,29 @@
-import * as adminAuth from './adminAuth.js';
+// ─── admin.js ────────────────────────────────────────────────
+// Super Admin entry point — detects page and calls init function.
+// ─────────────────────────────────────────────────────────────
 
-const PAGE_MODULES = {
-  'dashboard.html': () => import('./adminDashboard.js'),
-  'client-management.html': () => import('./adminClients.js'),
-  'managers-management.html': () => import('./adminManagers.js'),
-  'gig-professional-management.html': () => import('./adminProfessionals.js'),
-  'projects.html': () => import('./adminProjects.js'),
-  'payments-revenue.html': () => import('./adminPayments.js'),
-  'reviews.html': () => import('./adminReviews.js'),
-  'disputes-reports.html': () => import('./adminReports.js'),
-  'admin-analytics.html': () => import('./adminAnalytics.js'),
-  'platform-settings.html': () => import('./adminSettings.js'),
-  'admin-management.html': () => import('./adminAdmins.js'),
-  'admin-profile.html': () => import('./adminProfile.js'),
+import { injectSidebar } from './adminShared.js';
+
+const page = location.pathname.split('/').pop() || 'dashboard.html';
+
+// Inject sidebar on every page
+injectSidebar(page);
+
+// Dynamic import for the active page module
+const PAGE_MAP = {
+  'dashboard.html':          () => import('./adminDashboard.js').then(m => m.init()),
+  'users.html':              () => import('./adminUsers.js').then(m => m.init()),
+  'clients.html':            () => import('./adminClients.js').then(m => m.init()),
+  'managers.html':           () => import('./adminManagers.js').then(m => m.init()),
+  'gig-professionals.html':  () => import('./adminProfessionals.js').then(m => m.init()),
+  'tasks.html':              () => import('./adminTasks.js').then(m => m.init()),
+  'applications.html':       () => import('./adminApplications.js').then(m => m.init()),
+  'assignments.html':        () => import('./adminAssignments.js').then(m => m.init()),
+  'deliverables.html':       () => import('./adminDeliverables.js').then(m => m.init()),
+  'payments.html':           () => import('./adminPayments.js').then(m => m.init()),
+  'reviews.html':            () => import('./adminReviews.js').then(m => m.init()),
+  'settings.html':           () => import('./adminSettings.js').then(m => m.init()),
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    const session = adminAuth.guardAdminPage();
-    if (session) {
-        adminAuth.injectAdminIdentity();
-        adminAuth.bindAdminLogout();
-        initPage();
-    }
-});
-
-async function initPage() {
-    const page = currentPageName();
-    const loader = PAGE_MODULES[page];
-    
-    if (loader) {
-        try {
-            const module = await loader();
-            if (module.init) {
-                module.init();
-            }
-        } catch (err) {
-            console.error(`Admin System: Failed to load module for [${page}]:`, err);
-        }
-    }
-    
-    updateActiveNavItem(page);
-}
-
-function currentPageName() {
-    const path = window.location.pathname;
-    const name = path.split('/').pop() || 'dashboard.html';
-    return name;
-}
-
-function updateActiveNavItem(page) {
-    document.querySelectorAll('.admin-nav-item').forEach(item => {
-        const href = item.getAttribute('href');
-        if (href && href.includes(page)) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-}
+const loader = PAGE_MAP[page];
+if (loader) loader().catch(err => console.error(`[Admin] Failed to init ${page}:`, err));

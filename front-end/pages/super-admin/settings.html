@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - GigsForGigs Admin</title>
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/reset.css">
+  <link rel="stylesheet" href="../../css/components.css">
+  <link rel="stylesheet" href="../../css/super-admin.css">
+</head>
+<body>
+<div class="admin-sidebar" id="admin-sidebar"></div>
+<main class="admin-main">
+  <header class="admin-page-header">
+    <div>
+      <div class="admin-breadcrumbs"><a href="dashboard.html">Dashboard</a> <span>›</span> Settings</div>
+      <h1 class="admin-page-title">Platform Settings</h1>
+      <p class="admin-page-desc">System configuration and maintenance</p>
+    </div>
+  </header>
+  <div style="padding:0 var(--spacing-xxl);">
+    <div class="admin-card">
+      <h3 style="font-weight:700;margin-bottom:var(--spacing-md);color:var(--color-text-dark);">Database</h3>
+      <p style="color:var(--color-text-muted);margin-bottom:var(--spacing-lg);line-height:1.6;">
+        The in-memory database is seeded automatically when the NestJS backend starts.
+        To re-seed with fresh demo data, restart the backend server.
+      </p>
+      <button class="btn btn-outline" id="reseed-btn">ℹ️ Re-seed Info</button>
+    </div>
+    <div class="admin-card">
+      <h3 style="font-weight:700;margin-bottom:var(--spacing-md);color:var(--color-text-dark);">API Endpoint</h3>
+      <p style="color:var(--color-text-muted);line-height:1.6;">
+        Backend: <code style="background:var(--color-bg-light);padding:4px 8px;border-radius:4px;">http://localhost:3000/admin/*</code>
+      </p>
+    </div>
+  </div>
+</main>
+<script type="module" src="../../js/admin/admin.js"></script>
+</body>
+</html>

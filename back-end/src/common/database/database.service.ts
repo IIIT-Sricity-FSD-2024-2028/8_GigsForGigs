@@ -552,4 +552,215 @@ export class DatabaseService {
 
     return this.clone(review);
   }
+
+  // =========================================================
+  // ADMIN CRUD EXTENSIONS (added for Super Admin module)
+  // Only new methods — no existing signatures modified.
+  // =========================================================
+
+  // ── GET ALL ──────────────────────────────────────────────
+
+  getAllUsers(): User[] {
+    return Array.from(this.users.values()).map((u) => this.clone(u));
+  }
+
+  getAllClients(): Client[] {
+    return Array.from(this.clients.values()).map((c) => this.clone(c));
+  }
+
+  getAllManagers(): Manager[] {
+    return Array.from(this.managers.values()).map((m) => this.clone(m));
+  }
+
+  getAllGigProfiles(): GigProfile[] {
+    return Array.from(this.gigProfiles.values()).map((g) => this.clone(g));
+  }
+
+  getAllApplications(): Application[] {
+    return Array.from(this.applications.values()).map((a) => this.clone(a));
+  }
+
+  getAllAssignments(): Assignment[] {
+    return Array.from(this.assignments.values()).map((a) => this.clone(a));
+  }
+
+  getAllDeliverables(): Deliverable[] {
+    return Array.from(this.deliverables.values()).map((d) => this.clone(d));
+  }
+
+  getAllPayments(): Payment[] {
+    return Array.from(this.payments.values()).map((p) => this.clone(p));
+  }
+
+  getAllReviews(): Review[] {
+    return Array.from(this.reviews.values()).map((r) => this.clone(r));
+  }
+
+  // ── GET SINGLE (safe wrappers that don't throw) ─────────
+
+  getGigProfile(gig_profile_id: string): GigProfile {
+    return this.clone(this.requireGigProfile(gig_profile_id));
+  }
+
+  getApplication(application_id: string): Application {
+    const app = this.applications.get(application_id);
+    if (!app) throw new NotFoundException(`Application not found: ${application_id}`);
+    return this.clone(app);
+  }
+
+  getPayment(payment_id: string): Payment {
+    const pay = this.payments.get(payment_id);
+    if (!pay) throw new NotFoundException(`Payment not found: ${payment_id}`);
+    return this.clone(pay);
+  }
+
+  getReview(review_id: string): Review {
+    const rev = this.reviews.get(review_id);
+    if (!rev) throw new NotFoundException(`Review not found: ${review_id}`);
+    return this.clone(rev);
+  }
+
+  // ── Profile data getters ────────────────────────────────
+
+  getSkills(gig_profile_id: string): string[] {
+    return this.clone(this.profileSkills.get(gig_profile_id) ?? []);
+  }
+
+  getTools(gig_profile_id: string): string[] {
+    return this.clone(this.profileTools.get(gig_profile_id) ?? []);
+  }
+
+  getPortfolio(gig_profile_id: string): string[] {
+    return this.clone(this.profilePortfolio.get(gig_profile_id) ?? []);
+  }
+
+  // ── UPDATE ──────────────────────────────────────────────
+
+  updateUser(user_id: string, updates: Partial<Pick<User, 'name' | 'email' | 'password' | 'role'>>): User {
+    const user = this.requireUser(user_id);
+
+    if (updates.email !== undefined) {
+      const newEmail = this.normalizeEmail(updates.email);
+      const existingId = this.usersByEmail.get(newEmail);
+      if (existingId && existingId !== user_id) {
+        throw new BadRequestException('email must be unique');
+      }
+      // Remove old email index
+      this.usersByEmail.delete(user.email);
+      user.email = newEmail;
+      this.usersByEmail.set(newEmail, user_id);
+    }
+    if (updates.name !== undefined) {
+      this.requireNonEmptyString('name', updates.name);
+      user.name = updates.name.trim();
+    }
+    if (updates.password !== undefined) {
+      this.requireNonEmptyString('password', updates.password);
+      user.password = updates.password;
+    }
+    if (updates.role !== undefined) {
+      user.role = updates.role;
+    }
+
+    user.updatedAt = this.now();
+    return this.clone(user);
+  }
+
+  updateTask(task_id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'budget' | 'status'>>): Task {
+    const task = this.requireTask(task_id);
+
+    if (updates.title !== undefined) {
+      this.requireNonEmptyString('title', updates.title);
+      task.title = updates.title.trim();
+    }
+    if (updates.description !== undefined) {
+      this.requireNonEmptyString('description', updates.description);
+      task.description = updates.description.trim();
+    }
+    if (updates.budget !== undefined) {
+      this.requirePositiveNumber('budget', updates.budget);
+      task.budget = updates.budget;
+    }
+    if (updates.status !== undefined) {
+      task.status = updates.status;
+    }
+
+    task.updatedAt = this.now();
+    return this.clone(task);
+  }
+
+  // ── DELETE ──────────────────────────────────────────────
+
+  deleteUser(user_id: string): void {
+    const user = this.requireUser(user_id);
+    this.usersByEmail.delete(user.email);
+    this.users.delete(user_id);
+  }
+
+  deleteClient(client_id: string): void {
+    this.requireClient(client_id);
+    this.clients.delete(client_id);
+  }
+
+  deleteManager(client_id: string, manager_id: string): void {
+    const key = this.managerKey(client_id, manager_id);
+    if (!this.managers.has(key)) {
+      throw new NotFoundException(`Manager not found: ${key}`);
+    }
+    this.managers.delete(key);
+  }
+
+  deleteGigProfile(gig_profile_id: string): void {
+    this.requireGigProfile(gig_profile_id);
+    this.gigProfiles.delete(gig_profile_id);
+    this.profileSkills.delete(gig_profile_id);
+    this.profileTools.delete(gig_profile_id);
+    this.profilePortfolio.delete(gig_profile_id);
+  }
+
+  deleteTask(task_id: string): void {
+    this.requireTask(task_id);
+    this.tasks.delete(task_id);
+  }
+
+  deleteApplication(application_id: string): void {
+    const app = this.applications.get(application_id);
+    if (!app) throw new NotFoundException(`Application not found: ${application_id}`);
+    // Clean up unique index
+    const uniqueKey = this.applicationUniqueKey(app.gig_profile_id, app.task_id);
+    this.applicationByGigTask.delete(uniqueKey);
+    this.applications.delete(application_id);
+  }
+
+  deleteAssignment(gig_profile_id: string, task_id: string): void {
+    const key = this.assignmentKey(gig_profile_id, task_id);
+    if (!this.assignments.has(key)) {
+      throw new NotFoundException(`Assignment not found: ${key}`);
+    }
+    this.assignments.delete(key);
+  }
+
+  deleteDeliverable(task_id: string, deliverable_no: number): void {
+    const key = this.deliverableKey(task_id, deliverable_no);
+    if (!this.deliverables.has(key)) {
+      throw new NotFoundException(`Deliverable not found: ${key}`);
+    }
+    this.deliverables.delete(key);
+  }
+
+  deletePayment(payment_id: string): void {
+    const pay = this.payments.get(payment_id);
+    if (!pay) throw new NotFoundException(`Payment not found: ${payment_id}`);
+    const uniqueKey = this.paymentUniqueKey(pay.task_id, pay.gig_profile_id);
+    this.paymentByTaskGig.delete(uniqueKey);
+    this.payments.delete(payment_id);
+  }
+
+  deleteReview(review_id: string): void {
+    const rev = this.reviews.get(review_id);
+    if (!rev) throw new NotFoundException(`Review not found: ${review_id}`);
+    const uniqueKey = this.reviewUniqueKey(rev.reviewer_id, rev.reviewee_id, rev.task_id);
+    this.reviewByReviewerRevieweeTask.delete(uniqueKey);
+    this.reviews.delete(review_id);
+  }
 }

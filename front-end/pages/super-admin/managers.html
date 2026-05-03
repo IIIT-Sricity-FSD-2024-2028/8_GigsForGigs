@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reviews - GigsForGigs Admin</title>
+  <title>Managers - GigsForGigs Admin</title>
   <link rel="stylesheet" href="../../css/variables.css">
   <link rel="stylesheet" href="../../css/reset.css">
   <link rel="stylesheet" href="../../css/components.css">
@@ -14,19 +14,19 @@
 <main class="admin-main">
   <header class="admin-page-header">
     <div>
-      <div class="admin-breadcrumbs"><a href="dashboard.html">Dashboard</a> <span>›</span> Reviews</div>
-      <h1 class="admin-page-title">Review Management</h1>
-      <p class="admin-page-desc">All platform reviews with ratings</p>
+      <div class="admin-breadcrumbs"><a href="dashboard.html">Dashboard</a> <span>›</span> Managers</div>
+      <h1 class="admin-page-title">Manager Management</h1>
+      <p class="admin-page-desc">Managers (weak entity — composite key: client_id + manager_id)</p>
     </div>
     <div class="admin-header-actions">
-      <button class="btn btn-primary-blue" id="add-btn">+ Create Review</button>
+      <button class="btn btn-primary-blue" id="add-btn">+ Create Manager</button>
     </div>
   </header>
   <div style="padding:0 var(--spacing-xxl);">
     <div class="admin-card">
       <table class="admin-table">
-        <thead><tr><th>Review ID</th><th>Reviewer</th><th>Reviewee</th><th>Task</th><th>Rating</th><th>Comment</th><th>Actions</th></tr></thead>
-        <tbody id="table-body"><tr><td colspan="7" style="text-align:center;padding:24px;">Loading...</td></tr></tbody>
+        <thead><tr><th>Manager ID</th><th>Client ID</th><th>Name</th><th>Email</th><th>Created</th><th>Actions</th></tr></thead>
+        <tbody id="table-body"><tr><td colspan="6" style="text-align:center;padding:24px;">Loading...</td></tr></tbody>
       </table>
     </div>
   </div>
