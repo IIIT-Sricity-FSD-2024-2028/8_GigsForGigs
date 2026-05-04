@@ -8,7 +8,11 @@ const API_BASE = 'http://localhost:3000/admin';
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`;
   const config = {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-role': 'CLIENT',
+      'x-user-id': '',
+    },
     ...options,
   };
 
