@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../common/database/database.service';
-import { TaskStatus, UserRole } from '../../common/database/database.types';
+import { ApplicationStatus, TaskStatus, UserRole } from '../../common/database/database.types';
 import {
   AssignTaskDto,
   AuthLoginDto,
@@ -231,18 +231,14 @@ export class ClientService {
   }
 
   getServices() {
-    return Array.from(this.db.gigProfiles.values()).map((gigProfile) => {
+    return this.db.getAllServices().map((service) => {
+      const gigProfile = this.db.getGigProfile(service.gig_profile_id);
       const user = this.db.users.get(gigProfile.user_id) ?? null;
+
       return {
-        service_id: gigProfile.gig_profile_id,
-        gig_profile_id: gigProfile.gig_profile_id,
+        ...service,
         user,
-        skills: this.db.profileSkills.get(gigProfile.gig_profile_id) ?? [],
-        tools: this.db.profileTools.get(gigProfile.gig_profile_id) ?? [],
-        portfolio:
-          this.db.profilePortfolio.get(gigProfile.gig_profile_id) ?? [],
-        createdAt: gigProfile.createdAt,
-        updatedAt: gigProfile.updatedAt,
+        skills: service.tags ?? [],
       };
     });
   }
@@ -261,7 +257,12 @@ export class ClientService {
       task_id: task.task_id,
     });
 
-    return { task, request: application };
+    const shortlisted = this.db.updateApplicationStatus(
+      application.application_id,
+      ApplicationStatus.SHORTLISTED,
+    );
+
+    return { task, request: shortlisted };
   }
 
   getRequests(clientId?: string) {

@@ -69,6 +69,50 @@
   gap: var(--spacing-md);
 }
 
+.sidebar-footer-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.sidebar-footer-name {
+  min-width: 0;
+  font-weight: 600;
+  color: var(--color-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-footer-role {
+  color: rgba(240, 246, 246, 0.7);
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.sidebar-logout-btn {
+  padding: 0.35rem 0.65rem;
+  border: none;
+  border-radius: 9999px;
+  background: #f97316;
+  color: var(--color-white);
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.sidebar-logout-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
 .profile-mini {
   width: 40px;
   height: 40px;

@@ -1,5 +1,5 @@
 // ─── auth.js ─ Login & Signup ────────────────────────────────────
-import { getDashboardPath } from './api.js';
+import { getDashboardPath, setSession } from './api.js';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -88,9 +88,12 @@ function initLogin() {
       const dbRole = user.role; // e.g. 'GIG', 'CLIENT', 'MANAGER'
       const headerRole = DB_ROLE_TO_HEADER[dbRole] || dbRole; // → 'GIG_PROFESSIONAL'
 
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('role', headerRole);
-      localStorage.setItem('userName', user.name || '');
+      setSession({
+        userId,
+        role: headerRole,
+        name: user.name || '',
+        appliedTaskIds: [],
+      });
 
       // Also map for dashboard redirect
       window.location.href = getDashboardPath(headerRole);
@@ -127,9 +130,12 @@ function initSignup() {
       const dbRole = user.role;
       const headerRole = DB_ROLE_TO_HEADER[dbRole] || dbRole;
 
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('role', headerRole);
-      localStorage.setItem('userName', user.name || name);
+      setSession({
+        userId,
+        role: headerRole,
+        name: user.name || name,
+        appliedTaskIds: [],
+      });
 
       window.location.href = getDashboardPath(headerRole);
     } catch (err) {

@@ -32,4 +32,9 @@ export class PostServiceDto {
   @IsString({ each: true })
   @IsOptional()
   tags?: string[];
+
+  @ApiPropertyOptional({ example: 'https://example.com/thumbnail.png' })
+  @IsString()
+  @IsOptional()
+  thumbnail?: string;
 }
