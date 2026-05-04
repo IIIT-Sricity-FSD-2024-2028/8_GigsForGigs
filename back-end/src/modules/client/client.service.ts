@@ -25,14 +25,27 @@ export class ClientService {
   constructor(private readonly db: DatabaseService) {}
 
   signup(dto: AuthSignupDto) {
+    let userRole = UserRole.CLIENT;
+    if (dto.role === 'gig') userRole = UserRole.GIG;
+    if (dto.role === 'manager') userRole = UserRole.MANAGER;
+
     const user = this.db.createUser({
       name: dto.name,
       email: dto.email,
       password: dto.password,
-      role: UserRole.CLIENT,
+      role: userRole,
     });
-    const client = this.db.createClient({ user_id: user.user_id });
-    return { user, client };
+
+    let profile;
+    if (userRole === UserRole.CLIENT) {
+      profile = this.db.createClient({ user_id: user.user_id });
+    } else if (userRole === UserRole.GIG) {
+      profile = this.db.createGigProfile({ user_id: user.user_id });
+    } else if (userRole === UserRole.MANAGER) {
+      profile = this.db.createManager({ user_id: user.user_id });
+    }
+
+    return { user, profile };
   }
 
   login(dto: AuthLoginDto) {
