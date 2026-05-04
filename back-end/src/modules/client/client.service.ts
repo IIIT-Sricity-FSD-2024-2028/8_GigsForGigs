@@ -46,9 +46,10 @@ export class ClientService {
       profile = this.db.createClient({ user_id: user.user_id });
     } else if (userRole === UserRole.GIG) {
       profile = this.db.createGigProfile({ user_id: user.user_id });
-    } else if (userRole === UserRole.MANAGER && clientId) {
+    } else if (userRole === UserRole.MANAGER) {
+      const client = this.db.createClient({ user_id: user.user_id });
       profile = this.db.createManager({
-        client_id: clientId,
+        client_id: client.client_id,
         user_id: user.user_id,
       });
     }
