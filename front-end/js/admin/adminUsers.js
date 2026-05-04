@@ -1,11 +1,29 @@
 // ─── adminUsers.js ──────────────────────────────────────────
 import { fetchUsers, createUser, updateUser, deleteUser } from './adminData.js';
-import { showToast, openModal, confirmAction, statusBadge, formatDate, getInitials, showLoading, formField } from './adminShared.js';
+import { showToast, openModal, confirmAction, statusBadge, formatDate, getInitials, showLoading, formField, renderSearchBar, renderFilterBar } from './adminShared.js';
 
 let users = [];
+let searchQuery = '';
+let filters = { role: '' };
 
 export async function init() {
   document.getElementById('add-user-btn')?.addEventListener('click', openCreateModal);
+
+  renderSearchBar('users-search-container', 'Search by name or email...', (query) => {
+    searchQuery = query;
+    render();
+  });
+
+  renderFilterBar('users-filter-container', [
+    { key: 'role', label: 'Roles', options: [
+      { value: 'CLIENT',      label: 'Client' },
+      { value: 'GIG',         label: 'Gig Professional' },
+      { value: 'MANAGER',     label: 'Manager' },
+      { value: 'ADMIN',       label: 'Admin' },
+      { value: 'SUPER_ADMIN', label: 'Super Admin' },
+    ]},
+  ], (f) => { filters = f; render(); });
+
   await loadUsers();
 }
 
@@ -23,12 +41,24 @@ function render() {
   const tbody = document.getElementById('users-table-body');
   if (!tbody) return;
 
-  if (users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No users found.</td></tr>';
+  const filtered = users.filter(u => {
+    const matchSearch = !searchQuery ||
+      u.name.toLowerCase().includes(searchQuery) ||
+      u.email.toLowerCase().includes(searchQuery) ||
+      u.role.toLowerCase().includes(searchQuery);
+    const matchRole = !filters.role || u.role === filters.role;
+    return matchSearch && matchRole;
+  });
+
+  const count = document.getElementById('users-count');
+  if (count) count.textContent = `${filtered.length} of ${users.length} users`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No users match the current filters.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = users.map(u => `
+  tbody.innerHTML = filtered.map(u => `
     <tr>
       <td><code style="font-size:0.75rem;color:var(--color-text-muted);">${u.user_id}</code></td>
       <td>

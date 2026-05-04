@@ -1,10 +1,31 @@
 import { fetchTasks, createTask, updateTask, deleteTask } from './adminData.js';
-import { showToast, openModal, confirmAction, statusBadge, formatDate, formatCurrency, showLoading, formField } from './adminShared.js';
+import { showToast, openModal, confirmAction, statusBadge, formatDate, formatCurrency, showLoading, formField, renderSearchBar, renderFilterBar } from './adminShared.js';
 
 let tasks = [];
+let searchQuery = '';
+let filters = { status: '', budget: '' };
 
 export async function init() {
   document.getElementById('add-btn')?.addEventListener('click', openCreateModal);
+
+  renderSearchBar('tasks-search-container', 'Search by title or ID...', (q) => {
+    searchQuery = q; render();
+  });
+
+  renderFilterBar('tasks-filter-container', [
+    { key: 'status', label: 'Status', options: [
+      { value: 'OPEN',        label: 'Open' },
+      { value: 'IN_PROGRESS', label: 'In Progress' },
+      { value: 'COMPLETED',   label: 'Completed' },
+      { value: 'CANCELLED',   label: 'Cancelled' },
+    ]},
+    { key: 'budget', label: 'Budget', options: [
+      { value: 'low',    label: 'Under ₹10,000' },
+      { value: 'medium', label: '₹10k – ₹50k' },
+      { value: 'high',   label: 'Over ₹50,000' },
+    ]},
+  ], (f) => { filters = f; render(); });
+
   await loadData();
 }
 
@@ -17,9 +38,25 @@ async function loadData() {
 function render() {
   const tbody = document.getElementById('table-body');
   if (!tbody) return;
-  if (tasks.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No tasks found.</td></tr>'; return; }
 
-  tbody.innerHTML = tasks.map(t => `<tr>
+  const filtered = tasks.filter(t => {
+    const matchSearch = !searchQuery ||
+      t.title.toLowerCase().includes(searchQuery) ||
+      t.task_id.toLowerCase().includes(searchQuery);
+    const matchStatus = !filters.status || t.status === filters.status;
+    let matchBudget = true;
+    if (filters.budget === 'low')    matchBudget = t.budget < 10000;
+    if (filters.budget === 'medium') matchBudget = t.budget >= 10000 && t.budget <= 50000;
+    if (filters.budget === 'high')   matchBudget = t.budget > 50000;
+    return matchSearch && matchStatus && matchBudget;
+  });
+
+  const count = document.getElementById('tasks-count');
+  if (count) count.textContent = `${filtered.length} of ${tasks.length} tasks`;
+
+  if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No tasks match the current filters.</td></tr>'; return; }
+
+  tbody.innerHTML = filtered.map(t => `<tr>
     <td><code style="font-size:0.75rem;color:var(--color-text-muted);">${t.task_id}</code></td>
     <td style="font-weight:600;">${t.title}</td>
     <td><code style="font-size:0.75rem;color:var(--color-text-muted);">${t.client_id}</code></td>

@@ -19,11 +19,16 @@
       <p class="admin-page-desc">View and manage all platform users</p>
     </div>
     <div class="admin-header-actions">
+      <div id="users-search-container"></div>
       <button class="btn btn-primary-blue" id="add-user-btn">+ Create User</button>
     </div>
   </header>
   <div style="padding:0 var(--spacing-xxl);">
     <div class="admin-card">
+      <div class="admin-table-toolbar">
+        <div id="users-filter-container"></div>
+        <span class="admin-table-count" id="users-count"></span>
+      </div>
       <table class="admin-table">
         <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
         <tbody id="users-table-body"><tr><td colspan="6" style="text-align:center;padding:24px;">Loading...</td></tr></tbody>

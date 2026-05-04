@@ -19,11 +19,16 @@
       <p class="admin-page-desc">All platform tasks with status tracking</p>
     </div>
     <div class="admin-header-actions">
+      <div id="tasks-search-container"></div>
       <button class="btn btn-primary-blue" id="add-btn">+ Create Task</button>
     </div>
   </header>
   <div style="padding:0 var(--spacing-xxl);">
     <div class="admin-card">
+      <div class="admin-table-toolbar">
+        <div id="tasks-filter-container"></div>
+        <span class="admin-table-count" id="tasks-count"></span>
+      </div>
       <table class="admin-table">
         <thead><tr><th>Task ID</th><th>Title</th><th>Client ID</th><th>Budget</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
         <tbody id="table-body"><tr><td colspan="7" style="text-align:center;padding:24px;">Loading...</td></tr></tbody>

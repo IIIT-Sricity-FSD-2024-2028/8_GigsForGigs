@@ -19,11 +19,16 @@
       <p class="admin-page-desc">All recorded platform payments</p>
     </div>
     <div class="admin-header-actions">
+      <div id="payments-search-container"></div>
       <button class="btn btn-primary-blue" id="add-btn">+ Record Payment</button>
     </div>
   </header>
   <div style="padding:0 var(--spacing-xxl);">
     <div class="admin-card">
+      <div class="admin-table-toolbar">
+        <div id="payments-filter-container"></div>
+        <span class="admin-table-count" id="payments-count"></span>
+      </div>
       <table class="admin-table">
         <thead><tr><th>Payment ID</th><th>Task ID</th><th>Gig Profile ID</th><th>Amount</th><th>Paid At</th><th>Actions</th></tr></thead>
         <tbody id="table-body"><tr><td colspan="6" style="text-align:center;padding:24px;">Loading...</td></tr></tbody>

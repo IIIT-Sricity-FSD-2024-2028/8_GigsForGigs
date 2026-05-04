@@ -19,11 +19,16 @@
       <p class="admin-page-desc">All platform reviews with ratings</p>
     </div>
     <div class="admin-header-actions">
+      <div id="reviews-search-container"></div>
       <button class="btn btn-primary-blue" id="add-btn">+ Create Review</button>
     </div>
   </header>
   <div style="padding:0 var(--spacing-xxl);">
     <div class="admin-card">
+      <div class="admin-table-toolbar">
+        <div id="reviews-filter-container"></div>
+        <span class="admin-table-count" id="reviews-count"></span>
+      </div>
       <table class="admin-table">
         <thead><tr><th>Review ID</th><th>Reviewer</th><th>Reviewee</th><th>Task</th><th>Rating</th><th>Comment</th><th>Actions</th></tr></thead>
         <tbody id="table-body"><tr><td colspan="7" style="text-align:center;padding:24px;">Loading...</td></tr></tbody>

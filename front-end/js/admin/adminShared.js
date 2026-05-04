@@ -62,12 +62,27 @@ export function injectSidebar(activePage) {
     <nav class="admin-nav">${navHtml}</nav>
     <div class="admin-sidebar-footer">
       <div class="admin-footer-avatar">SA</div>
-      <div class="admin-footer-info">
+      <div class="admin-footer-info" style="flex:1;">
         <span class="admin-footer-name">Super Admin</span>
         <span class="admin-footer-role" style="text-transform:uppercase;font-size:0.6rem;letter-spacing:0.08em;">ADMIN</span>
       </div>
     </div>
+    <div style="padding: 0 var(--spacing-md) var(--spacing-xl);">
+      <button class="admin-sidebar-logout" id="admin-logout-btn">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Logout
+      </button>
+    </div>
   `;
+
+  document.getElementById('admin-logout-btn')?.addEventListener('click', async () => {
+    const ok = await confirmAction('Are you sure you want to log out of the admin panel?');
+    if (ok) {
+      sessionStorage.clear();
+      localStorage.removeItem('admin_token');
+      window.location.href = '../../index.html';
+    }
+  });
 }
 
 // ── Toast ─────────────────────────────────────────────────────────
@@ -230,6 +245,72 @@ export function renderTable(containerId, { columns, rows, onDelete, deleteLabel 
     </table>`;
 }
 
+// ── Search Bar ────────────────────────────────────────────────────
+
+export function renderSearchBar(containerId, placeholder, onSearch) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="admin-search-wrapper">
+      <svg class="admin-search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" class="admin-search-input" placeholder="${placeholder}">
+    </div>
+  `;
+
+  const input = container.querySelector('input');
+  input.addEventListener('input', (e) => {
+    onSearch(e.target.value.toLowerCase());
+  });
+}
+
+// ── Filter Bar ────────────────────────────────────────────────────
+// filters: [{ key, label, options: [{value, label}] }]
+// onFilter: called with an object of { key: selectedValue } whenever any filter changes
+
+export function renderFilterBar(containerId, filters, onFilter) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const state = {};
+  filters.forEach(f => state[f.key] = '');
+
+  const selects = filters.map(f => {
+    const opts = [{ value: '', label: `All ${f.label}` }, ...f.options]
+      .map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+    return `
+      <div style="display:flex;align-items:center;gap:6px;">
+        <select class="admin-filter-select" data-filter-key="${f.key}">
+          ${opts}
+        </select>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="admin-filter-bar">
+      <span class="admin-filter-label">Filter:</span>
+      ${selects}
+      <button class="admin-filter-reset" id="filter-reset-${containerId}">✕ Reset</button>
+    </div>
+  `;
+
+  container.querySelectorAll('.admin-filter-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      state[sel.dataset.filterKey] = sel.value;
+      onFilter({ ...state });
+    });
+  });
+
+  container.querySelector(`#filter-reset-${containerId}`)?.addEventListener('click', () => {
+    container.querySelectorAll('.admin-filter-select').forEach(sel => {
+      sel.value = '';
+      state[sel.dataset.filterKey] = '';
+    });
+    onFilter({ ...state });
+  });
+}
+
 // ── Formatting ────────────────────────────────────────────────────
 
 export function formatCurrency(amount) {
@@ -255,8 +336,12 @@ export function statusBadge(status) {
     CLIENT: 'admin-badge-active',
     GIG: 'admin-badge-verified',
     MANAGER: 'admin-badge-pending',
-    ADMIN: 'admin-badge-suspended',
-    SUPER_ADMIN: 'admin-badge-suspended',
+    ADMIN: 'admin-badge-pending',
+    SUPER_ADMIN: 'admin-badge-super-admin',
+    // Rating levels
+    HIGH: 'admin-badge-verified',
+    MEDIUM: 'admin-badge-pending',
+    LOW: 'admin-badge-suspended',
   };
   const cls = map[status] || 'admin-tag';
   const label = String(status || '').replace(/_/g, ' ');

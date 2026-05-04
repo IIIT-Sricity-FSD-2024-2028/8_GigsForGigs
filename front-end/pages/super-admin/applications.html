@@ -19,11 +19,16 @@
       <p class="admin-page-desc">Gig professional applications to tasks</p>
     </div>
     <div class="admin-header-actions">
+      <div id="applications-search-container"></div>
       <button class="btn btn-primary-blue" id="add-btn">+ Create Application</button>
     </div>
   </header>
   <div style="padding:0 var(--spacing-xxl);">
     <div class="admin-card">
+      <div class="admin-table-toolbar">
+        <div id="applications-filter-container"></div>
+        <span class="admin-table-count" id="applications-count"></span>
+      </div>
       <table class="admin-table">
         <thead><tr><th>Application ID</th><th>Gig Profile ID</th><th>Task ID</th><th>Created</th><th>Actions</th></tr></thead>
         <tbody id="table-body"><tr><td colspan="5" style="text-align:center;padding:24px;">Loading...</td></tr></tbody>

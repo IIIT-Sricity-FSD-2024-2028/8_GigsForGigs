@@ -168,6 +168,51 @@ export class SeedService implements OnModuleInit {
       comment: 'Arham is an excellent developer. Clean code, well-documented API.',
     });
 
+    // ── Additional Seed Data for Charts ─────────────────────
+    
+    // More Users
+    const u7 = this.db.createUser({ name: 'Sam Chen', email: 'sam@design.io', password: 'pass', role: UserRole.CLIENT });
+    const u8 = this.db.createUser({ name: 'Jordan Lee', email: 'jordan@code.dev', password: 'pass', role: UserRole.GIG });
+    const u9 = this.db.createUser({ name: 'Taylor Swift', email: 'taylor@music.com', password: 'pass', role: UserRole.GIG });
+    const u10 = this.db.createUser({ name: 'Casey Smith', email: 'casey@mgmt.com', password: 'pass', role: UserRole.MANAGER });
+    
+    const c3 = this.db.createClient({ user_id: u7.user_id });
+    const g3 = this.db.createGigProfile({ user_id: u8.user_id });
+    const g4 = this.db.createGigProfile({ user_id: u9.user_id });
+
+    // More Tasks
+    const t5 = this.db.createTask({
+      client_id: c3.client_id,
+      title: 'Logo Redesign',
+      description: 'Modernize our current company logo.',
+      budget: 5000,
+      status: TaskStatus.COMPLETED,
+    });
+    const t6 = this.db.createTask({
+      client_id: c3.client_id,
+      title: 'SEO Optimization',
+      description: 'Optimize landing pages for better search rankings.',
+      budget: 8000,
+      status: TaskStatus.OPEN,
+    });
+    const t7 = this.db.createTask({
+      client_id: client1.client_id,
+      title: 'Cancel this task',
+      description: 'This task was cancelled.',
+      budget: 1000,
+      status: TaskStatus.CANCELLED,
+    });
+
+    // More Payments
+    this.db.createPayment({ task_id: t5.task_id, gig_profile_id: g3.gig_profile_id, amount: 5000 });
+    this.db.createPayment({ task_id: task2.task_id, gig_profile_id: gig1.gig_profile_id, amount: 25000 });
+    this.db.createPayment({ task_id: task4.task_id, gig_profile_id: gig2.gig_profile_id, amount: 15000 }); // Partial payment
+
+    // More Reviews
+    this.db.createReview({ reviewer_id: u7.user_id, reviewee_id: u8.user_id, task_id: t5.task_id, rating: 5, comment: 'Great logo.' });
+    this.db.createReview({ reviewer_id: u8.user_id, reviewee_id: u7.user_id, task_id: t5.task_id, rating: 4, comment: 'Good clear requirements.' });
+    this.db.createReview({ reviewer_id: clientUser1.user_id, reviewee_id: gigUser2.user_id, task_id: task4.task_id, rating: 3, comment: 'Okay work, but missed a deadline.' });
+
     console.log('[SeedService] Database seeded with demo data.');
   }
 }
