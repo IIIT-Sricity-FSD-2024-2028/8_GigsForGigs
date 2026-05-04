@@ -12,10 +12,11 @@ import { ContractModule } from './modules/contract/contract.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { DeliverableModule } from './modules/deliverable/deliverable.module';
 import { ReviewModule } from './modules/review/review.module';
-import { DatabaseService } from './common/database/database.service';
+import { DatabaseModule } from './common/database/database.module';
 
 @Module({
   imports: [
+    DatabaseModule,
     AuthModule,
     ClientModule,
     GigModule,
@@ -29,7 +30,6 @@ import { DatabaseService } from './common/database/database.service';
     ReviewModule,
   ],
   controllers: [AppController],
-  providers: [AppService, DatabaseService],
-  exports: [DatabaseService],
+  providers: [AppService],
 })
 export class AppModule {}

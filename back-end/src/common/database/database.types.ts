@@ -13,6 +13,13 @@ export enum TaskStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum ApplicationStatus {
+  PENDING = 'PENDING',
+  SHORTLISTED = 'SHORTLISTED',
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED',
+}
+
 export type CompositeKey = string;
 
 export interface Timestamps {
@@ -42,6 +49,7 @@ export interface Manager extends Timestamps {
 export interface GigProfile extends Timestamps {
   gig_profile_id: string;
   user_id: string;
+  bio?: string;
 }
 
 export interface Task extends Timestamps {
@@ -51,12 +59,14 @@ export interface Task extends Timestamps {
   description: string;
   budget: number;
   status: TaskStatus;
+  assigned_to?: string;
 }
 
 export interface Application extends Timestamps {
   application_id: string;
   gig_profile_id: string;
   task_id: string;
+  status: ApplicationStatus;
 }
 
 export interface Assignment extends Timestamps {
@@ -89,6 +99,15 @@ export interface Review extends Timestamps {
   comment?: string;
 }
 
+export interface Service extends Timestamps {
+  service_id: string;
+  gig_profile_id: string;
+  title: string;
+  description: string;
+  price: number;
+  tags: string[];
+}
+
 export interface CreateUserInput {
   name: string;
   email: string;
@@ -108,6 +127,7 @@ export interface CreateManagerInput {
 
 export interface CreateGigProfileInput {
   user_id: string;
+  bio?: string;
 }
 
 export interface CreateTaskInput {
@@ -150,4 +170,12 @@ export interface CreateReviewInput {
   task_id: string;
   rating: number;
   comment?: string;
+}
+
+export interface CreateServiceInput {
+  gig_profile_id: string;
+  title: string;
+  description: string;
+  price: number;
+  tags?: string[];
 }

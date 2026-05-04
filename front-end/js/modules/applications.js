@@ -5,11 +5,9 @@
 
 import { tasks, users, applications, persistApplications, saveTasks } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
-import {
-  formatDate, formatCurrency, getStatusBadgeClass,
-  humaniseStatus, getInitials
-} from '../utils/helpers.js';
+import { formatDate, formatCurrency, getStatusBadgeClass, humaniseStatus, getInitials } from '../utils/helpers.js';
 import { acceptGigRequest, declineGigRequest, getGigDashboardSummary } from './gigState.js';
+import { apiGet, apiPost } from '../utils/api.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -160,9 +158,28 @@ function renderPendingRequests() {
   const user = getUser();
   if (!user || user.role !== 'gig') return;
 
-  const container = document.getElementById('pending-requests-list');
-  if (!container) return;
+  // Try fetching from backend API first
+  apiGet('/gig/requests/pending').then((result) => {
+    if (result && result.ok && Array.isArray(result.data)) {
+      renderPendingRequestsWithData(user, result.data.map(r => ({
+        id: r.application_id,
+        taskId: r.task_id,
+        clientId: r.client_id,
+        clientName: 'Client',
+        title: r.title || 'Task Request',
+        description: r.cover_letter || '',
+        budget: r.proposed_budget,
+        status: r.status?.toLowerCase() || 'pending',
+        deadline: r.createdAt,
+        createdAt: r.createdAt
+      })));
+    } else {
+      fallbackPendingRequests(user);
+    }
+  }).catch(() => fallbackPendingRequests(user));
+}
 
+function fallbackPendingRequests(user) {
   const summary = getGigDashboardSummary(user.id);
   const pendingRequests = summary.pendingRequests;
   const declinedRequests = summary.declinedRequests;
@@ -171,6 +188,12 @@ function renderPendingRequests() {
     const bTime = new Date(b.createdAt || 0).getTime();
     return bTime - aTime;
   });
+  renderPendingRequestsWithData(user, allRequests);
+}
+
+function renderPendingRequestsWithData(user, allRequests) {
+  const container = document.getElementById('pending-requests-list');
+  if (!container) return;
 
   if (allRequests.length === 0) {
     container.innerHTML = `<div style="padding:var(--spacing-xl);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;color:var(--color-text-muted);">No request history yet. Invitations from clients will appear here.</div>`;
@@ -217,8 +240,17 @@ function renderPendingRequests() {
     btn.addEventListener('click', () => {
       const requestId = btn.dataset.requestId;
       if (!requestId) return;
-      acceptGigRequest(user.id, requestId);
-      renderPendingRequests();
+      apiPost(`/gig/requests/${requestId}/respond`, { accept: true }).then((result) => {
+        if (result && result.ok) {
+          renderPendingRequests();
+          return;
+        }
+        acceptGigRequest(user.id, requestId);
+        renderPendingRequests();
+      }).catch(() => {
+        acceptGigRequest(user.id, requestId);
+        renderPendingRequests();
+      });
     });
   });
 
@@ -227,8 +259,17 @@ function renderPendingRequests() {
     btn.addEventListener('click', () => {
       const requestId = btn.dataset.requestId;
       if (!requestId) return;
-      declineGigRequest(user.id, requestId);
-      renderPendingRequests();
+      apiPost(`/gig/requests/${requestId}/respond`, { accept: false }).then((result) => {
+        if (result && result.ok) {
+          renderPendingRequests();
+          return;
+        }
+        declineGigRequest(user.id, requestId);
+        renderPendingRequests();
+      }).catch(() => {
+        declineGigRequest(user.id, requestId);
+        renderPendingRequests();
+      });
     });
   });
 }

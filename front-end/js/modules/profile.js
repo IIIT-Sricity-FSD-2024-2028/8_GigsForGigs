@@ -8,6 +8,7 @@ import { users, saveUsers } from '../data/mockData.js';
 import { getUser, setUser, get, set } from '../utils/storage.js';
 import { showError, clearError } from '../utils/validation.js';
 import { getInitials } from '../utils/helpers.js';
+import { apiPut } from '../utils/api.js';
 
 // ── profile-completion-client.html ───────────────────────────────
 
@@ -366,13 +367,16 @@ function initProfileCompletionGig() {
     sessionStorage.removeItem('gfg_onboarding_role');
     sessionStorage.removeItem('gfg_pending_user');
 
-    // Determine correct redirect based on page depth
-    const path = window.location.pathname;
-    if (path.includes('/gig/')) {
-      window.location.href = 'gig-dashboard.html';
-    } else {
-      window.location.href = './gig/gig-dashboard.html';
-    }
+    // Sync with backend API
+    apiPut('/gig/profile', profileData).finally(() => {
+      // Determine correct redirect based on page depth
+      const path = window.location.pathname;
+      if (path.includes('/gig/')) {
+        window.location.href = 'gig-dashboard.html';
+      } else {
+        window.location.href = './gig/gig-dashboard.html';
+      }
+    });
   });
 }
 
@@ -461,7 +465,7 @@ function initGigProfile() {
         }
 
         // Persist
-        set('gig_profile', {
+        const updatedData = {
           title: u.title,
           experience: u.experience,
           skills: u.skills,
@@ -469,7 +473,9 @@ function initGigProfile() {
           portfolio: u.portfolio,
           hourlyRate: u.hourlyRate,
           availability: u.availability
-        });
+        };
+        set('gig_profile', updatedData);
+        apiPut('/gig/profile', updatedData);
       }
     });
   }

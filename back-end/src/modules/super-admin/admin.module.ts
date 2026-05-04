@@ -6,7 +6,6 @@ import { DatabaseService } from '../../common/database/database.service';
 
 @Module({
   controllers: [AdminController],
-  providers: [AdminService, SeedService, DatabaseService],
-  exports: [DatabaseService],
+  providers: [AdminService, SeedService],
 })
 export class AdminModule {}

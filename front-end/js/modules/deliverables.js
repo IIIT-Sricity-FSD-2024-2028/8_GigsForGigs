@@ -19,6 +19,7 @@ import {
   markGigTaskComplete
 } from './gigState.js';
 import { showError, clearError } from '../utils/validation.js';
+import { apiPost } from '../utils/api.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -613,9 +614,17 @@ function initSubmitDeliverables() {
         toast.classList.add('visible');
       }
 
-      setTimeout(() => {
-        window.location.href = 'submission-success.html';
-      }, 1800);
+      const backendPayload = {
+        taskId: task ? task.id : '',
+        message: notes,
+        fileUrl: link || 'uploaded-files'
+      };
+
+      apiPost('/gig/deliverables', backendPayload).finally(() => {
+        setTimeout(() => {
+          window.location.href = 'submission-success.html';
+        }, 1800);
+      });
     });
   }
 }

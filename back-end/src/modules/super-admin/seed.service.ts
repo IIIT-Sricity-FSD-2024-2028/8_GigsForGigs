@@ -24,6 +24,7 @@ export class SeedService implements OnModuleInit {
     });
 
     const clientUser1 = this.db.createUser({
+      user_id: 'u1',
       name: 'Aditya Deshmukh',
       email: 'aditya@techstart.io',
       password: 'password1',
@@ -31,6 +32,7 @@ export class SeedService implements OnModuleInit {
     });
 
     const clientUser2 = this.db.createUser({
+      user_id: 'u6',
       name: 'Priya Sharma',
       email: 'priya@designco.in',
       password: 'password2',
@@ -38,6 +40,7 @@ export class SeedService implements OnModuleInit {
     });
 
     const gigUser1 = this.db.createUser({
+      user_id: 'u3',
       name: 'Arham Kansal',
       email: 'arham@dev.com',
       password: 'password3',
@@ -45,6 +48,7 @@ export class SeedService implements OnModuleInit {
     });
 
     const gigUser2 = this.db.createUser({
+      user_id: 'u4',
       name: 'Elena Torres',
       email: 'elena@code.dev',
       password: 'password4',
@@ -52,32 +56,42 @@ export class SeedService implements OnModuleInit {
     });
 
     const mgrUser = this.db.createUser({
+      user_id: 'u2',
       name: 'Leo Hudson',
       email: 'leo@techstart.io',
       password: 'password5',
       role: UserRole.MANAGER,
     });
 
-    // ── Client profiles ───────────────────────────────────
-    const client1 = this.db.createClient({ user_id: clientUser1.user_id });
-    const client2 = this.db.createClient({ user_id: clientUser2.user_id });
+    // ── Clients ────────────────────────────────────────────
+    const client1 = this.db.createClient({ user_id: clientUser1.user_id, client_id: 'u1' });
+    const client2 = this.db.createClient({ user_id: clientUser2.user_id, client_id: 'u6' });
 
-    // ── Manager (weak entity) ─────────────────────────────
+    // ── Managers ───────────────────────────────────────────
     const manager = this.db.createManager({
       client_id: client1.client_id,
       user_id: mgrUser.user_id,
     });
 
-    // ── Gig Profiles ──────────────────────────────────────
-    const gig1 = this.db.createGigProfile({ user_id: gigUser1.user_id });
-    const gig2 = this.db.createGigProfile({ user_id: gigUser2.user_id });
-
-    // ── Skills / Tools ────────────────────────────────────
+    // ── Gig Profiles ───────────────────────────────────────
+    const gig1 = this.db.createGigProfile({
+      user_id: gigUser1.user_id,
+      gig_profile_id: 'u3',
+      bio: 'Full-stack developer with 5 years of NestJS experience.',
+    });
+    this.db.addSkill(gig1.gig_profile_id, 'NestJS');
+    this.db.addSkill(gig1.gig_profile_id, 'TypeScript');
     this.db.addSkill(gig1.gig_profile_id, 'JavaScript');
     this.db.addSkill(gig1.gig_profile_id, 'React');
     this.db.addSkill(gig1.gig_profile_id, 'Node.js');
     this.db.addTool(gig1.gig_profile_id, 'VS Code');
     this.db.addTool(gig1.gig_profile_id, 'Figma');
+
+    const gig2 = this.db.createGigProfile({
+      user_id: gigUser2.user_id,
+      gig_profile_id: 'u4',
+      bio: 'UI/UX Designer specializing in SaaS platforms.',
+    });
 
     this.db.addSkill(gig2.gig_profile_id, 'Python');
     this.db.addSkill(gig2.gig_profile_id, 'Django');

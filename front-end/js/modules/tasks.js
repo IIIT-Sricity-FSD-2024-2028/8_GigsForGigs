@@ -13,6 +13,7 @@ import {
   saveToStorage
 } from '../data/mockData.js';
 import { getUser } from '../utils/storage.js';
+import { apiGet, apiPost, apiDelete } from '../utils/api.js';
 import { validatePostGigForm, showError, clearError } from '../utils/validation.js';
 import {
   formatDate, formatCurrency, generateId,
@@ -555,8 +556,31 @@ function renderExploreTasks() {
   const user = getUser();
   if (!user || user.role !== 'gig') return;
 
-  const taskList = getTasks();
-  const openTasks = taskList.filter(t => t.status === 'open');
+  // Try API first, fallback to localStorage
+  apiGet('/gig/tasks/marketplace').then((result) => {
+    if (result && result.ok && Array.isArray(result.data)) {
+      renderExploreTasksWithData(user, result.data.map(t => ({
+        id: t.task_id,
+        clientId: t.client_id,
+        title: t.title,
+        description: t.description,
+        budget: t.budget,
+        category: t.category || '', // Backend might not have category but frontend filter needs it
+        duration: t.duration || '',
+        skills: t.skills || [],
+        status: t.status?.toLowerCase() || 'open',
+        deadline: t.createdAt,
+        createdAt: t.createdAt
+      })));
+    } else {
+      renderExploreTasksWithData(user, getTasks().filter(t => t.status === 'open'));
+    }
+  }).catch(() => {
+    renderExploreTasksWithData(user, getTasks().filter(t => t.status === 'open'));
+  });
+}
+
+function renderExploreTasksWithData(user, openTasks) {
   const workflowSummary = getGigDashboardSummary(user.id);
   const requestByTaskId = new Map(
     workflowSummary.requests.map((request) => [request.sourceTaskId, request])
@@ -639,22 +663,30 @@ function renderExploreTasks() {
       const taskId = btn.dataset.taskId;
       if (!taskId) return;
 
-      const latestTasks = getTasks();
-      const sourceTask = latestTasks.find((task) => task.id === taskId && task.status === 'open');
-      if (!sourceTask) return;
+      // Try backend API first
+      apiPost('/gig/applications', { taskId }).then((result) => {
+        if (result && result.ok) {
+          renderExploreTasks();
+          return;
+        }
+        // Fallback to local workflow if API fails
+        const latestTasks = getTasks();
+        const sourceTask = latestTasks.find((task) => task.id === taskId && task.status === 'open');
+        if (!sourceTask) return;
 
-      const request = upsertGigRequestFromTask(user.id, sourceTask);
-      if (request?.id) {
-        acceptGigRequest(user.id, request.id);
-      } else {
-        // Fallback to direct task assignment if workflow request cannot be created.
-        sourceTask.assignedTo = user.id;
-        sourceTask.status = 'in_progress';
-        sourceTask.updatedAt = new Date().toISOString();
-        persistTaskList(latestTasks);
-      }
+        const request = upsertGigRequestFromTask(user.id, sourceTask);
+        if (request?.id) {
+          acceptGigRequest(user.id, request.id);
+        } else {
+          // Fallback to direct task assignment if workflow request cannot be created.
+          sourceTask.assignedTo = user.id;
+          sourceTask.status = 'in_progress';
+          sourceTask.updatedAt = new Date().toISOString();
+          persistTaskList(latestTasks);
+        }
 
-      renderExploreTasks(); // re‑render
+        renderExploreTasks(); // re‑render
+      });
     });
   });
 

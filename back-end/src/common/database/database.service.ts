@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { IdGenerator } from './id-generator';
 import {
   Application,
+  ApplicationStatus,
   ApplyToTaskInput,
   AssignManagerInput,
   Assignment,
@@ -12,6 +13,7 @@ import {
   CreateManagerInput,
   CreatePaymentInput,
   CreateReviewInput,
+  CreateServiceInput,
   CreateTaskInput,
   CreateUserInput,
   Deliverable,
@@ -19,6 +21,7 @@ import {
   Manager,
   Payment,
   Review,
+  Service,
   Task,
   TaskStatus,
   User,
@@ -37,6 +40,7 @@ export class DatabaseService {
   readonly deliverables = new Map<string, Deliverable>();
   readonly payments = new Map<string, Payment>();
   readonly reviews = new Map<string, Review>();
+  readonly services = new Map<string, Service>();
 
   // 1NF profile data
   readonly profileSkills = new Map<string, string[]>();
@@ -58,6 +62,7 @@ export class DatabaseService {
     application: new IdGenerator('app'),
     payment: new IdGenerator('pay'),
     review: new IdGenerator('rev'),
+    service: new IdGenerator('svc'),
   };
 
   // -------------------------
@@ -201,7 +206,7 @@ export class DatabaseService {
   // USER
   // -------------------------
 
-  createUser(input: CreateUserInput): User {
+  createUser(input: CreateUserInput & { user_id?: string }): User {
     this.requireNonEmptyString('name', input.name);
     this.requireNonEmptyString('email', input.email);
     this.requireNonEmptyString('password', input.password);
@@ -213,7 +218,7 @@ export class DatabaseService {
 
     const now = this.now();
     const user: User = {
-      user_id: this.ids.user.next(),
+      user_id: input.user_id || this.ids.user.next(),
       name: input.name.trim(),
       email,
       password: input.password,
@@ -249,12 +254,12 @@ export class DatabaseService {
   // CLIENT
   // -------------------------
 
-  createClient(input: CreateClientInput): Client {
+  createClient(input: CreateClientInput & { client_id?: string }): Client {
     this.requireUser(input.user_id);
 
     const now = this.now();
     const client: Client = {
-      client_id: this.ids.client.next(),
+      client_id: input.client_id || this.ids.client.next(),
       user_id: input.user_id,
       createdAt: now,
       updatedAt: now,
@@ -305,24 +310,32 @@ export class DatabaseService {
   // GIG PROFILE
   // -------------------------
 
-  createGigProfile(input: CreateGigProfileInput): GigProfile {
+  createGigProfile(input: CreateGigProfileInput & { gig_profile_id?: string }): GigProfile {
     this.requireUser(input.user_id);
 
+    const existing = Array.from(this.gigProfiles.values()).find(
+      (p) => p.user_id === input.user_id,
+    );
+    if (existing) {
+      throw new BadRequestException('User already has a gig profile');
+    }
+
     const now = this.now();
-    const gig: GigProfile = {
-      gig_profile_id: this.ids.gigProfile.next(),
+    const profile: GigProfile = {
+      gig_profile_id: input.gig_profile_id || this.ids.gigProfile.next(),
       user_id: input.user_id,
+      bio: input.bio,
       createdAt: now,
       updatedAt: now,
     };
 
-    this.gigProfiles.set(gig.gig_profile_id, gig);
+    this.gigProfiles.set(profile.gig_profile_id, profile);
     // Initialize 1NF maps (optional but avoids undefined checks later)
-    this.profileSkills.set(gig.gig_profile_id, []);
-    this.profileTools.set(gig.gig_profile_id, []);
-    this.profilePortfolio.set(gig.gig_profile_id, []);
+    this.profileSkills.set(profile.gig_profile_id, []);
+    this.profileTools.set(profile.gig_profile_id, []);
+    this.profilePortfolio.set(profile.gig_profile_id, []);
 
-    return this.clone(gig);
+    return this.clone(profile);
   }
 
   addSkill(gig_profile_id: string, skill: string): string[] {
@@ -394,6 +407,7 @@ export class DatabaseService {
       application_id: this.ids.application.next(),
       gig_profile_id: input.gig_profile_id,
       task_id: input.task_id,
+      status: ApplicationStatus.PENDING,
       createdAt: now,
       updatedAt: now,
     };
@@ -666,7 +680,7 @@ export class DatabaseService {
     return this.clone(user);
   }
 
-  updateTask(task_id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'budget' | 'status'>>): Task {
+  updateTask(task_id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'budget' | 'status' | 'assigned_to'>>): Task {
     const task = this.requireTask(task_id);
 
     if (updates.title !== undefined) {
@@ -683,6 +697,9 @@ export class DatabaseService {
     }
     if (updates.status !== undefined) {
       task.status = updates.status;
+    }
+    if (updates.assigned_to !== undefined) {
+      task.assigned_to = updates.assigned_to;
     }
 
     task.updatedAt = this.now();
@@ -762,5 +779,70 @@ export class DatabaseService {
     const uniqueKey = this.reviewUniqueKey(rev.reviewer_id, rev.reviewee_id, rev.task_id);
     this.reviewByReviewerRevieweeTask.delete(uniqueKey);
     this.reviews.delete(review_id);
+  }
+
+  // =========================================================
+  // GIG MODULE EXTENSIONS
+  // =========================================================
+
+  // ── Gig Profile by User ID ────────────────────────────────
+
+  getGigProfileByUserId(user_id: string): GigProfile | null {
+    for (const profile of this.gigProfiles.values()) {
+      if (profile.user_id === user_id) {
+        return this.clone(profile);
+      }
+    }
+    return null;
+  }
+
+  updateGigProfile(gig_profile_id: string, updates: Partial<Pick<GigProfile, 'bio'>>): GigProfile {
+    const profile = this.requireGigProfile(gig_profile_id);
+
+    if (updates.bio !== undefined) {
+      profile.bio = updates.bio;
+    }
+
+    profile.updatedAt = this.now();
+    return this.clone(profile);
+  }
+
+  // ── Application Status ────────────────────────────────────
+
+  updateApplicationStatus(application_id: string, status: ApplicationStatus): Application {
+    const app = this.applications.get(application_id);
+    if (!app) throw new NotFoundException(`Application not found: ${application_id}`);
+
+    app.status = status;
+    app.updatedAt = this.now();
+    return this.clone(app);
+  }
+
+  // ── Service ───────────────────────────────────────────────
+
+  createService(input: CreateServiceInput): Service {
+    this.requireGigProfile(input.gig_profile_id);
+    this.requireNonEmptyString('title', input.title);
+    this.requireNonEmptyString('description', input.description);
+    this.requirePositiveNumber('price', input.price);
+
+    const now = this.now();
+    const service: Service = {
+      service_id: this.ids.service.next(),
+      gig_profile_id: input.gig_profile_id,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      price: input.price,
+      tags: input.tags ?? [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.services.set(service.service_id, service);
+    return this.clone(service);
+  }
+
+  getAllServices(): Service[] {
+    return Array.from(this.services.values()).map((s) => this.clone(s));
   }
 }

@@ -7,6 +7,7 @@ import { services as seededServices, users, getFromStorage, saveToStorage } from
 import { getUser } from '../utils/storage.js';
 import { generateId, getInitials, truncate } from '../utils/helpers.js';
 import { createGigHireRequestFromService, getClientContractSummary } from './gigState.js';
+import { apiPost } from '../utils/api.js';
 
 const SERVICES_KEY = 'gfg_services';
 
@@ -438,10 +439,13 @@ function initPostService() {
       return;
     }
 
-    form.reset();
-    setPostServiceFeedback('Service posted successfully. Redirecting to dashboard...', false);
-    showServicePostedPopup(() => {
-      window.location.href = 'gig-dashboard.html';
+    // Try sending to the backend
+    apiPost('/gig/services', payload).finally(() => {
+      form.reset();
+      setPostServiceFeedback('Service posted successfully. Redirecting to dashboard...', false);
+      showServicePostedPopup(() => {
+        window.location.href = 'gig-dashboard.html';
+      });
     });
   });
 }
