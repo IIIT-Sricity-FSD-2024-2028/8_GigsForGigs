@@ -36,9 +36,14 @@ export class RolesGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<{
       headers: Record<string, RoleHeaderValue>;
+      method?: string;
       url?: string;
       originalUrl?: string;
     }>();
+
+    if (request.method === 'OPTIONS') {
+      return true;
+    }
 
     const path = request.originalUrl ?? request.url ?? '';
     // Allow Swagger UI and its assets without RBAC headers.

@@ -62,7 +62,12 @@ export class ManagerService {
       throw new BadRequestException('email and password are required');
     }
 
-    const user = this.db.getUserByEmail(dto.email);
+    let user;
+    try {
+      user = this.db.getUserByEmail(dto.email);
+    } catch (_) {
+      throw new BadRequestException('invalid credentials');
+    }
     if (user.password !== dto.password) {
       throw new BadRequestException('invalid credentials');
     }

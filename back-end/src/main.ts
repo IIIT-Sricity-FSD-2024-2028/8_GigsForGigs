@@ -14,7 +14,12 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-role', 'x-user-id'],
+    optionsSuccessStatus: 204,
+  });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('FFSD API')

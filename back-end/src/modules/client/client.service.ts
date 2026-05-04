@@ -28,6 +28,11 @@ export class ClientService {
     let userRole = UserRole.CLIENT;
     if (dto.role === 'gig') userRole = UserRole.GIG;
     if (dto.role === 'manager') userRole = UserRole.MANAGER;
+    const clientId = dto.client_id;
+
+    if (userRole === UserRole.MANAGER && !clientId) {
+      throw new BadRequestException('client_id is required for manager signup');
+    }
 
     const user = this.db.createUser({
       name: dto.name,
@@ -41,15 +46,23 @@ export class ClientService {
       profile = this.db.createClient({ user_id: user.user_id });
     } else if (userRole === UserRole.GIG) {
       profile = this.db.createGigProfile({ user_id: user.user_id });
-    } else if (userRole === UserRole.MANAGER) {
-      profile = this.db.createManager({ user_id: user.user_id });
+    } else if (userRole === UserRole.MANAGER && clientId) {
+      profile = this.db.createManager({
+        client_id: clientId,
+        user_id: user.user_id,
+      });
     }
 
     return { user, profile };
   }
 
   login(dto: AuthLoginDto) {
-    const user = this.db.getUserByEmail(dto.email);
+    let user;
+    try {
+      user = this.db.getUserByEmail(dto.email);
+    } catch (_) {
+      throw new BadRequestException('invalid credentials');
+    }
     if (user.password !== dto.password) {
       throw new BadRequestException('invalid credentials');
     }

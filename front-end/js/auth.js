@@ -22,19 +22,31 @@ const DB_ROLE_TO_HEADER = {
  * We manually set the x-role header from the form dropdown selection.
  */
 async function authRequest(url, body, xRole) {
-  const res = await fetch(`${API_BASE}${url}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-role': xRole,
-      'x-user-id': '',
-    },
-    body: JSON.stringify(body),
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${url}`, {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-role': xRole,
+        'x-user-id': '',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    const msg = 'Unable to reach the backend API. Make sure the NestJS server is running on http://localhost:3000 and refresh the login page.';
+    alert(msg);
+    throw err;
+  }
 
   if (!res.ok) {
     let msg = `Error ${res.status}`;
-    try { const err = await res.json(); msg = err.message || msg; } catch (_) {}
+    try {
+      const err = await res.json();
+      msg = Array.isArray(err.message) ? err.message.join('\n') : err.message || msg;
+    } catch (_) {}
     alert(msg);
     throw new Error(msg);
   }
