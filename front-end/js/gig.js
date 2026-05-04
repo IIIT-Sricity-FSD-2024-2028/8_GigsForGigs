@@ -1,387 +1,855 @@
 // ─── gig.js ─ All Gig Professional Pages ────────────────────────
-import { apiRequest, requireAuth, logout, formatCurrency, formatDate, getStatusBadgeClass } from './api.js';
+import {
+  apiRequest,
+  requireAuth,
+  logout,
+  formatCurrency,
+  formatDate,
+  getStatusBadgeClass,
+  updateSession,
+  getUser,
+} from './api.js';
+
+const GIG_ROLE = 'GIG_PROFESSIONAL';
 
 function getPage() {
   return window.location.pathname.split('/').pop();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const user = requireAuth(['GIG_PROFESSIONAL']);
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function initials(name) {
+  return (name || 'GP')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+function currentUserLabel(user) {
+  return user?.name || 'Gig Professional';
+}
+
+function bindGlobalControls() {
+  document.querySelectorAll('[data-action="logout"]').forEach((element) => {
+    element.addEventListener('click', (event) => {
+      event.preventDefault();
+      logout();
+    });
+  });
+}
+
+function renderSidebarFooter(user) {
+  const sidebar = document.querySelector('.dashboard-sidebar');
+  const footer = sidebar?.querySelector('.sidebar-footer');
+  if (!footer) return;
+
+  const name = currentUserLabel(user);
+  const avatar = initials(name);
+
+  footer.innerHTML = `
+    <div class="profile-mini" id="sidebar-avatar">${avatar}</div>
+    <div class="sidebar-footer-info">
+      <div class="sidebar-footer-top">
+        <div class="sidebar-footer-name" id="sidebar-user-name">${name}</div>
+        <button type="button" class="sidebar-logout-btn" data-action="logout">Logout</button>
+      </div>
+      <div class="sidebar-footer-role" id="sidebar-user-role">Gig Professional</div>
+    </div>
+  `;
+}
+
+function syncSidebarIdentity(user) {
+  const name = currentUserLabel(user);
+  const avatar = initials(name);
+  const roleLabel = 'Gig Professional';
+
+  const sidebarNameTargets = [
+    document.getElementById('sidebar-user-name'),
+    document.querySelector('[data-gfg-user-name]'),
+  ];
+  sidebarNameTargets.forEach((target) => {
+    if (target) target.textContent = name;
+  });
+
+  const avatarTargets = [
+    document.getElementById('profile-avatar-text'),
+    document.getElementById('sidebar-avatar'),
+    document.querySelector('[data-gfg-user-avatar]'),
+  ];
+  avatarTargets.forEach((target) => {
+    if (target) target.textContent = avatar;
+  });
+
+  const roleTargets = [
+    document.querySelector('#sidebar-user-role'),
+    document.querySelector('[data-gfg-user-role]'),
+  ];
+  roleTargets.forEach((target) => {
+    if (target) target.textContent = roleLabel;
+  });
+}
+
+function extractSubmissionLink(content) {
+  if (!content) return '';
+  const match = String(content).match(/https?:\/\/[^\s<>'"]+/i);
+  return match ? match[0] : '';
+}
+
+function setText(selector, value) {
+  const target = document.querySelector(selector);
+  if (target) target.textContent = value;
+}
+
+function setHtml(selector, value) {
+  const target = document.querySelector(selector);
+  if (target) target.innerHTML = value;
+}
+
+function createEmptyState(message) {
+  return `<p style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xxl);">${message}</p>`;
+}
+
+function taskProgress(task) {
+  if (task.status === 'COMPLETED') return 100;
+  if (task.deliverables && task.deliverables.length > 0) return 25;
+  return 0;
+}
+
+function formatMoney(amount) {
+  return formatCurrency(amount || 0);
+}
+
+function bindNavToProfileCompletion() {
+  const editButton = document.querySelector('.btn.btn-outline');
+  if (editButton && getPage() === 'gig-profile.html') {
+    editButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      window.location.href = 'profile-completion-gig.html';
+    });
+  }
+}
+
+function getSessionUser() {
+  return getUser() || null;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth([GIG_ROLE]);
   if (!user) return;
 
-  document.querySelectorAll('[data-action="logout"]').forEach(el =>
-    el.addEventListener('click', (e) => { e.preventDefault(); logout(); })
-  );
+  renderSidebarFooter(user);
+  bindGlobalControls();
+  syncSidebarIdentity(user);
+  bindNavToProfileCompletion();
 
   const page = getPage();
   switch (page) {
-    case 'gig-dashboard.html': initGigDashboard(user); break;
-    case 'explore-tasks.html': initExploreTasks(user); break;
-    case 'active-tasks.html': initActiveTasks(user); break;
-    case 'pending-requests.html': initPendingRequests(user); break;
-    case 'gig-profile.html': initGigProfile(user); break;
-    case 'submit-deliverables.html': initSubmitDeliverables(user); break;
-    case 'post-service.html': initPostService(user); break;
-    case 'completed-projects.html': initCompletedProjects(user); break;
-    case 'total-earnings.html': initTotalEarnings(user); break;
-    case 'profile-completion-gig.html': initProfileCompletion(user); break;
+    case 'gig-dashboard.html':
+      await initGigDashboard(user);
+      break;
+    case 'explore-tasks.html':
+      await initExploreTasks(user);
+      break;
+    case 'active-tasks.html':
+      await initActiveTasks(user);
+      break;
+    case 'pending-requests.html':
+      await initPendingRequests(user);
+      break;
+    case 'gig-profile.html':
+      await initGigProfile(user);
+      break;
+    case 'submit-deliverables.html':
+      await initSubmitDeliverables(user);
+      break;
+    case 'post-service.html':
+      await initPostService(user);
+      break;
+    case 'completed-projects.html':
+      await initCompletedProjects(user);
+      break;
+    case 'total-earnings.html':
+      await initTotalEarnings(user);
+      break;
+    case 'profile-completion-gig.html':
+      await initProfileCompletion(user);
+      break;
+    case 'project-detail.html':
+      await initProjectDetail(user);
+      break;
   }
 });
 
-// ── Dashboard ────────────────────────────────────────────────────
 async function initGigDashboard(user) {
-  // Update sidebar name
-  const nameEl = document.querySelector('.sidebar-footer div[style*="font-weight"] , .sidebar-footer div div:first-child');
-  if (nameEl) nameEl.textContent = user.name || 'Professional';
-  const miniEl = document.querySelector('.profile-mini');
-  if (miniEl && user.name) miniEl.textContent = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
-
   try {
-    // Fetch all data in parallel
     const [activeTasks, pendingRequests, completedProjects, earnings] = await Promise.all([
       apiRequest('/gig/tasks/active').catch(() => []),
       apiRequest('/gig/requests/pending').catch(() => []),
       apiRequest('/gig/projects/completed').catch(() => []),
-      apiRequest('/gig/earnings').catch(() => ({ totalEarnings: 0 })),
+      apiRequest('/gig/earnings').catch(() => ({ totalEarnings: 0, payments: [] })),
     ]);
 
-    // Metrics
-    const activeCountEl = document.getElementById('gig-active-count');
-    if (activeCountEl) activeCountEl.textContent = Array.isArray(activeTasks) ? activeTasks.length : 0;
+    const activeList = safeArray(activeTasks);
+    const pendingList = safeArray(pendingRequests);
+    const completedList = safeArray(completedProjects);
+    const payments = safeArray(earnings.payments);
+    const completedTasks = Number(earnings.completedTasks || 0);
+    const totalEarnings = completedTasks === 0 ? 0 : Number(earnings.totalEarnings || 0);
 
-    const pendingCountEl = document.getElementById('gig-pending-count');
-    if (pendingCountEl) pendingCountEl.textContent = Array.isArray(pendingRequests) ? pendingRequests.length : 0;
+    setText('#gig-active-count', String(activeList.length));
+    setText('#gig-pending-count', String(pendingList.length));
+    setText('#gig-completed-count', String(completedList.length));
+    setText('#gig-earnings-count', formatMoney(totalEarnings));
 
-    const completedCountEl = document.getElementById('gig-completed-count');
-    if (completedCountEl) completedCountEl.textContent = Array.isArray(completedProjects) ? completedProjects.length : 0;
+    const totalWork = activeList.length + completedList.length;
+    const rate = totalWork > 0 ? Math.round((completedList.length / totalWork) * 100) : 0;
+    const circle = document.getElementById('gig-profile-success-circle');
+    if (circle) circle.setAttribute('stroke-dasharray', `${rate}, 100`);
+    setText('#gig-profile-success-rate', `${rate}%`);
 
-    const earningsEl = document.getElementById('gig-earnings-count');
-    const totalEarn = earnings.totalEarnings || earnings.total || (typeof earnings === 'number' ? earnings : 0);
-    if (earningsEl) earningsEl.textContent = formatCurrency(totalEarn);
+    const requestRows = pendingList.length
+      ? pendingList
+          .slice(0, 5)
+          .map(
+            (request) => `
+              <tr>
+                <td>${request.task?.client_id || '—'}</td>
+                <td>${request.task?.title || '—'}</td>
+                <td>${formatDate(request.task?.createdAt || request.createdAt)}</td>
+                <td>${formatMoney(request.task?.budget || request.budget || 0)}</td>
+                <td><span class="status-badge ${getStatusBadgeClass(request.status)}">${String(request.status || 'PENDING').replace(/_/g, ' ')}</span></td>
+              </tr>
+            `,
+          )
+          .join('')
+      : `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No pending requests.</td></tr>`;
+    setHtml('#gig-dashboard-requests-body', requestRows);
 
-    // Profile success rate
-    const total = (Array.isArray(activeTasks) ? activeTasks.length : 0) + (Array.isArray(completedProjects) ? completedProjects.length : 0);
-    const rate = total > 0 ? Math.round(((Array.isArray(completedProjects) ? completedProjects.length : 0) / total) * 100) : 0;
-    const circleEl = document.getElementById('gig-profile-success-circle');
-    if (circleEl) circleEl.setAttribute('stroke-dasharray', `${rate}, 100`);
-    const rateEl = document.getElementById('gig-profile-success-rate');
-    if (rateEl) rateEl.textContent = `${rate}%`;
+    setHtml(
+      '#dashboard-active-preview',
+      activeList.length
+        ? activeList
+            .slice(0, 3)
+            .map((task) => `<p style="padding:4px 0;border-bottom:1px solid var(--color-border);font-size:0.875rem;">${task.title}</p>`)
+            .join('')
+        : '<p style="color:var(--color-text-muted);font-size:0.875rem;">No active tasks</p>',
+    );
 
-    // Requests table
-    const tbody = document.getElementById('gig-dashboard-requests-body');
-    if (tbody) {
-      const items = Array.isArray(pendingRequests) ? pendingRequests : [];
-      if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No pending requests.</td></tr>';
-      } else {
-        tbody.innerHTML = items.slice(0, 5).map(r => `
-          <tr>
-            <td>${r.client_name || r.task?.client_id || '—'}</td>
-            <td>${r.task?.title || r.title || '—'}</td>
-            <td>${formatDate(r.task?.createdAt || r.createdAt)}</td>
-            <td>${formatCurrency(r.task?.budget || r.budget || 0)}</td>
-            <td><span class="status-badge ${getStatusBadgeClass(r.status || 'PENDING')}">${r.status || 'PENDING'}</span></td>
-          </tr>
-        `).join('');
-      }
+    setHtml(
+      '#dashboard-pending-preview',
+      pendingList.length
+        ? pendingList
+            .slice(0, 3)
+            .map((request) => `<p style="padding:4px 0;border-bottom:1px solid var(--color-border);font-size:0.875rem;">${request.task?.title || '—'}</p>`)
+            .join('')
+        : '<p style="color:var(--color-text-muted);font-size:0.875rem;">No pending requests</p>',
+    );
+
+    setHtml(
+      '#dashboard-completed-preview',
+      completedList.length
+        ? completedList
+            .slice(0, 3)
+            .map((project) => `<p style="padding:4px 0;border-bottom:1px solid var(--color-border);font-size:0.875rem;">${project.title}</p>`)
+            .join('')
+        : '<p style="color:var(--color-text-muted);font-size:0.875rem;">No completed projects</p>',
+    );
+
+    const sidebarGreeting = document.querySelector('.sidebar-footer div[style*="font-weight: 600"]');
+    if (sidebarGreeting) sidebarGreeting.textContent = currentUserLabel(user);
+    const pendingCount = document.getElementById('gig-pending-count');
+    if (pendingCount && payments.length === 0 && totalEarnings === 0) {
+      pendingCount.textContent = pendingList.length.toString();
     }
-
-    // Workflow snapshot previews
-    const activePreview = document.getElementById('dashboard-active-preview');
-    if (activePreview) {
-      const items = Array.isArray(activeTasks) ? activeTasks : [];
-      activePreview.innerHTML = items.length > 0 
-        ? items.slice(0, 3).map(t => `<p style="padding:4px 0;border-bottom:1px solid var(--color-border);font-size:0.875rem;">${t.title || t.task?.title || '—'}</p>`).join('')
-        : '<p style="color:var(--color-text-muted);font-size:0.875rem;">No active tasks</p>';
-    }
-    const pendingPreview = document.getElementById('dashboard-pending-preview');
-    if (pendingPreview) {
-      const items = Array.isArray(pendingRequests) ? pendingRequests : [];
-      pendingPreview.innerHTML = items.length > 0
-        ? items.slice(0, 3).map(r => `<p style="padding:4px 0;border-bottom:1px solid var(--color-border);font-size:0.875rem;">${r.task?.title || '—'}</p>`).join('')
-        : '<p style="color:var(--color-text-muted);font-size:0.875rem;">No pending requests</p>';
-    }
-    const completedPreview = document.getElementById('dashboard-completed-preview');
-    if (completedPreview) {
-      const items = Array.isArray(completedProjects) ? completedProjects : [];
-      completedPreview.innerHTML = items.length > 0
-        ? items.slice(0, 3).map(p => `<p style="padding:4px 0;border-bottom:1px solid var(--color-border);font-size:0.875rem;">${p.title || p.task?.title || '—'}</p>`).join('')
-        : '<p style="color:var(--color-text-muted);font-size:0.875rem;">No completed projects</p>';
-    }
-  } catch (err) {
-    console.error('Gig dashboard failed:', err);
+  } catch (error) {
+    console.error('Gig dashboard failed:', error);
   }
 }
 
-// ── Explore Tasks (Marketplace) ──────────────────────────────────
 async function initExploreTasks(user) {
   try {
-    const tasks = await apiRequest('/gig/tasks/marketplace');
+    const [tasks, activeTasks, pendingRequests] = await Promise.all([
+      apiRequest('/gig/tasks/marketplace').catch(() => []),
+      apiRequest('/gig/tasks/active').catch(() => []),
+      apiRequest('/gig/requests/pending').catch(() => []),
+    ]);
+
     const grid = document.getElementById('explore-tasks-grid');
     if (!grid) return;
 
-    if (!tasks || tasks.length === 0) {
-      grid.innerHTML = '<p style="text-align:center;grid-column:1/-1;color:var(--color-text-muted);padding:var(--spacing-xxl);">No tasks available right now.</p>';
+    const blockedTaskIds = new Set([
+      ...safeArray(user.appliedTaskIds),
+      ...safeArray(activeTasks).map((task) => task.task_id),
+      ...safeArray(pendingRequests).map((request) => request.task_id || request.task?.task_id),
+    ]);
+
+    if (!safeArray(tasks).length) {
+      grid.innerHTML = createEmptyState('No tasks available right now.');
       return;
     }
 
     const colors = ['rgba(8,75,131,0.1)', 'rgba(191,105,0,0.1)', 'rgba(81,158,138,0.1)', 'var(--color-border)'];
-    grid.innerHTML = tasks.map((t, i) => `
-      <div class="explore-card">
-        <div class="explore-image" style="background-color:${colors[i % colors.length]};">
-          <svg width="48" height="48" fill="none" stroke="var(--color-primary-dark)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-        </div>
-        <div class="explore-content">
-          <h3 class="explore-title">${t.title}</h3>
-          <p class="explore-client">${t.client_id}</p>
-          <div class="explore-price">${formatCurrency(t.budget)}</div>
-          <div class="explore-footer">
-            <button class="btn btn-primary btn-full" data-apply-task="${t.task_id}">Apply Now</button>
+    grid.innerHTML = safeArray(tasks)
+      .map((task, index) => {
+        const alreadyApplied = blockedTaskIds.has(task.task_id);
+        const buttonLabel = alreadyApplied ? 'Applied ✓' : 'Apply Now';
+        const buttonClass = alreadyApplied ? 'btn-outline' : 'btn-primary';
+        return `
+          <div class="explore-card">
+            <div class="explore-image" style="background-color:${colors[index % colors.length]};">
+              <svg width="48" height="48" fill="none" stroke="var(--color-primary-dark)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            </div>
+            <div class="explore-content">
+              <h3 class="explore-title">${task.title}</h3>
+              <p class="explore-client">Client ID: ${task.client_id}</p>
+              <div class="explore-price">${formatMoney(task.budget)}</div>
+              <p style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:var(--spacing-lg);">${task.description}</p>
+              <div class="explore-footer">
+                <button class="btn ${buttonClass} btn-full" data-apply-task="${task.task_id}" ${alreadyApplied ? 'disabled' : ''}>${buttonLabel}</button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    `).join('');
+        `;
+      })
+      .join('');
 
-    // Apply buttons
-    grid.querySelectorAll('[data-apply-task]').forEach(btn => {
-      btn.addEventListener('click', async () => {
+    grid.querySelectorAll('[data-apply-task]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const taskId = button.dataset.applyTask;
+        if (!taskId) return;
+
+        const session = getSessionUser();
+        if (safeArray(session?.appliedTaskIds).includes(taskId)) {
+          button.textContent = 'Applied ✓';
+          button.disabled = true;
+          return;
+        }
+
         try {
-          await apiRequest('/gig/applications', 'POST', { taskId: btn.dataset.applyTask });
-          btn.textContent = 'Applied ✓';
-          btn.disabled = true;
-          btn.classList.remove('btn-primary');
-          btn.classList.add('btn-outline');
-        } catch (err) {
-          console.error('Apply failed:', err);
+          await apiRequest('/gig/applications', 'POST', { taskId });
+          const nextTaskIds = Array.from(new Set([...(session?.appliedTaskIds || []), taskId]));
+          updateSession({ appliedTaskIds: nextTaskIds });
+          button.textContent = 'Applied ✓';
+          button.disabled = true;
+          button.classList.remove('btn-primary');
+          button.classList.add('btn-outline');
+        } catch (error) {
+          if (String(error?.message || '').toLowerCase().includes('unique')) {
+            const nextTaskIds = Array.from(new Set([...(session?.appliedTaskIds || []), taskId]));
+            updateSession({ appliedTaskIds: nextTaskIds });
+            button.textContent = 'Applied ✓';
+            button.disabled = true;
+          }
         }
       });
     });
-  } catch (err) {
-    console.error('Explore tasks failed:', err);
+  } catch (error) {
+    console.error('Explore tasks failed:', error);
   }
 }
 
-// ── Active Tasks ─────────────────────────────────────────────────
 async function initActiveTasks(user) {
   try {
-    const tasks = await apiRequest('/gig/tasks/active');
-    const tbody = document.querySelector('tbody');
-    if (!tbody) return;
+    const tasks = safeArray(await apiRequest('/gig/tasks/active').catch(() => []));
+    const container = document.getElementById('active-tasks-list');
+    if (!container) return;
 
-    if (!tasks || tasks.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No active tasks.</td></tr>';
+    if (!tasks.length) {
+      container.innerHTML = createEmptyState('No active tasks.');
       return;
     }
 
-    tbody.innerHTML = tasks.map(t => {
-      const task = t.task || t;
-      return `
-        <tr>
-          <td><div class="task-name-cell">${task.title}</div></td>
-          <td>${task.client_id || '—'}</td>
-          <td>${formatCurrency(task.budget)}</td>
-          <td><span class="status-badge status-in-progress">In Progress</span></td>
-          <td><a href="submit-deliverables.html?taskId=${task.task_id}" class="btn btn-outline" style="padding:4px 12px;font-size:0.8rem;text-decoration:none;">Submit Work</a></td>
-        </tr>
-      `;
-    }).join('');
-  } catch (err) {
-    console.error('Active tasks failed:', err);
+    container.innerHTML = tasks
+      .map((task) => {
+        const deliverableCount = safeArray(task.deliverables).length;
+        return `
+          <article class="task-card" style="align-items: stretch;">
+            <div style="width: 120px; background-color: rgba(8, 75, 131, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(8, 75, 131, 0.2); display: flex; align-items: center; justify-content: center; margin-right: var(--spacing-lg);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-dark)" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
+                <div class="task-details">
+                  <h3>${task.title}</h3>
+                  <p>Client ID: ${task.client_id}</p>
+                </div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-secondary);">${formatMoney(task.budget)}</div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; color: var(--color-text-muted);">
+                <span>Progress: ${task.status === 'IN_PROGRESS' ? 'In Development' : 'In Progress'}</span>
+                <span style="font-weight: 600; color: var(--color-primary-dark);">0%</span>
+              </div>
+              <div class="progress-container"><div class="progress-bar" style="width: 0%;"></div></div>
+              <div style="font-size:0.875rem;color:var(--color-text-muted);margin-top:var(--spacing-sm);">${deliverableCount} deliverable(s)</div>
+            </div>
+            <div style="display: flex; flex-direction: column; justify-content: center; margin-left: var(--spacing-xxl); min-width: 140px;">
+              <a href="project-detail.html?taskId=${task.task_id}" class="btn btn-outline btn-full" style="text-align: center; margin-bottom: var(--spacing-sm); text-decoration: none;">View Details</a>
+              <a href="submit-deliverables.html?taskId=${task.task_id}" class="btn btn-primary-blue btn-full" style="text-align: center; text-decoration: none;">Submit Deliverable</a>
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+  } catch (error) {
+    console.error('Active tasks failed:', error);
   }
 }
 
-// ── Pending Requests ─────────────────────────────────────────────
 async function initPendingRequests(user) {
   try {
-    const requests = await apiRequest('/gig/requests/pending');
-    const container = document.querySelector('.dashboard-content') || document.querySelector('main');
+    const requests = safeArray(await apiRequest('/gig/requests/pending').catch(() => []));
+    const container = document.getElementById('pending-requests-list');
     if (!container) return;
 
-    const existing = container.querySelector('.requests-list');
-    const target = existing || document.createElement('div');
-    target.className = 'requests-list';
-
-    if (!requests || requests.length === 0) {
-      target.innerHTML = '<p style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xxl);">No pending requests at this time.</p>';
-    } else {
-      target.innerHTML = requests.map(r => `
-        <div style="background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--spacing-lg);margin-bottom:var(--spacing-md);">
-          <h3 style="font-size:1rem;font-weight:700;">${r.task?.title || r.title || '—'}</h3>
-          <p style="font-size:0.875rem;color:var(--color-text-muted);">${r.task?.description || ''}</p>
-          <p style="font-weight:600;color:var(--color-secondary);margin:var(--spacing-sm) 0;">${formatCurrency(r.task?.budget || r.budget || 0)}</p>
-          <div style="display:flex;gap:var(--spacing-sm);">
-            <button class="btn btn-primary" style="padding:6px 16px;font-size:0.85rem;" data-respond-accept="${r.application_id}">Accept</button>
-            <button class="btn btn-outline" style="padding:6px 16px;font-size:0.85rem;" data-respond-decline="${r.application_id}">Decline</button>
-          </div>
-        </div>
-      `).join('');
-
-      target.querySelectorAll('[data-respond-accept]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          await apiRequest(`/gig/requests/${btn.dataset.respondAccept}/respond`, 'POST', { action: 'ACCEPT' });
-          alert('Request accepted!');
-          initPendingRequests(user);
-        });
-      });
-
-      target.querySelectorAll('[data-respond-decline]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          await apiRequest(`/gig/requests/${btn.dataset.respondDecline}/respond`, 'POST', { action: 'DECLINE' });
-          alert('Request declined.');
-          initPendingRequests(user);
-        });
-      });
+    if (!requests.length) {
+      container.innerHTML = createEmptyState('No pending requests');
+      return;
     }
 
-    if (!existing) container.appendChild(target);
-  } catch (err) {
-    console.error('Pending requests failed:', err);
+    container.innerHTML = requests
+      .map(
+        (request) => `
+          <article class="dashboard-section" style="margin-bottom:0;">
+            <div style="display:flex;justify-content:space-between;gap:var(--spacing-lg);align-items:flex-start;">
+              <div>
+                <h3 style="font-size:1rem;font-weight:700;margin-bottom:var(--spacing-xs);">${request.task?.title || '—'}</h3>
+                <p style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:var(--spacing-sm);">${request.task?.description || ''}</p>
+                <p style="font-weight:600;color:var(--color-secondary);">${formatMoney(request.task?.budget || 0)}</p>
+              </div>
+              <span class="status-badge ${getStatusBadgeClass(request.status)}">${String(request.status || 'PENDING').replace(/_/g, ' ')}</span>
+            </div>
+            <div style="display:flex;gap:var(--spacing-sm);margin-top:var(--spacing-lg);flex-wrap:wrap;">
+              <button class="btn btn-primary" style="padding:6px 16px;font-size:0.85rem;" data-respond-accept="${request.application_id}">Accept</button>
+              <button class="btn btn-outline" style="padding:6px 16px;font-size:0.85rem;" data-respond-decline="${request.application_id}">Decline</button>
+            </div>
+          </article>
+        `,
+      )
+      .join('');
+
+    container.querySelectorAll('[data-respond-accept]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        try {
+          await apiRequest(`/gig/requests/${button.dataset.respondAccept}/respond`, 'POST', {
+            action: 'accepted',
+          });
+          window.location.href = 'active-tasks.html';
+        } catch (error) {
+          console.error('Accept request failed:', error);
+        }
+      });
+    });
+
+    container.querySelectorAll('[data-respond-decline]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        try {
+          await apiRequest(`/gig/requests/${button.dataset.respondDecline}/respond`, 'POST', {
+            action: 'declined',
+          });
+          await initPendingRequests(user);
+        } catch (error) {
+          console.error('Decline request failed:', error);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Pending requests failed:', error);
   }
 }
 
-// ── Gig Profile ──────────────────────────────────────────────────
 async function initGigProfile(user) {
   try {
-    const profile = await apiRequest('/gig/profile');
+    const [profile, services, activeTasks, completedProjects] = await Promise.all([
+      apiRequest('/gig/profile').catch(() => null),
+      apiRequest('/gig/services/mine').catch(() => []),
+      apiRequest('/gig/tasks/active').catch(() => []),
+      apiRequest('/gig/projects/completed').catch(() => []),
+    ]);
 
-    // Populate profile fields
-    const nameEl = document.getElementById('profile-name') || document.querySelector('.profile-name');
-    if (nameEl) nameEl.textContent = profile.name || user.name || '';
+    if (!profile) return;
 
-    const bioEl = document.getElementById('profile-bio') || document.querySelector('#bio');
-    if (bioEl) bioEl.value = profile.bio || '';
+    syncSidebarIdentity({ ...user, name: profile.name || user.name });
 
-    const skillsEl = document.getElementById('profile-skills');
-    if (skillsEl && profile.skills) {
-      skillsEl.innerHTML = profile.skills.map(s => `<span class="skill-tag">${s}</span>`).join('');
+    setText('#profile-name-text', profile.name || user.name || 'Gig Professional');
+    setText('#profile-avatar-text', initials(profile.name || user.name || 'GP'));
+    setText('#profile-subtitle-text', profile.email || 'Active gig professional');
+
+    const about = document.getElementById('about-me-text');
+    if (about) {
+      about.textContent = profile.bio || 'No bio added yet.';
     }
 
-    const toolsEl = document.getElementById('profile-tools');
-    if (toolsEl && profile.tools) {
-      toolsEl.innerHTML = profile.tools.map(t => `<span class="skill-tag">${t}</span>`).join('');
+    const skillsList = document.getElementById('skills-list');
+    if (skillsList) {
+      const skills = safeArray(profile.skills);
+      skillsList.innerHTML = skills.length
+        ? skills.map((skill) => `<span class="skill-tag">${skill}</span>`).join('')
+        : '<span class="skill-tag">No skills added yet</span>';
     }
 
-    // Save handler
-    const form = document.querySelector('form');
+    const servicesList = document.getElementById('services-list');
+    if (servicesList) {
+      const ownedServices = safeArray(services);
+      servicesList.innerHTML = ownedServices.length
+        ? ownedServices
+            .map(
+              (service) => `
+                <div style="display:flex;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;">
+                  <div style="width:150px;background-color:rgba(8,75,131,0.1);display:flex;align-items:center;justify-content:center;">
+                    <svg width="48" height="48" fill="none" stroke="var(--color-primary-dark)" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                  </div>
+                  <div style="padding:var(--spacing-lg);flex:1;display:flex;flex-direction:column;">
+                    <h3 style="font-size:1.125rem;font-weight:600;color:var(--color-text-dark);margin-bottom:4px;">${service.title}</h3>
+                    <div style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:var(--spacing-sm);">${service.description}</div>
+                    <div style="font-weight:700;color:var(--color-secondary);margin-top:auto;">${formatMoney(service.price)}</div>
+                  </div>
+                </div>
+              `,
+            )
+            .join('')
+        : '<p style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No services posted yet.</p>';
+    }
+
+    const completedCount = safeArray(completedProjects).length;
+    const activeCount = safeArray(activeTasks).length;
+    const totalCompletedMetrics = completedCount + activeCount;
+    const successRate = totalCompletedMetrics > 0 ? Math.round((completedCount / totalCompletedMetrics) * 100) : 0;
+    setText('#job-success-text', `${successRate}%`);
+    const successBar = document.getElementById('job-success-bar');
+    if (successBar) successBar.style.width = `${successRate}%`;
+
+    const ratingRow = document.getElementById('job-rating-row');
+    const reviews = safeArray(completedProjects).flatMap((project) => safeArray(project.reviews));
+    if (ratingRow) {
+      if (reviews.length) {
+        const avg = reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length;
+        ratingRow.innerHTML = `<span style="color:#facc15;font-size:1.25rem;">★ ★ ★ ★ ★</span><span style="font-weight:600;font-size:0.875rem;">${avg.toFixed(1)} (${reviews.length} Reviews)</span>`;
+      } else {
+        ratingRow.innerHTML = '<span style="color:var(--color-text-muted);font-size:0.875rem;">No reviews yet</span>';
+      }
+    }
+
+    const languages = document.getElementById('languages-list');
+    if (languages) {
+      const portfolioItems = safeArray(profile.portfolio);
+      if (portfolioItems.length) {
+        languages.innerHTML = portfolioItems
+          .slice(0, 4)
+          .map((item) => `<li style="display:flex;justify-content:space-between;font-size:0.875rem;"><span style="font-weight:600;">Portfolio</span><span style="color:var(--color-text-muted);">${item}</span></li>`)
+          .join('');
+      }
+    }
+  } catch (error) {
+    console.error('Gig profile failed:', error);
+  }
+}
+
+async function initSubmitDeliverables(user) {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('taskId');
+    const activeTasks = safeArray(await apiRequest('/gig/tasks/active').catch(() => []));
+    const task = activeTasks.find((entry) => entry.task_id === taskId);
+    const form = document.getElementById('submit-deliverables-form') || document.querySelector('form');
+
+    if (!task) {
+      setHtml('#project-context-card', createEmptyState('No active task selected. Open this page from Active Tasks.'));
+      if (form) form.style.display = 'none';
+      return;
+    }
+
+    setText('#context-project-name', task.title);
+    setText('#context-client-name', `Client: ${task.client_id}`);
+    const viewLink = document.getElementById('view-project-link');
+    if (viewLink) viewLink.href = `project-detail.html?taskId=${task.task_id}`;
+
+    const taskDeliverables = safeArray(task.deliverables);
+    const historyMarkup = taskDeliverables.length
+      ? taskDeliverables
+          .map(
+            (deliverable) => `
+              <div style="padding:var(--spacing-md) 0;border-bottom:1px solid var(--color-border);">
+                <div style="font-weight:600;margin-bottom:4px;">Deliverable #${deliverable.deliverable_no}</div>
+                <div style="font-size:0.875rem;color:var(--color-text-muted);">${deliverable.content}</div>
+              </div>
+            `,
+          )
+          .join('')
+      : '<p style="color:var(--color-text-muted);">No deliverables submitted yet.</p>';
+
+    const historyContainer = document.getElementById('deliverables-history') || document.createElement('div');
+    historyContainer.id = 'deliverables-history';
+    historyContainer.className = 'dashboard-section';
+    historyContainer.innerHTML = `<div class="section-header"><h2>Deliverables</h2></div>${historyMarkup}`;
+
+    const submitCard = document.querySelector('.submission-form-card');
+    if (submitCard && !document.getElementById('deliverables-history')) {
+      submitCard.parentElement.insertBefore(historyContainer, submitCard.nextSibling);
+    } else if (!document.getElementById('deliverables-history') && form) {
+      form.insertAdjacentElement('afterend', historyContainer);
+    }
+
     if (form) {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const bio = document.getElementById('bio')?.value || '';
-        await apiRequest('/gig/profile', 'PUT', { bio });
-        alert('Profile updated!');
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const content = (document.getElementById('submission-notes')?.value || '').trim();
+        const notes = (document.getElementById('external-link')?.value || '').trim();
+
+        if (!content) {
+          alert('Deliverable content is required');
+          return;
+        }
+
+        try {
+          await apiRequest('/gig/deliverables', 'POST', {
+            taskId: task.task_id,
+            content,
+            notes,
+          });
+          alert('Deliverable submitted!');
+          window.location.href = 'submission-success.html';
+        } catch (error) {
+          console.error('Submit deliverable failed:', error);
+        }
       });
     }
-  } catch (err) {
-    console.error('Gig profile failed:', err);
+  } catch (error) {
+    console.error('Submit deliverables failed:', error);
   }
 }
 
-// ── Submit Deliverables ──────────────────────────────────────────
-async function initSubmitDeliverables(user) {
-  const params = new URLSearchParams(window.location.search);
-  const taskId = params.get('taskId');
-
-  const form = document.querySelector('form');
-  if (!form) return;
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const content = (document.getElementById('deliverable-content')?.value || document.querySelector('textarea')?.value || '').trim();
-    const tid = taskId || document.getElementById('task-id')?.value || '';
-
-    if (!content || !tid) { alert('Task ID and content are required'); return; }
-
-    try {
-      await apiRequest('/gig/deliverables', 'POST', { taskId: tid, content });
-      alert('Deliverable submitted!');
-      window.location.href = 'submission-success.html';
-    } catch (err) {
-      console.error('Submit deliverable failed:', err);
-    }
-  });
-}
-
-// ── Post Service ─────────────────────────────────────────────────
 async function initPostService(user) {
-  const form = document.querySelector('form');
+  const form = document.getElementById('post-service-form') || document.querySelector('form');
   if (!form) return;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
     const title = (document.getElementById('service-title')?.value || '').trim();
-    const description = (document.getElementById('service-description')?.value || document.querySelector('textarea')?.value || '').trim();
-    const price = Number(document.getElementById('service-price')?.value || 0);
-    const tags = (document.getElementById('service-tags')?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+    const description = (document.getElementById('description')?.value || document.querySelector('textarea')?.value || '').trim();
+    const price = Number(document.getElementById('amount')?.value || 0);
+    const category = (document.getElementById('category')?.value || '').trim();
+    const delivery = (document.getElementById('delivery')?.value || '').trim();
+    const thumbnail = (document.getElementById('thumbnail')?.value || '').trim();
 
-    if (!title || !description || price <= 0) { alert('All fields are required'); return; }
+    const tags = [category, delivery].filter(Boolean);
+
+    if (!title || !description || !Number.isFinite(price) || price <= 0 || tags.length === 0) {
+      alert('All fields are required');
+      return;
+    }
+
+    const servicePayload = {
+      title,
+      description,
+      price,
+      tags,
+      ...(thumbnail ? { thumbnail } : {}),
+    };
+
+    console.log(servicePayload);
 
     try {
-      await apiRequest('/gig/services', 'POST', { title, description, price, tags });
+      await apiRequest('/gig/services', 'POST', servicePayload);
       alert('Service posted!');
       window.location.href = 'service-published.html';
-    } catch (err) {
-      console.error('Post service failed:', err);
+    } catch (error) {
+      console.error('Post service failed:', error);
     }
   });
 }
 
-// ── Completed Projects ───────────────────────────────────────────
 async function initCompletedProjects(user) {
   try {
-    const projects = await apiRequest('/gig/projects/completed');
-    const container = document.querySelector('.dashboard-content') || document.querySelector('main');
+    const projects = safeArray(await apiRequest('/gig/projects/completed').catch(() => []));
+    const container = document.getElementById('completed-projects-grid');
     if (!container) return;
 
-    const target = container.querySelector('.projects-list') || document.createElement('div');
-    target.className = 'projects-list';
+    setText('#completed-total-count', String(projects.length));
 
-    if (!projects || projects.length === 0) {
-      target.innerHTML = '<p style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xxl);">No completed projects yet.</p>';
-    } else {
-      target.innerHTML = projects.map(p => {
-        const task = p.task || p;
-        return `
-          <div style="background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--spacing-lg);margin-bottom:var(--spacing-md);">
-            <h3 style="font-size:1rem;font-weight:700;">${task.title}</h3>
-            <p style="font-size:0.875rem;color:var(--color-text-muted);">${task.description || ''}</p>
-            <p style="font-weight:600;color:var(--color-secondary);">${formatCurrency(task.budget)}</p>
-          </div>
-        `;
-      }).join('');
+    if (!projects.length) {
+      container.innerHTML = createEmptyState('No completed projects yet.');
+      return;
     }
 
-    if (!container.querySelector('.projects-list')) container.appendChild(target);
-  } catch (err) {
-    console.error('Completed projects failed:', err);
+    container.innerHTML = projects
+      .map((project) => {
+        const reviews = safeArray(project.reviews);
+        const payment = project.payment;
+        return `
+          <article class="dashboard-section" style="margin-bottom:0;">
+            <div style="display:flex;justify-content:space-between;gap:var(--spacing-lg);align-items:flex-start;">
+              <div>
+                <h3 style="font-size:1rem;font-weight:700;margin-bottom:var(--spacing-xs);">${project.title}</h3>
+                <p style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:var(--spacing-sm);">${project.description || ''}</p>
+                <p style="font-weight:600;color:var(--color-secondary);">${formatMoney(project.budget)}</p>
+              </div>
+              <span class="status-badge status-review-needed">Completed</span>
+            </div>
+            <div style="display:flex;gap:var(--spacing-lg);flex-wrap:wrap;margin-top:var(--spacing-lg);font-size:0.875rem;color:var(--color-text-muted);">
+              <span>${reviews.length} review(s)</span>
+              <span>${payment ? `Paid ${formatMoney(payment.amount)}` : 'Payment pending'}</span>
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+  } catch (error) {
+    console.error('Completed projects failed:', error);
   }
 }
 
-// ── Total Earnings ───────────────────────────────────────────────
 async function initTotalEarnings(user) {
   try {
-    const earnings = await apiRequest('/gig/earnings');
-    const totalEl = document.getElementById('total-earnings-amount') || document.querySelector('.metric-value');
-    const total = earnings.totalEarnings || earnings.total || (typeof earnings === 'number' ? earnings : 0);
-    if (totalEl) totalEl.textContent = formatCurrency(total);
-  } catch (err) {
-    console.error('Total earnings failed:', err);
+    const earnings = await apiRequest('/gig/earnings').catch(() => ({ totalEarnings: 0, completedTasks: 0, payments: [] }));
+    const payments = safeArray(earnings.payments);
+    const completedTasks = Number(earnings.completedTasks || 0);
+    const total = completedTasks === 0 ? 0 : Number(earnings.totalEarnings || 0);
+
+    setText('#earnings-total-ytd', formatMoney(total));
+
+    const monthKey = new Date().toISOString().slice(0, 7);
+    const monthlyTotal = payments.reduce((sum, payment) => {
+      const paidAt = payment.paidAt ? new Date(payment.paidAt).toISOString().slice(0, 7) : '';
+      return paidAt === monthKey ? sum + Number(payment.amount || 0) : sum;
+    }, 0);
+
+    setText('#earnings-expected-month', formatMoney(monthlyTotal));
+    setText('#earnings-available-withdrawal', formatMoney(total));
+    setText('#earnings-active-milestones', `From ${completedTasks} completed tasks`);
+    setText('#earnings-withdrawn-total', 'Withdrawals are synced with backend payments.');
+
+    const chart = document.getElementById('earnings-trend-chart');
+    if (chart) {
+      chart.innerHTML = payments.length
+        ? `<div style="display:grid;gap:var(--spacing-sm);">${payments
+            .slice(-6)
+            .map((payment) => {
+              const label = payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—';
+              return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--color-border);"><span>${label}</span><strong>${formatMoney(payment.amount)}</strong></div>`;
+            })
+            .join('')}</div>`
+        : createEmptyState('No payment activity yet.');
+    }
+
+    const tbody = document.getElementById('earnings-transactions-body');
+    if (tbody) {
+      tbody.innerHTML = payments.length
+        ? payments
+            .slice()
+            .reverse()
+            .map(
+              (payment) => `
+                <tr>
+                  <td>${formatDate(payment.paidAt || payment.createdAt)}</td>
+                  <td>Payment for ${payment.task_id}</td>
+                  <td>${payment.gig_profile_id}</td>
+                  <td>${formatMoney(payment.amount)}</td>
+                  <td><span class="status-badge status-review-needed">Paid</span></td>
+                </tr>
+              `,
+            )
+            .join('')
+        : '<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:var(--spacing-xl);">No transactions yet.</td></tr>';
+    }
+  } catch (error) {
+    console.error('Total earnings failed:', error);
   }
 }
 
-// ── Profile Completion ───────────────────────────────────────────
 async function initProfileCompletion(user) {
   const form = document.querySelector('form');
   if (!form) return;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  try {
+    const profile = await apiRequest('/gig/profile').catch(() => null);
+    if (profile && document.getElementById('bio')) {
+      document.getElementById('bio').value = profile.bio || '';
+    }
+  } catch (_) {
+    // Ignore prefill errors.
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
     const bio = (document.getElementById('bio')?.value || '').trim();
     try {
       await apiRequest('/gig/profile', 'PUT', { bio });
       alert('Profile completed!');
       window.location.href = 'gig-dashboard.html';
-    } catch (err) {
-      console.error('Profile completion failed:', err);
+    } catch (error) {
+      console.error('Profile completion failed:', error);
     }
   });
+}
+
+async function initProjectDetail(user) {
+  const params = new URLSearchParams(window.location.search);
+  const taskId = params.get('taskId');
+
+  if (!taskId) {
+    setText('#project-detail-title', 'Select a task to view details');
+    setText('#project-detail-subtitle', 'Open this page from an active task.');
+    setText('#project-detail-description', 'No task was provided.');
+    setHtml('#project-detail-deliverables-list', createEmptyState('No deliverables available.'));
+    return;
+  }
+
+  try {
+    const activeTasks = safeArray(await apiRequest('/gig/tasks/active').catch(() => []));
+    const task = activeTasks.find((entry) => entry.task_id === taskId);
+
+    if (!task) {
+      setText('#project-detail-title', 'Task not found');
+      setText('#project-detail-subtitle', 'This task is not currently assigned to you.');
+      setText('#project-detail-description', 'Open the task from Active Tasks to view live details.');
+      setHtml('#project-detail-deliverables-list', createEmptyState('No deliverables available.'));
+      return;
+    }
+
+    renderSidebarFooter(user);
+    bindGlobalControls();
+
+    setText('#project-detail-title', task.title || 'Task Details');
+    setText('#project-detail-subtitle', `${currentUserLabel(user)} • ${formatMoney(task.budget)} • ${task.status}`);
+    setText('#project-detail-description', task.description || 'No description available.');
+    setText('#project-detail-budget', formatMoney(task.budget));
+    setText('#project-detail-deadline', task.updatedAt ? formatDate(task.updatedAt) : '—');
+    setText('#project-detail-client-name', task.client_id || 'Client unavailable');
+    setText('#project-detail-client-initials', initials(task.client_id || 'GP'));
+    setText('#project-detail-status-badge', task.status === 'IN_PROGRESS' ? 'In Progress' : 'Task Details');
+
+    const deliverables = safeArray(task.deliverables);
+
+    const deliverablesMarkup = deliverables.length
+      ? deliverables
+          .map((deliverable) => {
+            const link = extractSubmissionLink(deliverable.content);
+            const status = task.status === 'COMPLETED' ? 'approved' : 'submitted';
+            return `
+              <article style="padding:var(--spacing-lg); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-white); display:grid; gap:var(--spacing-sm);">
+                <div style="display:flex; justify-content:space-between; gap:var(--spacing-md); align-items:center;">
+                  <h3 style="font-size:1rem; font-weight:700; color:var(--color-text-dark);">Atomic Deliverable #${deliverable.deliverable_no}</h3>
+                  <span class="status-badge ${getStatusBadgeClass(status)}">${status}</span>
+                </div>
+                <p style="margin:0; color:var(--color-text-muted); font-size:0.875rem;">${deliverable.content || 'No submission content provided.'}</p>
+                ${link ? `<a href="${link}" target="_blank" rel="noreferrer" style="color:var(--color-primary-blue); font-weight:600; text-decoration:none;">Submission link</a>` : '<span style="color:var(--color-text-muted); font-size:0.875rem;">No submission link</span>'}
+              </article>
+            `;
+          })
+          .join('')
+      : createEmptyState('No deliverables found for this task yet.');
+
+    setHtml('#project-detail-deliverables-list', deliverablesMarkup);
+  } catch (error) {
+    console.error('Project detail failed:', error);
+  }
 }

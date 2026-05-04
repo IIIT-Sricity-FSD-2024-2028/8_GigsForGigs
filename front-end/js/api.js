@@ -1,16 +1,112 @@
 // ─── api.js ─ Central API service layer ──────────────────────────
 const API_BASE = 'http://localhost:3000';
 
-export async function apiRequest(url, method = 'GET', body = null) {
+let sessionState = null;
+
+function normalizeRole(role) {
+  if (role === 'GIG') return 'GIG_PROFESSIONAL';
+  return role || '';
+}
+
+function hydrateSessionFromWindow() {
+  if (sessionState) return sessionState;
+
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  if (window.__GFG_SESSION__ && window.__GFG_SESSION__.userId && window.__GFG_SESSION__.role) {
+    sessionState = {
+      ...window.__GFG_SESSION__,
+      role: normalizeRole(window.__GFG_SESSION__.role),
+      appliedTaskIds: Array.isArray(window.__GFG_SESSION__.appliedTaskIds)
+        ? window.__GFG_SESSION__.appliedTaskIds
+        : [],
+    };
+    return sessionState;
+  }
+
+  if (typeof window.name === 'string' && window.name.trim()) {
+    try {
+      const parsed = JSON.parse(window.name);
+      if (parsed && parsed.userId && parsed.role) {
+        sessionState = {
+          userId: parsed.userId,
+          role: normalizeRole(parsed.role),
+          name: parsed.name || '',
+          appliedTaskIds: Array.isArray(parsed.appliedTaskIds)
+            ? parsed.appliedTaskIds
+            : [],
+        };
+        window.__GFG_SESSION__ = sessionState;
+        return sessionState;
+      }
+    } catch (_) {
+      // Ignore invalid window.name payloads.
+    }
+  }
+
+  return null;
+}
+
+function persistSession(nextSession) {
+  sessionState = nextSession
+    ? {
+        userId: nextSession.userId,
+        role: normalizeRole(nextSession.role),
+        name: nextSession.name || '',
+        appliedTaskIds: Array.isArray(nextSession.appliedTaskIds)
+          ? [...new Set(nextSession.appliedTaskIds)]
+          : [],
+      }
+    : null;
+
+  if (typeof window !== 'undefined') {
+    window.__GFG_SESSION__ = sessionState;
+    window.name = sessionState ? JSON.stringify(sessionState) : '';
+  }
+
+  return sessionState;
+}
+
+export function setSession(session) {
+  return persistSession(session);
+}
+
+export function updateSession(patch) {
+  const current = getUser();
+  if (!current) return null;
+  return persistSession({
+    ...current,
+    ...patch,
+    appliedTaskIds: patch.appliedTaskIds ?? current.appliedTaskIds ?? [],
+  });
+}
+
+export function clearSession() {
+  sessionState = null;
+  if (typeof window !== 'undefined') {
+    window.__GFG_SESSION__ = null;
+    window.name = '';
+  }
+}
+
+export function apiRequest(url, method = 'GET', body = null) {
+  return request(url, method, body);
+}
+
+async function request(url, method, body) {
+  const user = getUser();
   const headers = {
     'Content-Type': 'application/json',
-    'role': localStorage.getItem('role') || '',
-    'x-role': localStorage.getItem('role') || '',
-    'x-user-id': localStorage.getItem('userId') || '',
+    'x-role': user?.role || '',
+    'x-user-id': user?.userId || '',
   };
 
   const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
+  if (body !== null && body !== undefined) {
+    options.body = typeof body === 'string' ? body : JSON.stringify(body);
+  }
 
   const res = await fetch(`${API_BASE}${url}`, options);
 
@@ -29,11 +125,7 @@ export async function apiRequest(url, method = 'GET', body = null) {
 }
 
 export function getUser() {
-  const userId = localStorage.getItem('userId');
-  const role = localStorage.getItem('role');
-  const name = localStorage.getItem('userName');
-  if (!userId || !role) return null;
-  return { userId, role, name };
+  return hydrateSessionFromWindow();
 }
 
 export function requireAuth(allowedRoles) {
@@ -50,9 +142,7 @@ export function requireAuth(allowedRoles) {
 }
 
 export function logout() {
-  localStorage.removeItem('userId');
-  localStorage.removeItem('role');
-  localStorage.removeItem('userName');
+  clearSession();
   window.location.href = getLoginPath();
 }
 
@@ -99,8 +189,6 @@ export function getStatusBadgeClass(status) {
     'SHORTLISTED': 'status-in-progress',
     'ACCEPTED': 'status-review-needed',
     'DECLINED': 'status-cancelled',
-    'APPROVED': 'status-review-needed',
-    'REJECTED': 'status-cancelled',
   };
   return map[status] || 'status-scheduled';
 }

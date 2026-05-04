@@ -623,23 +623,62 @@ async function initReviewDeliverables(user) {
 async function initSearchTalent(user) {
   try {
     const services = await apiRequest('/api/services');
-    const grid = document.querySelector('.talent-grid') || document.querySelector('.dashboard-content .metrics-grid') || document.querySelector('.dashboard-content');
+    const grid = document.getElementById('talent-grid') || document.querySelector('.talent-grid') || document.querySelector('.dashboard-content');
     if (!grid) return;
 
-    if (services.length === 0) return;
+    const serviceList = Array.isArray(services) ? services : [];
+    if (serviceList.length === 0) {
+      grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--color-text-muted);padding:var(--spacing-xxl);">No services available yet.</p>';
+      return;
+    }
 
-    const cardsHtml = services.map(s => `
-      <div style="background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--spacing-lg);">
-        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:var(--spacing-xs);">${s.user?.name || 'Professional'}</h3>
-        <p style="font-size:0.875rem;color:var(--color-text-muted);margin-bottom:var(--spacing-sm);">${(s.skills || []).join(', ') || 'No skills listed'}</p>
-        <p style="font-size:0.875rem;">${s.tools ? s.tools.join(', ') : ''}</p>
-        <a href="review-shortlist.html" class="btn btn-outline btn-full" style="margin-top:var(--spacing-md);text-align:center;text-decoration:none;">View Profile</a>
-      </div>
+    grid.innerHTML = serviceList.map((service) => `
+      <article class="talent-card">
+        <div class="talent-banner talent-banner-blue">
+          <span class="talent-vetted-badge">✓ Active</span>
+        </div>
+        <div class="talent-body">
+          <div class="talent-header">
+            <span class="talent-name">${service.title}</span>
+            <span class="talent-rate">₹${Number(service.price || 0).toLocaleString('en-IN')}</span>
+          </div>
+          <div class="talent-title">${service.user?.name || 'Gig Professional'}</div>
+          <div class="talent-rating">
+            <span class="star">★</span> ${service.user?.name || service.gig_profile_id}
+          </div>
+          <div class="talent-skills">
+            ${(service.skills || service.tags || []).map((tag) => `<span class="skill-chip">${tag}</span>`).join('') || '<span class="skill-chip">No tags</span>'}
+          </div>
+          <p style="font-size:0.875rem;color:var(--color-text-muted);margin-top:var(--spacing-sm);">${service.description}</p>
+          <div class="talent-actions">
+            <button type="button" class="btn-hire" data-request-service="${service.service_id}">Request / Hire</button>
+          </div>
+        </div>
+      </article>
     `).join('');
-    
-    // Inject after existing content or replace placeholder
-    const existingGrid = grid.querySelector('.metrics-grid, .talent-cards');
-    if (existingGrid) existingGrid.innerHTML = cardsHtml;
+
+    grid.querySelectorAll('[data-request-service]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const serviceId = button.dataset.requestService;
+        const service = serviceList.find((item) => item.service_id === serviceId);
+        if (!service) return;
+
+        const requestPayload = {
+          client_id: user.userId,
+          title: service.title,
+          description: service.description,
+          budget: Number(service.price || 0),
+        };
+
+        try {
+          await apiRequest(`/api/services/${serviceId}/requests`, 'POST', requestPayload);
+          button.textContent = 'Requested';
+          button.disabled = true;
+        } catch (error) {
+          console.error('Service request failed:', error);
+        }
+      });
+    });
   } catch (err) {
     console.error('Search talent failed:', err);
   }
