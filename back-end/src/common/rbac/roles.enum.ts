@@ -1,0 +1,5 @@
+export enum Role {
+  CLIENT = 'CLIENT',
+  MANAGER = 'MANAGER',
+  GIG_PROFESSIONAL = 'GIG_PROFESSIONAL',
+}

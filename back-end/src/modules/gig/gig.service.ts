@@ -116,7 +116,9 @@ export class GigService {
 
     // Ensure the application belongs to this gig professional
     if (app.gig_profile_id !== profile.gig_profile_id) {
-      throw new ForbiddenException('You can only withdraw your own applications');
+      throw new ForbiddenException(
+        'You can only withdraw your own applications',
+      );
     }
 
     // Can only withdraw PENDING applications
@@ -148,7 +150,11 @@ export class GigService {
 
   // ── 7. POST /gig/requests/:id/respond ─────────────────────────
 
-  respondToRequest(userId: string, applicationId: string, dto: RespondRequestDto) {
+  respondToRequest(
+    userId: string,
+    applicationId: string,
+    dto: RespondRequestDto,
+  ) {
     const profile = this.requireGigProfileForUser(userId);
     const app = this.db.getApplication(applicationId);
 
@@ -164,7 +170,10 @@ export class GigService {
 
     if (dto.action === RequestAction.ACCEPTED) {
       // Accept: update application status → ACCEPTED
-      this.db.updateApplicationStatus(applicationId, ApplicationStatus.ACCEPTED);
+      this.db.updateApplicationStatus(
+        applicationId,
+        ApplicationStatus.ACCEPTED,
+      );
 
       // Update task to IN_PROGRESS + assign to this gig pro
       this.db.updateTask(app.task_id, {
@@ -175,7 +184,10 @@ export class GigService {
       return { message: 'Request accepted. Task is now in progress.' };
     } else {
       // Decline: update application status → DECLINED
-      this.db.updateApplicationStatus(applicationId, ApplicationStatus.DECLINED);
+      this.db.updateApplicationStatus(
+        applicationId,
+        ApplicationStatus.DECLINED,
+      );
       return { message: 'Request declined.' };
     }
   }
@@ -217,7 +229,9 @@ export class GigService {
     }
 
     if (task.status !== TaskStatus.IN_PROGRESS) {
-      throw new BadRequestException('Can only submit deliverables for IN_PROGRESS tasks');
+      throw new BadRequestException(
+        'Can only submit deliverables for IN_PROGRESS tasks',
+      );
     }
 
     const content = dto.notes

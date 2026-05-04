@@ -11,6 +11,8 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/rbac/roles.enum';
 import { GigService } from './gig.service';
 import {
   UpdateProfileDto,
@@ -39,6 +41,7 @@ export class GigController {
   // ── 1. GET /gig/profile ───────────────────────────────────────
 
   @Get('profile')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getProfile(@Headers('x-user-id') userId: string) {
     return this.gigService.getProfile(this.extractUserId(userId));
   }
@@ -46,6 +49,7 @@ export class GigController {
   // ── 2. PUT /gig/profile ───────────────────────────────────────
 
   @Put('profile')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   updateProfile(
     @Headers('x-user-id') userId: string,
     @Body() dto: UpdateProfileDto,
@@ -56,6 +60,7 @@ export class GigController {
   // ── 3. GET /gig/tasks/marketplace ─────────────────────────────
 
   @Get('tasks/marketplace')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getMarketplaceTasks() {
     return this.gigService.getMarketplaceTasks();
   }
@@ -64,6 +69,7 @@ export class GigController {
 
   @Post('applications')
   @HttpCode(HttpStatus.CREATED)
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   applyToTask(
     @Headers('x-user-id') userId: string,
     @Body() dto: CreateApplicationDto,
@@ -75,6 +81,7 @@ export class GigController {
 
   @Delete('applications/:id')
   @HttpCode(HttpStatus.OK)
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   withdrawApplication(
     @Headers('x-user-id') userId: string,
     @Param('id') applicationId: string,
@@ -88,6 +95,7 @@ export class GigController {
   // ── 6. GET /gig/requests/pending ──────────────────────────────
 
   @Get('requests/pending')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getPendingRequests(@Headers('x-user-id') userId: string) {
     return this.gigService.getPendingRequests(this.extractUserId(userId));
   }
@@ -95,6 +103,7 @@ export class GigController {
   // ── 7. POST /gig/requests/:id/respond ─────────────────────────
 
   @Post('requests/:id/respond')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   respondToRequest(
     @Headers('x-user-id') userId: string,
     @Param('id') applicationId: string,
@@ -110,6 +119,7 @@ export class GigController {
   // ── 8. GET /gig/tasks/active ──────────────────────────────────
 
   @Get('tasks/active')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getActiveTasks(@Headers('x-user-id') userId: string) {
     return this.gigService.getActiveTasks(this.extractUserId(userId));
   }
@@ -118,6 +128,7 @@ export class GigController {
 
   @Post('deliverables')
   @HttpCode(HttpStatus.CREATED)
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   submitDeliverable(
     @Headers('x-user-id') userId: string,
     @Body() dto: SubmitDeliverableDto,
@@ -129,6 +140,7 @@ export class GigController {
 
   @Post('services')
   @HttpCode(HttpStatus.CREATED)
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   postService(
     @Headers('x-user-id') userId: string,
     @Body() dto: PostServiceDto,
@@ -139,6 +151,7 @@ export class GigController {
   // ── 11. GET /gig/services/mine ────────────────────────────────
 
   @Get('services/mine')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getMyServices(@Headers('x-user-id') userId: string) {
     return this.gigService.getMyServices(this.extractUserId(userId));
   }
@@ -147,6 +160,7 @@ export class GigController {
 
   @Post('reviews')
   @HttpCode(HttpStatus.CREATED)
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   submitReview(
     @Headers('x-user-id') userId: string,
     @Body() dto: CreateReviewDto,
@@ -157,6 +171,7 @@ export class GigController {
   // ── 13. GET /gig/projects/completed ───────────────────────────
 
   @Get('projects/completed')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getCompletedProjects(@Headers('x-user-id') userId: string) {
     return this.gigService.getCompletedProjects(this.extractUserId(userId));
   }
@@ -164,6 +179,7 @@ export class GigController {
   // ── 14. GET /gig/earnings ─────────────────────────────────────
 
   @Get('earnings')
+  @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getTotalEarnings(@Headers('x-user-id') userId: string) {
     return this.gigService.getTotalEarnings(this.extractUserId(userId));
   }

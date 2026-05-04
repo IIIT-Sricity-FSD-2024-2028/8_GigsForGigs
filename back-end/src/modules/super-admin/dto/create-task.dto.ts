@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsNumber, IsPositive, IsEnum, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsPositive,
+  IsEnum,
+  IsOptional,
+} from 'class-validator';
 import { TaskStatus } from '../../../common/database/database.types';
 
 export class CreateTaskDto {

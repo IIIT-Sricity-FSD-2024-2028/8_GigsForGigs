@@ -13,6 +13,8 @@ import { ApplicationModule } from './modules/application/application.module';
 import { DeliverableModule } from './modules/deliverable/deliverable.module';
 import { ReviewModule } from './modules/review/review.module';
 import { DatabaseModule } from './common/database/database.module';
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
   imports: [
@@ -30,6 +32,12 @@ import { DatabaseModule } from './common/database/database.module';
     ReviewModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
 })
 export class AppModule {}

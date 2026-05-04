@@ -46,7 +46,10 @@ export class AdminService {
     const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
     const avgRating =
       reviews.length > 0
-        ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) / 10
+        ? Math.round(
+            (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) *
+              10,
+          ) / 10
         : 0;
 
     return {
@@ -64,23 +67,34 @@ export class AdminService {
       },
       tasksByStatus: {
         open: tasks.filter((t) => t.status === TaskStatus.OPEN).length,
-        inProgress: tasks.filter((t) => t.status === TaskStatus.IN_PROGRESS).length,
-        completed: tasks.filter((t) => t.status === TaskStatus.COMPLETED).length,
-        cancelled: tasks.filter((t) => t.status === TaskStatus.CANCELLED).length,
+        inProgress: tasks.filter((t) => t.status === TaskStatus.IN_PROGRESS)
+          .length,
+        completed: tasks.filter((t) => t.status === TaskStatus.COMPLETED)
+          .length,
+        cancelled: tasks.filter((t) => t.status === TaskStatus.CANCELLED)
+          .length,
       },
       usersByRole: {
         clients: users.filter((u) => u.role === UserRole.CLIENT).length,
         gigs: users.filter((u) => u.role === UserRole.GIG).length,
         managers: users.filter((u) => u.role === UserRole.MANAGER).length,
-        admins: users.filter((u) => u.role === UserRole.ADMIN || u.role === UserRole.SUPER_ADMIN).length,
+        admins: users.filter(
+          (u) => u.role === UserRole.ADMIN || u.role === UserRole.SUPER_ADMIN,
+        ).length,
       },
       totalRevenue,
       avgRating,
       recentUsers: users
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
         .slice(0, 5),
       recentTasks: tasks
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
         .slice(0, 5),
     };
   }
@@ -99,7 +113,10 @@ export class AdminService {
     return this.db.createUser(input);
   }
 
-  updateUser(id: string, updates: Partial<Pick<User, 'name' | 'email' | 'password' | 'role'>>): User {
+  updateUser(
+    id: string,
+    updates: Partial<Pick<User, 'name' | 'email' | 'password' | 'role'>>,
+  ): User {
     return this.db.updateUser(id, updates);
   }
 
@@ -153,7 +170,12 @@ export class AdminService {
 
   // ── Gig Profiles ───────────────────────────────────────────
 
-  getAllGigProfiles(): (GigProfile & { user?: User; skills: string[]; tools: string[]; portfolio: string[] })[] {
+  getAllGigProfiles(): (GigProfile & {
+    user?: User;
+    skills: string[];
+    tools: string[];
+    portfolio: string[];
+  })[] {
     const profiles = this.db.getAllGigProfiles();
     return profiles.map((g) => {
       let user: User | undefined;
@@ -194,7 +216,10 @@ export class AdminService {
     return this.db.createTask(input);
   }
 
-  updateTask(id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'budget' | 'status'>>): Task {
+  updateTask(
+    id: string,
+    updates: Partial<Pick<Task, 'title' | 'description' | 'budget' | 'status'>>,
+  ): Task {
     return this.db.updateTask(id, updates);
   }
 

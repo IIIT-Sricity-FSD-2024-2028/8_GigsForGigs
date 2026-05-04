@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsNumber, IsPositive, IsOptional, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsPositive,
+  IsOptional,
+  IsArray,
+} from 'class-validator';
 
 export class PostServiceDto {
   @IsString()

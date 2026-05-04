@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { IdGenerator } from './id-generator';
 import {
   Application,
@@ -81,7 +85,10 @@ export class DatabaseService {
     return `${task_id}_${deliverable_no}`;
   }
 
-  private applicationUniqueKey(gig_profile_id: string, task_id: string): string {
+  private applicationUniqueKey(
+    gig_profile_id: string,
+    task_id: string,
+  ): string {
     return `${gig_profile_id}_${task_id}`;
   }
 
@@ -89,7 +96,11 @@ export class DatabaseService {
     return `${task_id}_${gig_profile_id}`;
   }
 
-  private reviewUniqueKey(reviewer_id: string, reviewee_id: string, task_id: string): string {
+  private reviewUniqueKey(
+    reviewer_id: string,
+    reviewee_id: string,
+    task_id: string,
+  ): string {
     return `${reviewer_id}_${reviewee_id}_${task_id}`;
   }
 
@@ -106,8 +117,9 @@ export class DatabaseService {
   }
 
   private clone<T>(value: T): T {
-    const structuredCloneFn: unknown = (globalThis as unknown as { structuredClone?: unknown })
-      .structuredClone;
+    const structuredCloneFn: unknown = (
+      globalThis as unknown as { structuredClone?: unknown }
+    ).structuredClone;
     if (typeof structuredCloneFn === 'function') {
       return (structuredCloneFn as (v: T) => T)(value);
     }
@@ -130,7 +142,9 @@ export class DatabaseService {
 
   private requireRating(value: number): void {
     if (!Number.isInteger(value) || value < 1 || value > 5) {
-      throw new BadRequestException('rating must be an integer between 1 and 5');
+      throw new BadRequestException(
+        'rating must be an integer between 1 and 5',
+      );
     }
   }
 
@@ -175,7 +189,10 @@ export class DatabaseService {
     return task;
   }
 
-  private getOrInitStringArray(map: Map<string, string[]>, key: string): string[] {
+  private getOrInitStringArray(
+    map: Map<string, string[]>,
+    key: string,
+  ): string[] {
     const existing = map.get(key);
     if (existing) return existing;
     const arr: string[] = [];
@@ -310,7 +327,9 @@ export class DatabaseService {
   // GIG PROFILE
   // -------------------------
 
-  createGigProfile(input: CreateGigProfileInput & { gig_profile_id?: string }): GigProfile {
+  createGigProfile(
+    input: CreateGigProfileInput & { gig_profile_id?: string },
+  ): GigProfile {
     this.requireUser(input.user_id);
 
     const existing = Array.from(this.gigProfiles.values()).find(
@@ -339,11 +358,21 @@ export class DatabaseService {
   }
 
   addSkill(gig_profile_id: string, skill: string): string[] {
-    return this.appendUniqueString(this.profileSkills, gig_profile_id, skill, 'skill');
+    return this.appendUniqueString(
+      this.profileSkills,
+      gig_profile_id,
+      skill,
+      'skill',
+    );
   }
 
   addTool(gig_profile_id: string, tool: string): string[] {
-    return this.appendUniqueString(this.profileTools, gig_profile_id, tool, 'tool');
+    return this.appendUniqueString(
+      this.profileTools,
+      gig_profile_id,
+      tool,
+      'tool',
+    );
   }
 
   addPortfolio(gig_profile_id: string, portfolioItem: string): string[] {
@@ -397,7 +426,10 @@ export class DatabaseService {
     this.requireGigProfile(input.gig_profile_id);
     this.requireTask(input.task_id);
 
-    const uniqueKey = this.applicationUniqueKey(input.gig_profile_id, input.task_id);
+    const uniqueKey = this.applicationUniqueKey(
+      input.gig_profile_id,
+      input.task_id,
+    );
     if (this.applicationByGigTask.has(uniqueKey)) {
       throw new BadRequestException('UNIQUE(gig_profile_id, task_id) violated');
     }
@@ -427,7 +459,9 @@ export class DatabaseService {
     const task = this.requireTask(input.task_id);
 
     if (input.client_id && input.client_id !== task.client_id) {
-      throw new BadRequestException('client_id does not match the task client_id');
+      throw new BadRequestException(
+        'client_id does not match the task client_id',
+      );
     }
 
     // FK MANAGER: manager is scoped under task.client_id
@@ -460,14 +494,22 @@ export class DatabaseService {
     this.requireGigProfile(input.gig_profile_id);
     this.requireNonEmptyString('content', input.content);
 
-    const assignmentKey = this.assignmentKey(input.gig_profile_id, input.task_id);
+    const assignmentKey = this.assignmentKey(
+      input.gig_profile_id,
+      input.task_id,
+    );
     if (!this.assignments.has(assignmentKey)) {
-      throw new BadRequestException('deliverable requires an existing assignment');
+      throw new BadRequestException(
+        'deliverable requires an existing assignment',
+      );
     }
 
-    const deliverable_no = input.deliverable_no ?? this.nextDeliverableNoForTask(input.task_id);
+    const deliverable_no =
+      input.deliverable_no ?? this.nextDeliverableNoForTask(input.task_id);
     if (!Number.isInteger(deliverable_no) || deliverable_no <= 0) {
-      throw new BadRequestException('deliverable_no must be a positive integer');
+      throw new BadRequestException(
+        'deliverable_no must be a positive integer',
+      );
     }
 
     const key = this.deliverableKey(input.task_id, deliverable_no);
@@ -508,7 +550,10 @@ export class DatabaseService {
     this.requireGigProfile(input.gig_profile_id);
     this.requirePositiveNumber('amount', input.amount);
 
-    const uniqueKey = this.paymentUniqueKey(input.task_id, input.gig_profile_id);
+    const uniqueKey = this.paymentUniqueKey(
+      input.task_id,
+      input.gig_profile_id,
+    );
     if (this.paymentByTaskGig.has(uniqueKey)) {
       throw new BadRequestException('UNIQUE(task_id, gig_profile_id) violated');
     }
@@ -544,9 +589,15 @@ export class DatabaseService {
     this.requireTask(input.task_id);
     this.requireRating(input.rating);
 
-    const uniqueKey = this.reviewUniqueKey(input.reviewer_id, input.reviewee_id, input.task_id);
+    const uniqueKey = this.reviewUniqueKey(
+      input.reviewer_id,
+      input.reviewee_id,
+      input.task_id,
+    );
     if (this.reviewByReviewerRevieweeTask.has(uniqueKey)) {
-      throw new BadRequestException('UNIQUE(reviewer_id, reviewee_id, task_id) violated');
+      throw new BadRequestException(
+        'UNIQUE(reviewer_id, reviewee_id, task_id) violated',
+      );
     }
 
     const now = this.now();
@@ -618,7 +669,8 @@ export class DatabaseService {
 
   getApplication(application_id: string): Application {
     const app = this.applications.get(application_id);
-    if (!app) throw new NotFoundException(`Application not found: ${application_id}`);
+    if (!app)
+      throw new NotFoundException(`Application not found: ${application_id}`);
     return this.clone(app);
   }
 
@@ -650,7 +702,10 @@ export class DatabaseService {
 
   // ── UPDATE ──────────────────────────────────────────────
 
-  updateUser(user_id: string, updates: Partial<Pick<User, 'name' | 'email' | 'password' | 'role'>>): User {
+  updateUser(
+    user_id: string,
+    updates: Partial<Pick<User, 'name' | 'email' | 'password' | 'role'>>,
+  ): User {
     const user = this.requireUser(user_id);
 
     if (updates.email !== undefined) {
@@ -680,7 +735,12 @@ export class DatabaseService {
     return this.clone(user);
   }
 
-  updateTask(task_id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'budget' | 'status' | 'assigned_to'>>): Task {
+  updateTask(
+    task_id: string,
+    updates: Partial<
+      Pick<Task, 'title' | 'description' | 'budget' | 'status' | 'assigned_to'>
+    >,
+  ): Task {
     const task = this.requireTask(task_id);
 
     if (updates.title !== undefined) {
@@ -742,9 +802,13 @@ export class DatabaseService {
 
   deleteApplication(application_id: string): void {
     const app = this.applications.get(application_id);
-    if (!app) throw new NotFoundException(`Application not found: ${application_id}`);
+    if (!app)
+      throw new NotFoundException(`Application not found: ${application_id}`);
     // Clean up unique index
-    const uniqueKey = this.applicationUniqueKey(app.gig_profile_id, app.task_id);
+    const uniqueKey = this.applicationUniqueKey(
+      app.gig_profile_id,
+      app.task_id,
+    );
     this.applicationByGigTask.delete(uniqueKey);
     this.applications.delete(application_id);
   }
@@ -776,7 +840,11 @@ export class DatabaseService {
   deleteReview(review_id: string): void {
     const rev = this.reviews.get(review_id);
     if (!rev) throw new NotFoundException(`Review not found: ${review_id}`);
-    const uniqueKey = this.reviewUniqueKey(rev.reviewer_id, rev.reviewee_id, rev.task_id);
+    const uniqueKey = this.reviewUniqueKey(
+      rev.reviewer_id,
+      rev.reviewee_id,
+      rev.task_id,
+    );
     this.reviewByReviewerRevieweeTask.delete(uniqueKey);
     this.reviews.delete(review_id);
   }
@@ -796,7 +864,10 @@ export class DatabaseService {
     return null;
   }
 
-  updateGigProfile(gig_profile_id: string, updates: Partial<Pick<GigProfile, 'bio'>>): GigProfile {
+  updateGigProfile(
+    gig_profile_id: string,
+    updates: Partial<Pick<GigProfile, 'bio'>>,
+  ): GigProfile {
     const profile = this.requireGigProfile(gig_profile_id);
 
     if (updates.bio !== undefined) {
@@ -809,9 +880,13 @@ export class DatabaseService {
 
   // ── Application Status ────────────────────────────────────
 
-  updateApplicationStatus(application_id: string, status: ApplicationStatus): Application {
+  updateApplicationStatus(
+    application_id: string,
+    status: ApplicationStatus,
+  ): Application {
     const app = this.applications.get(application_id);
-    if (!app) throw new NotFoundException(`Application not found: ${application_id}`);
+    if (!app)
+      throw new NotFoundException(`Application not found: ${application_id}`);
 
     app.status = status;
     app.updatedAt = this.now();

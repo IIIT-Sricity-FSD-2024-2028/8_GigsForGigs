@@ -1,6 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../../common/database/database.service';
-import { UserRole, TaskStatus } from '../../common/database/database.types';
+import {
+  ApplicationStatus,
+  UserRole,
+  TaskStatus,
+} from '../../common/database/database.types';
 
 /**
  * Seeds the in-memory database with realistic demo data on application startup.
@@ -63,9 +67,23 @@ export class SeedService implements OnModuleInit {
       role: UserRole.MANAGER,
     });
 
+    const mgrUser2 = this.db.createUser({
+      user_id: 'u10',
+      name: 'Casey Smith',
+      email: 'casey@mgmt.com',
+      password: 'pass',
+      role: UserRole.MANAGER,
+    });
+
     // ── Clients ────────────────────────────────────────────
-    const client1 = this.db.createClient({ user_id: clientUser1.user_id, client_id: 'u1' });
-    const client2 = this.db.createClient({ user_id: clientUser2.user_id, client_id: 'u6' });
+    const client1 = this.db.createClient({
+      user_id: clientUser1.user_id,
+      client_id: 'u1',
+    });
+    const client2 = this.db.createClient({
+      user_id: clientUser2.user_id,
+      client_id: 'u6',
+    });
 
     // ── Managers ───────────────────────────────────────────
     const manager = this.db.createManager({
@@ -98,11 +116,31 @@ export class SeedService implements OnModuleInit {
     this.db.addSkill(gig2.gig_profile_id, 'PostgreSQL');
     this.db.addTool(gig2.gig_profile_id, 'PyCharm');
 
+    // ── Services (Gig listings) ───────────────────────────
+    this.db.createService({
+      gig_profile_id: gig1.gig_profile_id,
+      title: 'NestJS REST API (CRUD + Auth)',
+      description:
+        'I will build a clean NestJS REST API with validation, role-based access, and in-memory persistence for demos.',
+      price: 20000,
+      tags: ['nestjs', 'typescript', 'rest', 'api'],
+    });
+
+    this.db.createService({
+      gig_profile_id: gig2.gig_profile_id,
+      title: 'SaaS UI/UX Design Pack',
+      description:
+        'Wireframes + high-fidelity screens for onboarding, dashboard, and settings, optimized for modern SaaS.',
+      price: 15000,
+      tags: ['ui', 'ux', 'figma', 'saas'],
+    });
+
     // ── Tasks ─────────────────────────────────────────────
     const task1 = this.db.createTask({
       client_id: client1.client_id,
       title: 'Build Landing Page',
-      description: 'Create a responsive landing page for our new SaaS product with hero section, features grid, and CTA.',
+      description:
+        'Create a responsive landing page for our new SaaS product with hero section, features grid, and CTA.',
       budget: 15000,
       status: TaskStatus.OPEN,
     });
@@ -110,7 +148,8 @@ export class SeedService implements OnModuleInit {
     const task2 = this.db.createTask({
       client_id: client1.client_id,
       title: 'REST API Development',
-      description: 'Develop a RESTful API for user management, authentication, and CRUD operations using NestJS.',
+      description:
+        'Develop a RESTful API for user management, authentication, and CRUD operations using NestJS.',
       budget: 25000,
       status: TaskStatus.IN_PROGRESS,
     });
@@ -118,7 +157,8 @@ export class SeedService implements OnModuleInit {
     const task3 = this.db.createTask({
       client_id: client2.client_id,
       title: 'Mobile App UI Design',
-      description: 'Design UI screens for an iOS fitness tracking app including onboarding, dashboard, and profile.',
+      description:
+        'Design UI screens for an iOS fitness tracking app including onboarding, dashboard, and profile.',
       budget: 12000,
       status: TaskStatus.COMPLETED,
     });
@@ -126,15 +166,39 @@ export class SeedService implements OnModuleInit {
     const task4 = this.db.createTask({
       client_id: client2.client_id,
       title: 'Data Pipeline Setup',
-      description: 'Set up an ETL pipeline using Python and Apache Airflow for real-time analytics dashboard.',
+      description:
+        'Set up an ETL pipeline using Python and Apache Airflow for real-time analytics dashboard.',
       budget: 30000,
       status: TaskStatus.OPEN,
     });
 
     // ── Applications ──────────────────────────────────────
-    this.db.applyToTask({ gig_profile_id: gig1.gig_profile_id, task_id: task1.task_id });
-    this.db.applyToTask({ gig_profile_id: gig2.gig_profile_id, task_id: task1.task_id });
-    this.db.applyToTask({ gig_profile_id: gig2.gig_profile_id, task_id: task4.task_id });
+    const a1 = this.db.applyToTask({
+      gig_profile_id: gig1.gig_profile_id,
+      task_id: task1.task_id,
+    });
+    const a2 = this.db.applyToTask({
+      gig_profile_id: gig2.gig_profile_id,
+      task_id: task1.task_id,
+    });
+    const a3 = this.db.applyToTask({
+      gig_profile_id: gig2.gig_profile_id,
+      task_id: task4.task_id,
+    });
+
+    // Make the demo dashboards feel “alive”
+    this.db.updateApplicationStatus(
+      a1.application_id,
+      ApplicationStatus.SHORTLISTED,
+    );
+    this.db.updateApplicationStatus(
+      a2.application_id,
+      ApplicationStatus.PENDING,
+    );
+    this.db.updateApplicationStatus(
+      a3.application_id,
+      ApplicationStatus.PENDING,
+    );
 
     // ── Assignments ───────────────────────────────────────
     this.db.assignManager({
@@ -143,11 +207,42 @@ export class SeedService implements OnModuleInit {
       manager_id: manager.manager_id,
     });
 
+    // Ensure gig dashboards show active work
+    this.db.updateTask(task2.task_id, {
+      assigned_to: gig1.gig_profile_id,
+      status: TaskStatus.IN_PROGRESS,
+    });
+
+    // Client-2 also needs a manager for assignment/deliverables
+    const manager2 = this.db.createManager({
+      client_id: client2.client_id,
+      user_id: mgrUser2.user_id,
+    });
+
+    this.db.assignManager({
+      gig_profile_id: gig2.gig_profile_id,
+      task_id: task3.task_id,
+      manager_id: manager2.manager_id,
+    });
+
+    this.db.updateTask(task3.task_id, {
+      assigned_to: gig2.gig_profile_id,
+      status: TaskStatus.COMPLETED,
+    });
+
     // ── Deliverables ──────────────────────────────────────
     this.db.createDeliverable({
       task_id: task2.task_id,
       gig_profile_id: gig1.gig_profile_id,
-      content: 'Completed user authentication module with JWT tokens, password hashing, and refresh token rotation.',
+      content:
+        'Completed user authentication module with JWT tokens, password hashing, and refresh token rotation.',
+    });
+
+    this.db.createDeliverable({
+      task_id: task3.task_id,
+      gig_profile_id: gig2.gig_profile_id,
+      content:
+        'Delivered final Figma screens for onboarding and dashboard (mobile + desktop variants).',
     });
 
     // ── Payments ──────────────────────────────────────────
@@ -163,7 +258,8 @@ export class SeedService implements OnModuleInit {
       reviewee_id: gigUser2.user_id,
       task_id: task3.task_id,
       rating: 5,
-      comment: 'Outstanding UI designs. Elena delivered pixel-perfect screens ahead of schedule.',
+      comment:
+        'Outstanding UI designs. Elena delivered pixel-perfect screens ahead of schedule.',
     });
 
     this.db.createReview({
@@ -171,7 +267,8 @@ export class SeedService implements OnModuleInit {
       reviewee_id: clientUser2.user_id,
       task_id: task3.task_id,
       rating: 4,
-      comment: 'Great client to work with. Clear requirements and prompt feedback.',
+      comment:
+        'Great client to work with. Clear requirements and prompt feedback.',
     });
 
     this.db.createReview({
@@ -179,20 +276,57 @@ export class SeedService implements OnModuleInit {
       reviewee_id: gigUser1.user_id,
       task_id: task2.task_id,
       rating: 5,
-      comment: 'Arham is an excellent developer. Clean code, well-documented API.',
+      comment:
+        'Arham is an excellent developer. Clean code, well-documented API.',
     });
 
     // ── Additional Seed Data for Charts ─────────────────────
-    
+
     // More Users
-    const u7 = this.db.createUser({ name: 'Sam Chen', email: 'sam@design.io', password: 'pass', role: UserRole.CLIENT });
-    const u8 = this.db.createUser({ name: 'Jordan Lee', email: 'jordan@code.dev', password: 'pass', role: UserRole.GIG });
-    const u9 = this.db.createUser({ name: 'Taylor Swift', email: 'taylor@music.com', password: 'pass', role: UserRole.GIG });
-    const u10 = this.db.createUser({ name: 'Casey Smith', email: 'casey@mgmt.com', password: 'pass', role: UserRole.MANAGER });
-    
+    const u7 = this.db.createUser({
+      name: 'Sam Chen',
+      email: 'sam@design.io',
+      password: 'pass',
+      role: UserRole.CLIENT,
+    });
+    const u8 = this.db.createUser({
+      name: 'Jordan Lee',
+      email: 'jordan@code.dev',
+      password: 'pass',
+      role: UserRole.GIG,
+    });
+    const u9 = this.db.createUser({
+      name: 'Taylor Swift',
+      email: 'taylor@music.com',
+      password: 'pass',
+      role: UserRole.GIG,
+    });
     const c3 = this.db.createClient({ user_id: u7.user_id });
     const g3 = this.db.createGigProfile({ user_id: u8.user_id });
     const g4 = this.db.createGigProfile({ user_id: u9.user_id });
+
+    this.db.addSkill(g3.gig_profile_id, 'Branding');
+    this.db.addSkill(g3.gig_profile_id, 'Figma');
+    this.db.addSkill(g4.gig_profile_id, 'SEO');
+    this.db.addSkill(g4.gig_profile_id, 'Content Strategy');
+
+    this.db.createService({
+      gig_profile_id: g3.gig_profile_id,
+      title: 'Logo & Brand Refresh',
+      description:
+        'A modern logo refresh plus simple brand guidelines (color + typography) for consistent marketing.',
+      price: 7000,
+      tags: ['branding', 'logo', 'design'],
+    });
+
+    this.db.createService({
+      gig_profile_id: g4.gig_profile_id,
+      title: 'SEO Audit + Quick Fixes',
+      description:
+        'Technical + on-page SEO audit with a prioritized fix list and quick wins applied where possible.',
+      price: 6000,
+      tags: ['seo', 'content', 'analytics'],
+    });
 
     // More Tasks
     const t5 = this.db.createTask({
@@ -218,14 +352,44 @@ export class SeedService implements OnModuleInit {
     });
 
     // More Payments
-    this.db.createPayment({ task_id: t5.task_id, gig_profile_id: g3.gig_profile_id, amount: 5000 });
-    this.db.createPayment({ task_id: task2.task_id, gig_profile_id: gig1.gig_profile_id, amount: 25000 });
-    this.db.createPayment({ task_id: task4.task_id, gig_profile_id: gig2.gig_profile_id, amount: 15000 }); // Partial payment
+    this.db.createPayment({
+      task_id: t5.task_id,
+      gig_profile_id: g3.gig_profile_id,
+      amount: 5000,
+    });
+    this.db.createPayment({
+      task_id: task2.task_id,
+      gig_profile_id: gig1.gig_profile_id,
+      amount: 25000,
+    });
+    this.db.createPayment({
+      task_id: task4.task_id,
+      gig_profile_id: gig2.gig_profile_id,
+      amount: 15000,
+    }); // Partial payment
 
     // More Reviews
-    this.db.createReview({ reviewer_id: u7.user_id, reviewee_id: u8.user_id, task_id: t5.task_id, rating: 5, comment: 'Great logo.' });
-    this.db.createReview({ reviewer_id: u8.user_id, reviewee_id: u7.user_id, task_id: t5.task_id, rating: 4, comment: 'Good clear requirements.' });
-    this.db.createReview({ reviewer_id: clientUser1.user_id, reviewee_id: gigUser2.user_id, task_id: task4.task_id, rating: 3, comment: 'Okay work, but missed a deadline.' });
+    this.db.createReview({
+      reviewer_id: u7.user_id,
+      reviewee_id: u8.user_id,
+      task_id: t5.task_id,
+      rating: 5,
+      comment: 'Great logo.',
+    });
+    this.db.createReview({
+      reviewer_id: u8.user_id,
+      reviewee_id: u7.user_id,
+      task_id: t5.task_id,
+      rating: 4,
+      comment: 'Good clear requirements.',
+    });
+    this.db.createReview({
+      reviewer_id: clientUser1.user_id,
+      reviewee_id: gigUser2.user_id,
+      task_id: task4.task_id,
+      rating: 3,
+      comment: 'Okay work, but missed a deadline.',
+    });
 
     console.log('[SeedService] Database seeded with demo data.');
   }
