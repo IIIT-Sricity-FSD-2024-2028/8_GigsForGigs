@@ -83,7 +83,7 @@ export class ClientService {
 
   createTask(dto: CreateTaskDto) {
     return this.db.createTask({
-      client_id: dto.client_id,
+      client_id: this.resolveClientId(dto.client_id),
       title: dto.title,
       description: dto.description,
       budget: dto.budget,
@@ -93,20 +93,19 @@ export class ClientService {
 
   getTasks(clientId?: string) {
     const tasks = Array.from(this.db.tasks.values());
+    const resolvedClientId = this.resolveClientId(clientId);
     const rows = clientId
-      ? tasks.filter((task) => task.client_id === clientId)
+      ? tasks.filter((task) => task.client_id === resolvedClientId)
       : tasks;
 
-    return rows.map((task) => ({
-      ...task,
-      assigned_to: task.assigned_to ?? this.findAssignedGigForTask(task.task_id),
-    }));
+    return rows.map((task) => this.withAssignmentState(task));
   }
 
   updateTask(taskId: string, dto: UpdateTaskDto) {
     const task = this.db.tasks.get(taskId);
     if (!task) throw new NotFoundException(`Task not found: ${taskId}`);
-    if (dto.client_id && task.client_id !== dto.client_id) {
+    const resolvedClientId = this.resolveClientId(dto.client_id);
+    if (resolvedClientId && task.client_id !== resolvedClientId) {
       throw new BadRequestException('client_id does not match task client_id');
     }
 
@@ -135,6 +134,19 @@ export class ClientService {
       throw new BadRequestException('task must be OPEN to assign');
     }
 
+    const acceptedApplication = Array.from(this.db.applications.values()).find(
+      (application) =>
+        application.task_id === taskId &&
+        application.gig_profile_id === dto.gig_profile_id,
+    );
+    if (!acceptedApplication) {
+      throw new BadRequestException('gig must apply before assignment');
+    }
+    this.db.updateApplicationStatus(
+      acceptedApplication.application_id,
+      ApplicationStatus.ACCEPTED,
+    );
+
     const assignment = this.db.assignManager({
       gig_profile_id: dto.gig_profile_id,
       task_id: taskId,
@@ -142,26 +154,7 @@ export class ClientService {
       client_id: task.client_id,
     });
 
-    const updatedTask = {
-      ...task,
-      status: TaskStatus.IN_PROGRESS,
-      assigned_to: dto.gig_profile_id,
-      updatedAt: new Date(),
-    };
-
-    this.db.tasks.set(updatedTask.task_id, updatedTask);
-    const acceptedApplication = Array.from(this.db.applications.values()).find(
-      (application) =>
-        application.task_id === taskId &&
-        application.gig_profile_id === dto.gig_profile_id,
-    );
-    if (acceptedApplication) {
-      this.db.updateApplicationStatus(
-        acceptedApplication.application_id,
-        ApplicationStatus.ACCEPTED,
-      );
-    }
-    this.rejectOtherApplications(taskId, dto.gig_profile_id);
+    const updatedTask = this.db.assignGigToTask(taskId, dto.gig_profile_id);
 
     return { task: updatedTask, assignment };
   }
@@ -169,7 +162,8 @@ export class ClientService {
   deleteTask(taskId: string, clientId?: string) {
     const task = this.db.tasks.get(taskId);
     if (!task) throw new NotFoundException(`Task not found: ${taskId}`);
-    if (clientId && task.client_id !== clientId) {
+    const resolvedClientId = this.resolveClientId(clientId);
+    if (resolvedClientId && task.client_id !== resolvedClientId) {
       throw new BadRequestException('client_id does not match task client_id');
     }
     this.db.tasks.delete(taskId);
@@ -193,12 +187,35 @@ export class ClientService {
     if (!application)
       throw new NotFoundException(`Application not found: ${applicationId}`);
 
-    if (dto.status === 'rejected') {
-      this.db.applications.delete(applicationId);
-      return { application_id: applicationId, status: 'rejected' };
+    const nextStatus = this.normalizeApplicationStatus(dto.status);
+    const updatedApplication = this.db.updateApplicationStatus(
+      applicationId,
+      nextStatus,
+    );
+
+    if (nextStatus === ApplicationStatus.ACCEPTED) {
+      const task = this.db.assignGigToTask(
+        application.task_id,
+        application.gig_profile_id,
+      );
+
+      return {
+        application: {
+          ...updatedApplication,
+          status: String(updatedApplication.status).toLowerCase(),
+        },
+        task: this.withAssignmentState(task),
+        status: 'accepted',
+      };
     }
 
-    return { application, status: 'shortlisted' };
+    return {
+      application: {
+        ...updatedApplication,
+        status: String(updatedApplication.status).toLowerCase(),
+      },
+      status: String(updatedApplication.status).toLowerCase(),
+    };
   }
 
   getContracts(clientId?: string, status?: string) {
@@ -314,7 +331,7 @@ export class ClientService {
 
   createServiceRequest(serviceId: string, dto: CreateServiceRequestDto) {
     const task = this.db.createTask({
-      client_id: dto.client_id,
+      client_id: this.resolveClientId(dto.client_id),
       title: dto.title,
       description: dto.description,
       budget: dto.budget,
@@ -338,7 +355,7 @@ export class ClientService {
     if (!clientId) return [];
 
     const tasks = Array.from(this.db.tasks.values()).filter(
-      (task) => task.client_id === clientId,
+      (task) => task.client_id === this.resolveClientId(clientId),
     );
     const taskIds = new Set(tasks.map((task) => task.task_id));
 
@@ -373,7 +390,7 @@ export class ClientService {
     });
 
     const manager = this.db.createManager({
-      client_id: dto.client_id,
+      client_id: this.resolveClientId(dto.client_id),
       user_id: managerUser.user_id,
       manager_id: dto.manager_id,
     });
@@ -383,8 +400,11 @@ export class ClientService {
 
   getManagerInvites(clientId?: string) {
     const managers = Array.from(this.db.managers.values());
+    const resolvedClientId = this.resolveClientId(clientId);
     return (
-      clientId ? managers.filter((mgr) => mgr.client_id === clientId) : managers
+      clientId
+        ? managers.filter((mgr) => mgr.client_id === resolvedClientId)
+        : managers
     ).map((manager) => ({
       ...manager,
       user: this.db.users.get(manager.user_id) ?? null,
@@ -398,7 +418,7 @@ export class ClientService {
     for (const [applicationId, application] of this.db.applications.entries()) {
       if (application.task_id !== taskId) continue;
       if (application.gig_profile_id === acceptedGigProfileId) continue;
-      this.db.applications.delete(applicationId);
+      this.db.updateApplicationStatus(applicationId, ApplicationStatus.REJECTED);
     }
   }
 
@@ -406,6 +426,48 @@ export class ClientService {
     return Array.from(this.db.assignments.values()).find(
       (assignment) => assignment.task_id === taskId,
     )?.gig_profile_id;
+  }
+
+  private resolveClientId(clientIdOrUserId: string): string;
+  private resolveClientId(clientIdOrUserId?: string): string | undefined;
+  private resolveClientId(clientIdOrUserId?: string) {
+    if (!clientIdOrUserId) return clientIdOrUserId;
+    if (this.db.clients.has(clientIdOrUserId)) return clientIdOrUserId;
+
+    const client = Array.from(this.db.clients.values()).find(
+      (item) => item.user_id === clientIdOrUserId,
+    );
+    return client?.client_id ?? clientIdOrUserId;
+  }
+
+  private withAssignmentState(task: {
+    task_id: string;
+    assigned_to?: string;
+    assignedGigs?: string[];
+  }) {
+    const assignedGigs = [...new Set(task.assignedGigs ?? [])];
+    if (task.assigned_to && !assignedGigs.includes(task.assigned_to)) {
+      assignedGigs.push(task.assigned_to);
+    }
+
+    const assignedFromManager = this.findAssignedGigForTask(task.task_id);
+    if (assignedFromManager && !assignedGigs.includes(assignedFromManager)) {
+      assignedGigs.push(assignedFromManager);
+    }
+
+    return {
+      ...task,
+      assignedGigs,
+      assigned_to: task.assigned_to ?? assignedGigs[0],
+    };
+  }
+
+  private normalizeApplicationStatus(status: UpdateApplicationDto['status']) {
+    const value = String(status || '').toLowerCase();
+    if (value === 'accepted') return ApplicationStatus.ACCEPTED;
+    if (value === 'rejected') return ApplicationStatus.REJECTED;
+    if (value === 'shortlisted') return ApplicationStatus.SHORTLISTED;
+    throw new BadRequestException('status must be accepted or rejected');
   }
 
   private isTaskTransitionAllowed(current: TaskStatus, next: TaskStatus) {

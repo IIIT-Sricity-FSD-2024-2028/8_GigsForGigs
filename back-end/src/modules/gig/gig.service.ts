@@ -202,7 +202,7 @@ export class GigService {
       .filter(
         (task) =>
           task.status === TaskStatus.IN_PROGRESS &&
-          task.assigned_to === profile.gig_profile_id,
+          this.isGigAssignedToTask(task, profile.gig_profile_id),
       )
       .map((task) => {
         // Include deliverables for this task
@@ -224,7 +224,7 @@ export class GigService {
 
     // Ensure the task is assigned to this gig pro
     const task = this.db.getTask(dto.taskId);
-    if (task.assigned_to !== profile.gig_profile_id) {
+    if (!this.isGigAssignedToTask(task, profile.gig_profile_id)) {
       throw new ForbiddenException('You are not assigned to this task');
     }
 
@@ -292,7 +292,7 @@ export class GigService {
       .filter(
         (task) =>
           task.status === TaskStatus.COMPLETED &&
-          task.assigned_to === profile.gig_profile_id,
+          this.isGigAssignedToTask(task, profile.gig_profile_id),
       )
       .map((task) => {
         // Include reviews and payments
@@ -327,7 +327,7 @@ export class GigService {
       .filter(
         (t) =>
           t.status === TaskStatus.COMPLETED &&
-          t.assigned_to === profile.gig_profile_id,
+          this.isGigAssignedToTask(t, profile.gig_profile_id),
       ).length;
 
     return {
@@ -335,5 +335,15 @@ export class GigService {
       completedTasks,
       payments,
     };
+  }
+
+  private isGigAssignedToTask(
+    task: { assigned_to?: string; assignedGigs?: string[] },
+    gigProfileId: string,
+  ) {
+    return (
+      task.assigned_to === gigProfileId ||
+      (task.assignedGigs ?? []).includes(gigProfileId)
+    );
   }
 }

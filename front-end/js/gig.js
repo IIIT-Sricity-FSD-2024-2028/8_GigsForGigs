@@ -833,15 +833,16 @@ async function initProjectDetail(user) {
       ? deliverables
           .map((deliverable) => {
             const link = extractSubmissionLink(deliverable.content);
-            const status = task.status === 'COMPLETED' ? 'approved' : 'submitted';
             return `
               <article style="padding:var(--spacing-lg); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-white); display:grid; gap:var(--spacing-sm);">
-                <div style="display:flex; justify-content:space-between; gap:var(--spacing-md); align-items:center;">
+                <div style="display:flex; gap:var(--spacing-md); align-items:center;">
                   <h3 style="font-size:1rem; font-weight:700; color:var(--color-text-dark);">Atomic Deliverable #${deliverable.deliverable_no}</h3>
-                  <span class="status-badge ${getStatusBadgeClass(status)}">${status}</span>
                 </div>
                 <p style="margin:0; color:var(--color-text-muted); font-size:0.875rem;">${deliverable.content || 'No submission content provided.'}</p>
                 ${link ? `<a href="${link}" target="_blank" rel="noreferrer" style="color:var(--color-primary-blue); font-weight:600; text-decoration:none;">Submission link</a>` : '<span style="color:var(--color-text-muted); font-size:0.875rem;">No submission link</span>'}
+                <div style="display:flex; justify-content:flex-end; margin-top:var(--spacing-sm);">
+                  <button type="button" class="btn btn-primary-blue" data-project-detail-submit>Submit Deliverable</button>
+                </div>
               </article>
             `;
           })
@@ -849,6 +850,18 @@ async function initProjectDetail(user) {
       : createEmptyState('No deliverables found for this task yet.');
 
     setHtml('#project-detail-deliverables-list', deliverablesMarkup);
+    document.querySelectorAll('[data-project-detail-submit]').forEach((button) => {
+      button.addEventListener('click', () => {
+        button.textContent = 'Submitted';
+        button.disabled = true;
+        button.classList.remove('btn-primary-blue');
+        button.style.background = 'rgba(81, 158, 138, 0.16)';
+        button.style.color = 'var(--color-secondary)';
+        button.style.border = '1px solid rgba(81, 158, 138, 0.32)';
+        button.style.cursor = 'not-allowed';
+        button.style.opacity = '1';
+      });
+    });
   } catch (error) {
     console.error('Project detail failed:', error);
   }

@@ -39,11 +39,87 @@ function getPage() {
   return window.location.pathname.split('/').pop();
 }
 
+const CLIENT_NAV_ICONS = {
+  dashboard: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
+  search: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
+  contracts: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+  applications: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="14" y2="17"></line></svg>',
+  managers: '<svg fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+};
+
+function getClientNavKey(page) {
+  if (page === 'client-dashboard.html') return 'dashboard';
+  if (page === 'search-talent.html') return 'search';
+  if (page === 'applications.html' || page === 'review-shortlist.html') return 'applications';
+  if (page === 'client-profile-selection.html' || page === 'add-manager.html' || page === 'add-manager-flow.html') return 'managers';
+  if (page === 'my-gigs-client.html' || page === 'task-details.html' || page === 'review-deliverables.html') return 'contracts';
+  return '';
+}
+
+function getInitials(name) {
+  const parts = String(name || 'Client')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return (parts[0]?.[0] || 'C') + (parts[1]?.[0] || '');
+}
+
+function renderClientSidebar(user, page) {
+  const sidebar = document.querySelector('.dashboard-sidebar');
+  if (!sidebar) return;
+
+  const brandName = sidebar.querySelector('.brand-name');
+  const brandSub = sidebar.querySelector('.brand-sub');
+  const nav = sidebar.querySelector('.sidebar-nav');
+  const userInfo = sidebar.querySelector('.sidebar-user-info');
+  const userName = sidebar.querySelector('.user-name');
+  const userRole = sidebar.querySelector('.user-role');
+  const userAvatar = sidebar.querySelector('.user-avatar');
+  const activeKey = getClientNavKey(page);
+  const displayName = user.name || 'Client';
+
+  if (brandName) brandName.textContent = 'GigsForGigs';
+  if (brandSub) brandSub.textContent = 'Client Portal';
+
+  if (userInfo) {
+    userInfo.innerHTML = `
+      <div class="user-avatar user-avatar-seagrass">${getInitials(displayName).toUpperCase()}</div>
+      <div class="user-details">
+        <div class="user-name">${escapeHtml(displayName)}</div>
+        <div class="user-role">Client Account</div>
+      </div>
+      <button type="button" class="sidebar-logout-btn" data-action="logout">Logout</button>
+    `;
+  }
+
+  if (userName) userName.textContent = displayName;
+  if (userRole) userRole.textContent = 'Client Account';
+  if (userAvatar) userAvatar.textContent = getInitials(displayName).toUpperCase();
+
+  if (!nav) return;
+
+  const items = [
+    { key: 'dashboard', href: 'client-dashboard.html', label: 'Dashboard' },
+    { key: 'search', href: 'search-talent.html', label: 'Search Talent' },
+    { key: 'contracts', href: 'my-gigs-client.html', label: 'Active Contracts' },
+    { key: 'applications', href: 'applications.html', label: 'Applications' },
+    { key: 'managers', href: 'client-profile-selection.html', label: 'Supervise Manager' },
+  ];
+
+  nav.innerHTML = items.map(item => `
+    <a href="${item.href}" class="nav-item${item.key === activeKey ? ' active' : ''}">
+      ${CLIENT_NAV_ICONS[item.key]}
+      ${item.label}
+    </a>
+  `).join('');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const user = requireAuth(['CLIENT']);
   if (!user) return;
 
   const page = getPage();
+  renderClientSidebar(user, page);
 
   // Wire logout buttons
   document.querySelectorAll('[data-action="logout"]').forEach(el =>
@@ -55,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     case 'post-gig.html': initPostGig(user); break;
     case 'my-gigs-client.html': initMyGigs(user); break;
     case 'task-details.html': initTaskDetails(user); break;
+    case 'applications.html': initApplications(user); break;
     case 'review-shortlist.html': initReviewShortlist(user); break;
     case 'review-deliverables.html': initReviewDeliverables(user); break;
     case 'search-talent.html': initSearchTalent(user); break;
@@ -114,7 +191,7 @@ async function initClientDashboard(user) {
             <td>${formatDate(t.createdAt)}</td>
             <td class="budget-cell">${formatCurrency(t.budget)}</td>
             <td><div class="actions-cell">
-              <a href="review-shortlist.html?taskId=${t.task_id}" class="btn-icon-action" title="View Applications">👁</a>
+              <a href="applications.html?taskId=${t.task_id}" class="btn-icon-action" title="View Applications">View</a>
               <a href="post-gig.html?editId=${t.task_id}" class="btn-icon-action" title="Edit">✏️</a>
             </div></td>
           </tr>
@@ -213,45 +290,19 @@ async function initPostGig(user) {
 async function initMyGigs(user) {
   try {
     const tasks = await apiRequest(`/api/tasks?clientId=${user.userId}`);
-    const applicationGroups = await Promise.all(
-      tasks.map(async (task) => {
-        try {
-          const apps = await apiRequest(`/api/applications?taskId=${task.task_id}`);
-          return [task.task_id, apps];
-        } catch (_) {
-          return [task.task_id, []];
-        }
-      })
-    );
-    const appsByTaskId = new Map(applicationGroups);
     const container = document.getElementById('active-contracts-content');
     const tbody = document.querySelector('#active-contracts-table tbody');
     const target = tbody || container;
     if (!target) return;
 
     if (tasks.length === 0) {
-      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No tasks found.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">No tasks found.</td></tr>';
       else target.innerHTML = '<p style="text-align:center;padding:2rem;">No tasks found.</p>';
       return;
     }
 
     if (tbody) {
-      tbody.innerHTML = tasks.map(t => `
-        <tr>
-          <td><div class="task-name-cell">${t.title}</div></td>
-          <td><span class="status-badge ${getStatusBadgeClass(t.status)}">${t.status.replace('_', ' ')}</span></td>
-          <td class="budget-cell">${formatCurrency(t.budget)}</td>
-          <td>${formatDate(t.createdAt)}</td>
-          <td><div class="actions-cell">
-            <a href="post-gig.html?editId=${t.task_id}" class="btn-icon-action" title="Edit">✏️</a>
-            <button class="btn-icon-action" title="Delete" data-delete-task="${t.task_id}">🗑️</button>
-          </div></td>
-        </tr>
-      `).join('');
-
       tbody.innerHTML = tasks.map(t => {
-        const apps = appsByTaskId.get(t.task_id) || [];
-        const professionals = t.assigned_to || apps.map(app => app.gig_profile_id).join(', ') || 'Not assigned';
         const progress = getTaskProgress(t.status);
 
         return `
@@ -259,12 +310,6 @@ async function initMyGigs(user) {
             <td>
               <div class="task-name-cell">${escapeHtml(t.title)}</div>
               <div class="task-category">${escapeHtml(formatDate(t.createdAt))}</div>
-            </td>
-            <td>
-              <div class="pro-cell">
-                <div class="pro-photo"></div>
-                ${escapeHtml(professionals)}
-              </div>
             </td>
             <td><span class="status-badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.status.replace('_', ' '))}</span></td>
             <td class="progress-cell">
@@ -365,8 +410,11 @@ async function initTaskDetails(user) {
   }
 
   async function loadApplications(task) {
-    const apps = await apiRequest(`/api/applications?taskId=${taskId}`);
-    associatedGigs = buildAssociatedGigs(apps, task);
+    const [apps, services] = await Promise.all([
+      apiRequest(`/api/applications?taskId=${taskId}`),
+      apiRequest('/api/services').catch(() => []),
+    ]);
+    associatedGigs = buildAssociatedGigs(apps, task, services);
     renderAssociatedGigs();
     renderDeliverableGigOptions();
 
@@ -375,15 +423,30 @@ async function initTaskDetails(user) {
     }
   }
 
-  function buildAssociatedGigs(apps, task) {
+  function buildAssociatedGigs(apps, task, services = []) {
     const byGigId = new Map();
+    const gigNameById = new Map(
+      (Array.isArray(services) ? services : [])
+        .filter(service => service?.gig_profile_id)
+        .map(service => [
+          service.gig_profile_id,
+          service.user?.name || service.name || service.title || '',
+        ])
+    );
+    const getGigName = (gigProfileId) => gigNameById.get(gigProfileId) || '';
 
-    if (task.assigned_to) {
-      byGigId.set(task.assigned_to, {
-        gig_profile_id: task.assigned_to,
+    const assignedGigs = Array.isArray(task.assignedGigs)
+      ? task.assignedGigs
+      : (task.assigned_to ? [task.assigned_to] : []);
+
+    assignedGigs.forEach((gigProfileId) => {
+      if (!gigProfileId) return;
+      byGigId.set(gigProfileId, {
+        gig_profile_id: gigProfileId,
+        gig_name: getGigName(gigProfileId),
         status: 'assigned',
       });
-    }
+    });
 
     if (byGigId.size === 0) {
       apps
@@ -392,6 +455,7 @@ async function initTaskDetails(user) {
           if (!app.gig_profile_id) return;
           byGigId.set(app.gig_profile_id, {
             gig_profile_id: app.gig_profile_id,
+            gig_name: getGigName(app.gig_profile_id),
             status: app.status || 'associated',
           });
         });
@@ -412,6 +476,7 @@ async function initTaskDetails(user) {
         <div class="relationship-row">
           <div>
             <div class="detail-value">Gig ${escapeHtml(gig.gig_profile_id)}</div>
+            <div class="detail-copy" style="font-weight:600;">${escapeHtml(gig.gig_name || 'Name unavailable')}</div>
             <div class="detail-label">Gig Profile: ${escapeHtml(gig.gig_profile_id)}</div>
           </div>
           <span class="status-badge ${getStatusBadgeClass(gig.status)}">${escapeHtml(gig.status)}</span>
@@ -474,7 +539,9 @@ async function initTaskDetails(user) {
 
       const option = document.createElement('option');
       option.value = gig.gig_profile_id;
-      option.textContent = `Gig ${gig.gig_profile_id}`;
+      option.textContent = gig.gig_name
+        ? `Gig ${gig.gig_profile_id} - ${gig.gig_name}`
+        : `Gig ${gig.gig_profile_id}`;
       gigSelect.appendChild(option);
     });
   }
@@ -535,6 +602,85 @@ async function initTaskDetails(user) {
   }
 }
 
+async function initApplications(user) {
+  const params = new URLSearchParams(window.location.search);
+  const taskId = params.get('taskId');
+  const tbody = document.querySelector('#applications-table tbody');
+  const title = document.getElementById('applications-task-title');
+
+  if (!tbody) return;
+
+  async function render() {
+    const tasks = await apiRequest(`/api/tasks?clientId=${user.userId}`);
+    const task = taskId ? tasks.find(item => item.task_id === taskId) : null;
+    const applicationsByTask = taskId
+      ? [[taskId, await apiRequest(`/api/applications?taskId=${taskId}`)]]
+      : await Promise.all(tasks.map(async item => {
+          try {
+            return [item.task_id, await apiRequest(`/api/applications?taskId=${item.task_id}`)];
+          } catch (_) {
+            return [item.task_id, []];
+          }
+        }));
+    const taskTitleById = new Map(tasks.map(item => [item.task_id, item.title]));
+    const apps = applicationsByTask.flatMap(([currentTaskId, rows]) =>
+      (Array.isArray(rows) ? rows : []).map(app => ({
+        ...app,
+        task_id: currentTaskId,
+        task_title: taskTitleById.get(currentTaskId) || currentTaskId,
+      }))
+    );
+
+    if (title) title.textContent = taskId ? (task ? task.title : taskId) : 'All posted tasks';
+
+    if (apps.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;">No applications yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = apps.map(app => {
+      const status = String(app.status || 'pending').toLowerCase();
+      const isClosed = status === 'accepted' || status === 'rejected';
+
+      return `
+        <tr>
+          <td>${escapeHtml(app.application_id)}</td>
+          <td>
+            ${escapeHtml(app.gig_profile_id)}
+            ${taskId ? '' : `<div class="task-category">${escapeHtml(app.task_title)}</div>`}
+          </td>
+          <td><span class="status-badge ${getStatusBadgeClass(status)}">${escapeHtml(status)}</span></td>
+          <td><div class="actions-cell">
+            <button class="btn btn-primary" style="padding:4px 12px;font-size:0.8rem;" data-accept="${escapeHtml(app.application_id)}" ${isClosed ? 'disabled' : ''}>Accept</button>
+            <button class="btn btn-outline" style="padding:4px 12px;font-size:0.8rem;" data-reject="${escapeHtml(app.application_id)}" ${isClosed ? 'disabled' : ''}>Reject</button>
+          </div></td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('[data-accept]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await apiRequest(`/api/applications/${btn.dataset.accept}`, 'PATCH', { status: 'accepted' });
+        await render();
+      });
+    });
+
+    tbody.querySelectorAll('[data-reject]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await apiRequest(`/api/applications/${btn.dataset.reject}`, 'PATCH', { status: 'rejected' });
+        await render();
+      });
+    });
+  }
+
+  try {
+    await render();
+  } catch (err) {
+    console.error('Applications load failed:', err);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;">Unable to load applications.</td></tr>';
+  }
+}
+
 async function initReviewShortlist(user) {
   const params = new URLSearchParams(window.location.search);
   const taskId = params.get('taskId');
@@ -564,7 +710,7 @@ async function initReviewShortlist(user) {
 
     tbody.querySelectorAll('[data-accept]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        await apiRequest(`/api/applications/${btn.dataset.accept}`, 'PATCH', { status: 'shortlisted' });
+        await apiRequest(`/api/applications/${btn.dataset.accept}`, 'PATCH', { status: 'accepted' });
         initReviewShortlist(user);
       });
     });

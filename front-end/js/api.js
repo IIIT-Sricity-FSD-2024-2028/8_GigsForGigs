@@ -188,8 +188,10 @@ export function getStatusBadgeClass(status) {
     'PENDING': 'status-scheduled',
     'SHORTLISTED': 'status-in-progress',
     'ACCEPTED': 'status-review-needed',
+    'REJECTED': 'status-cancelled',
     'DECLINED': 'status-cancelled',
     'accepted': 'status-review-needed',
+    'rejected': 'status-cancelled',
     'declined': 'status-cancelled',
   };
   return map[status] || 'status-scheduled';

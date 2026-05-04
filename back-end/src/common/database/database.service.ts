@@ -402,6 +402,7 @@ export class DatabaseService {
       description: input.description.trim(),
       budget: input.budget,
       status: input.status ?? TaskStatus.OPEN,
+      assignedGigs: [],
       createdAt: now,
       updatedAt: now,
     };
@@ -490,17 +491,13 @@ export class DatabaseService {
   // -------------------------
 
   createDeliverable(input: CreateDeliverableInput): Deliverable {
-    this.requireTask(input.task_id);
+    const task = this.requireTask(input.task_id);
     this.requireGigProfile(input.gig_profile_id);
     this.requireNonEmptyString('content', input.content);
 
-    const assignmentKey = this.assignmentKey(
-      input.gig_profile_id,
-      input.task_id,
-    );
-    if (!this.assignments.has(assignmentKey)) {
+    if (!(task.assignedGigs ?? []).includes(input.gig_profile_id)) {
       throw new BadRequestException(
-        'deliverable requires an existing assignment',
+        'deliverable requires the gig to be assigned to this task',
       );
     }
 
@@ -741,7 +738,10 @@ export class DatabaseService {
   updateTask(
     task_id: string,
     updates: Partial<
-      Pick<Task, 'title' | 'description' | 'budget' | 'status' | 'assigned_to'>
+      Pick<
+        Task,
+        'title' | 'description' | 'budget' | 'status' | 'assigned_to' | 'assignedGigs'
+      >
     >,
   ): Task {
     const task = this.requireTask(task_id);
@@ -763,6 +763,12 @@ export class DatabaseService {
     }
     if (updates.assigned_to !== undefined) {
       task.assigned_to = updates.assigned_to;
+      task.assignedGigs = [
+        ...new Set([...(task.assignedGigs ?? []), updates.assigned_to]),
+      ];
+    }
+    if (updates.assignedGigs !== undefined) {
+      task.assignedGigs = [...new Set(updates.assignedGigs)];
     }
 
     task.updatedAt = this.now();
@@ -894,6 +900,24 @@ export class DatabaseService {
     app.status = status;
     app.updatedAt = this.now();
     return this.clone(app);
+  }
+
+  assignGigToTask(task_id: string, gig_profile_id: string): Task {
+    this.requireGigProfile(gig_profile_id);
+    const task = this.requireTask(task_id);
+    const assignedGigs = task.assignedGigs ?? [];
+
+    if (!assignedGigs.includes(gig_profile_id)) {
+      task.assignedGigs = [...assignedGigs, gig_profile_id];
+    } else {
+      task.assignedGigs = assignedGigs;
+    }
+
+    task.assigned_to = task.assigned_to ?? gig_profile_id;
+    task.status = TaskStatus.IN_PROGRESS;
+    task.updatedAt = this.now();
+
+    return this.clone(task);
   }
 
   // ── Service ───────────────────────────────────────────────

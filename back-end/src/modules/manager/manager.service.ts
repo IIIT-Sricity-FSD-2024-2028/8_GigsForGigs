@@ -218,6 +218,7 @@ export class ManagerService {
       taskId,
       requestedGigProfileId,
       task.assigned_to,
+      task.assignedGigs,
     );
 
     if (user.role === UserRole.CLIENT) {
@@ -341,18 +342,28 @@ export class ManagerService {
     taskId: string,
     requestedGigProfileId?: string,
     assignedTo?: string,
+    assignedGigs: string[] = [],
   ): string {
-    if (assignedTo) {
-      if (requestedGigProfileId && requestedGigProfileId !== assignedTo) {
-        throw new BadRequestException(
-          'deliverable gig must match the gig assigned to this task',
-        );
-      }
-      return assignedTo;
+    const normalizedAssignedGigs = [...new Set(assignedGigs ?? [])];
+    if (assignedTo && !normalizedAssignedGigs.includes(assignedTo)) {
+      normalizedAssignedGigs.push(assignedTo);
     }
 
     if (requestedGigProfileId) {
+      if (!normalizedAssignedGigs.includes(requestedGigProfileId)) {
+        throw new BadRequestException(
+          'deliverable gig must be assigned to this task',
+        );
+      }
       return requestedGigProfileId;
+    }
+
+    if (normalizedAssignedGigs.length === 1) {
+      return normalizedAssignedGigs[0];
+    }
+
+    if (normalizedAssignedGigs.length > 1) {
+      throw new BadRequestException('gig_profile_id is required');
     }
 
     const assignedGigProfiles = Array.from(this.db.assignments.values())

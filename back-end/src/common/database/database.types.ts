@@ -17,6 +17,7 @@ export enum ApplicationStatus {
   PENDING = 'PENDING',
   SHORTLISTED = 'SHORTLISTED',
   ACCEPTED = 'ACCEPTED',
+  REJECTED = 'REJECTED',
   DECLINED = 'DECLINED',
 }
 
@@ -60,6 +61,7 @@ export interface Task extends Timestamps {
   budget: number;
   status: TaskStatus;
   assigned_to?: string;
+  assignedGigs: string[];
 }
 
 export interface Application extends Timestamps {
