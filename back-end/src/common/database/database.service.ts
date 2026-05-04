@@ -519,6 +519,8 @@ export class DatabaseService {
 
     const now = this.now();
     const deliverable: Deliverable = {
+      id: key,
+      taskId: input.task_id,
       task_id: input.task_id,
       deliverable_no,
       gig_profile_id: input.gig_profile_id,

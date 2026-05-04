@@ -378,19 +378,23 @@ async function initTaskDetails(user) {
   function buildAssociatedGigs(apps, task) {
     const byGigId = new Map();
 
-    apps.forEach(app => {
-      if (!app.gig_profile_id) return;
-      byGigId.set(app.gig_profile_id, {
-        gig_profile_id: app.gig_profile_id,
-        status: app.status || 'associated',
-      });
-    });
-
-    if (task.assigned_to && !byGigId.has(task.assigned_to)) {
+    if (task.assigned_to) {
       byGigId.set(task.assigned_to, {
         gig_profile_id: task.assigned_to,
         status: 'assigned',
       });
+    }
+
+    if (byGigId.size === 0) {
+      apps
+        .filter(app => String(app.status).toLowerCase() === 'accepted')
+        .forEach(app => {
+          if (!app.gig_profile_id) return;
+          byGigId.set(app.gig_profile_id, {
+            gig_profile_id: app.gig_profile_id,
+            status: app.status || 'associated',
+          });
+        });
     }
 
     return Array.from(byGigId.values());

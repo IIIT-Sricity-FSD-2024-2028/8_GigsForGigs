@@ -235,7 +235,13 @@ export class ClientService {
       .filter((deliverable) => deliverable.task_id === taskId)
       .map((deliverable) => ({
         ...deliverable,
-        deliverable_id: `${deliverable.task_id}_${deliverable.deliverable_no}`,
+        id:
+          deliverable.id ??
+          `${deliverable.task_id}_${deliverable.deliverable_no}`,
+        taskId: deliverable.taskId ?? deliverable.task_id,
+        deliverable_id:
+          deliverable.id ??
+          `${deliverable.task_id}_${deliverable.deliverable_no}`,
         status: deliverable.status ?? 'pending',
       }));
   }

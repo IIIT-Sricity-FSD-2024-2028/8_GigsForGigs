@@ -76,6 +76,8 @@ export interface Assignment extends Timestamps {
 }
 
 export interface Deliverable extends Timestamps {
+  id: string;
+  taskId: string;
   task_id: string;
   deliverable_no: number;
   gig_profile_id: string;

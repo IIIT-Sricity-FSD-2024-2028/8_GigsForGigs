@@ -225,12 +225,14 @@ export class ManagerService {
         throw new ForbiddenException('client does not own this task');
       }
 
-      return this.createDeliverableForTask(
-        taskId,
-        gigProfileId,
+      const created = this.db.createDeliverable({
+        task_id: taskId,
+        deliverable_no: deliverableNo,
+        gig_profile_id: gigProfileId,
         content,
-        deliverableNo,
-      );
+      });
+
+      return this.withManagerMeta(created);
     }
 
     const ctx = this.requireManagerContext(userId);
@@ -324,44 +326,6 @@ export class ManagerService {
   }
 
   // ── Internals ───────────────────────────────────────────────-
-
-  private createDeliverableForTask(
-    taskId: string,
-    gigProfileId: string,
-    content: string,
-    deliverableNo?: number,
-  ) {
-    this.db.getTask(taskId);
-    this.db.getGigProfile(gigProfileId);
-
-    const nextNo =
-      deliverableNo ??
-      Math.max(
-        0,
-        ...Array.from(this.db.deliverables.values())
-          .filter((deliverable) => deliverable.task_id === taskId)
-          .map((deliverable) => deliverable.deliverable_no),
-      ) + 1;
-
-    const key = this.deliverableKey(taskId, nextNo);
-    if (this.db.deliverables.has(key)) {
-      throw new BadRequestException('deliverable composite key must be unique');
-    }
-
-    const now = new Date();
-    const deliverable = {
-      task_id: taskId,
-      deliverable_no: nextNo,
-      gig_profile_id: gigProfileId,
-      content: content.trim(),
-      status: 'pending' as const,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.db.deliverables.set(key, deliverable);
-    return this.withManagerMeta(deliverable);
-  }
 
   private isTaskClientUser(clientId: string, userId: string): boolean {
     if (clientId === userId) {
@@ -491,6 +455,11 @@ export class ManagerService {
     const close = this.deliverableClosures.get(key) ?? null;
     return {
       ...deliverable,
+      id:
+        (deliverable as { id?: string }).id ??
+        `${deliverable.task_id}_${deliverable.deliverable_no}`,
+      taskId:
+        (deliverable as { taskId?: string }).taskId ?? deliverable.task_id,
       manager_review: review,
       manager_closed: close ? true : false,
       manager_closed_at: close?.closedAt ?? null,
