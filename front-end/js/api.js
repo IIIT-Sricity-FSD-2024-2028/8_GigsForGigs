@@ -189,6 +189,8 @@ export function getStatusBadgeClass(status) {
     'SHORTLISTED': 'status-in-progress',
     'ACCEPTED': 'status-review-needed',
     'DECLINED': 'status-cancelled',
+    'accepted': 'status-review-needed',
+    'declined': 'status-cancelled',
   };
   return map[status] || 'status-scheduled';
 }
