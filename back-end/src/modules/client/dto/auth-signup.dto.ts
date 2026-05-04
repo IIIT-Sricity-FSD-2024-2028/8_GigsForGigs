@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-=======
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsNotEmpty, IsString } from 'class-validator';
->>>>>>> caa7868cb617e31b5f661fece23f697ab1c3f263
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class AuthSignupDto {
   @ApiProperty({ example: 'Jane Doe' })

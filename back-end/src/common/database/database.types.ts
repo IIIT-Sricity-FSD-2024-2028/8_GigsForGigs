@@ -80,6 +80,7 @@ export interface Deliverable extends Timestamps {
   deliverable_no: number;
   gig_profile_id: string;
   content: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface Payment extends Timestamps {

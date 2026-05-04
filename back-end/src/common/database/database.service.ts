@@ -523,6 +523,7 @@ export class DatabaseService {
       deliverable_no,
       gig_profile_id: input.gig_profile_id,
       content: input.content.trim(),
+      status: 'pending',
       createdAt: now,
       updatedAt: now,
     };

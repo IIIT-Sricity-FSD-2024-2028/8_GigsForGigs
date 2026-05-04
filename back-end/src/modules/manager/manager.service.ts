@@ -204,19 +204,42 @@ export class ManagerService {
     taskId: string,
     dto: CreateManagerDeliverableDto,
   ) {
-    const ctx = this.requireManagerContext(userId);
+    const user = this.db.getUserById(userId);
     const deliverableNo = dto?.deliverable_no;
+    const content = dto?.content ?? dto?.description;
 
-    if (!dto?.gig_profile_id || !dto?.content) {
-      throw new BadRequestException('gig_profile_id and content are required');
+    if (!content) {
+      throw new BadRequestException('description is required');
     }
 
-    // Must have an assignment on this task for this manager + gig profile.
+    const task = this.db.getTask(taskId);
+    const requestedGigProfileId = dto?.gig_profile_id ?? dto?.assignedGigId;
+    const gigProfileId = this.resolveWorkingGigProfileId(
+      taskId,
+      requestedGigProfileId,
+      task.assigned_to,
+    );
+
+    if (user.role === UserRole.CLIENT) {
+      if (!this.isTaskClientUser(task.client_id, userId)) {
+        throw new ForbiddenException('client does not own this task');
+      }
+
+      return this.createDeliverableForTask(
+        taskId,
+        gigProfileId,
+        content,
+        deliverableNo,
+      );
+    }
+
+    const ctx = this.requireManagerContext(userId);
+
     const match = Array.from(this.db.assignments.values()).find(
       (a) =>
         a.task_id === taskId &&
         a.manager_id === ctx.manager.manager_id &&
-        a.gig_profile_id === dto.gig_profile_id,
+        a.gig_profile_id === gigProfileId,
     );
     if (!match) {
       throw new ForbiddenException(
@@ -227,8 +250,8 @@ export class ManagerService {
     const created = this.db.createDeliverable({
       task_id: taskId,
       deliverable_no: deliverableNo,
-      gig_profile_id: dto.gig_profile_id,
-      content: dto.content,
+      gig_profile_id: gigProfileId,
+      content,
     });
 
     return this.withManagerMeta(created);
@@ -301,6 +324,85 @@ export class ManagerService {
   }
 
   // ── Internals ───────────────────────────────────────────────-
+
+  private createDeliverableForTask(
+    taskId: string,
+    gigProfileId: string,
+    content: string,
+    deliverableNo?: number,
+  ) {
+    this.db.getTask(taskId);
+    this.db.getGigProfile(gigProfileId);
+
+    const nextNo =
+      deliverableNo ??
+      Math.max(
+        0,
+        ...Array.from(this.db.deliverables.values())
+          .filter((deliverable) => deliverable.task_id === taskId)
+          .map((deliverable) => deliverable.deliverable_no),
+      ) + 1;
+
+    const key = this.deliverableKey(taskId, nextNo);
+    if (this.db.deliverables.has(key)) {
+      throw new BadRequestException('deliverable composite key must be unique');
+    }
+
+    const now = new Date();
+    const deliverable = {
+      task_id: taskId,
+      deliverable_no: nextNo,
+      gig_profile_id: gigProfileId,
+      content: content.trim(),
+      status: 'pending' as const,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.db.deliverables.set(key, deliverable);
+    return this.withManagerMeta(deliverable);
+  }
+
+  private isTaskClientUser(clientId: string, userId: string): boolean {
+    if (clientId === userId) {
+      return true;
+    }
+
+    return Array.from(this.db.clients.values()).some(
+      (client) => client.client_id === clientId && client.user_id === userId,
+    );
+  }
+
+  private resolveWorkingGigProfileId(
+    taskId: string,
+    requestedGigProfileId?: string,
+    assignedTo?: string,
+  ): string {
+    if (assignedTo) {
+      if (requestedGigProfileId && requestedGigProfileId !== assignedTo) {
+        throw new BadRequestException(
+          'deliverable gig must match the gig assigned to this task',
+        );
+      }
+      return assignedTo;
+    }
+
+    if (requestedGigProfileId) {
+      return requestedGigProfileId;
+    }
+
+    const assignedGigProfiles = Array.from(this.db.assignments.values())
+      .filter((assignment) => assignment.task_id === taskId)
+      .map((assignment) => assignment.gig_profile_id);
+
+    if (assignedGigProfiles.length === 1) {
+      return assignedGigProfiles[0];
+    }
+
+    throw new BadRequestException(
+      'task does not have a working gig assigned',
+    );
+  }
 
   private requireManagerContext(userId: string) {
     const user = this.db.getUserById(userId);

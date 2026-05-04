@@ -51,7 +51,9 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const role = normalizeRoleHeader(request.headers['x-role']);
+    const role = normalizeRoleHeader(
+      request.headers['x-role'] ?? request.headers.role,
+    );
 
     const requiredRoles = this.reflector.getAllAndOverride<Role[] | undefined>(
       ROLES_KEY,

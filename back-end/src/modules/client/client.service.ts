@@ -4,7 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../common/database/database.service';
-import { TaskStatus, UserRole } from '../../common/database/database.types';
+import {
+  ApplicationStatus,
+  TaskStatus,
+  UserRole,
+} from '../../common/database/database.types';
 import {
   AssignTaskDto,
   AuthLoginDto,
@@ -89,9 +93,14 @@ export class ClientService {
 
   getTasks(clientId?: string) {
     const tasks = Array.from(this.db.tasks.values());
-    return clientId
+    const rows = clientId
       ? tasks.filter((task) => task.client_id === clientId)
       : tasks;
+
+    return rows.map((task) => ({
+      ...task,
+      assigned_to: task.assigned_to ?? this.findAssignedGigForTask(task.task_id),
+    }));
   }
 
   updateTask(taskId: string, dto: UpdateTaskDto) {
@@ -136,10 +145,22 @@ export class ClientService {
     const updatedTask = {
       ...task,
       status: TaskStatus.IN_PROGRESS,
+      assigned_to: dto.gig_profile_id,
       updatedAt: new Date(),
     };
 
     this.db.tasks.set(updatedTask.task_id, updatedTask);
+    const acceptedApplication = Array.from(this.db.applications.values()).find(
+      (application) =>
+        application.task_id === taskId &&
+        application.gig_profile_id === dto.gig_profile_id,
+    );
+    if (acceptedApplication) {
+      this.db.updateApplicationStatus(
+        acceptedApplication.application_id,
+        ApplicationStatus.ACCEPTED,
+      );
+    }
     this.rejectOtherApplications(taskId, dto.gig_profile_id);
 
     return { task: updatedTask, assignment };
@@ -157,9 +178,14 @@ export class ClientService {
 
   getApplications(taskId?: string) {
     const applications = Array.from(this.db.applications.values());
-    return taskId
+    const rows = taskId
       ? applications.filter((application) => application.task_id === taskId)
       : applications;
+
+    return rows.map((application) => ({
+      ...application,
+      status: String(application.status).toLowerCase(),
+    }));
   }
 
   updateApplication(applicationId: string, dto: UpdateApplicationDto) {
@@ -205,9 +231,13 @@ export class ClientService {
   }
 
   getDeliverables(taskId: string) {
-    return Array.from(this.db.deliverables.values()).filter(
-      (deliverable) => deliverable.task_id === taskId,
-    );
+    return Array.from(this.db.deliverables.values())
+      .filter((deliverable) => deliverable.task_id === taskId)
+      .map((deliverable) => ({
+        ...deliverable,
+        deliverable_id: `${deliverable.task_id}_${deliverable.deliverable_no}`,
+        status: deliverable.status ?? 'pending',
+      }));
   }
 
   updateDeliverable(deliverableId: string, dto: UpdateDeliverableDto) {
@@ -219,7 +249,23 @@ export class ClientService {
     if (!task)
       throw new NotFoundException(`Task not found: ${deliverable.task_id}`);
 
-    if (dto.action === 'approve') {
+    const nextStatus =
+      dto.status ??
+      (dto.action === 'approve'
+        ? 'approved'
+        : dto.action === 'revision_requested'
+          ? 'rejected'
+          : undefined);
+
+    if (!nextStatus) {
+      throw new BadRequestException('status is required');
+    }
+
+    deliverable.status = nextStatus;
+    deliverable.updatedAt = new Date();
+    this.db.deliverables.set(deliverableId, deliverable);
+
+    if (nextStatus === 'approved') {
       const updatedTask = {
         ...task,
         status: TaskStatus.COMPLETED,
@@ -228,16 +274,23 @@ export class ClientService {
 
       this.db.tasks.set(updatedTask.task_id, updatedTask);
 
-      const payment = this.db.createPayment({
-        task_id: deliverable.task_id,
-        gig_profile_id: deliverable.gig_profile_id,
-        amount: task.budget,
-      });
+      const existingPayment = Array.from(this.db.payments.values()).find(
+        (payment) =>
+          payment.task_id === deliverable.task_id &&
+          payment.gig_profile_id === deliverable.gig_profile_id,
+      );
+      const payment =
+        existingPayment ??
+        this.db.createPayment({
+          task_id: deliverable.task_id,
+          gig_profile_id: deliverable.gig_profile_id,
+          amount: task.budget,
+        });
 
       return { deliverable, task: updatedTask, payment, status: 'approved' };
     }
 
-    return { deliverable, task, status: 'revision_requested' };
+    return { deliverable, task, status: 'rejected' };
   }
 
   getServices() {
@@ -340,6 +393,12 @@ export class ClientService {
       if (application.gig_profile_id === acceptedGigProfileId) continue;
       this.db.applications.delete(applicationId);
     }
+  }
+
+  private findAssignedGigForTask(taskId: string) {
+    return Array.from(this.db.assignments.values()).find(
+      (assignment) => assignment.task_id === taskId,
+    )?.gig_profile_id;
   }
 
   private isTaskTransitionAllowed(current: TaskStatus, next: TaskStatus) {

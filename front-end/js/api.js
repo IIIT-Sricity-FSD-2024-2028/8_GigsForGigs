@@ -4,6 +4,7 @@ const API_BASE = 'http://localhost:3000';
 export async function apiRequest(url, method = 'GET', body = null) {
   const headers = {
     'Content-Type': 'application/json',
+    'role': localStorage.getItem('role') || '',
     'x-role': localStorage.getItem('role') || '',
     'x-user-id': localStorage.getItem('userId') || '',
   };
@@ -98,6 +99,8 @@ export function getStatusBadgeClass(status) {
     'SHORTLISTED': 'status-in-progress',
     'ACCEPTED': 'status-review-needed',
     'DECLINED': 'status-cancelled',
+    'APPROVED': 'status-review-needed',
+    'REJECTED': 'status-cancelled',
   };
   return map[status] || 'status-scheduled';
 }
