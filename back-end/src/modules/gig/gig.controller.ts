@@ -11,6 +11,7 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiBody, ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/rbac/roles.enum';
 import { GigService } from './gig.service';
@@ -23,6 +24,12 @@ import {
   CreateReviewDto,
 } from './dto';
 
+@ApiTags('Gig')
+@ApiHeader({
+  name: 'x-role',
+  description: 'Role for RBAC: CLIENT | MANAGER | GIG_PROFESSIONAL',
+  required: true,
+})
 @Controller('gig')
 export class GigController {
   constructor(private readonly gigService: GigService) {}
@@ -41,6 +48,10 @@ export class GigController {
   // ── 1. GET /gig/profile ───────────────────────────────────────
 
   @Get('profile')
+  @ApiOperation({ summary: 'Get the gig professional profile' })
+  @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getProfile(@Headers('x-user-id') userId: string) {
     return this.gigService.getProfile(this.extractUserId(userId));
@@ -49,6 +60,11 @@ export class GigController {
   // ── 2. PUT /gig/profile ───────────────────────────────────────
 
   @Put('profile')
+  @ApiOperation({ summary: 'Update the gig professional profile' })
+  @ApiBody({ type: UpdateProfileDto })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   updateProfile(
     @Headers('x-user-id') userId: string,
@@ -60,6 +76,10 @@ export class GigController {
   // ── 3. GET /gig/tasks/marketplace ─────────────────────────────
 
   @Get('tasks/marketplace')
+  @ApiOperation({ summary: 'Get marketplace tasks' })
+  @ApiResponse({ status: 200, description: 'Marketplace tasks retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getMarketplaceTasks() {
     return this.gigService.getMarketplaceTasks();
@@ -69,6 +89,11 @@ export class GigController {
 
   @Post('applications')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Apply to a task' })
+  @ApiBody({ type: CreateApplicationDto })
+  @ApiResponse({ status: 201, description: 'Application created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   applyToTask(
     @Headers('x-user-id') userId: string,
@@ -81,6 +106,10 @@ export class GigController {
 
   @Delete('applications/:id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Withdraw an application' })
+  @ApiResponse({ status: 200, description: 'Application withdrawn successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   withdrawApplication(
     @Headers('x-user-id') userId: string,
@@ -95,6 +124,10 @@ export class GigController {
   // ── 6. GET /gig/requests/pending ──────────────────────────────
 
   @Get('requests/pending')
+  @ApiOperation({ summary: 'Get pending requests' })
+  @ApiResponse({ status: 200, description: 'Pending requests retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getPendingRequests(@Headers('x-user-id') userId: string) {
     return this.gigService.getPendingRequests(this.extractUserId(userId));
@@ -103,6 +136,11 @@ export class GigController {
   // ── 7. POST /gig/requests/:id/respond ─────────────────────────
 
   @Post('requests/:id/respond')
+  @ApiOperation({ summary: 'Respond to a request' })
+  @ApiBody({ type: RespondRequestDto })
+  @ApiResponse({ status: 200, description: 'Request response saved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   respondToRequest(
     @Headers('x-user-id') userId: string,
@@ -119,6 +157,10 @@ export class GigController {
   // ── 8. GET /gig/tasks/active ──────────────────────────────────
 
   @Get('tasks/active')
+  @ApiOperation({ summary: 'Get active tasks' })
+  @ApiResponse({ status: 200, description: 'Active tasks retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getActiveTasks(@Headers('x-user-id') userId: string) {
     return this.gigService.getActiveTasks(this.extractUserId(userId));
@@ -128,6 +170,11 @@ export class GigController {
 
   @Post('deliverables')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Submit a deliverable' })
+  @ApiBody({ type: SubmitDeliverableDto })
+  @ApiResponse({ status: 201, description: 'Deliverable submitted successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   submitDeliverable(
     @Headers('x-user-id') userId: string,
@@ -140,6 +187,11 @@ export class GigController {
 
   @Post('services')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Post a service' })
+  @ApiBody({ type: PostServiceDto })
+  @ApiResponse({ status: 201, description: 'Service created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   postService(
     @Headers('x-user-id') userId: string,
@@ -151,6 +203,10 @@ export class GigController {
   // ── 11. GET /gig/services/mine ────────────────────────────────
 
   @Get('services/mine')
+  @ApiOperation({ summary: 'Get the current gig professional services' })
+  @ApiResponse({ status: 200, description: 'Services retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getMyServices(@Headers('x-user-id') userId: string) {
     return this.gigService.getMyServices(this.extractUserId(userId));
@@ -160,6 +216,11 @@ export class GigController {
 
   @Post('reviews')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Submit a review' })
+  @ApiBody({ type: CreateReviewDto })
+  @ApiResponse({ status: 201, description: 'Review submitted successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   submitReview(
     @Headers('x-user-id') userId: string,
@@ -171,6 +232,10 @@ export class GigController {
   // ── 13. GET /gig/projects/completed ───────────────────────────
 
   @Get('projects/completed')
+  @ApiOperation({ summary: 'Get completed projects' })
+  @ApiResponse({ status: 200, description: 'Completed projects retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getCompletedProjects(@Headers('x-user-id') userId: string) {
     return this.gigService.getCompletedProjects(this.extractUserId(userId));
@@ -179,6 +244,10 @@ export class GigController {
   // ── 14. GET /gig/earnings ─────────────────────────────────────
 
   @Get('earnings')
+  @ApiOperation({ summary: 'Get total earnings' })
+  @ApiResponse({ status: 200, description: 'Earnings retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 404, description: 'Not found' })
   @Roles(Role.CLIENT, Role.GIG_PROFESSIONAL)
   getTotalEarnings(@Headers('x-user-id') userId: string) {
     return this.gigService.getTotalEarnings(this.extractUserId(userId));

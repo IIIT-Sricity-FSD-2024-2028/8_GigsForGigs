@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
 
 export enum RequestAction {
@@ -6,6 +7,7 @@ export enum RequestAction {
 }
 
 export class RespondRequestDto {
+  @ApiProperty({ example: RequestAction.ACCEPTED, enum: RequestAction })
   @IsEnum(RequestAction)
   action: RequestAction;
 }
