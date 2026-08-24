@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  userId          Int                     @id @default(autoincrement()) @map("user_id")
+  name            String                  @db.VarChar(100)
+  hashPassword    String                  @map("hash_password") @db.VarChar(100)
+  email           String                  @unique @db.VarChar(100)
+  role            Role
+  createdAt       DateTime                @default(now()) @map("created_at")
+  client          Client?
+  gigProfile      GigProfessionalProfile?
+  managerLink     Manager?
+  reviewsReceived Review[]                @relation("Reviewee")
+  reviewsGiven    Review[]                @relation("Reviewer")
+
+  @@map("USERS")
+}
+
+model Client {
+  clientId        Int       @id @default(autoincrement()) @map("client_id")
+  userId          Int       @unique @map("user_id")
+  clientName      String    @map("client_name") @db.VarChar(100)
+  numberOfManager Int       @default(0) @map("number_of_manager")
+  domain          String?   @db.VarChar(100)
+  user            User      @relation(fields: [userId], references: [userId])
+  managers        Manager[]
+  tasks           Task[]
+
+  @@map("CLIENT")
+}
+
+model Manager {
+  clientId    Int                    @map("client_id")
+  managerId   Int                    @unique @map("manager_id")
+  userId      Int                    @unique @map("user_id")
+  assignments GigManagerAssignment[]
+  client      Client                 @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [userId])
+
+  @@id([clientId, managerId])
+  @@map("MANAGER")
+}
+
+model GigProfessionalProfile {
+  gigProfileId Int                    @id @default(autoincrement()) @map("gig_profile_id")
+  userId       Int                    @unique @map("user_id")
+  bio          String?
+  applications Application[]
+  deliverables Deliverable[]
+  assignments  GigManagerAssignment[]
+  user         User                   @relation(fields: [userId], references: [userId])
+  payments     Payment[]
+  portfolio    ProfilePortfolio[]
+  skills       ProfileSkill[]
+  tools        ProfileTool[]
+
+  @@map("GIG_PROFESSIONAL_PROFILE")
+}
+
+model ProfileSkill {
+  gigProfileId Int                    @map("gig_profile_id")
+  skill        String                 @db.VarChar(100)
+  profile      GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId], onDelete: Cascade)
+
+  @@id([gigProfileId, skill])
+  @@map("PROFILE_SKILLS")
+}
+
+model ProfileTool {
+  gigProfileId Int                    @map("gig_profile_id")
+  tool         String                 @db.VarChar(100)
+  profile      GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId], onDelete: Cascade)
+
+  @@id([gigProfileId, tool])
+  @@map("PROFILE_TOOLS")
+}
+
+model ProfilePortfolio {
+  gigProfileId Int                    @map("gig_profile_id")
+  url          String                 @db.VarChar(500)
+  profile      GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId], onDelete: Cascade)
+
+  @@id([gigProfileId, url])
+  @@map("PROFILE_PORTFOLIO")
+}
+
+model Task {
+  taskId       Int                    @id @default(autoincrement()) @map("task_id")
+  clientId     Int                    @map("client_id")
+  title        String                 @db.VarChar(255)
+  description  String?
+  budget       Decimal                @db.Decimal(10, 2)
+  dueDate      DateTime?              @map("due_date") @db.Date
+  status       TaskStatus             @default(open)
+  applications Application[]
+  deliverables Deliverable[]
+  assignments  GigManagerAssignment[]
+  payments     Payment[]
+  reviews      Review[]
+  client       Client                 @relation(fields: [clientId], references: [clientId])
+
+  @@map("TASKS")
+}
+
+model Application {
+  applicationId Int                    @id @default(autoincrement()) @map("application_id")
+  gigProfileId  Int                    @map("gig_profile_id")
+  taskId        Int                    @map("task_id")
+  status        ApplicationStatus      @default(pending)
+  createdAt     DateTime               @default(now()) @map("created_at")
+  gigProfile    GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
+  task          Task                   @relation(fields: [taskId], references: [taskId])
+
+  @@unique([gigProfileId, taskId], map: "uq_application")
+  @@map("APPLICATION")
+}
+
+model GigManagerAssignment {
+  gigProfileId Int                    @map("gig_profile_id")
+  taskId       Int                    @map("task_id")
+  managerId    Int                    @map("manager_id")
+  assignedAt   DateTime               @default(now()) @map("assigned_at")
+  deliverables Deliverable[]
+  gigProfile   GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
+  manager      Manager                @relation(fields: [managerId], references: [managerId])
+  task         Task                   @relation(fields: [taskId], references: [taskId])
+
+  @@id([gigProfileId, taskId])
+  @@map("GIG_MANAGER_ASSIGNMENT")
+}
+
+model Deliverable {
+  taskId         Int                    @map("task_id")
+  deliverableNo  Int                    @map("deliverable_no")
+  gigProfileId   Int                    @map("gig_profile_id")
+  description    String                 @db.VarChar(500)
+  submissionPath String                 @map("submission_path") @db.VarChar(500)
+  status         DeliverableStatus      @default(submitted)
+  createdAt      DateTime               @default(now()) @map("created_at")
+  gigProfile     GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
+  assignment     GigManagerAssignment   @relation(fields: [gigProfileId, taskId], references: [gigProfileId, taskId])
+  task           Task                   @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+
+  @@id([taskId, deliverableNo])
+  @@map("DELIVERABLE")
+}
+
+model Payment {
+  paymentId    Int                    @id @default(autoincrement()) @map("payment_id")
+  taskId       Int                    @map("task_id")
+  gigProfileId Int                    @map("gig_profile_id")
+  amount       Decimal                @db.Decimal(10, 2)
+  status       PaymentStatus          @default(pending)
+  createdAt    DateTime               @default(now()) @map("created_at")
+  gigProfile   GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
+  task         Task                   @relation(fields: [taskId], references: [taskId])
+
+  @@unique([taskId, gigProfileId], map: "uq_payment")
+  @@map("PAYMENT")
+}
+
+model Review {
+  reviewId   Int      @id @default(autoincrement()) @map("review_id")
+  reviewerId Int      @map("reviewer_id")
+  revieweeId Int      @map("reviewee_id")
+  taskId     Int      @map("task_id")
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  reviewee   User     @relation("Reviewee", fields: [revieweeId], references: [userId])
+  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [userId])
+  task       Task     @relation(fields: [taskId], references: [taskId])
+
+  @@unique([reviewerId, revieweeId, taskId], map: "uq_review")
+  @@map("REVIEWS")
+}
+
+enum Role {
+  client
+  gig_professional
+  manager
+}
+
+enum TaskStatus {
+  open
+  in_progress
+  completed
+}
+
+enum ApplicationStatus {
+  pending
+  accepted
+  declined
+}
+
+enum DeliverableStatus {
+  submitted
+  approved
+  revision_requested
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+}
