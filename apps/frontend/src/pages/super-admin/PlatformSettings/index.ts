@@ -1,2 +1,1 @@
-export { default } from './PlatformSettings';
-export * from './PlatformSettings';
+export { PlatformSettings, default } from './PlatformSettings';

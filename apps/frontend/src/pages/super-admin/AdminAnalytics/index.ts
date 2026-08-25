@@ -1,2 +1,1 @@
-export { default } from './AdminAnalytics';
-export * from './AdminAnalytics';
+export { AdminAnalytics, default } from './AdminAnalytics';

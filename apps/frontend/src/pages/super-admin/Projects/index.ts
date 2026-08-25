@@ -1,2 +1,1 @@
-export { default } from './Projects';
-export * from './Projects';
+export { Projects, default } from './Projects';

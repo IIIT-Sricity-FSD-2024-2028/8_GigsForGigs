@@ -1,2 +1,1 @@
-export { default } from './GigProfessionalManagement';
-export * from './GigProfessionalManagement';
+export { GigProfessionalManagement, default } from './GigProfessionalManagement';
