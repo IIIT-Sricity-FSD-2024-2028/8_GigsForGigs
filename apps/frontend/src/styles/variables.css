@@ -1,0 +1,56 @@
+:root {
+  --color-primary: #0D568D;
+  --color-primary-dark: #084875;
+  --color-primary-light: #2F6F9F;
+  --color-primary-outline-hover: #E4EEF5;
+
+  --color-orange: #D47700;
+  --color-orange-dark: #B86300;
+  --color-orange-light: #F4E3CF;
+  --color-accent: #D47700;
+  --color-accent-dark: #B86300;
+  --color-accent-light: #F4E3CF;
+
+  --color-background: #EFF6F7;
+  --color-surface: #FFFFFF;
+
+  --color-text-primary: #3A1F16;
+  --color-heading-blue: #0D568D;
+  --color-text-secondary: #76594F;
+  --color-text-muted: #927D74;
+
+  --color-success: #55A99A;
+  --color-success-soft: #E4F2EF;
+  --color-badge-success-text: #438F82;
+
+  --color-danger: #C94C4C;
+  --color-danger-dark: #A63838;
+  --color-danger-soft: #F8E8E8;
+
+  --color-warning: #D47700;
+  --color-warning-soft: #F8EBD9;
+  --color-warning-text: #B86300;
+
+  --color-info: #0D568D;
+  --color-info-soft: #E4EEF5;
+
+  --color-sidebar-bg: #0D568D;
+  --color-sidebar-text: #FFFFFF;
+  --color-sidebar-inactive-text: #B8D0E0;
+  --color-sidebar-active-bg: #1F6598;
+  --color-sidebar-active-text: #FFFFFF;
+  --color-sidebar-active-indicator: #D47700;
+  --color-sidebar-hover: #1F6598;
+
+  --color-logout-bg: #D47700;
+  --color-logout-hover: #B86300;
+
+  --color-border-default: #D9E0E3;
+  --color-border-input: #D5DDE0;
+  --color-border-secondary: #D8D8D8;
+  --radius-card: 12px;
+
+  --color-progress-track: #D9E0E3;
+  --color-progress-fill: #0D568D;
+  --color-progress-completed: #55A99A;
+}
