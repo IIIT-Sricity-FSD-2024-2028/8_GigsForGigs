@@ -13,16 +13,102 @@ import { AdminManagement } from './pages/super-admin/AdminManagement';
 import { AdminProfile } from './pages/super-admin/AdminProfile';
 import { PlatformSettings } from './pages/super-admin/PlatformSettings';
 
+// Client Portal Imports
+import { useAuth } from './context/AuthContext';
+import { ClientLayout } from './layouts/ClientLayout';
+import { ClientDashboard } from './pages/client/ClientDashboard';
+import { SearchTalent } from './pages/client/SearchTalent';
+import { MyGigs } from './pages/client/MyGigs';
+import { TotalSpent } from './pages/client/TotalSpent';
+import { ReviewDeliverables } from './pages/client/ReviewDeliverables';
+import { ReviewShortlist } from './pages/client/ReviewShortlist';
+import { PostGig } from './pages/client/PostGig';
+import { ClientProfileSelection } from './pages/client/ClientProfileSelection';
+import { AddManager } from './pages/client/AddManager';
+import { AddManagerFlow } from './pages/client/AddManagerFlow';
+import { ClientProfileCompletion } from './pages/client/ClientProfileCompletion';
+
 /**
  * @file App.tsx
  * @description
- * Root application component for GigsForGigs Super Admin Portal.
- * Mounts the high-fidelity AdminLayout shell and handles client-side state routing across all 12 views.
+ * Root application component for GigsForGigs.
+ * Mounts Super Admin Portal or Client Portal based on active session role.
  */
 
 export function App() {
-  const [currentView, setCurrentView] = useState('dashboard');
+  const { user, login } = useAuth();
+  
+  // Super Admin view state
+  const [adminView, setAdminView] = useState('dashboard');
+  
+  // Client view state
+  const [clientView, setClientView] = useState('profile-selection');
+  const [clientParams, setClientParams] = useState<Record<string, string>>({});
 
+  const navigateClient = (view: string, params?: Record<string, string>) => {
+    setClientView(view);
+    if (params) {
+      setClientParams(params);
+    } else {
+      setClientParams({});
+    }
+  };
+
+  const isClientRole = user?.role === 'CLIENT' || user?.role === 'MANAGER';
+
+  // Toggle Portal Role Helper
+  const handlePortalToggle = async (role: 'SUPER_ADMIN' | 'CLIENT') => {
+    if (role === 'CLIENT') {
+      await login('aditya@gigsforgigs.com', 'CLIENT');
+      setClientView('profile-selection');
+    } else {
+      await login('admin@gigsforgigs.com', 'SUPER_ADMIN');
+      setAdminView('dashboard');
+    }
+  };
+
+  // ──── RENDER CLIENT PORTAL ───────────────────────────────────────
+  if (isClientRole) {
+    const renderActiveClientView = () => {
+      switch (clientView) {
+        case 'dashboard':
+          return <ClientDashboard onNavigate={navigateClient} />;
+        case 'search-talent':
+          return <SearchTalent onNavigate={navigateClient} />;
+        case 'my-gigs':
+          return <MyGigs onNavigate={navigateClient} />;
+        case 'total-spent':
+          return <TotalSpent onNavigate={navigateClient} />;
+        case 'review-deliverables':
+          return <ReviewDeliverables onNavigate={navigateClient} params={clientParams} />;
+        case 'review-shortlist':
+          return <ReviewShortlist onNavigate={navigateClient} params={clientParams} />;
+        case 'post-gig':
+          return <PostGig onNavigate={navigateClient} params={clientParams} />;
+        case 'profile-selection':
+          return <ClientProfileSelection onNavigate={navigateClient} />;
+        case 'add-manager':
+          return <AddManager onNavigate={navigateClient} />;
+        case 'add-manager-flow':
+          return <AddManagerFlow onNavigate={navigateClient} />;
+        case 'profile-completion':
+          return <ClientProfileCompletion onNavigate={navigateClient} />;
+        default:
+          return <ClientDashboard onNavigate={navigateClient} />;
+      }
+    };
+
+    return (
+      <>
+        <ClientLayout currentView={clientView} onNavigate={navigateClient}>
+          {renderActiveClientView()}
+        </ClientLayout>
+        {renderPortalSwitcher()}
+      </>
+    );
+  }
+
+  // ──── RENDER SUPER ADMIN PORTAL ──────────────────────────────────
   const viewMetadata: Record<string, { title: string; subtitle: string }> = {
     dashboard: { title: 'Executive Overview', subtitle: 'Real-time platform health, KPIs, and operational activity' },
     analytics: { title: 'Business Intelligence & Trends', subtitle: 'Marketplace volume velocity, rake take rates, and cohort retention' },
@@ -38,12 +124,12 @@ export function App() {
     settings: { title: 'Platform Configuration', subtitle: 'Commission rake percentages, minimum budgets, and maintenance controls' }
   };
 
-  const activeMeta = viewMetadata[currentView] || { title: 'Super Admin', subtitle: 'GigsForGigs Portal' };
+  const activeMeta = viewMetadata[adminView] || { title: 'Super Admin', subtitle: 'GigsForGigs Portal' };
 
-  const renderActiveView = () => {
-    switch (currentView) {
+  const renderActiveAdminView = () => {
+    switch (adminView) {
       case 'dashboard':
-        return <Dashboard onNavigate={setCurrentView} />;
+        return <Dashboard onNavigate={setAdminView} />;
       case 'analytics':
         return <AdminAnalytics />;
       case 'clients':
@@ -67,20 +153,78 @@ export function App() {
       case 'settings':
         return <PlatformSettings />;
       default:
-        return <Dashboard onNavigate={setCurrentView} />;
+        return <Dashboard onNavigate={setAdminView} />;
     }
   };
 
+  function renderPortalSwitcher() {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          backgroundColor: 'var(--color-primary-dark)',
+          color: '#fff',
+          padding: '10px 16px',
+          borderRadius: '30px',
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex',
+          gap: '10px',
+          alignItems: 'center',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          zIndex: 100000,
+          border: '2px solid var(--color-primary-blue)'
+        }}
+      >
+        <span>Portal:</span>
+        <button
+          onClick={() => handlePortalToggle('SUPER_ADMIN')}
+          style={{
+            background: user?.role === 'SUPER_ADMIN' ? 'var(--color-primary-blue)' : 'transparent',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontWeight: 600
+          }}
+        >
+          Super Admin
+        </button>
+        <button
+          onClick={() => handlePortalToggle('CLIENT')}
+          style={{
+            background: isClientRole ? 'var(--color-primary-blue)' : 'transparent',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontWeight: 600
+          }}
+        >
+          Client
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <AdminLayout
-      currentView={currentView}
-      onNavigate={setCurrentView}
-      pageTitle={activeMeta.title}
-      pageSubtitle={activeMeta.subtitle}
-    >
-      {renderActiveView()}
-    </AdminLayout>
+    <>
+      <AdminLayout
+        currentView={adminView}
+        onNavigate={setAdminView}
+        pageTitle={activeMeta.title}
+        pageSubtitle={activeMeta.subtitle}
+      >
+        {renderActiveAdminView()}
+      </AdminLayout>
+      {renderPortalSwitcher()}
+    </>
   );
 }
 
 export default App;
+
