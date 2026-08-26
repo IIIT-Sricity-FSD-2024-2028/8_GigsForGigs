@@ -32,7 +32,8 @@ interface ManagerContextType {
 const ManagerContext = createContext<ManagerContextType | undefined>(undefined);
 
 export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   const [profile, setProfile] = useState<ManagerProfile | null>(null);
   const [tasks, setTasks] = useState<ManagerTask[]>([]);
   const [selectedTask, setSelectedTask] = useState<ManagerTask | null>(null);

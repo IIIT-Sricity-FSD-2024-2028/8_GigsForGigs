@@ -1,5 +1,162 @@
-export const ProjectDetail = () => {
-  return null;
+/**
+ * @file ProjectDetail.tsx
+ * @description
+ * In-depth task inspection view for Gig Professionals.
+ * Displays comprehensive task requirements, client info, budget, status, and deliverable history.
+ */
+
+import React, { useEffect, useState } from 'react';
+import { useGig } from '../../../context/GigContext/GigContext';
+import gigApi from '../../../services/api/gig/gigApi';
+import type { GigTask } from '../../../types/gig';
+
+export const ProjectDetail: React.FC = () => {
+  const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable } = useGig();
+  const [task, setTask] = useState<GigTask | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let mounted = true;
+    gigApi.getActiveTasks().then((active) => {
+      if (mounted) {
+        const found = active.find((t) => t.task_id === selectedTaskId) || active[0] || null;
+        setTask(found);
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedTaskId]);
+
+  const formatCurrency = (amt: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amt);
+
+  if (loading) {
+    return (
+      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
+        Loading Task Specifications...
+      </div>
+    );
+  }
+
+  if (!task) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center' }}>
+        <h2 style={{ color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>Task Not Found</h2>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-lg)' }}>
+          The requested task could not be found or is no longer active.
+        </p>
+        <button className="admin-btn admin-btn-primary" onClick={() => setActiveTab('active-tasks')}>
+          Back to Active Tasks
+        </button>
+      </div>
+    );
+  }
+
+  const deliverables = task.deliverables || [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)', maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+      {/* Header Context Card */}
+      <div
+        className="admin-card"
+        style={{
+          padding: 'var(--spacing-xl)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 'var(--spacing-lg)'
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-xs)' }}>
+            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
+              {task.title}
+            </h1>
+            <span className="admin-badge badge-info">{task.status}</span>
+          </div>
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            Task Ref ID: <strong>{task.task_id}</strong> • Client: <strong>{task.client_id}</strong>
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+          <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-secondary)' }}>
+            {formatCurrency(task.budget)}
+          </span>
+          <button
+            className="admin-btn admin-btn-primary"
+            onClick={() => navigateToSubmitDeliverable(task.task_id)}
+          >
+            Submit Deliverable
+          </button>
+        </div>
+      </div>
+
+      {/* Specification Content */}
+      <div className="admin-card" style={{ padding: 'var(--spacing-xl)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
+        <div>
+          <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-sm)' }}>
+            Project Requirements & Scope
+          </h2>
+          <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-dark)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+            {task.description}
+          </p>
+        </div>
+
+        {/* Deliverables History */}
+        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-lg)' }}>
+          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>
+            Submissions & Deliverable History ({deliverables.length})
+          </h3>
+
+          {deliverables.length === 0 ? (
+            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+              No deliverables have been submitted for this task yet.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+              {deliverables.map((del) => (
+                <div
+                  key={del.deliverable_id || del.deliverable_no}
+                  style={{
+                    padding: 'var(--spacing-lg)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--color-bg-white)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-xs)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+                      Deliverable #${del.deliverable_no}
+                    </h4>
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                      Submitted: {del.createdAt ? new Date(del.createdAt).toLocaleDateString() : 'Recent'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)', margin: '4px 0' }}>
+                    {del.content}
+                  </p>
+                  {del.notes && (
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                      <strong>Notes:</strong> {del.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ProjectDetail;

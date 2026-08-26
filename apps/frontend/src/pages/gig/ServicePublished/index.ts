@@ -1,2 +1,2 @@
-export { default } from './ServicePublished';
 export * from './ServicePublished';
+export { default } from './ServicePublished';

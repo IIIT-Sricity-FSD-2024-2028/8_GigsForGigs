@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useAuth, MOCK_USERS_DB, type MockUserRecord } from '../../../context/AuthContext/AuthContext';
 
 interface LoginProps {
@@ -7,12 +6,9 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
-  const { loginManager, loading } = useAuth();
-  const [role, setRole] = useState('manager');
   const { login, loading } = useAuth();
   const [role, setRole] = useState<'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONAL' | 'SUPER_ADMIN'>('CLIENT');
   const [email, setEmail] = useState('aditya@techstart.io');
-  const [password, setPassword] = useState('password123');
   const [password, setPassword] = useState('password1');
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -34,10 +30,8 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    const success = await loginManager(email, password);
     const success = await login(email, password, role);
     if (!success) {
-      setErrorMsg('Invalid credentials or server error. Please try again.');
       setErrorMsg('Invalid login credentials or server error. Please try again.');
     }
   };
@@ -78,34 +72,20 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
         </div>
 
         {/* Hero Text Content */}
-        <div style={{ maxWidth: '440px', marginTop: '40px', marginBottom: '40px' }}>
         <div style={{ maxWidth: '460px', marginTop: '32px', marginBottom: '32px' }}>
           <h1 style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1.2, marginBottom: '20px', letterSpacing: '-0.5px' }}>
             Connect with the world's best talent.
           </h1>
-          <p style={{ fontSize: '18px', color: '#D0E3F0', lineHeight: 1.6, margin: 0 }}>
-            Join thousands of startups and freelancers collaborating on the next generation of digital products.
           <p style={{ fontSize: '17px', color: '#D0E3F0', lineHeight: 1.6, margin: 0 }}>
             Join thousands of startups, managers, and freelancers collaborating on the next generation of digital products.
           </p>
         </div>
 
-        {/* Stylized Bar Illustration at Bottom */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '20px', height: '180px', marginTop: 'auto' }}>
-          {/* Pillar 1 */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#A4C4D9', border: '3px solid #0F527E' }} />
-            <div style={{ width: '64px', height: '110px', backgroundColor: '#6B5B3E', borderRadius: '12px 12px 0 0' }} />
         {/* Quick Demo Login Pills */}
         <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '20px', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: '#FDE68A', marginBottom: '12px' }}>
             ⚡ Quick Demo Logins
           </div>
-
-          {/* Pillar 2 */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#C87D20', border: '3px solid #0F527E' }} />
-            <div style={{ width: '64px', height: '150px', backgroundColor: '#5281A5', borderRadius: '12px 12px 0 0' }} />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {MOCK_USERS_DB.map((u) => (
               <button
@@ -130,9 +110,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
           </div>
         </div>
 
-          {/* Pillar 3 */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '64px', height: '90px', backgroundColor: '#426987', borderRadius: '12px 12px 0 0' }} />
         {/* Stylized Bar Illustration at Bottom */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '20px', height: '140px', marginTop: '24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
@@ -186,13 +163,10 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
 
         <div style={{ maxWidth: '420px', width: '100%', margin: '0 auto' }}>
           {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F527E', margin: '0 0 8px 0' }}>
           <div style={{ marginBottom: '28px' }}>
             <h2 style={{ fontSize: '30px', fontWeight: 800, color: '#0F527E', margin: '0 0 6px 0' }}>
               Welcome back to GigsForGigs
             </h2>
-            <p style={{ fontSize: '15px', color: '#8C6A5E', margin: 0 }}>
             <p style={{ fontSize: '14px', color: '#8C6A5E', margin: 0 }}>
               Please enter your details to sign in.
             </p>
@@ -214,17 +188,14 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {/* Log in as Dropdown */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Log in as
               </label>
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
                 onChange={(e) => handleRoleChange(e.target.value as any)}
                 style={{
                   width: '100%',
@@ -238,9 +209,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
                   boxSizing: 'border-box'
                 }}
               >
-                <option value="manager">Manager</option>
-                <option value="client">Client</option>
-                <option value="freelancer">Gig Professional</option>
                 <option value="CLIENT">Client Owner (Aditya / Priya)</option>
                 <option value="MANAGER">Manager (Leo Hudson / Casey)</option>
                 <option value="GIG_PROFESSIONAL">Gig Professional (Arham / Elena)</option>
@@ -250,7 +218,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
 
             {/* Email Address */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Email address
               </label>
@@ -276,7 +243,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
 
             {/* Password */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Password
               </label>
@@ -334,7 +300,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
                 fontWeight: 700,
                 fontSize: '16px',
                 cursor: 'pointer',
-                marginTop: '8px',
                 marginTop: '6px',
                 transition: 'background-color 0.2s'
               }}
@@ -344,7 +309,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
           </form>
 
           {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '28px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
             <span style={{ fontSize: '13px', color: '#9AA7AF' }}>or continue with</span>
@@ -380,7 +344,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
           </button>
 
           {/* Footer prompt */}
-          <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '14px', color: '#5C443A' }}>
           <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: '#5C443A' }}>
             Don't have an account?{' '}
             <a

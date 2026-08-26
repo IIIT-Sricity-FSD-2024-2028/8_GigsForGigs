@@ -9,7 +9,7 @@ export interface ManagerLayoutProps {
 }
 
 export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTab, setActiveTab }) => {
-  const { logoutManager } = useAuth();
+  const { logout } = useAuth();
   const { profile } = useManager();
 
   const managerName = profile?.user?.name || 'Leo Hudson';
@@ -194,7 +194,7 @@ export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTa
             </div>
           </div>
           <button
-            onClick={() => logoutManager()}
+            onClick={() => logout()}
             style={{
               backgroundColor: '#D47700',
               color: '#FFFFFF',

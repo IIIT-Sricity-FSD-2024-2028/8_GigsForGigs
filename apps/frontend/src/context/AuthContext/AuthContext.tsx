@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import React, { createContext, useContext, useState } from 'react';
 import { managerApi } from '../../services/api/manager/managerApi';
 
 export interface UserSession {
@@ -33,7 +32,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   role: string | null;
   loading: boolean;
-  login: (email: string, role: string, name?: string) => Promise<void>;
   login: (email: string, password?: string, roleHint?: string) => Promise<boolean>;
   loginManager: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
@@ -53,47 +51,9 @@ function normalizeRole(role: string): 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' 
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
-  const [user, setUser] = useState<UserSession | null>(() => {
-    if (typeof window !== 'undefined') {
-      const win = window as any;
-      if (win.__GFG_SESSION__?.userId) {
-        return {
-          ...win.__GFG_SESSION__,
-          role: normalizeRole(win.__GFG_SESSION__.role),
-        };
-      }
-      if (win.name) {
-        try {
-          const parsed = JSON.parse(win.name);
-          if (parsed && parsed.userId) {
-            return {
-              userId: parsed.userId,
-              role: normalizeRole(parsed.role),
-              name: parsed.name || 'Aditya',
-              email: parsed.email || 'aditya@gigsforgigs.com',
-              appliedTaskIds: Array.isArray(parsed.appliedTaskIds) ? parsed.appliedTaskIds : [],
-            };
-          }
-        } catch (_) {}
-      }
-    }
   
   // Initial user state is null so http://localhost:5173/ always loads the Landing Page first!
   const [user, setUser] = useState<UserSession | null>(null);
-
-  const login = async (email: string, _pass?: string, roleHint?: string): Promise<boolean> => {
-    setLoading(true);
-    const found = MOCK_USERS_DB.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    // Default session: Active Client user
-    return {
-      userId: 'cli-01',
-      role: 'CLIENT',
-      name: 'Aditya',
-      email: 'aditya@gigsforgigs.com',
-      appliedTaskIds: [],
-    };
-  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -105,6 +65,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         win.__GFG_SESSION__ = null;
         win.name = '';
       }
+    }
+  }, [user]);
+
+  const login = async (email: string, _pass?: string, roleHint?: string): Promise<boolean> => {
+    setLoading(true);
+    const found = MOCK_USERS_DB.find(u => u.email.toLowerCase() === email.toLowerCase());
+    
     if (found) {
       setUser({
         userId: found.user_id,
@@ -116,28 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       return true;
     }
-  }, [user]);
 
-  const login = async (email: string, role: string, customName?: string) => {
-    setLoading(true);
-    const normRole = normalizeRole(role);
-    const defaultName = customName || (normRole === 'CLIENT' ? 'Aditya' : normRole === 'MANAGER' ? 'Leo Hudson' : 'Elena Rodriguez');
-    const defaultUserId = normRole === 'CLIENT' ? 'cli-01' : normRole === 'MANAGER' ? 'mgr-01' : 'gig-01';
-    
-    const newUser: UserSession = {
-      userId: defaultUserId,
     // Fallback user creation if email not in mock list
     const normRole = normalizeRole(roleHint || 'CLIENT');
     const fallbackName = normRole === 'CLIENT' ? 'Aditya Deshmukh' : normRole === 'MANAGER' ? 'Leo Hudson' : 'Arham Kansal';
     setUser({
       userId: 'u-' + Date.now(),
       role: normRole,
-      name: defaultName,
       name: fallbackName,
       email: email,
-      appliedTaskIds: [],
-    };
-    setUser(newUser);
       appliedTaskIds: []
     });
     setLoading(false);
@@ -147,21 +101,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginManager = async (email: string, pass?: string): Promise<boolean> => {
     setLoading(true);
     try {
-      const res = await managerApi.login(email, pass || 'password123');
-      if (res.success) {
-        const newUser: UserSession = {
-          userId: 'mgr-01',
-          role: 'MANAGER',
-          name: res.user?.name || 'Leo Hudson',
-          email: email,
-          appliedTaskIds: [],
-        };
-        setUser(newUser);
-        setLoading(false);
-        return true;
-      }
-    } catch {
-      // Fallback
       await managerApi.login(email, pass || 'password5');
     } catch (_) {}
     
@@ -179,11 +118,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setUser({
-      userId: 'mgr-01',
       userId: 'u2',
       role: 'MANAGER',
       name: 'Leo Hudson',
-      email: email,
       email: email || 'leo@techstart.io',
       appliedTaskIds: []
     });

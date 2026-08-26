@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
+import { GigProvider, useGig } from './context/GigContext/GigContext';
 
 // Layouts
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
 import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
+import { GigLayout } from './layouts/GigLayout/GigLayout';
 
 // Public & Auth Pages
 import { LandingPage } from './pages/public/LandingPage/LandingPage';
@@ -30,18 +32,88 @@ import { ManagerTasks } from './pages/manager/ManagerTasks/ManagerTasks';
 import { ReviewDeliverables as ManagerReviewDeliverables } from './pages/manager/ReviewDeliverables/ReviewDeliverables';
 import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
 
+// Gig Professional Pages
+import { GigDashboard } from './pages/gig/GigDashboard/GigDashboard';
+import { ExploreTasks } from './pages/gig/ExploreTasks/ExploreTasks';
+import { ActiveTasks } from './pages/gig/ActiveTasks/ActiveTasks';
+import { PendingRequests } from './pages/gig/PendingRequests/PendingRequests';
+import { CompletedProjects } from './pages/gig/CompletedProjects/CompletedProjects';
+import { TotalEarnings } from './pages/gig/TotalEarnings/TotalEarnings';
+import { SubmitDeliverables } from './pages/gig/SubmitDeliverables/SubmitDeliverables';
+import { SubmissionSuccess } from './pages/gig/SubmissionSuccess/SubmissionSuccess';
+import { PostService } from './pages/gig/PostService/PostService';
+import { ServicePublished } from './pages/gig/ServicePublished/ServicePublished';
+import { ProjectDetail } from './pages/gig/ProjectDetail/ProjectDetail';
+import { GigProfile } from './pages/gig/GigProfile/GigProfile';
+import { GigProfileCompletion } from './pages/gig/GigProfileCompletion/GigProfileCompletion';
+
 type UnauthView = 'landing' | 'login';
 type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
 
-function MainAppContent() {
-  const { user, isAuthenticated, loading: authLoading, login } = useAuth();
-  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const { selectTask } = useManager();
+/**
+ * Inner view component rendered when active user is a Gig Professional.
+ */
+function GigAppContent() {
+  const { activeTab } = useGig();
 
-  // Navigation states
+  return (
+    <GigLayout>
+      {activeTab === 'dashboard' && <GigDashboard />}
+      {activeTab === 'explore' && <ExploreTasks />}
+      {activeTab === 'active-tasks' && <ActiveTasks />}
+      {activeTab === 'pending-requests' && <PendingRequests />}
+      {activeTab === 'completed-projects' && <CompletedProjects />}
+      {activeTab === 'earnings' && <TotalEarnings />}
+      {activeTab === 'submit-deliverables' && <SubmitDeliverables />}
+      {activeTab === 'submission-success' && <SubmissionSuccess />}
+      {activeTab === 'post-service' && <PostService />}
+      {activeTab === 'service-published' && <ServicePublished />}
+      {activeTab === 'project-detail' && <ProjectDetail />}
+      {activeTab === 'profile' && <GigProfile />}
+      {activeTab === 'profile-completion' && <GigProfileCompletion />}
+    </GigLayout>
+  );
+}
+
+/**
+ * Inner view component rendered when active user is a Manager.
+ */
+function ManagerAppContent() {
+  const { selectTask } = useManager();
+  const [managerActiveTab, setManagerActiveTab] = useState<ManagerTabType>('dashboard');
+
+  const handleNavigateToTask = (taskId: number) => {
+    selectTask(taskId);
+    setManagerActiveTab('task-detail');
+  };
+
+  return (
+    <ManagerLayout activeTab={managerActiveTab} setActiveTab={setManagerActiveTab}>
+      {managerActiveTab === 'dashboard' && (
+        <ManagerDashboard
+          onNavigateToTask={handleNavigateToTask}
+          onNavigateToQueue={() => setManagerActiveTab('tasks')}
+        />
+      )}
+      {managerActiveTab === 'talent' && <ManagerSearchTalent />}
+      {managerActiveTab === 'tasks' && (
+        <ManagerTasks onSelectTask={handleNavigateToTask} />
+      )}
+      {managerActiveTab === 'task-detail' && (
+        <ManagerReviewDeliverables onBack={() => setManagerActiveTab('tasks')} />
+      )}
+      {managerActiveTab === 'profile' && <ManagerProfile />}
+    </ManagerLayout>
+  );
+}
+
+/**
+ * Main application router deciding layout and portal shell based on user role.
+ */
+function MainAppContent() {
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [unauthView, setUnauthView] = useState<UnauthView>('landing');
   const [clientView, setClientView] = useState<string>('dashboard');
-  const [managerTab, setManagerTab] = useState<ManagerTabType>('dashboard');
 
   if (authLoading) {
     return (
@@ -51,7 +123,6 @@ function MainAppContent() {
     );
   }
 
-  // 1. Unauthenticated Visitor Flow (Landing Page -> Login)
   // 1. Unauthenticated Visitor Flow (ALWAYS starts on Landing Page!)
   if (!isAuthenticated || !user) {
     if (unauthView === 'landing') {
@@ -68,55 +139,19 @@ function MainAppContent() {
 
   // 2. Manager Portal Flow
   if (user.role === 'MANAGER') {
-    const handleNavigateToManagerTask = (taskId: number) => {
-      selectTask(taskId);
-      setManagerTab('task-detail');
-    };
-
     return (
-      <ManagerLayout activeTab={managerTab} setActiveTab={setManagerTab}>
-        {managerTab === 'dashboard' && (
-          <ManagerDashboard
-            onNavigateToTask={handleNavigateToManagerTask}
-            onNavigateToQueue={() => setManagerTab('tasks')}
-          />
-        )}
-        {managerTab === 'talent' && <ManagerSearchTalent />}
-        {managerTab === 'tasks' && (
-          <ManagerTasks onSelectTask={handleNavigateToManagerTask} />
-        )}
-        {managerTab === 'task-detail' && (
-          <ManagerReviewDeliverables onBack={() => setManagerTab('tasks')} />
-        )}
-        {managerTab === 'profile' && <ManagerProfile />}
-      </ManagerLayout>
+      <ManagerProvider>
+        <ManagerAppContent />
+      </ManagerProvider>
     );
   }
 
-  // 3. Client Portal Flow (Default for CLIENT / SUPER_ADMIN)
-  // 3. Gig Professional Flow
+  // 3. Gig Professional Flow (Incoming branch flow)
   if (user.role === 'GIG_PROFESSIONAL') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#EFF6F7', padding: '48px', fontFamily: 'sans-serif' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '16px', border: '1px solid #D9E0E3', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <h1 style={{ fontSize: '24px', color: '#0D568D', margin: 0, fontWeight: 700 }}>
-              Welcome, {user.name}! (Gig Professional)
-            </h1>
-          </div>
-          <p style={{ color: '#76594F', fontSize: '15px', lineHeight: 1.6 }}>
-            You are logged in as a Gig Professional (User ID: {user.userId}, Email: {user.email}). You can browse tasks, submit deliverables, and track client reviews.
-          </p>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-            <button
-              onClick={handleLogoutToLanding}
-              style={{ padding: '10px 20px', backgroundColor: '#0D568D', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
-            >
-              Logout to Landing Page
-            </button>
-          </div>
-        </div>
-      </div>
+      <GigProvider>
+        <GigAppContent />
+      </GigProvider>
     );
   }
 
@@ -146,37 +181,31 @@ function MainAppContent() {
 
   // 5. Client Portal Flow (Default for CLIENT)
   const handleClientNavigate = (viewId: string, _params?: Record<string, string>) => {
-    if (viewId === 'manager-dashboard') {
-      login(user.email, 'MANAGER', 'Leo Hudson');
-      return;
-    }
     setClientView(viewId);
   };
 
   return (
-    <ClientLayout currentView={clientView} onNavigate={handleClientNavigate}>
-      {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
-      {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
-      {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
-      {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
-      {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
-      {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
-      {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
-      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
-      {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} />}
-      {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} />}
-    </ClientLayout>
+    <ClientProvider>
+      <ClientLayout currentView={clientView} onNavigate={handleClientNavigate}>
+        {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
+        {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
+        {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
+        {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
+        {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
+        {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
+        {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
+        {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
+        {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} />}
+        {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} />}
+      </ClientLayout>
+    </ClientProvider>
   );
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <ClientProvider>
-        <ManagerProvider>
-          <MainAppContent />
-        </ManagerProvider>
-      </ClientProvider>
+      <MainAppContent />
     </AuthProvider>
   );
 }
