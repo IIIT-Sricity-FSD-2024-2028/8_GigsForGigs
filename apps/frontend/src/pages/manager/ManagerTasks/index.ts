@@ -1,2 +1,2 @@
-export { default } from './ManagerTasks';
+export { default as ManagerTasks } from './ManagerTasks';
 export * from './ManagerTasks';

@@ -1,2 +1,2 @@
-export { default } from './ManagerContext';
+export { default as ManagerContext, ManagerProvider, useManager } from './ManagerContext';
 export * from './ManagerContext';

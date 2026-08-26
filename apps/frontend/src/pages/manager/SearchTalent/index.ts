@@ -1,2 +1,2 @@
-export { default } from './SearchTalent';
+export { default as SearchTalent } from './SearchTalent';
 export * from './SearchTalent';
