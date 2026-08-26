@@ -1,21 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
-import { mockDisputes, type DisputeCase } from '../../../mock/adminMockData';
-
-/**
- * @file DisputesReports.tsx
- * @description
- * High-stakes Dispute Arbitration Court for unresolved conflicts between Clients and Freelancers.
- * Features multi-pane evidence inspection and a 1-click settlement engine (Full Refund, Full Release, or Split).
- */
-
 import { useToast } from '../../../components/super-admin/Toast';
+import { adminApi } from '../../../services/api/admin/adminApi';
+
+export interface DisputeCase {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  filedByName: string;
+  filedByRole: 'CLIENT' | 'GIG_PROFESSIONAL';
+  againstName: string;
+  disputeAmount: number;
+  reason: string;
+  description: string;
+  evidenceUrls: string[];
+  status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
+  slaHoursLeft: number;
+  createdAt: string;
+}
 
 export const DisputesReports: React.FC = () => {
   const toast = useToast();
-  const [disputes, setDisputes] = useState<DisputeCase[]>(mockDisputes);
+  const [disputes, setDisputes] = useState<DisputeCase[]>([]);
   const [selectedDispute, setSelectedDispute] = useState<DisputeCase | null>(null);
   const [isDocketOpen, setIsDocketOpen] = useState(false);
 
@@ -24,6 +32,18 @@ export const DisputesReports: React.FC = () => {
   const [splitClientPercent, setSplitClientPercent] = useState<number>(50);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDisputes() {
+      const data = await adminApi.getDisputes();
+      if (isMounted) {
+        setDisputes(data);
+      }
+    }
+    loadDisputes();
+    return () => { isMounted = false; };
+  }, []);
+
   const handleOpenDocket = (dispute: DisputeCase) => {
     setSelectedDispute(dispute);
     setSettlementType('FULL_REFUND');
@@ -31,10 +51,11 @@ export const DisputesReports: React.FC = () => {
     setIsDocketOpen(true);
   };
 
-  const handleExecuteSettlement = (e: React.FormEvent) => {
+  const handleExecuteSettlement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDispute || !resolutionNotes.trim()) return;
 
+    await adminApi.settleDispute(selectedDispute.id, settlementType, resolutionNotes, splitClientPercent);
     const updated = disputes.map((d) =>
       d.id === selectedDispute.id ? { ...d, status: 'RESOLVED' as const } : d
     );
@@ -64,13 +85,23 @@ export const DisputesReports: React.FC = () => {
     },
     {
       header: 'Disputed Escrow',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>${row.disputeAmount.toLocaleString()}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${row.disputeAmount.toLocaleString()}</span>
     },
     {
-      header: 'SLA Response Window',
+      header: 'Reason',
+      cell: (row) => <span style={{ fontSize: 'var(--font-size-xs)' }}>{row.reason}</span>
+    },
+    {
+      header: 'SLA Status',
       cell: (row) => (
-        <span className="admin-badge badge-warning" style={{ fontSize: '11px' }}>
-          {row.slaHoursLeft}h remaining
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: row.slaHoursLeft < 24 ? 'var(--color-danger-text)' : 'var(--color-warning-text)'
+          }}
+        >
+          ⏱ {row.slaHoursLeft}h remaining
         </span>
       )
     },
@@ -79,15 +110,12 @@ export const DisputesReports: React.FC = () => {
       cell: (row) => <StatusBadge status={row.status} />
     },
     {
-      header: 'Actions',
-      align: 'right',
+      header: 'Action',
       cell: (row) => (
         <button
-          className="admin-btn admin-btn-primary admin-btn-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenDocket(row);
-          }}
+          onClick={() => handleOpenDocket(row)}
+          className="admin-btn admin-btn-primary"
+          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
         >
           Arbitrate Docket
         </button>
@@ -97,159 +125,135 @@ export const DisputesReports: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-      <DataTable
-        title="Escalated Dispute Arbitration Queue"
-        columns={columns}
-        data={disputes}
-        pageSize={6}
-        searchPlaceholder="Search dispute dockets by case ID or task..."
-        onRowClick={handleOpenDocket}
-      />
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <DataTable
+          data={disputes}
+          columns={columns}
+          pageSize={10}
+          searchPlaceholder="Search dispute dockets by case ID, task, or filer..."
+        />
+      </div>
 
-      {/* ── Arbitration Docket Modal ────────────────────────────────────── */}
+      {/* Arbitration Docket Modal */}
       <ActionModal
         isOpen={isDocketOpen}
         onClose={() => setIsDocketOpen(false)}
-        title={`Arbitration Court: Case #${selectedDispute?.id}`}
-        subtitle={`Task: ${selectedDispute?.taskTitle} · Disputed Amount: $${selectedDispute?.disputeAmount.toLocaleString()}`}
-        width="680px"
-        footer={
-          <>
-            <button
-              type="button"
-              className="admin-btn admin-btn-outline"
-              onClick={() => setIsDocketOpen(false)}
-            >
-              Close Docket
-            </button>
-            {selectedDispute?.status !== 'RESOLVED' && (
-              <button
-                type="button"
-                className="admin-btn admin-btn-primary"
-                onClick={handleExecuteSettlement}
-              >
-                Issue Legally Binding Ruling
-              </button>
-            )}
-          </>
-        }
+        title={`Arbitration Court Docket: Case #${selectedDispute?.id}`}
+        maxWidth="760px"
       >
         {selectedDispute && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-            {/* Case Overview Card */}
-            <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>PRIMARY CLAIM</span>
-                <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-danger-text)' }}>
-                  {selectedDispute.reason}
-                </span>
-              </div>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)', lineHeight: 1.5 }}>
-                "{selectedDispute.description}"
-              </p>
+          <form onSubmit={handleExecuteSettlement} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
+              <div><strong>Task:</strong> {selectedDispute.taskTitle}</div>
+              <div><strong>Disputed Escrow:</strong> ${selectedDispute.disputeAmount.toLocaleString()}</div>
+              <div><strong>Filer:</strong> {selectedDispute.filedByName} ({selectedDispute.filedByRole})</div>
+              <div><strong>Against:</strong> {selectedDispute.againstName}</div>
+              <div style={{ marginTop: '8px' }}><strong>Filer Description:</strong> {selectedDispute.description}</div>
             </div>
 
-            {/* Evidence & Deliverables */}
+            {/* Evidence Inspector */}
             <div>
-              <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: '8px' }}>
-                Submitted Evidence & Artifacts
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {selectedDispute.evidenceUrls.map((url, idx) => (
+              <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                Evidence Documents & Artifact Logs
+              </span>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                {selectedDispute.evidenceUrls.map((url, i) => (
                   <a
-                    key={idx}
+                    key={i}
                     href={url}
                     target="_blank"
                     rel="noreferrer"
                     style={{
-                      padding: '8px 12px',
-                      borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'rgba(8, 75, 131, 0.04)',
-                      border: '1px solid var(--color-border)',
                       fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-primary-dark)',
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--color-info-bg)',
+                      color: 'var(--color-info-text)',
                       textDecoration: 'none',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
+                      fontWeight: 600
                     }}
                   >
-                    <span>{url}</span>
-                    <span style={{ fontWeight: 600 }}>Inspect Artifact ↗</span>
+                    📄 Evidence File #{i + 1}
                   </a>
                 ))}
               </div>
             </div>
 
-            {/* Settlement Decision Engine */}
-            {selectedDispute.status !== 'RESOLVED' ? (
-              <form onSubmit={handleExecuteSettlement} style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-                <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                  Arbitration Ruling & Escrow Distribution
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--spacing-sm)' }}>
+            {/* Settlement Ruling Controls */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+              <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                Arbitration Ruling
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--spacing-sm)' }}>
+                {(['FULL_REFUND', 'FULL_RELEASE', 'SPLIT'] as const).map((type) => (
                   <button
+                    key={type}
                     type="button"
-                    className={`admin-btn ${settlementType === 'FULL_REFUND' ? 'admin-btn-primary' : 'admin-btn-outline'} admin-btn-sm`}
-                    onClick={() => setSettlementType('FULL_REFUND')}
+                    onClick={() => setSettlementType(type)}
+                    style={{
+                      padding: '10px',
+                      borderRadius: 'var(--radius-md)',
+                      border: settlementType === type ? '2px solid var(--color-primary-dark)' : '1px solid var(--color-border)',
+                      backgroundColor: settlementType === type ? 'rgba(8, 75, 131, 0.08)' : 'var(--color-bg-white)',
+                      fontWeight: 700,
+                      fontSize: 'var(--font-size-xs)',
+                      color: 'var(--color-primary-dark)',
+                      cursor: 'pointer'
+                    }}
                   >
-                    100% Client Refund
+                    {type.replace('_', ' ')}
                   </button>
-                  <button
-                    type="button"
-                    className={`admin-btn ${settlementType === 'FULL_RELEASE' ? 'admin-btn-primary' : 'admin-btn-outline'} admin-btn-sm`}
-                    onClick={() => setSettlementType('FULL_RELEASE')}
-                  >
-                    100% Freelancer Payout
-                  </button>
-                  <button
-                    type="button"
-                    className={`admin-btn ${settlementType === 'SPLIT' ? 'admin-btn-primary' : 'admin-btn-outline'} admin-btn-sm`}
-                    onClick={() => setSettlementType('SPLIT')}
-                  >
-                    Split Settlement
-                  </button>
-                </div>
+                ))}
+              </div>
+            </div>
 
-                {settlementType === 'SPLIT' && (
-                  <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '6px' }}>
-                      <span>Client Refund: {splitClientPercent}% (${((selectedDispute.disputeAmount * splitClientPercent) / 100).toLocaleString()})</span>
-                      <span>Freelancer Payout: {100 - splitClientPercent}% (${((selectedDispute.disputeAmount * (100 - splitClientPercent)) / 100).toLocaleString()})</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="10"
-                      max="90"
-                      step="5"
-                      value={splitClientPercent}
-                      onChange={(e) => setSplitClientPercent(Number(e.target.value))}
-                      style={{ width: '100%', accentColor: 'var(--color-primary-blue)' }}
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                    ARBITRATION FINDING & LEGAL RATIONALE
-                  </label>
-                  <textarea
-                    className="admin-textarea"
-                    rows={3}
-                    placeholder="Document the legal rationale and factual findings behind this settlement..."
-                    value={resolutionNotes}
-                    onChange={(e) => setResolutionNotes(e.target.value)}
-                    required
-                  />
-                </div>
-              </form>
-            ) : (
-              <div className="admin-badge badge-success" style={{ width: '100%', padding: '12px', justifyContent: 'center' }}>
-                Case Legally Settled & Disbursed
+            {settlementType === 'SPLIT' && (
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+                  Client Split %: {splitClientPercent}% | Freelancer Split %: {100 - splitClientPercent}%
+                </label>
+                <input
+                  type="range"
+                  min="10"
+                  max="90"
+                  step="5"
+                  value={splitClientPercent}
+                  onChange={(e) => setSplitClientPercent(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
               </div>
             )}
-          </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+                Legal & Operational Arbitration Notes (Sent to both parties)
+              </label>
+              <textarea
+                className="admin-textarea"
+                rows={3}
+                required
+                placeholder="Explain the binding ruling and evidence analysis..."
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)' }}>
+              <button
+                type="button"
+                onClick={() => setIsDocketOpen(false)}
+                className="admin-btn admin-btn-secondary"
+              >
+                Close Docket
+              </button>
+              <button
+                type="submit"
+                className="admin-btn admin-btn-primary"
+              >
+                Execute Final Arbitration Ruling
+              </button>
+            </div>
+          </form>
         )}
       </ActionModal>
     </div>

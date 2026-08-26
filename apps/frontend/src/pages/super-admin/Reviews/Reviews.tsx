@@ -1,23 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { ReviewIcon } from '../../../components/super-admin/Icons';
-import { mockReviews, type ModerationReview } from '../../../mock/adminMockData';
-
-/**
- * @file Reviews.tsx
- * @description
- * Feedback moderation queue and rating integrity supervisor.
- * Allows Super Admins to hide abusive/retaliatory reviews and trigger rating recalculations.
- */
-
 import { useToast } from '../../../components/super-admin/Toast';
+import { adminApi } from '../../../services/api/admin/adminApi';
+
+export interface ModerationReview {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  reviewerName: string;
+  reviewerRole: 'CLIENT' | 'GIG_PROFESSIONAL';
+  targetUserName: string;
+  rating: number;
+  comment: string;
+  flagCount: number;
+  flagReason?: string;
+  status: 'APPROVED' | 'FLAGGED' | 'HIDDEN';
+  createdAt: string;
+}
 
 export const Reviews: React.FC = () => {
   const toast = useToast();
-  const [reviews, setReviews] = useState<ModerationReview[]>(mockReviews);
+  const [reviews, setReviews] = useState<ModerationReview[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'flagged' | 'hidden'>('all');
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadReviews() {
+      const data = await adminApi.getReviews();
+      if (isMounted) {
+        setReviews(data);
+      }
+    }
+    loadReviews();
+    return () => { isMounted = false; };
+  }, []);
 
   const filteredReviews = reviews.filter((r) => {
     if (activeTab === 'flagged') return r.status === 'FLAGGED' || r.flagCount > 0;
@@ -25,7 +44,8 @@ export const Reviews: React.FC = () => {
     return true;
   });
 
-  const handleModerate = (id: string, newStatus: ModerationReview['status']) => {
+  const handleModerate = async (id: string, newStatus: ModerationReview['status']) => {
+    await adminApi.moderateReview(id, newStatus);
     const updated = reviews.map((r) =>
       r.id === id ? { ...r, status: newStatus } : r
     );
@@ -65,13 +85,13 @@ export const Reviews: React.FC = () => {
     {
       header: 'Feedback Comment',
       cell: (row) => (
-        <div style={{ maxWidth: '320px' }}>
-          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)', lineHeight: 1.4 }}>
+        <div style={{ maxWidth: '380px' }}>
+          <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)' }}>
             "{row.comment}"
           </p>
           {row.flagReason && (
             <span style={{ fontSize: '11px', color: 'var(--color-danger-text)', fontWeight: 600, marginTop: '2px', display: 'block' }}>
-              Flagged: {row.flagReason}
+              🚩 Flag Reason: {row.flagReason}
             </span>
           )}
         </div>
@@ -82,24 +102,25 @@ export const Reviews: React.FC = () => {
       cell: (row) => <StatusBadge status={row.status} />
     },
     {
-      header: 'Actions',
-      align: 'right',
+      header: 'Moderation Actions',
       cell: (row) => (
-        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           {row.status !== 'APPROVED' && (
             <button
-              className="admin-btn admin-btn-primary admin-btn-sm"
               onClick={() => handleModerate(row.id, 'APPROVED')}
+              className="admin-btn admin-btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '11px' }}
             >
               Approve
             </button>
           )}
           {row.status !== 'HIDDEN' && (
             <button
-              className="admin-btn admin-btn-danger admin-btn-sm"
               onClick={() => handleModerate(row.id, 'HIDDEN')}
+              className="admin-btn admin-btn-danger"
+              style={{ padding: '4px 8px', fontSize: '11px' }}
             >
-              Hide
+              Hide Review
             </button>
           )}
         </div>
@@ -112,20 +133,21 @@ export const Reviews: React.FC = () => {
       <AdminTabs
         tabs={[
           { id: 'all', label: 'All Reviews', count: reviews.length },
-          { id: 'flagged', label: 'Flagged Queue', count: reviews.filter((r) => r.status === 'FLAGGED').length },
-          { id: 'hidden', label: 'Hidden Reviews', count: reviews.filter((r) => r.status === 'HIDDEN').length }
+          { id: 'flagged', label: 'Flagged Queue', count: reviews.filter((r) => r.status === 'FLAGGED' || r.flagCount > 0).length },
+          { id: 'hidden', label: 'Hidden / Suppressed', count: reviews.filter((r) => r.status === 'HIDDEN').length }
         ]}
         activeTab={activeTab}
-        onChange={(t) => setActiveTab(t as any)}
+        onChange={(tabId) => setActiveTab(tabId as any)}
       />
 
-      <DataTable
-        title="Marketplace Feedback Moderation"
-        columns={columns}
-        data={filteredReviews}
-        pageSize={6}
-        searchPlaceholder="Search reviews by party or comment..."
-      />
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <DataTable
+          data={filteredReviews}
+          columns={columns}
+          pageSize={10}
+          searchPlaceholder="Search reviews by task, party, or feedback..."
+        />
+      </div>
     </div>
   );
 };

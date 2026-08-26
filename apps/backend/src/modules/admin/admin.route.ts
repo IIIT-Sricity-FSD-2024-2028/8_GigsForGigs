@@ -13,6 +13,16 @@ export const adminRouter = Router();
 adminRouter.get('/kpis', (req, res) => adminController.getKPIs(req, res));
 adminRouter.get('/analytics', (req, res) => adminController.getAnalytics(req, res));
 
+// Master Directories
+adminRouter.get('/clients', (req, res) => adminController.getClients(req, res));
+adminRouter.get('/gig-pros', (req, res) => adminController.getGigPros(req, res));
+adminRouter.get('/managers', (req, res) => adminController.getManagers(req, res));
+adminRouter.get('/projects', (req, res) => adminController.getProjects(req, res));
+adminRouter.get('/payments', (req, res) => adminController.getPayments(req, res));
+adminRouter.get('/reviews', (req, res) => adminController.getReviews(req, res));
+adminRouter.get('/disputes', (req, res) => adminController.getDisputes(req, res));
+adminRouter.get('/admin-staff', (req, res) => adminController.getAdminStaff(req, res));
+
 // User Governance & Moderation
 adminRouter.patch('/users/:id/status', (req, res) => adminController.updateUserStatus(req, res));
 

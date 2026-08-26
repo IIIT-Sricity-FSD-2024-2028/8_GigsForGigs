@@ -1,22 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusIcon, CloseIcon } from '../../../components/super-admin/Icons';
-import { mockPlatformConfig, type PlatformConfig } from '../../../mock/adminMockData';
-
-/**
- * @file PlatformSettings.tsx
- * @description
- * Global marketplace configuration control plane.
- * Allows Super Admins to adjust platform commission rake rates, category taxonomy,
- * escrow holding periods, and system maintenance mode toggles.
- */
-
 import { useToast } from '../../../components/super-admin/Toast';
+import { adminApi } from '../../../services/api/admin/adminApi';
+
+export interface PlatformConfig {
+  platformRakePercentage: number;
+  minimumGigBudget: number;
+  escrowHoldingDays: number;
+  maxFileUploadMb: number;
+  isMaintenanceMode: boolean;
+  allowedCategories: string[];
+}
 
 export const PlatformSettings: React.FC = () => {
   const toast = useToast();
-  const [config, setConfig] = useState<PlatformConfig>(mockPlatformConfig);
+  const [config, setConfig] = useState<PlatformConfig>({
+    platformRakePercentage: 10.0,
+    minimumGigBudget: 50,
+    escrowHoldingDays: 14,
+    maxFileUploadMb: 100,
+    isMaintenanceMode: false,
+    allowedCategories: ['Software Development', 'Design & Creative', 'AI & Data Science', '3D & Spatial Computing']
+  });
   const [newCategory, setNewCategory] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadSettings() {
+      const data = await adminApi.getPlatformSettings();
+      if (isMounted && data) {
+        setConfig(data);
+      }
+    }
+    loadSettings();
+    return () => { isMounted = false; };
+  }, []);
 
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,9 +60,10 @@ export const PlatformSettings: React.FC = () => {
     toast.info('Category Removed', `Removed "${catToRemove}" from taxonomy.`);
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaved(true);
+    await adminApi.updatePlatformSettings(config);
     toast.success('Platform Settings Saved', `Platform commission set to ${config.platformRakePercentage}% and parameters updated.`);
     setTimeout(() => setIsSaved(false), 2500);
   };
@@ -60,161 +80,167 @@ export const PlatformSettings: React.FC = () => {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'var(--spacing-lg)' }}>
-        {/* ── Economic Parameters ────────────────────────────────────────── */}
+        {/* Economic Parameters */}
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
             Marketplace Economics & Take Rate
           </h3>
 
           <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              PLATFORM COMMISSION RAKE ({config.platformRakePercentage}%)
+            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+              Platform Commission Take Rate (% Rake)
             </label>
-            <input
-              type="range"
-              min="0"
-              max="25"
-              step="0.5"
-              value={config.platformRakePercentage}
-              onChange={(e) => setConfig({ ...config, platformRakePercentage: Number(e.target.value) })}
-              style={{ width: '100%', accentColor: 'var(--color-primary-blue)' }}
-            />
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-              Percentage retained from gross task payouts as marketplace revenue.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                max="50"
+                className="admin-input"
+                value={config.platformRakePercentage}
+                onChange={(e) => setConfig({ ...config, platformRakePercentage: parseFloat(e.target.value) || 0 })}
+              />
+              <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>%</span>
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
+              Deducted automatically from gross milestone payments upon release.
             </span>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              MINIMUM GIG POSTING BUDGET ($)
+            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+              Minimum Gig Budget Floor ($ USD)
             </label>
             <input
               type="number"
+              min="5"
               className="admin-input"
               value={config.minimumGigBudget}
-              onChange={(e) => setConfig({ ...config, minimumGigBudget: Number(e.target.value) })}
-              min="5"
+              onChange={(e) => setConfig({ ...config, minimumGigBudget: parseInt(e.target.value, 10) || 0 })}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              ESCROW HOLDING GRACE PERIOD (DAYS)
+            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+              Escrow Dispute Holding Window (Days)
             </label>
             <input
               type="number"
+              min="1"
+              max="90"
               className="admin-input"
               value={config.escrowHoldingDays}
-              onChange={(e) => setConfig({ ...config, escrowHoldingDays: Number(e.target.value) })}
-              min="1"
+              onChange={(e) => setConfig({ ...config, escrowHoldingDays: parseInt(e.target.value, 10) || 0 })}
             />
           </div>
         </div>
 
-        {/* ── System Governance & Maintenance ────────────────────────────── */}
+        {/* Operational Constraints */}
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-            System Health & Security Controls
+            System Limits & Maintenance
           </h3>
 
-          <div
-            style={{
-              padding: 'var(--spacing-md)',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: config.isMaintenanceMode ? 'var(--color-danger-bg)' : 'var(--color-bg-light)',
-              border: `1px solid ${config.isMaintenanceMode ? 'var(--color-danger-border)' : 'var(--color-border)'}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <div>
-              <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: config.isMaintenanceMode ? 'var(--color-danger-text)' : 'var(--color-text-dark)' }}>
-                Platform Maintenance Mode
-              </h4>
-              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                Temporarily suspends user logins and API transactions.
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={config.isMaintenanceMode}
-              onChange={(e) => setConfig({ ...config, isMaintenanceMode: e.target.checked })}
-              style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-            />
-          </div>
-
           <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              MAXIMUM DELIVERABLE UPLOAD SIZE (MB)
+            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+              Deliverable Upload Ceiling (MB)
             </label>
             <input
               type="number"
-              className="admin-input"
-              value={config.maxFileUploadMb}
-              onChange={(e) => setConfig({ ...config, maxFileUploadMb: Number(e.target.value) })}
               min="10"
               max="1024"
+              className="admin-input"
+              value={config.maxFileUploadMb}
+              onChange={(e) => setConfig({ ...config, maxFileUploadMb: parseInt(e.target.value, 10) || 0 })}
             />
+          </div>
+
+          <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={config.isMaintenanceMode}
+                onChange={(e) => setConfig({ ...config, isMaintenanceMode: e.target.checked })}
+              />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', color: 'var(--color-danger-text)' }}>
+                  Platform Maintenance Mode
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                  Locks client contract creation and payment checkouts. Super admin operations remain unaffected.
+                </div>
+              </div>
+            </label>
           </div>
         </div>
       </div>
 
-      {/* ── Category Taxonomy Editor ────────────────────────────────────── */}
+      {/* Category Taxonomy Manager */}
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
         <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-          Marketplace Skill Category Taxonomy
+          Marketplace Skill Categories & Taxonomy
         </h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-sm)' }}>
-          {config.allowedCategories.map((category) => (
-            <div
-              key={category}
+        <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+          Approved categories available for client job postings and freelancer talent profiles.
+        </p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', margin: 'var(--spacing-xs) 0' }}>
+          {config.allowedCategories.map((cat) => (
+            <span
+              key={cat}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 padding: '6px 12px',
                 borderRadius: 'var(--radius-pill)',
-                backgroundColor: 'rgba(8, 75, 131, 0.08)',
-                color: 'var(--color-primary-dark)',
+                backgroundColor: 'var(--color-bg-light)',
+                border: '1px solid var(--color-border)',
                 fontSize: 'var(--font-size-xs)',
-                fontWeight: 600
+                fontWeight: 600,
+                color: 'var(--color-text-dark)'
               }}
             >
-              <span>{category}</span>
+              {cat}
               <button
                 type="button"
-                onClick={() => handleRemoveCategory(category)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}
+                onClick={() => handleRemoveCategory(cat)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--color-text-muted)', display: 'flex' }}
               >
-                <CloseIcon size={14} />
+                <CloseIcon size={12} />
               </button>
-            </div>
+            </span>
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 'var(--spacing-sm)', maxWidth: '400px', marginTop: 'var(--spacing-sm)' }}>
+        <div style={{ display: 'flex', gap: '8px', maxWidth: '400px' }}>
           <input
             type="text"
             className="admin-input"
-            placeholder="Add new gig category..."
+            placeholder="New Category Name..."
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
           />
           <button
             type="button"
-            className="admin-btn admin-btn-outline admin-btn-sm"
             onClick={handleAddCategory}
+            className="admin-btn admin-btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
           >
-            <PlusIcon size={16} /> Add
+            <PlusIcon size={14} />
+            <span>Add</span>
           </button>
         </div>
       </div>
 
-      {/* Save Changes Bar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)' }}>
-        <button type="submit" className="admin-btn admin-btn-primary">
-          Save Platform Configuration
+      {/* Submit Action */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          type="submit"
+          className="admin-btn admin-btn-primary"
+          style={{ padding: '0.75rem 2rem', fontSize: 'var(--font-size-sm)' }}
+        >
+          Save Platform Changes
         </button>
       </div>
     </form>

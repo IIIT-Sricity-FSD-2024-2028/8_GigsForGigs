@@ -1,6 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { adminRouter } from './modules/admin/admin.route';
+import { clientRouter } from './modules/client/client.route';
+import { managerRouter } from './modules/manager/manager.route';
+import { gigRouter } from './modules/gig/gig.route';
+import { authRouter } from './modules/auth/auth.route';
 
 dotenv.config();
 
@@ -34,6 +38,10 @@ app.get('/health', (_req, res) => {
 
 // Mount Module Routes
 app.use('/api/admin', adminRouter);
+app.use('/api/client', clientRouter);
+app.use('/api/manager', managerRouter);
+app.use('/api/gig', gigRouter);
+app.use('/api/auth', authRouter);
 
 // API Root Info
 app.get('/api', (_req, res) => {
@@ -45,7 +53,8 @@ app.get('/api', (_req, res) => {
       admin: '/api/admin',
       manager: '/api/manager',
       client: '/api/client',
-      gig: '/api/gig'
+      gig: '/api/gig',
+      auth: '/api/auth'
     }
   });
 });

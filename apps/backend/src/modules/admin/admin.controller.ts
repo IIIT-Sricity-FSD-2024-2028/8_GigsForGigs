@@ -37,6 +37,78 @@ export class AdminController {
     }
   }
 
+  async getClients(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getClients();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch clients', error: error?.message });
+    }
+  }
+
+  async getGigPros(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getGigPros();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch gig professionals', error: error?.message });
+    }
+  }
+
+  async getManagers(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getManagers();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch managers', error: error?.message });
+    }
+  }
+
+  async getProjects(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getProjects();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch projects', error: error?.message });
+    }
+  }
+
+  async getPayments(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getPayments();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch payments', error: error?.message });
+    }
+  }
+
+  async getReviews(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getReviews();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch reviews', error: error?.message });
+    }
+  }
+
+  async getDisputes(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getDisputes();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch disputes', error: error?.message });
+    }
+  }
+
+  async getAdminStaff(_req: Request, res: Response): Promise<void> {
+    try {
+      const data = await adminService.getAdminStaff();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to fetch admin staff', error: error?.message });
+    }
+  }
+
   async updateUserStatus(req: Request, res: Response): Promise<void> {
     try {
       const id = String(req.params.id || '');

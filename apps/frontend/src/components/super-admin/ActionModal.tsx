@@ -16,6 +16,7 @@ export interface ActionModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   width?: string;
+  maxWidth?: string;
   isDrawer?: boolean;
 }
 
@@ -26,9 +27,11 @@ export const ActionModal: React.FC<ActionModalProps> = ({
   subtitle,
   children,
   footer,
-  width = '540px',
+  width,
+  maxWidth = '540px',
   isDrawer = false
 }) => {
+  const modalWidth = width || maxWidth;
   // Handle Escape key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,7 +65,7 @@ export const ActionModal: React.FC<ActionModalProps> = ({
         className="admin-card"
         style={{
           width: '100%',
-          maxWidth: width,
+          maxWidth: modalWidth,
           maxHeight: isDrawer ? '100vh' : '90vh',
           height: isDrawer ? '100vh' : 'auto',
           borderRadius: isDrawer ? 'var(--radius-lg) 0 0 var(--radius-lg)' : 'var(--radius-lg)',
