@@ -12,6 +12,7 @@ import { GigLayout } from './layouts/GigLayout/GigLayout';
 // Public & Auth Pages
 import { LandingPage } from './pages/public/LandingPage/LandingPage';
 import { Login } from './pages/auth/Login/Login';
+import { Signup } from './pages/auth/Signup/Signup';
 
 // Client Pages
 import { ClientDashboard } from './pages/client/ClientDashboard/ClientDashboard';
@@ -47,7 +48,7 @@ import { ProjectDetail } from './pages/gig/ProjectDetail/ProjectDetail';
 import { GigProfile } from './pages/gig/GigProfile/GigProfile';
 import { GigProfileCompletion } from './pages/gig/GigProfileCompletion/GigProfileCompletion';
 
-type UnauthView = 'landing' | 'login';
+type UnauthView = 'landing' | 'login' | 'signup';
 type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
 
 /**
@@ -126,9 +127,27 @@ function MainAppContent() {
   // 1. Unauthenticated Visitor Flow (ALWAYS starts on Landing Page!)
   if (!isAuthenticated || !user) {
     if (unauthView === 'landing') {
-      return <LandingPage onNavigateToLogin={() => setUnauthView('login')} />;
+      return (
+        <LandingPage
+          onNavigateToLogin={() => setUnauthView('login')}
+          onNavigateToSignup={() => setUnauthView('signup')}
+        />
+      );
     }
-    return <Login onBackToLanding={() => setUnauthView('landing')} />;
+    if (unauthView === 'signup') {
+      return (
+        <Signup
+          onBackToLanding={() => setUnauthView('landing')}
+          onNavigateToLogin={() => setUnauthView('login')}
+        />
+      );
+    }
+    return (
+      <Login
+        onBackToLanding={() => setUnauthView('landing')}
+        onNavigateToSignup={() => setUnauthView('signup')}
+      />
+    );
   }
 
   // Helper to handle Logout and return to Landing Page
@@ -146,7 +165,7 @@ function MainAppContent() {
     );
   }
 
-  // 3. Gig Professional Flow (Incoming branch flow)
+  // 3. Gig Professional Flow
   if (user.role === 'GIG_PROFESSIONAL') {
     return (
       <GigProvider>

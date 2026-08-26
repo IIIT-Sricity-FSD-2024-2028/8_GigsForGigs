@@ -409,7 +409,7 @@ html {
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-xl);
-  color: rgba(240, 246, 246, 0.7); /* Faded Platinum */
+  color: #FFFFFF !important;
   text-decoration: none;
   font-weight: 500;
   transition: all 0.2s ease;
@@ -417,8 +417,8 @@ html {
 }
 
 .nav-item:hover, .nav-item.active {
-  color: var(--color-white);
-  background-color: rgba(255, 255, 255, 0.05);
+  color: #FFFFFF !important;
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .nav-item.active {
@@ -1193,7 +1193,8 @@ html {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  opacity: 0.7;
+  color: #FFFFFF !important;
+  opacity: 1 !important;
 }
 
 /* ─── SIDEBAR USER FOOTER ──────────────────────────────────────── */
@@ -1242,12 +1243,13 @@ html {
 
 .sidebar-user-info .user-name {
   font-weight: 600;
-  color: var(--color-white);
+  color: #FFFFFF !important;
 }
 
 .sidebar-user-info .user-role {
   font-size: 0.75rem;
-  color: rgba(240, 246, 246, 0.6);
+  color: #FFFFFF !important;
+  opacity: 0.9;
 }
 
 .sidebar-user-info .online-dot {

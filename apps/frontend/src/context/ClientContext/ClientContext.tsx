@@ -131,6 +131,17 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Requested services tracking
   const [requestedServices, setRequestedServices] = useState<Set<string>>(new Set());
 
+  // Reset state to 0 / [] for new accounts
+  React.useEffect(() => {
+    if (user?.isNewAccount) {
+      setTasks([]);
+      setManagers([]);
+      setContracts([]);
+      setDeliverables([]);
+      setApplications([]);
+    }
+  }, [user]);
+
   const addTask = async (title: string, description: string, budget: number, category?: string, duration?: string, skills?: string) => {
     const newTask: Task = {
       task_id: 'task-' + Date.now(),

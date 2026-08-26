@@ -15,7 +15,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
   const [editEmail, setEditEmail] = useState('');
 
   const handleProfileSelect = async (role: string, email: string, name?: string) => {
-    await login(email, role, name);
+    await login(email, 'password5', role, name);
     if (role === 'MANAGER') {
       onNavigate('manager-dashboard');
     } else {

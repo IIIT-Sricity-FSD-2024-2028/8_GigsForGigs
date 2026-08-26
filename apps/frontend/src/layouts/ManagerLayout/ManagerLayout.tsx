@@ -9,11 +9,15 @@ export interface ManagerLayoutProps {
 }
 
 export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTab, setActiveTab }) => {
-  const { logout } = useAuth();
+  const { user, login, logout } = useAuth();
   const { profile } = useManager();
 
-  const managerName = profile?.user?.name || 'Leo Hudson';
-  const initials = managerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'LE';
+  const managerName = user?.name || profile?.user?.name || 'Leo Hudson';
+  const initials = managerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'MH';
+
+  const handleSwitchToClient = () => {
+    login('aditya@techstart.io', 'password1', 'CLIENT', 'Aditya Deshmukh');
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: '#EFF6F7', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -166,6 +170,30 @@ export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTa
               </svg>
               My Profile
             </button>
+
+            <div style={{ padding: '16px 24px 0 24px' }}>
+              <button
+                onClick={handleSwitchToClient}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  borderRadius: '8px',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                ← Switch to Client Owner
+              </button>
+            </div>
           </nav>
         </div>
 

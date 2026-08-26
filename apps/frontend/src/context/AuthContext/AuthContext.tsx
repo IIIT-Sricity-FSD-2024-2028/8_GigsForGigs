@@ -7,6 +7,7 @@ export interface UserSession {
   name: string;
   email: string;
   appliedTaskIds: string[];
+  isNewAccount?: boolean;
 }
 
 export interface MockUserRecord {
@@ -15,6 +16,7 @@ export interface MockUserRecord {
   email: string;
   password?: string;
   role: 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
+  isNewAccount?: boolean;
 }
 
 export const MOCK_USERS_DB: MockUserRecord[] = [
@@ -32,7 +34,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   role: string | null;
   loading: boolean;
-  login: (email: string, password?: string, roleHint?: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL') => Promise<boolean>;
+  login: (email: string, password?: string, roleHint?: string, customName?: string) => Promise<boolean>;
   loginManager: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
   logoutManager: () => Promise<void>;
@@ -68,17 +71,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const login = async (email: string, _pass?: string, roleHint?: string): Promise<boolean> => {
+  const signup = async (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL'): Promise<boolean> => {
+    setLoading(true);
+    const newUserId = 'new-user-' + Date.now();
+    const newRecord: MockUserRecord = {
+      user_id: newUserId,
+      name,
+      email,
+      password,
+      role,
+      isNewAccount: true
+    };
+    MOCK_USERS_DB.push(newRecord);
+
+    const newUserSession: UserSession = {
+      userId: newUserId,
+      role,
+      name,
+      email,
+      appliedTaskIds: [],
+      isNewAccount: true
+    };
+
+    setUser(newUserSession);
+    setLoading(false);
+    return true;
+  };
+
+  const login = async (email: string, _pass?: string, roleHint?: string, customName?: string): Promise<boolean> => {
     setLoading(true);
     const found = MOCK_USERS_DB.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (found) {
+      const targetRole = roleHint ? normalizeRole(roleHint) : found.role;
       setUser({
         userId: found.user_id,
-        role: found.role,
-        name: found.name,
+        role: targetRole,
+        name: customName || found.name,
         email: found.email,
-        appliedTaskIds: []
+        appliedTaskIds: [],
+        isNewAccount: !!found.isNewAccount
       });
       setLoading(false);
       return true;
@@ -86,13 +118,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Fallback user creation if email not in mock list
     const normRole = normalizeRole(roleHint || 'CLIENT');
-    const fallbackName = normRole === 'CLIENT' ? 'Aditya Deshmukh' : normRole === 'MANAGER' ? 'Leo Hudson' : 'Arham Kansal';
+    const fallbackName = customName || (normRole === 'CLIENT' ? 'Aditya Deshmukh' : normRole === 'MANAGER' ? 'Leo Hudson' : 'Arham Kansal');
     setUser({
       userId: 'u-' + Date.now(),
       role: normRole,
       name: fallbackName,
       email: email,
-      appliedTaskIds: []
+      appliedTaskIds: [],
+      isNewAccount: false
     });
     setLoading(false);
     return true;
@@ -158,6 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         role: user?.role || null,
         loading,
+        signup,
         login,
         loginManager,
         logout,
