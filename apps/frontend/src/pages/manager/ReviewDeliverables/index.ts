@@ -1,2 +1,2 @@
-export { default } from './ReviewDeliverables';
+export { default as ReviewDeliverables } from './ReviewDeliverables';
 export * from './ReviewDeliverables';
