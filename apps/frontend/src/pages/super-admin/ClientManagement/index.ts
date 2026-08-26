@@ -1,2 +1,1 @@
-export { default } from './ClientManagement';
-export * from './ClientManagement';
+export { ClientManagement, default } from './ClientManagement';

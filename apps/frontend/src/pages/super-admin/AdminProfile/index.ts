@@ -1,2 +1,1 @@
-export { default } from './AdminProfile';
-export * from './AdminProfile';
+export { AdminProfile, default } from './AdminProfile';

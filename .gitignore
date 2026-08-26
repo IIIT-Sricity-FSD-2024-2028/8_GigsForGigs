@@ -63,3 +63,5 @@ test-results/
 # Prisma
 prisma/*.db
 prisma/*.db-journal
+
+references

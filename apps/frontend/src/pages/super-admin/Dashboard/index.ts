@@ -1,2 +1,1 @@
-export { default } from './Dashboard';
-export * from './Dashboard';
+export { Dashboard, default } from './Dashboard';

@@ -1,2 +1,1 @@
-export { default } from './Reviews';
-export * from './Reviews';
+export { Reviews, default } from './Reviews';

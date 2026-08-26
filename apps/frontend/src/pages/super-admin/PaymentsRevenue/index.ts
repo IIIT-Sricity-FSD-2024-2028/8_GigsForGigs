@@ -1,2 +1,1 @@
-export { default } from './PaymentsRevenue';
-export * from './PaymentsRevenue';
+export { PaymentsRevenue, default } from './PaymentsRevenue';

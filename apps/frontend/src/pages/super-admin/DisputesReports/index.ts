@@ -1,2 +1,1 @@
-export { default } from './DisputesReports';
-export * from './DisputesReports';
+export { DisputesReports, default } from './DisputesReports';
