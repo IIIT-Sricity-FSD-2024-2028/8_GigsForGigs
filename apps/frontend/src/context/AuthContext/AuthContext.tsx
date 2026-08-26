@@ -51,12 +51,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     
-    // Default fallback to Aditya as active Client user
+    // Default fallback to Elena Rodriguez as active Gig Professional user
     return {
-      userId: 'cli-01',
-      role: 'CLIENT',
-      name: 'Aditya',
-      email: 'aditya@gigsforgigs.com',
+      userId: 'gig-01',
+      role: 'GIG_PROFESSIONAL',
+      name: 'Elena Rodriguez',
+      email: 'elena.rodriguez@gigsforgigs.com',
       appliedTaskIds: [],
     };
   });

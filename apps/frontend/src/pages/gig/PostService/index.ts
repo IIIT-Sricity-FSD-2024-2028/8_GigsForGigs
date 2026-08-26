@@ -1,2 +1,2 @@
-export { default } from './PostService';
 export * from './PostService';
+export { default } from './PostService';

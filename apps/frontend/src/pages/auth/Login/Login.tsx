@@ -6,9 +6,9 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
-  const { loginManager, loading } = useAuth();
-  const [role, setRole] = useState('manager');
-  const [email, setEmail] = useState('aditya@techstart.io');
+  const { login } = useAuth();
+  const [role, setRole] = useState('GIG_PROFESSIONAL');
+  const [email, setEmail] = useState('elena.rodriguez@gigsforgigs.com');
   const [password, setPassword] = useState('password123');
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -16,8 +16,9 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    const success = await loginManager(email, password);
-    if (!success) {
+    try {
+      await login(email, role);
+    } catch {
       setErrorMsg('Invalid credentials or server error. Please try again.');
     }
   };
@@ -250,7 +251,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
             {/* Submit Login Button */}
             <button
               type="submit"
-              disabled={loading}
               style={{
                 width: '100%',
                 backgroundColor: '#0F527E',
@@ -265,7 +265,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
                 transition: 'background-color 0.2s'
               }}
             >
-              {loading ? 'Signing in...' : 'Login'}
+              Login
             </button>
           </form>
 
