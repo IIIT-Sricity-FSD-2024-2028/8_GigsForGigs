@@ -1,20 +1,47 @@
 import type { Request, Response } from 'express';
 import { adminService, type AdminActor } from './admin.service';
+import { db } from '../../db/dbClient';
 
 /**
  * @file admin.controller.ts
  * @description
- * HTTP Request Handlers for Super Admin APIs.
- * Validates request payloads, extracts admin actor metadata, and formats standardized JSON responses.
+ * HTTP Request Handlers for Super Admin APIs with granular RBAC permission enforcement.
+ * Blocks Read-Only Auditors and non-privileged delegate admins from mutating database state.
  */
 
 function extractAdminActor(req: Request): AdminActor {
+  const emailHeader = (req.headers['x-admin-email'] as string) || (req as any).user?.email;
+  const staff = emailHeader ? db.adminStaff.find((s) => s.email.toLowerCase() === emailHeader.toLowerCase()) : null;
+
   return {
-    id: (req as any).user?.userId || 'adm-owner-01',
-    name: (req as any).user?.name || 'Chaitanya Anand',
-    email: (req as any).user?.email || 'chaitanya.admin@gigsforgigs.internal',
+    id: staff?.id || (req as any).user?.userId || 'adm-owner-01',
+    name: staff?.name || (req as any).user?.name || 'Chaitanya Anand',
+    email: staff?.email || (req as any).user?.email || 'chaitanya.admin@gigsforgigs.internal',
     ipAddress: req.ip || req.socket.remoteAddress || '127.0.0.1'
   };
+}
+
+function checkAdminPermission(req: Request, res: Response, requiredPerm: string): boolean {
+  const actor = extractAdminActor(req);
+  const staff = db.adminStaff.find((s) => s.email.toLowerCase() === actor.email.toLowerCase());
+
+  if (staff?.role === 'AUDITOR') {
+    res.status(403).json({
+      success: false,
+      message: 'Access Denied: Auditors have read-only compliance permissions and cannot execute platform mutations.'
+    });
+    return false;
+  }
+
+  if (staff && !staff.permissions.includes('*') && !staff.permissions.includes(requiredPerm)) {
+    res.status(403).json({
+      success: false,
+      message: `Access Denied: Missing required administrative permission (${requiredPerm}).`
+    });
+    return false;
+  }
+
+  return true;
 }
 
 export class AdminController {
@@ -48,6 +75,7 @@ export class AdminController {
 
   async verifyClientKYC(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'users:ban')) return;
       const id = String(req.params.id || '');
       const actor = extractAdminActor(req);
       const data = await adminService.verifyClientKYC(id, actor);
@@ -68,6 +96,7 @@ export class AdminController {
 
   async updateGigProBadge(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'users:ban')) return;
       const id = String(req.params.id || '');
       const badge = req.body.badge;
       const actor = extractAdminActor(req);
@@ -98,6 +127,7 @@ export class AdminController {
 
   async overrideProjectStatus(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'disputes:resolve')) return;
       const id = String(req.params.id || '');
       const status = req.body.status;
       const actor = extractAdminActor(req);
@@ -146,6 +176,7 @@ export class AdminController {
 
   async updateUserStatus(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'users:ban')) return;
       const id = String(req.params.id || '');
       const actor = extractAdminActor(req);
       const result = await adminService.updateUserStatus(id, req.body, actor);
@@ -157,6 +188,7 @@ export class AdminController {
 
   async inviteAdminStaff(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'admins:invite')) return;
       const actor = extractAdminActor(req);
       const result = await adminService.inviteAdminStaff(req.body, actor);
       res.status(201).json({ success: true, data: result });
@@ -177,6 +209,7 @@ export class AdminController {
 
   async revokeAdminSession(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'admins:invite')) return;
       const id = String(req.params.id || '');
       const actor = extractAdminActor(req);
       const result = await adminService.revokeAdminSession(id, actor);
@@ -188,6 +221,7 @@ export class AdminController {
 
   async settleDispute(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'disputes:resolve')) return;
       const id = String(req.params.id || '');
       const actor = extractAdminActor(req);
       const result = await adminService.settleDispute(id, req.body, actor);
@@ -199,6 +233,7 @@ export class AdminController {
 
   async overrideEscrow(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'payments:release')) return;
       const id = String(req.params.id || '');
       const actor = extractAdminActor(req);
       const result = await adminService.overrideEscrow(id, req.body, actor);
@@ -210,6 +245,7 @@ export class AdminController {
 
   async moderateReview(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'reviews:moderate')) return;
       const id = String(req.params.id || '');
       const actor = extractAdminActor(req);
       const result = await adminService.moderateReview(id, req.body, actor);
@@ -230,6 +266,7 @@ export class AdminController {
 
   async updatePlatformSettings(req: Request, res: Response): Promise<void> {
     try {
+      if (!checkAdminPermission(req, res, 'settings:manage')) return;
       const actor = extractAdminActor(req);
       const result = await adminService.updatePlatformSettings(req.body, actor);
       res.status(200).json({ success: true, data: result });

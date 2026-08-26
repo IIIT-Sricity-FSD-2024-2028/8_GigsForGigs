@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { PlusIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
 export interface AdminStaff {
@@ -41,6 +42,7 @@ interface GeneratedInvite {
 }
 
 export const AdminManagement: React.FC = () => {
+  const { hasPermission } = useAuth();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'staff' | 'audit'>('staff');
   const [staffList, setStaffList] = useState<AdminStaff[]>([]);
@@ -200,8 +202,14 @@ export const AdminManagement: React.FC = () => {
     },
     {
       header: 'Actions',
-      cell: (row) => (
-        row.role !== 'OWNER' ? (
+      cell: (row) => {
+        if (row.role === 'OWNER') {
+          return <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Immutable</span>;
+        }
+        if (!hasPermission('admins:invite')) {
+          return <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Read Only (Auditor)</span>;
+        }
+        return (
           <button
             onClick={() => {
               setTargetStaff(row);
@@ -212,10 +220,8 @@ export const AdminManagement: React.FC = () => {
           >
             Revoke Access
           </button>
-        ) : (
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Immutable</span>
-        )
-      )
+        );
+      }
     }
   ];
 
@@ -265,7 +271,7 @@ export const AdminManagement: React.FC = () => {
           onChange={(tabId) => setActiveTab(tabId as any)}
         />
 
-        {activeTab === 'staff' && (
+        {activeTab === 'staff' && hasPermission('admins:invite') && (
           <button
             onClick={() => setIsInviteModalOpen(true)}
             className="admin-btn admin-btn-primary"

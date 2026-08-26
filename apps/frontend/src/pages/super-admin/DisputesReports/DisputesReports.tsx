@@ -3,6 +3,7 @@ import { DataTable, type ColumnDef } from '../../../components/super-admin/DataT
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { useToast } from '../../../components/super-admin/Toast';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
 export interface DisputeCase {
@@ -22,6 +23,7 @@ export interface DisputeCase {
 }
 
 export const DisputesReports: React.FC = () => {
+  const { hasPermission } = useAuth();
   const toast = useToast();
   const [disputes, setDisputes] = useState<DisputeCase[]>([]);
   const [selectedDispute, setSelectedDispute] = useState<DisputeCase | null>(null);
@@ -180,79 +182,95 @@ export const DisputesReports: React.FC = () => {
             </div>
 
             {/* Settlement Ruling Controls */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-              <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
-                Arbitration Ruling
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--spacing-sm)' }}>
-                {(['FULL_REFUND', 'FULL_RELEASE', 'SPLIT'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setSettlementType(type)}
-                    style={{
-                      padding: '10px',
-                      borderRadius: 'var(--radius-md)',
-                      border: settlementType === type ? '2px solid var(--color-primary-dark)' : '1px solid var(--color-border)',
-                      backgroundColor: settlementType === type ? 'rgba(8, 75, 131, 0.08)' : 'var(--color-bg-white)',
-                      fontWeight: 700,
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-primary-dark)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {type.replace('_', ' ')}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {hasPermission('disputes:resolve') ? (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+                  <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                    Arbitration Ruling
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--spacing-sm)' }}>
+                    {(['FULL_REFUND', 'FULL_RELEASE', 'SPLIT'] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setSettlementType(type)}
+                        style={{
+                          padding: '10px',
+                          borderRadius: 'var(--radius-md)',
+                          border: settlementType === type ? '2px solid var(--color-primary-dark)' : '1px solid var(--color-border)',
+                          backgroundColor: settlementType === type ? 'rgba(8, 75, 131, 0.08)' : 'var(--color-bg-white)',
+                          fontWeight: 700,
+                          fontSize: 'var(--font-size-xs)',
+                          color: 'var(--color-primary-dark)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {type.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {settlementType === 'SPLIT' && (
-              <div>
-                <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
-                  Client Split %: {splitClientPercent}% | Freelancer Split %: {100 - splitClientPercent}%
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="90"
-                  step="5"
-                  value={splitClientPercent}
-                  onChange={(e) => setSplitClientPercent(Number(e.target.value))}
-                  style={{ width: '100%' }}
-                />
+                {settlementType === 'SPLIT' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+                      Client Split %: {splitClientPercent}% | Freelancer Split %: {100 - splitClientPercent}%
+                    </label>
+                    <input
+                      type="range"
+                      min="10"
+                      max="90"
+                      step="5"
+                      value={splitClientPercent}
+                      onChange={(e) => setSplitClientPercent(Number(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+                    Legal & Operational Arbitration Notes (Sent to both parties)
+                  </label>
+                  <textarea
+                    className="admin-textarea"
+                    rows={3}
+                    required
+                    placeholder="Explain the binding ruling and evidence analysis..."
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsDocketOpen(false)}
+                    className="admin-btn admin-btn-secondary"
+                  >
+                    Close Docket
+                  </button>
+                  <button
+                    type="submit"
+                    className="admin-btn admin-btn-primary"
+                  >
+                    Execute Final Arbitration Ruling
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ backgroundColor: '#FEF3C7', color: '#92400E', padding: '12px 16px', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📋 Read-Only Mode: Auditors may inspect case evidence, but cannot execute arbitration rulings.</span>
+                <button
+                  type="button"
+                  onClick={() => setIsDocketOpen(false)}
+                  className="admin-btn admin-btn-secondary"
+                  style={{ padding: '4px 10px', fontSize: '11px' }}
+                >
+                  Close
+                </button>
               </div>
             )}
-
-            <div>
-              <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
-                Legal & Operational Arbitration Notes (Sent to both parties)
-              </label>
-              <textarea
-                className="admin-textarea"
-                rows={3}
-                required
-                placeholder="Explain the binding ruling and evidence analysis..."
-                value={resolutionNotes}
-                onChange={(e) => setResolutionNotes(e.target.value)}
-              />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)' }}>
-              <button
-                type="button"
-                onClick={() => setIsDocketOpen(false)}
-                className="admin-btn admin-btn-secondary"
-              >
-                Close Docket
-              </button>
-              <button
-                type="submit"
-                className="admin-btn admin-btn-primary"
-              >
-                Execute Final Arbitration Ruling
-              </button>
-            </div>
           </form>
         )}
       </ActionModal>

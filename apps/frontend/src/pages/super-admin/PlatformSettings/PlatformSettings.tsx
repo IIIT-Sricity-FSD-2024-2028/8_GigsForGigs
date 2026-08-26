@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, CloseIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
 export interface PlatformConfig {
@@ -13,6 +14,7 @@ export interface PlatformConfig {
 }
 
 export const PlatformSettings: React.FC = () => {
+  const { hasPermission } = useAuth();
   const toast = useToast();
   const [config, setConfig] = useState<PlatformConfig>({
     platformRakePercentage: 10.0,
@@ -235,13 +237,19 @@ export const PlatformSettings: React.FC = () => {
 
       {/* Submit Action */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          type="submit"
-          className="admin-btn admin-btn-primary"
-          style={{ padding: '0.75rem 2rem', fontSize: 'var(--font-size-sm)' }}
-        >
-          Save Platform Changes
-        </button>
+        {hasPermission('settings:manage') ? (
+          <button
+            type="submit"
+            className="admin-btn admin-btn-primary"
+            style={{ padding: '0.75rem 2rem', fontSize: 'var(--font-size-sm)' }}
+          >
+            Save Platform Changes
+          </button>
+        ) : (
+          <div style={{ backgroundColor: 'var(--color-bg-light)', border: '1px solid var(--color-border)', padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+            Read-Only Settings (Auditor / Restricted Tier)
+          </div>
+        )}
       </div>
     </form>
   );

@@ -5,6 +5,7 @@ import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { PaymentIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
 export interface PaymentLedgerItem {
@@ -21,6 +22,7 @@ export interface PaymentLedgerItem {
 }
 
 export const PaymentsRevenue: React.FC = () => {
+  const { hasPermission } = useAuth();
   const toast = useToast();
   const [payments, setPayments] = useState<PaymentLedgerItem[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<PaymentLedgerItem | null>(null);
@@ -110,22 +112,26 @@ export const PaymentsRevenue: React.FC = () => {
       cell: (row) => (
         <div style={{ display: 'flex', gap: '6px' }}>
           {row.escrowStatus === 'HELD_IN_ESCROW' && (
-            <>
-              <button
-                onClick={() => handleOpenOverride(row, 'RELEASE')}
-                className="admin-btn admin-btn-secondary"
-                style={{ padding: '4px 8px', fontSize: '11px' }}
-              >
-                Force Release
-              </button>
-              <button
-                onClick={() => handleOpenOverride(row, 'REFUND')}
-                className="admin-btn admin-btn-danger"
-                style={{ padding: '4px 8px', fontSize: '11px' }}
-              >
-                Force Refund
-              </button>
-            </>
+            hasPermission('payments:release') ? (
+              <>
+                <button
+                  onClick={() => handleOpenOverride(row, 'RELEASE')}
+                  className="admin-btn admin-btn-primary"
+                  style={{ padding: '4px 8px', fontSize: '11px' }}
+                >
+                  Force Release
+                </button>
+                <button
+                  onClick={() => handleOpenOverride(row, 'REFUND')}
+                  className="admin-btn admin-btn-danger"
+                  style={{ padding: '4px 8px', fontSize: '11px' }}
+                >
+                  Force Refund
+                </button>
+              </>
+            ) : (
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Read Only (Auditor)</span>
+            )
           )}
         </div>
       )

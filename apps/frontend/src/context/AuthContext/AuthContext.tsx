@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+export type AdminTier = 'OWNER' | 'SUPER_ADMIN' | 'FINANCIAL_ADMIN' | 'SUPPORT_ADMIN' | 'CONTENT_MODERATOR' | 'AUDITOR';
+
 export interface UserSession {
   userId: string;
   role: 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
   name: string;
   email: string;
+  adminTier?: AdminTier;
+  permissions?: string[];
   appliedTaskIds: string[];
 }
 
@@ -17,6 +21,7 @@ export interface AuthContextType {
   logout: () => void;
   logoutManager: () => void;
   updateUserSession: (patch: Partial<UserSession>) => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContextInstance = createContext<AuthContextType | undefined>(undefined);
@@ -45,7 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (_) {}
     }
-    // Default to unauthenticated so Login / Landing page is presented first
     return null;
   });
 
@@ -63,10 +67,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const normalized = normalizeRole(role);
     let defaultName = 'Aditya Deshmukh';
     let defaultUserId = 'cli-01';
+    let adminTier: AdminTier | undefined = undefined;
+    let permissions: string[] = [];
 
     if (normalized === 'SUPER_ADMIN') {
       defaultName = 'Chaitanya Anand';
       defaultUserId = 'adm-01';
+      adminTier = 'OWNER';
+      permissions = ['*'];
     } else if (normalized === 'MANAGER') {
       defaultName = 'Leo Hudson';
       defaultUserId = 'mgr-01';
@@ -75,11 +83,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       defaultUserId = 'gig-01';
     }
 
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role: normalized })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data?.user) {
+          const u = data.data.user;
+          defaultUserId = u.userId;
+          defaultName = u.name;
+          adminTier = u.adminTier;
+          permissions = u.permissions || [];
+        }
+      }
+    } catch (_) {
+      // Fallback gracefully
+    }
+
     const newUser: UserSession = {
       userId: defaultUserId,
       role: normalized,
       name: defaultName,
       email: email || (normalized === 'SUPER_ADMIN' ? 'chaitanya.admin@gigsforgigs.internal' : `${normalized.toLowerCase()}@gigsforgigs.com`),
+      adminTier,
+      permissions,
       appliedTaskIds: [],
     };
     setUser(newUser);
@@ -99,13 +129,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserSession = (patch: Partial<UserSession>) => {
-    setUser(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        ...patch,
-      };
-    });
+    setUser((prev) => (prev ? { ...prev, ...patch } : null));
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    if (!user || user.role !== 'SUPER_ADMIN') return false;
+    if (user.adminTier === 'OWNER') return true;
+    if (user.adminTier === 'AUDITOR') return false; // Auditors have 0 mutation permissions
+    if (user.permissions?.includes('*')) return true;
+    return user.permissions?.includes(permission) || false;
   };
 
   return (
@@ -119,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         logoutManager,
         updateUserSession,
+        hasPermission
       }}
     >
       {children}
@@ -128,11 +161,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContextInstance);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-// Exporting default for folder index support
 export default AuthProvider;
