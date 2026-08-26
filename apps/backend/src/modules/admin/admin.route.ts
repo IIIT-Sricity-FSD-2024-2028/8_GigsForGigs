@@ -53,3 +53,7 @@ adminRouter.put('/settings', (req, res) => adminController.updatePlatformSetting
 
 // Immutable Security Audit Trail
 adminRouter.get('/audit-logs', (req, res) => adminController.getAuditLogs(req, res));
+
+// Profile Security & 2FA
+adminRouter.post('/profile/password', (req, res) => adminController.updateAdminPassword(req, res));
+adminRouter.post('/profile/2fa', (req, res) => adminController.toggleAdmin2FA(req, res));

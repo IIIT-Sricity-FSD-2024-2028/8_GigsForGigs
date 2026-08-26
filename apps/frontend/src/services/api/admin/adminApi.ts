@@ -190,6 +190,22 @@ export const adminApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings)
     });
+  },
+
+  async updateAdminPassword(email: string, newPassword: string) {
+    return await fetchJson(`${API_BASE_URL}/profile/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, newPassword })
+    });
+  },
+
+  async toggleAdmin2FA(email: string, isEnabled: boolean) {
+    return await fetchJson(`${API_BASE_URL}/profile/2fa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, isEnabled })
+    });
   }
 };
 

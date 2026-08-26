@@ -444,6 +444,46 @@ export class AdminService {
     return { success: true, settings: db.platformConfig };
   }
 
+  /**
+   * Update Admin Master Credentials in Database
+   */
+  async updateAdminPassword(email: string, newPassword: string, actor: AdminActor) {
+    const user = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (user) {
+      user.password = newPassword;
+    }
+    this.logAudit({
+      adminName: actor.name,
+      adminEmail: actor.email,
+      action: 'UPDATE_ADMIN_PASSWORD',
+      targetType: 'USER',
+      targetId: user?.id || 'admin-profile',
+      diffSummary: `Master administrative password updated for ${email}`,
+      ipAddress: actor.ipAddress
+    });
+    return { success: true, message: 'Password successfully updated in database.' };
+  }
+
+  /**
+   * Toggle Admin 2FA Status in Database
+   */
+  async toggleAdmin2FA(email: string, isEnabled: boolean, actor: AdminActor) {
+    const staff = db.adminStaff.find((s) => s.email.toLowerCase() === email.toLowerCase());
+    if (staff) {
+      staff.isTwoFactorEnabled = isEnabled;
+    }
+    this.logAudit({
+      adminName: actor.name,
+      adminEmail: actor.email,
+      action: isEnabled ? 'ENABLE_2FA' : 'DISABLE_2FA',
+      targetType: 'ADMIN_SECURITY',
+      targetId: staff?.id || 'admin-security',
+      diffSummary: `Two-Factor Authentication ${isEnabled ? 'enabled' : 'disabled'} for ${email}`,
+      ipAddress: actor.ipAddress
+    });
+    return { success: true, isTwoFactorEnabled: isEnabled };
+  }
+
   private logAudit(entry: Omit<typeof db.auditLogs[0], 'id' | 'createdAt'>) {
     const record = {
       id: `log-${Date.now()}`,

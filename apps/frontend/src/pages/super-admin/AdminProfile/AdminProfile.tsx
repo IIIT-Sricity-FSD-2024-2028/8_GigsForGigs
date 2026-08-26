@@ -27,7 +27,7 @@ export const AdminProfile: React.FC = () => {
     { device: 'Firefox on Linux (Ubuntu 24.04)', ip: '172.16.0.8', lastActive: 'Yesterday', current: false }
   ];
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword) {
       setMessage({ text: 'Please fill in all password fields.', type: 'error' });
@@ -37,11 +37,19 @@ export const AdminProfile: React.FC = () => {
       setMessage({ text: 'New passwords do not match.', type: 'error' });
       return;
     }
+    await adminApi.updateAdminPassword(adminEmail, newPassword);
     setMessage({ text: 'Password successfully updated across all clusters.', type: 'success' });
-    toast.success('Password Updated', 'Your administrative master password was changed.');
+    toast.success('Password Updated', 'Your administrative master password was changed in database.');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
+  };
+
+  const handleToggle2FA = async () => {
+    const nextState = !is2FAEnabled;
+    setIs2FAEnabled(nextState);
+    await adminApi.toggleAdmin2FA(adminEmail, nextState);
+    toast.info('2FA State Toggled', `Two-factor authentication is now ${nextState ? 'Enabled' : 'Disabled'} in database.`);
   };
 
   const handleRevokeSessions = async () => {
@@ -191,10 +199,7 @@ export const AdminProfile: React.FC = () => {
 
           <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
             <button
-              onClick={() => {
-                setIs2FAEnabled(!is2FAEnabled);
-                toast.info('2FA State Toggled', `Two-factor authentication is now ${!is2FAEnabled ? 'Enabled' : 'Disabled'}.`);
-              }}
+              onClick={handleToggle2FA}
               className={`admin-btn ${is2FAEnabled ? 'admin-btn-secondary' : 'admin-btn-primary'}`}
               style={{ fontSize: 'var(--font-size-xs)' }}
             >

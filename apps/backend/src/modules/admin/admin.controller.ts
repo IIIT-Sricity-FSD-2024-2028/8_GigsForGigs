@@ -275,6 +275,28 @@ export class AdminController {
     }
   }
 
+  async updateAdminPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, newPassword } = req.body;
+      const actor = extractAdminActor(req);
+      const result = await adminService.updateAdminPassword(email, newPassword, actor);
+      res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: 'Failed to update admin password', error: error?.message });
+    }
+  }
+
+  async toggleAdmin2FA(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, isEnabled } = req.body;
+      const actor = extractAdminActor(req);
+      const result = await adminService.toggleAdmin2FA(email, isEnabled, actor);
+      res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: 'Failed to toggle 2FA', error: error?.message });
+    }
+  }
+
   async getAuditLogs(_req: Request, res: Response): Promise<void> {
     try {
       const data = await adminService.getAuditLogs();
