@@ -11,7 +11,10 @@ import { mockDisputes, type DisputeCase } from '../../../mock/adminMockData';
  * Features multi-pane evidence inspection and a 1-click settlement engine (Full Refund, Full Release, or Split).
  */
 
+import { useToast } from '../../../components/super-admin/Toast';
+
 export const DisputesReports: React.FC = () => {
+  const toast = useToast();
   const [disputes, setDisputes] = useState<DisputeCase[]>(mockDisputes);
   const [selectedDispute, setSelectedDispute] = useState<DisputeCase | null>(null);
   const [isDocketOpen, setIsDocketOpen] = useState(false);
@@ -37,7 +40,7 @@ export const DisputesReports: React.FC = () => {
     );
     setDisputes(updated);
     setIsDocketOpen(false);
-    alert(`Dispute ${selectedDispute.id} arbitrated successfully via ${settlementType}. Escrow balances updated in PostgreSQL.`);
+    toast.success('Dispute Case Settled', `Ruling executed for ${selectedDispute.id} via ${settlementType.replace('_', ' ')}.`);
   };
 
   const columns: ColumnDef<DisputeCase>[] = [

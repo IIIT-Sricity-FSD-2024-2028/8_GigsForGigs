@@ -13,7 +13,10 @@ import { mockPayments, type PaymentLedgerItem } from '../../../mock/adminMockDat
  * Provides emergency escrow release and refund override capabilities with mandatory audit notes.
  */
 
+import { useToast } from '../../../components/super-admin/Toast';
+
 export const PaymentsRevenue: React.FC = () => {
+  const toast = useToast();
   const [payments, setPayments] = useState<PaymentLedgerItem[]>(mockPayments);
   const [selectedPayment, setSelectedPayment] = useState<PaymentLedgerItem | null>(null);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
@@ -37,7 +40,10 @@ export const PaymentsRevenue: React.FC = () => {
     );
     setPayments(updated);
     setIsOverrideModalOpen(false);
-    alert(`Escrow ${overrideAction === 'RELEASE' ? 'released to freelancer' : 'refunded to client'} successfully.`);
+    toast.success(
+      `Escrow ${overrideAction === 'RELEASE' ? 'Released' : 'Refunded'}`,
+      `Successfully updated ${selectedPayment.id} ($${selectedPayment.grossAmount.toLocaleString()})`
+    );
   };
 
   const columns: ColumnDef<PaymentLedgerItem>[] = [

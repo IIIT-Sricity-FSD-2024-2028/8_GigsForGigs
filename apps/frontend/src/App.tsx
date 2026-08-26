@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
+import { ToastProvider } from './components/super-admin/Toast';
 
 // Super Admin Layout & 12 Views
 import { AdminLayout } from './layouts/AdminLayout';
@@ -278,7 +279,9 @@ export default function App() {
     <AuthProvider>
       <ManagerProvider>
         <ClientProvider>
-          <MainAppContent />
+          <ToastProvider>
+            <MainAppContent />
+          </ToastProvider>
         </ClientProvider>
       </ManagerProvider>
     </AuthProvider>

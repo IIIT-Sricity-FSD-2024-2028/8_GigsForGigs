@@ -25,6 +25,8 @@ import {
  * dynamic breadcrumb headers, global search, and notification bell alerts.
  */
 
+import { CommandPalette } from '../components/super-admin/CommandPalette';
+
 export interface NavItem {
   id: string;
   label: string;
@@ -50,7 +52,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   headerActions
 }) => {
   const { logout } = useAuth();
-  const [globalSearch, setGlobalSearch] = useState('');
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // Global Ctrl+K / Cmd+K listener
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
@@ -282,24 +296,37 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
           {/* Search & Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-            <div style={{ position: 'relative', width: '280px' }}>
-              <SearchIcon
-                size={16}
-                color="var(--color-text-muted)"
-                className=""
-              />
-              <input
-                type="text"
-                className="admin-input"
-                style={{ paddingLeft: '2.2rem', fontSize: 'var(--font-size-xs)', height: '36px' }}
-                placeholder="Global platform search..."
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-              />
-            </div>
+            {/* Quick Search Spotlight Button */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '260px',
+                height: '36px',
+                padding: '0 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg-light)',
+                color: 'var(--color-text-muted)',
+                fontSize: 'var(--font-size-xs)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <SearchIcon size={15} color="var(--color-text-muted)" />
+                <span>Search or jump to...</span>
+              </div>
+              <kbd style={{ padding: '2px 5px', fontSize: '10px', fontWeight: 700, borderRadius: '4px', backgroundColor: '#ffffff', border: '1px solid #dbdfdf', color: '#502419' }}>
+                ⌘K
+              </kbd>
+            </button>
 
             {/* Notification Bell */}
             <button
+              onClick={() => onNavigate('disputes')}
               style={{
                 position: 'relative',
                 background: 'var(--color-bg-light)',
@@ -312,16 +339,17 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title="5 Unresolved Operational Alerts"
+              title="5 Unresolved Operational Alerts (Click to view Disputes)"
             >
               <BellIcon size={18} />
               <span
+                className="status-dot-pulse"
                 style={{
                   position: 'absolute',
-                  top: '-4px',
-                  right: '-4px',
-                  width: '8px',
-                  height: '8px',
+                  top: '-3px',
+                  right: '-3px',
+                  width: '9px',
+                  height: '9px',
                   borderRadius: '50%',
                   backgroundColor: 'var(--color-danger-text)'
                 }}
@@ -332,23 +360,49 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
         </header>
 
-        {/* Page Content Body */}
-        <main style={{ padding: 'var(--spacing-xl)', flex: 1 }}>
-          {pageTitle && (
-            <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary-dark)', letterSpacing: '-0.02em' }}>
-                {pageTitle}
-              </h1>
+        {/* Page Sub-Header */}
+        {(pageTitle || pageSubtitle || headerActions) && (
+          <div
+            style={{
+              padding: 'var(--spacing-xl) var(--spacing-xl) 0 var(--spacing-xl)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 'var(--spacing-md)'
+            }}
+          >
+            <div>
+              {pageTitle && (
+                <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)', margin: 0, letterSpacing: '-0.02em' }}>
+                  {pageTitle}
+                </h1>
+              )}
               {pageSubtitle && (
-                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', margin: 'var(--spacing-xs) 0 0 0' }}>
                   {pageSubtitle}
                 </p>
               )}
             </div>
-          )}
+            {headerActions && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                {headerActions}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Page Content Viewport */}
+        <main style={{ padding: 'var(--spacing-xl)', flex: 1 }}>
           {children}
         </main>
       </div>
+
+      {/* Spotlight Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 };

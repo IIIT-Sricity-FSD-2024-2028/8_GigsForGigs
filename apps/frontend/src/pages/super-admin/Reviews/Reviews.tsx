@@ -12,7 +12,10 @@ import { mockReviews, type ModerationReview } from '../../../mock/adminMockData'
  * Allows Super Admins to hide abusive/retaliatory reviews and trigger rating recalculations.
  */
 
+import { useToast } from '../../../components/super-admin/Toast';
+
 export const Reviews: React.FC = () => {
+  const toast = useToast();
   const [reviews, setReviews] = useState<ModerationReview[]>(mockReviews);
   const [activeTab, setActiveTab] = useState<'all' | 'flagged' | 'hidden'>('all');
 
@@ -27,7 +30,7 @@ export const Reviews: React.FC = () => {
       r.id === id ? { ...r, status: newStatus } : r
     );
     setReviews(updated);
-    alert(`Review marked as ${newStatus}. Aggregate ratings queued for background recalculation.`);
+    toast.info('Review Moderated', `Review status changed to ${newStatus}. Aggregate ratings recalculated.`);
   };
 
   const columns: ColumnDef<ModerationReview>[] = [

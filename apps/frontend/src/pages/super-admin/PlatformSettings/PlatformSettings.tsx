@@ -10,7 +10,10 @@ import { mockPlatformConfig, type PlatformConfig } from '../../../mock/adminMock
  * escrow holding periods, and system maintenance mode toggles.
  */
 
+import { useToast } from '../../../components/super-admin/Toast';
+
 export const PlatformSettings: React.FC = () => {
+  const toast = useToast();
   const [config, setConfig] = useState<PlatformConfig>(mockPlatformConfig);
   const [newCategory, setNewCategory] = useState('');
   const [isSaved, setIsSaved] = useState(false);
@@ -19,13 +22,14 @@ export const PlatformSettings: React.FC = () => {
     e.preventDefault();
     if (!newCategory.trim()) return;
     if (config.allowedCategories.includes(newCategory.trim())) {
-      alert('Category already exists.');
+      toast.warning('Category Exists', 'This skill category is already in the platform taxonomy.');
       return;
     }
     setConfig({
       ...config,
       allowedCategories: [...config.allowedCategories, newCategory.trim()]
     });
+    toast.info('Category Added', `Added "${newCategory.trim()}" to platform taxonomy.`);
     setNewCategory('');
   };
 
@@ -34,11 +38,13 @@ export const PlatformSettings: React.FC = () => {
       ...config,
       allowedCategories: config.allowedCategories.filter((c) => c !== catToRemove)
     });
+    toast.info('Category Removed', `Removed "${catToRemove}" from taxonomy.`);
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaved(true);
+    toast.success('Platform Settings Saved', `Platform commission set to ${config.platformRakePercentage}% and parameters updated.`);
     setTimeout(() => setIsSaved(false), 2500);
   };
 

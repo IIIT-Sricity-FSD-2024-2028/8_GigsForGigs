@@ -4,6 +4,7 @@ import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { mockClients, type ClientDetail } from '../../../mock/adminMockData';
+import { useToast } from '../../../components/super-admin/Toast';
 
 /**
  * @file ClientManagement.tsx
@@ -14,6 +15,7 @@ import { mockClients, type ClientDetail } from '../../../mock/adminMockData';
  */
 
 export const ClientManagement: React.FC = () => {
+  const toast = useToast();
   const [clients, setClients] = useState<ClientDetail[]>(mockClients);
   const [selectedClient, setSelectedClient] = useState<ClientDetail | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -31,7 +33,7 @@ export const ClientManagement: React.FC = () => {
     );
     setClients(updated);
     setSelectedClient({ ...selectedClient, isVerified: true, status: 'ACTIVE' });
-    alert(`Client ${selectedClient.name} KYC verified successfully.`);
+    toast.success('KYC Approved', `Client ${selectedClient.name} (${selectedClient.companyName}) verified.`);
   };
 
   const handleSuspendConfirm = () => {
@@ -42,7 +44,7 @@ export const ClientManagement: React.FC = () => {
     setClients(updated);
     setIsSuspendDialogOpen(false);
     setIsDrawerOpen(false);
-    alert(`Client ${selectedClient.companyName} suspended. All active hiring operations paused.`);
+    toast.warning('Client Suspended', `Account for ${selectedClient.companyName} paused.`);
   };
 
   const columns: ColumnDef<ClientDetail>[] = [

@@ -20,7 +20,10 @@ import {
  * session revocation, and an immutable SOC-2 compliant audit log inspector.
  */
 
+import { useToast } from '../../../components/super-admin/Toast';
+
 export const AdminManagement: React.FC = () => {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'staff' | 'audit'>('staff');
   const [staffList, setStaffList] = useState<AdminStaff[]>(mockAdminStaff);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(mockAuditLogs);
@@ -63,7 +66,7 @@ export const AdminManagement: React.FC = () => {
 
     const newStaff: AdminStaff = {
       id: `adm-${Date.now()}`,
-      name: inviteEmail.split('@')[0],
+      name: inviteEmail.split('@')[0] || 'Admin',
       email: inviteEmail,
       role: inviteRole,
       permissions: selectedPermissions,
@@ -90,7 +93,7 @@ export const AdminManagement: React.FC = () => {
 
     setIsInviteModalOpen(false);
     setInviteEmail('');
-    alert(`Cryptographic invitation token dispatched to ${inviteEmail} (48-hour expiration).`);
+    toast.success('Invitation Token Dispatched', `Cryptographic 48h token issued for ${inviteEmail}`);
   };
 
   const handleRevokeConfirm = () => {
@@ -110,6 +113,7 @@ export const AdminManagement: React.FC = () => {
       },
       ...auditLogs
     ]);
+    toast.warning('Admin Access Revoked', `All active JWT sessions for ${targetStaff.name} were invalidated.`);
     setIsRevokeDialogOpen(false);
     setTargetStaff(null);
   };

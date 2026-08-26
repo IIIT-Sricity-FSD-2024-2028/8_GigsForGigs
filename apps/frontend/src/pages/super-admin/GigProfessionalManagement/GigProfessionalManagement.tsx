@@ -14,7 +14,10 @@ import { mockGigPros, type GigProDetail } from '../../../mock/adminMockData';
  * and enforce marketplace quality standards.
  */
 
+import { useToast } from '../../../components/super-admin/Toast';
+
 export const GigProfessionalManagement: React.FC = () => {
+  const toast = useToast();
   const [gigPros, setGigPros] = useState<GigProDetail[]>(mockGigPros);
   const [selectedPro, setSelectedPro] = useState<GigProDetail | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -32,7 +35,7 @@ export const GigProfessionalManagement: React.FC = () => {
     );
     setGigPros(updated);
     setSelectedPro({ ...selectedPro, badge: newBadge });
-    alert(`Badge updated to ${newBadge} for ${selectedPro.name}.`);
+    toast.success('Badge Awarded', `Updated badge to ${newBadge.replace('_', ' ')} for ${selectedPro.name}.`);
   };
 
   const handleSuspendConfirm = () => {
@@ -43,7 +46,7 @@ export const GigProfessionalManagement: React.FC = () => {
     setGigPros(updated);
     setIsSuspendDialogOpen(false);
     setIsDrawerOpen(false);
-    alert(`Freelancer ${selectedPro.name} suspended from bidding on new tasks.`);
+    toast.warning('Freelancer Suspended', `Account for ${selectedPro.name} paused.`);
   };
 
   const columns: ColumnDef<GigProDetail>[] = [
