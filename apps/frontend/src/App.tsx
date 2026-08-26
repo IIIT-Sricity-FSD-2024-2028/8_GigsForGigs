@@ -29,6 +29,18 @@ import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
 import { Login } from './pages/auth/Login/Login';
 import { LandingPage } from './pages/public/LandingPage/LandingPage';
 
+// Client Portal Components & Context
+import { ClientProvider } from './context/ClientContext/ClientContext';
+import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
+import { ClientDashboard } from './pages/client/ClientDashboard/ClientDashboard';
+import { MyGigs } from './pages/client/MyGigs/MyGigs';
+import { PostGig } from './pages/client/PostGig/PostGig';
+import { SearchTalent as ClientSearchTalent } from './pages/client/SearchTalent/SearchTalent';
+import { TotalSpent } from './pages/client/TotalSpent/TotalSpent';
+import { ReviewDeliverables as ClientReviewDeliverables } from './pages/client/ReviewDeliverables/ReviewDeliverables';
+import { ReviewShortlist } from './pages/client/ReviewShortlist/ReviewShortlist';
+import { AddManagerFlow } from './pages/client/AddManagerFlow/AddManagerFlow';
+
 type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
 type UnauthView = 'landing' | 'login';
 
@@ -107,6 +119,90 @@ function ManagerPortal() {
   );
 }
 
+function ClientPortal() {
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [navParams, setNavParams] = useState<Record<string, string> | undefined>();
+
+  const handleNavigate = (viewId: string, params?: Record<string, string>) => {
+    setCurrentView(viewId);
+    setNavParams(params);
+  };
+
+  const renderActiveView = () => {
+    switch (currentView) {
+      case 'dashboard':
+        return <ClientDashboard onNavigate={handleNavigate} />;
+      case 'my-gigs':
+        return <MyGigs onNavigate={handleNavigate} />;
+      case 'post-gig':
+        return <PostGig onNavigate={handleNavigate} />;
+      case 'search-talent':
+        return <ClientSearchTalent onNavigate={handleNavigate} />;
+      case 'total-spent':
+        return <TotalSpent onNavigate={handleNavigate} />;
+      case 'review-deliverables':
+        return <ClientReviewDeliverables onNavigate={handleNavigate} params={navParams} />;
+      case 'review-shortlist':
+        return <ReviewShortlist onNavigate={handleNavigate} />;
+      case 'add-manager-flow':
+      case 'add-manager':
+        return <AddManagerFlow onNavigate={handleNavigate} />;
+      default:
+        return <ClientDashboard onNavigate={handleNavigate} />;
+    }
+  };
+
+  return (
+    <ClientLayout currentView={currentView} onNavigate={handleNavigate}>
+      {renderActiveView()}
+    </ClientLayout>
+  );
+}
+
+function GigProfessionalPortal() {
+  const { user, logout } = useAuth();
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f0f6f6', fontFamily: 'Inter, sans-serif', padding: '40px 24px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '1px solid #dbdfdf' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #dbdfdf', paddingBottom: '20px', marginBottom: '24px' }}>
+          <div>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#bf6900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>GIG PROFESSIONAL TALENT PORTAL</span>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#084b83', margin: '4px 0 0 0' }}>Welcome, {user?.name || 'Elena Rodriguez'}</h1>
+          </div>
+          <button
+            onClick={() => logout()}
+            style={{ padding: '8px 16px', backgroundColor: '#fce8e6', color: '#c5221f', border: '1px solid #fad2cf', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+          >
+            Sign Out
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+          <div style={{ padding: '20px', backgroundColor: '#EFF6FC', borderRadius: '12px', border: '1px solid #D5DDE0' }}>
+            <span style={{ fontSize: '13px', color: '#805c54', fontWeight: 600 }}>Active Deliverables</span>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#084b83', marginTop: '6px' }}>4 Tasks</div>
+          </div>
+          <div style={{ padding: '20px', backgroundColor: '#e6f4ea', borderRadius: '12px', border: '1px solid #ceead6' }}>
+            <span style={{ fontSize: '13px', color: '#137333', fontWeight: 600 }}>Escrow Locked Earnings</span>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#137333', marginTop: '6px' }}>$12,450</div>
+          </div>
+          <div style={{ padding: '20px', backgroundColor: '#fef7e0', borderRadius: '12px', border: '1px solid #feefc3' }}>
+            <span style={{ fontSize: '13px', color: '#b06000', fontWeight: 600 }}>Reputation Rating</span>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#b06000', marginTop: '6px' }}>⭐ 4.95 / 5.0</div>
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: '#FAFBFB', borderRadius: '12px', padding: '24px', border: '1px dashed #D5DDE0', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#502419', margin: '0 0 8px 0' }}>Gig Deliverables & Submission Pipeline</h3>
+          <p style={{ fontSize: '14px', color: '#805c54', maxWidth: '540px', margin: '0 auto 20px auto' }}>
+            Freelancer task exploration, bid submission, and milestone deliverable submission module is actively synchronized across team verticals.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MainAppContent() {
   const { user, isAuthenticated, loading: authLoading, login } = useAuth();
   const [unauthView, setUnauthView] = useState<UnauthView>('login');
@@ -171,7 +267,8 @@ function MainAppContent() {
 
       {user.role === 'SUPER_ADMIN' && <SuperAdminPortal />}
       {user.role === 'MANAGER' && <ManagerPortal />}
-      {user.role !== 'SUPER_ADMIN' && user.role !== 'MANAGER' && <SuperAdminPortal />}
+      {user.role === 'CLIENT' && <ClientPortal />}
+      {user.role === 'GIG_PROFESSIONAL' && <GigProfessionalPortal />}
     </div>
   );
 }
@@ -180,7 +277,9 @@ export default function App() {
   return (
     <AuthProvider>
       <ManagerProvider>
-        <MainAppContent />
+        <ClientProvider>
+          <MainAppContent />
+        </ClientProvider>
       </ManagerProvider>
     </AuthProvider>
   );
