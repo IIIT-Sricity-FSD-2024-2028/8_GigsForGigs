@@ -1,18 +1,5 @@
-<<<<<<< HEAD
 @import "./styles/globals.css";
 
-html, body, #root {
-  width: 100%;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  background-color: var(--color-background, #EFF6F7);
-}
-
-#root {
-  display: flex;
-  flex-direction: column;
-=======
 /* ==========================================================================
    GigsForGigs — Master Super Admin Design Tokens & Global Stylesheet
    Design Palette:
@@ -117,6 +104,11 @@ html, body, #root {
   color: var(--color-text-dark);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Base Component Classes */
@@ -275,5 +267,4 @@ html, body, #root {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #a3abab;
->>>>>>> bffc740dcf73c05e38146f5142d0d898fd4e0199
 }
