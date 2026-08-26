@@ -1,2 +1,2 @@
-export { default } from './PendingRequests';
 export * from './PendingRequests';
+export { default } from './PendingRequests';

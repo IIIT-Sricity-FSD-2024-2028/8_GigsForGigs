@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 
 interface LandingPageProps {
   onNavigateToLogin: () => void;
+  onNavigateToSignup?: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onNavigateToSignup }) => {
+  const handleJoinClick = onNavigateToSignup || onNavigateToLogin;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'hiring' | 'work'>('hiring');
 
@@ -38,10 +40,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
         </div>
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <a href="#how-it-works" style={{ textDecoration: 'none', color: '#4A5568', fontWeight: 600, fontSize: '15px' }}>Find Work</a>
-          <a href="#popular-services" style={{ textDecoration: 'none', color: '#4A5568', fontWeight: 600, fontSize: '15px' }}>Find Gigs</a>
-          <a href="#how-it-works" style={{ textDecoration: 'none', color: '#4A5568', fontWeight: 600, fontSize: '15px' }}>How it Works</a>
-          <a href="#about" style={{ textDecoration: 'none', color: '#4A5568', fontWeight: 600, fontSize: '15px' }}>About Us</a>
+          <a href="#how-it-works" style={{ textDecoration: 'none', color: 'rgb(15, 82, 126)', fontWeight: 600, fontSize: '15px' }}>Find Work</a>
+          <a href="#popular-services" style={{ textDecoration: 'none', color: 'rgb(15, 82, 126)', fontWeight: 600, fontSize: '15px' }}>Find Gigs</a>
+          <a href="#how-it-works" style={{ textDecoration: 'none', color: 'rgb(15, 82, 126)', fontWeight: 600, fontSize: '15px' }}>How it Works</a>
+          <a href="#about" style={{ textDecoration: 'none', color: 'rgb(15, 82, 126)', fontWeight: 600, fontSize: '15px' }}>About Us</a>
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -50,9 +52,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
             style={{
               padding: '10px 24px',
               borderRadius: '8px',
-              border: '1px solid #D1D5DB',
+              border: '1px solid rgb(15, 82, 126)',
               backgroundColor: '#FFFFFF',
-              color: '#1A202C',
+              color: 'rgb(15, 82, 126)',
               fontWeight: 600,
               fontSize: '15px',
               cursor: 'pointer',
@@ -62,14 +64,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
             Login
           </button>
           <button
-            onClick={onNavigateToLogin}
+            onClick={handleJoinClick}
             style={{
+              padding: '10px 24px',
+              borderRadius: '8px',
               border: 'none',
-              backgroundColor: 'transparent',
-              color: '#718096',
+              backgroundColor: '#D47700',
+              color: '#FFFFFF',
               fontWeight: 600,
               fontSize: '15px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s'
             }}
           >
             Join
@@ -79,7 +84,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
 
       {/* 2. Hero Section */}
       <section style={{ textAlign: 'center', padding: '96px 24px 80px 24px', maxWidth: '900px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '56px', fontWeight: 800, color: '#828C96', lineHeight: 1.15, margin: '0 0 24px 0', letterSpacing: '-1px' }}>
+        <h1 style={{ fontSize: '56px', fontWeight: 800, color: 'rgb(15, 82, 126)', lineHeight: 1.15, margin: '0 0 24px 0', letterSpacing: '-1px' }}>
           Find Great Work. Hire Great Talent.
         </h1>
         <p style={{ fontSize: '18px', color: '#718096', lineHeight: 1.6, margin: '0 auto 40px auto', maxWidth: '640px' }}>

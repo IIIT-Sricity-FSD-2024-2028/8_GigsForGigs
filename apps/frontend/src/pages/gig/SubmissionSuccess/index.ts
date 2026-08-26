@@ -1,2 +1,2 @@
-export { default } from './SubmissionSuccess';
 export * from './SubmissionSuccess';
+export { default } from './SubmissionSuccess';

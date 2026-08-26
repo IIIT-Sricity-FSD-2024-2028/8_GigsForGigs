@@ -11,14 +11,6 @@ html, body, #root {
 
 /* ==========================================================================
    GigsForGigs — Master Super Admin Design Tokens & Global Stylesheet
-   Design Palette:
-   - Primary Dark: #084b83 (Yale Blue - Sidebar, headers, deep navigation)
-   - Primary Action: #bf6900 (Copperwood - Primary buttons, key interactive focus)
-   - Secondary Accent: #519e8a (Seagrass - Active indicators, success highlights)
-   - Background Canvas: #f0f6f6 (Platinum - Clean, low-fatigue workspace)
-   - Text Dark: #502419 (Espresso - High-contrast readable typography)
-   - Text Muted: #805c54 (Muted Espresso - Subtitles, helper text)
-   - Border Color: #dbdfdf (Clean neutral dividers)
    ========================================================================== */
 
 :root {
@@ -104,7 +96,7 @@ html, body, #root {
 }
 
 html, body, #root {
-  height: 100%;
+  min-height: 100vh;
   width: 100%;
   font-family: var(--font-family-sans);
   background-color: var(--color-bg-light);
@@ -113,7 +105,12 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Base Component Classes */
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Base Utility Classes */
 .admin-card {
   background-color: var(--color-bg-white);
   border: 1px solid var(--color-border);

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
+import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
+import { GigProvider, useGig } from './context/GigContext/GigContext';
 import { ToastProvider } from './components/super-admin/Toast';
 
-// Super Admin Layout & 12 Views
+// 👑 Super Admin Layout & 12 Views
 import { AdminLayout } from './layouts/AdminLayout';
 import { Dashboard } from './pages/super-admin/Dashboard';
 import { AdminAnalytics } from './pages/super-admin/AdminAnalytics';
@@ -18,33 +20,54 @@ import { AdminManagement } from './pages/super-admin/AdminManagement';
 import { AdminProfile } from './pages/super-admin/AdminProfile';
 import { PlatformSettings } from './pages/super-admin/PlatformSettings';
 
-// Manager Portal Components
-import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
-import { ManagerDashboard } from './pages/manager/ManagerDashboard/ManagerDashboard';
-import { SearchTalent } from './pages/manager/SearchTalent/SearchTalent';
-import { ManagerTasks } from './pages/manager/ManagerTasks/ManagerTasks';
-import { ReviewDeliverables } from './pages/manager/ReviewDeliverables/ReviewDeliverables';
-import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
-
-// Public & Auth Views
-import { Login } from './pages/auth/Login/Login';
-import { LandingPage } from './pages/public/LandingPage/LandingPage';
-
-// Client Portal Components & Context
-import { ClientProvider } from './context/ClientContext/ClientContext';
+// 💼 Client Pages & Layout
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
 import { ClientDashboard } from './pages/client/ClientDashboard/ClientDashboard';
-import { MyGigs } from './pages/client/MyGigs/MyGigs';
-import { PostGig } from './pages/client/PostGig/PostGig';
 import { SearchTalent as ClientSearchTalent } from './pages/client/SearchTalent/SearchTalent';
+import { MyGigs } from './pages/client/MyGigs/MyGigs';
 import { TotalSpent } from './pages/client/TotalSpent/TotalSpent';
+import { ClientProfileSelection } from './pages/client/ClientProfileSelection/ClientProfileSelection';
+import { AddManager } from './pages/client/AddManager/AddManager';
+import { AddManagerFlow } from './pages/client/AddManagerFlow/AddManagerFlow';
+import { PostGig } from './pages/client/PostGig/PostGig';
 import { ReviewDeliverables as ClientReviewDeliverables } from './pages/client/ReviewDeliverables/ReviewDeliverables';
 import { ReviewShortlist } from './pages/client/ReviewShortlist/ReviewShortlist';
-import { AddManagerFlow } from './pages/client/AddManagerFlow/AddManagerFlow';
 
+// 👔 Manager Pages & Layout
+import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
+import { ManagerDashboard } from './pages/manager/ManagerDashboard/ManagerDashboard';
+import { SearchTalent as ManagerSearchTalent } from './pages/manager/SearchTalent/SearchTalent';
+import { ManagerTasks } from './pages/manager/ManagerTasks/ManagerTasks';
+import { ReviewDeliverables as ManagerReviewDeliverables } from './pages/manager/ReviewDeliverables/ReviewDeliverables';
+import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
+
+// ⚡ Gig Professional Pages & Layout
+import { GigLayout } from './layouts/GigLayout/GigLayout';
+import { GigDashboard } from './pages/gig/GigDashboard/GigDashboard';
+import { ExploreTasks } from './pages/gig/ExploreTasks/ExploreTasks';
+import { ActiveTasks } from './pages/gig/ActiveTasks/ActiveTasks';
+import { PendingRequests } from './pages/gig/PendingRequests/PendingRequests';
+import { CompletedProjects } from './pages/gig/CompletedProjects/CompletedProjects';
+import { TotalEarnings } from './pages/gig/TotalEarnings/TotalEarnings';
+import { SubmitDeliverables } from './pages/gig/SubmitDeliverables/SubmitDeliverables';
+import { SubmissionSuccess } from './pages/gig/SubmissionSuccess/SubmissionSuccess';
+import { PostService } from './pages/gig/PostService/PostService';
+import { ServicePublished } from './pages/gig/ServicePublished/ServicePublished';
+import { ProjectDetail } from './pages/gig/ProjectDetail/ProjectDetail';
+import { GigProfile } from './pages/gig/GigProfile/GigProfile';
+import { GigProfileCompletion } from './pages/gig/GigProfileCompletion/GigProfileCompletion';
+
+// 🌐 Public & Auth Pages
+import { LandingPage } from './pages/public/LandingPage/LandingPage';
+import { Login } from './pages/auth/Login/Login';
+import { Signup } from './pages/auth/Signup/Signup';
+
+type UnauthView = 'landing' | 'login' | 'signup';
 type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
-type UnauthView = 'landing' | 'login';
 
+/**
+ * 👑 Super Admin Platform Portal (12 Views Suite)
+ */
 function SuperAdminPortal() {
   const [currentView, setCurrentView] = useState('dashboard');
 
@@ -95,132 +118,128 @@ function SuperAdminPortal() {
   );
 }
 
-function ManagerPortal() {
+/**
+ * ⚡ Gig Professional Portal
+ */
+function GigAppContent() {
+  const { activeTab } = useGig();
+
+  return (
+    <GigLayout>
+      {activeTab === 'dashboard' && <GigDashboard />}
+      {activeTab === 'explore' && <ExploreTasks />}
+      {activeTab === 'active-tasks' && <ActiveTasks />}
+      {activeTab === 'pending-requests' && <PendingRequests />}
+      {activeTab === 'completed-projects' && <CompletedProjects />}
+      {activeTab === 'earnings' && <TotalEarnings />}
+      {activeTab === 'submit-deliverables' && <SubmitDeliverables />}
+      {activeTab === 'submission-success' && <SubmissionSuccess />}
+      {activeTab === 'post-service' && <PostService />}
+      {activeTab === 'service-published' && <ServicePublished />}
+      {activeTab === 'project-detail' && <ProjectDetail />}
+      {activeTab === 'profile' && <GigProfile />}
+      {activeTab === 'profile-completion' && <GigProfileCompletion />}
+    </GigLayout>
+  );
+}
+
+/**
+ * 👔 Manager Portal
+ */
+function ManagerAppContent() {
   const { selectTask } = useManager();
-  const [activeTab, setActiveTab] = useState<ManagerTabType>('dashboard');
+  const [managerActiveTab, setManagerActiveTab] = useState<ManagerTabType>('dashboard');
 
   const handleNavigateToTask = (taskId: number) => {
     selectTask(taskId);
-    setActiveTab('task-detail');
+    setManagerActiveTab('task-detail');
   };
 
   return (
-    <ManagerLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {activeTab === 'dashboard' && (
+    <ManagerLayout activeTab={managerActiveTab} setActiveTab={setManagerActiveTab}>
+      {managerActiveTab === 'dashboard' && (
         <ManagerDashboard
           onNavigateToTask={handleNavigateToTask}
-          onNavigateToQueue={() => setActiveTab('tasks')}
+          onNavigateToQueue={() => setManagerActiveTab('tasks')}
         />
       )}
-      {activeTab === 'talent' && <SearchTalent />}
-      {activeTab === 'tasks' && <ManagerTasks onSelectTask={handleNavigateToTask} />}
-      {activeTab === 'task-detail' && <ReviewDeliverables onBack={() => setActiveTab('tasks')} />}
-      {activeTab === 'profile' && <ManagerProfile />}
+      {managerActiveTab === 'talent' && <ManagerSearchTalent />}
+      {managerActiveTab === 'tasks' && (
+        <ManagerTasks onSelectTask={handleNavigateToTask} />
+      )}
+      {managerActiveTab === 'task-detail' && (
+        <ManagerReviewDeliverables onBack={() => setManagerActiveTab('tasks')} />
+      )}
+      {managerActiveTab === 'profile' && <ManagerProfile />}
     </ManagerLayout>
   );
 }
 
-function ClientPortal() {
-  const [currentView, setCurrentView] = useState('dashboard');
-  const [navParams, setNavParams] = useState<Record<string, string> | undefined>();
+/**
+ * 💼 Client Portal
+ */
+function ClientAppContent() {
+  const [clientView, setClientView] = useState<string>('dashboard');
 
-  const handleNavigate = (viewId: string, params?: Record<string, string>) => {
-    setCurrentView(viewId);
-    setNavParams(params);
-  };
-
-  const renderActiveView = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return <ClientDashboard onNavigate={handleNavigate} />;
-      case 'my-gigs':
-        return <MyGigs onNavigate={handleNavigate} />;
-      case 'post-gig':
-        return <PostGig onNavigate={handleNavigate} />;
-      case 'search-talent':
-        return <ClientSearchTalent onNavigate={handleNavigate} />;
-      case 'total-spent':
-        return <TotalSpent onNavigate={handleNavigate} />;
-      case 'review-deliverables':
-        return <ClientReviewDeliverables onNavigate={handleNavigate} params={navParams} />;
-      case 'review-shortlist':
-        return <ReviewShortlist onNavigate={handleNavigate} />;
-      case 'add-manager-flow':
-      case 'add-manager':
-        return <AddManagerFlow onNavigate={handleNavigate} />;
-      default:
-        return <ClientDashboard onNavigate={handleNavigate} />;
-    }
+  const handleClientNavigate = (viewId: string, _params?: Record<string, string>) => {
+    setClientView(viewId);
   };
 
   return (
-    <ClientLayout currentView={currentView} onNavigate={handleNavigate}>
-      {renderActiveView()}
+    <ClientLayout currentView={clientView} onNavigate={handleClientNavigate}>
+      {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
+      {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
+      {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
+      {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
+      {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
+      {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
+      {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
+      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
+      {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} />}
+      {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} />}
     </ClientLayout>
   );
 }
 
-function GigProfessionalPortal() {
-  const { user, logout } = useAuth();
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f0f6f6', fontFamily: 'Inter, sans-serif', padding: '40px 24px' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '16px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', border: '1px solid #dbdfdf' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #dbdfdf', paddingBottom: '20px', marginBottom: '24px' }}>
-          <div>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#bf6900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>GIG PROFESSIONAL TALENT PORTAL</span>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#084b83', margin: '4px 0 0 0' }}>Welcome, {user?.name || 'Elena Rodriguez'}</h1>
-          </div>
-          <button
-            onClick={() => logout()}
-            style={{ padding: '8px 16px', backgroundColor: '#fce8e6', color: '#c5221f', border: '1px solid #fad2cf', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
-          >
-            Sign Out
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          <div style={{ padding: '20px', backgroundColor: '#EFF6FC', borderRadius: '12px', border: '1px solid #D5DDE0' }}>
-            <span style={{ fontSize: '13px', color: '#805c54', fontWeight: 600 }}>Active Deliverables</span>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#084b83', marginTop: '6px' }}>4 Tasks</div>
-          </div>
-          <div style={{ padding: '20px', backgroundColor: '#e6f4ea', borderRadius: '12px', border: '1px solid #ceead6' }}>
-            <span style={{ fontSize: '13px', color: '#137333', fontWeight: 600 }}>Escrow Locked Earnings</span>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#137333', marginTop: '6px' }}>$12,450</div>
-          </div>
-          <div style={{ padding: '20px', backgroundColor: '#fef7e0', borderRadius: '12px', border: '1px solid #feefc3' }}>
-            <span style={{ fontSize: '13px', color: '#b06000', fontWeight: 600 }}>Reputation Rating</span>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#b06000', marginTop: '6px' }}>⭐ 4.95 / 5.0</div>
-          </div>
-        </div>
-
-        <div style={{ backgroundColor: '#FAFBFB', borderRadius: '12px', padding: '24px', border: '1px dashed #D5DDE0', textAlign: 'center' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#502419', margin: '0 0 8px 0' }}>Gig Deliverables & Submission Pipeline</h3>
-          <p style={{ fontSize: '14px', color: '#805c54', maxWidth: '540px', margin: '0 auto 20px auto' }}>
-            Freelancer task exploration, bid submission, and milestone deliverable submission module is actively synchronized across team verticals.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * Main application router deciding layout and portal shell based on user role.
+ */
 function MainAppContent() {
   const { user, isAuthenticated, loading: authLoading, login } = useAuth();
-  const [unauthView, setUnauthView] = useState<UnauthView>('login');
+  const [unauthView, setUnauthView] = useState<UnauthView>('landing');
 
   if (authLoading) {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFF6F7', color: '#0D568D', fontWeight: 600 }}>
-        Loading GigsForGigs...
+        Loading GigsForGigs Workspace...
       </div>
     );
   }
 
+  // 1. Unauthenticated Visitor Flow (ALWAYS starts on Landing Page!)
   if (!isAuthenticated || !user) {
     if (unauthView === 'landing') {
-      return <LandingPage onNavigateToLogin={() => setUnauthView('login')} />;
+      return (
+        <LandingPage
+          onNavigateToLogin={() => setUnauthView('login')}
+          onNavigateToSignup={() => setUnauthView('signup')}
+        />
+      );
     }
-    return <Login onBackToLanding={() => setUnauthView('landing')} />;
+    if (unauthView === 'signup') {
+      return (
+        <Signup
+          onBackToLanding={() => setUnauthView('landing')}
+          onNavigateToLogin={() => setUnauthView('login')}
+        />
+      );
+    }
+    return (
+      <Login
+        onBackToLanding={() => setUnauthView('landing')}
+        onNavigateToSignup={() => setUnauthView('signup')}
+      />
+    );
   }
 
   return (
@@ -247,7 +266,7 @@ function MainAppContent() {
         <span style={{ fontWeight: 600, opacity: 0.8 }}>ROLE:</span>
         <select
           value={user.role}
-          onChange={(e) => login(user.email, e.target.value)}
+          onChange={(e) => login(user.email, 'password123', e.target.value)}
           style={{
             background: '#ffffff',
             color: '#084b83',
@@ -267,9 +286,21 @@ function MainAppContent() {
       </div>
 
       {user.role === 'SUPER_ADMIN' && <SuperAdminPortal />}
-      {user.role === 'MANAGER' && <ManagerPortal />}
-      {user.role === 'CLIENT' && <ClientPortal />}
-      {user.role === 'GIG_PROFESSIONAL' && <GigProfessionalPortal />}
+      {user.role === 'MANAGER' && (
+        <ManagerProvider>
+          <ManagerAppContent />
+        </ManagerProvider>
+      )}
+      {user.role === 'CLIENT' && (
+        <ClientProvider>
+          <ClientAppContent />
+        </ClientProvider>
+      )}
+      {user.role === 'GIG_PROFESSIONAL' && (
+        <GigProvider>
+          <GigAppContent />
+        </GigProvider>
+      )}
     </div>
   );
 }
@@ -277,13 +308,9 @@ function MainAppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <ManagerProvider>
-        <ClientProvider>
-          <ToastProvider>
-            <MainAppContent />
-          </ToastProvider>
-        </ClientProvider>
-      </ManagerProvider>
+      <ToastProvider>
+        <MainAppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }

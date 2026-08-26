@@ -4,9 +4,10 @@ import { adminApi } from '../../../services/api/admin/adminApi';
 
 interface LoginProps {
   onBackToLanding?: () => void;
+  onNavigateToSignup?: () => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
+export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignup }) => {
   const { login, loading } = useAuth();
   const [role, setRole] = useState('super_admin');
   const [email, setEmail] = useState('chaitanya.admin@gigsforgigs.internal');
@@ -42,7 +43,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
 
   const handleQuickLogin = async (quickRole: string, quickEmail: string) => {
     setErrorMsg(null);
-    await login(quickEmail, quickRole);
+    await login(quickEmail, 'password123', quickRole);
   };
 
   const handleAcceptInvite = async (e: React.FormEvent) => {
@@ -56,8 +57,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
     try {
       const res = await adminApi.acceptAdminInvitation(inviteToken, inviteEmail, assignedPassword);
       if (res) {
-        // Automatically log in to the newly activated Super Admin account
-        await login(inviteEmail, 'SUPER_ADMIN');
+        await login(inviteEmail, assignedPassword, 'SUPER_ADMIN');
       } else {
         setErrorMsg('Invalid or expired cryptographic token.');
       }
@@ -72,7 +72,10 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
     e.preventDefault();
     setErrorMsg(null);
     try {
-      await login(email, role);
+      const success = await login(email, password, role);
+      if (!success) {
+        setErrorMsg('Invalid credentials or server error. Please try again.');
+      }
     } catch (err: any) {
       setErrorMsg('Invalid credentials or server error. Please try again.');
     }
@@ -114,7 +117,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
         </div>
 
         {/* Hero Text Content */}
-        <div style={{ maxWidth: '440px', marginTop: '40px', marginBottom: '40px' }}>
+        <div style={{ maxWidth: '460px', marginTop: '60px', marginBottom: '60px' }}>
           <h1 style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1.2, marginBottom: '20px', letterSpacing: '-0.5px' }}>
             Connect with the world's best talent.
           </h1>
@@ -125,19 +128,14 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
 
         {/* Stylized Bar Illustration at Bottom */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '20px', height: '180px', marginTop: 'auto' }}>
-          {/* Pillar 1 */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#A4C4D9', border: '3px solid #0F527E' }} />
             <div style={{ width: '64px', height: '110px', backgroundColor: '#6B5B3E', borderRadius: '12px 12px 0 0' }} />
           </div>
-
-          {/* Pillar 2 */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#C87D20', border: '3px solid #0F527E' }} />
             <div style={{ width: '64px', height: '150px', backgroundColor: '#5281A5', borderRadius: '12px 12px 0 0' }} />
           </div>
-
-          {/* Pillar 3 */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '64px', height: '90px', backgroundColor: '#426987', borderRadius: '12px 12px 0 0' }} />
           </div>
@@ -305,113 +303,106 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
                   style={{
                     width: '100%',
                     padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#FFFFFF',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <option value="super_admin">👑 Super Admin (Platform Owner)</option>
-                <option value="manager">👔 Manager (Leo Hudson)</option>
-                <option value="client">💼 Client (Aditya Deshmukh)</option>
-                <option value="freelancer">⚡ Gig Professional (Elena Rodriguez)</option>
-              </select>
-            </div>
+                    borderRadius: '8px',
+                    border: '1px solid #D5DDE0',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: '#0F527E',
+                    backgroundColor: '#F8FAFC',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="super_admin">👑 Super Administrator</option>
+                  <option value="manager">👔 Project Manager</option>
+                  <option value="client">💼 Client / Organization</option>
+                  <option value="freelancer">⚡ Gig Professional</option>
+                </select>
+              </div>
 
-            {/* Email Address */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
-                Email address
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="aditya@techstart.io"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#EFF6FC',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#EFF6FC',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-
-            {/* Options line: Remember me & Forgot Password */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#5C443A', cursor: 'pointer' }}>
+              {/* Email Input */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
+                  Email address
+                </label>
                 <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ width: '16px', height: '16px', borderRadius: '4px' }}
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #D5DDE0',
+                    fontSize: '15px',
+                    color: '#2C3E50',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
                 />
-                Remember me
-              </label>
-              <a
-                href="#forgot"
-                onClick={(e) => e.preventDefault()}
-                style={{ color: '#D47700', textDecoration: 'none', fontWeight: 600 }}
-              >
-                Forgot password?
-              </a>
-            </div>
+              </div>
 
-            {/* Submit Login Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                backgroundColor: '#0F527E',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '14px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '16px',
-                cursor: 'pointer',
-                marginTop: '8px',
-                transition: 'background-color 0.2s'
-              }}
-            >
-              {loading ? 'Signing in...' : 'Login'}
-            </button>
-          </form>
+              {/* Password Input */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #D5DDE0',
+                    fontSize: '15px',
+                    color: '#2C3E50',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Remember me & Forgot Password */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#5C443A' }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{ borderRadius: '4px', accentColor: '#0F527E' }}
+                  />
+                  Remember me
+                </label>
+                <a href="#forgot" style={{ color: '#D47700', textDecoration: 'none', fontWeight: 600 }}>
+                  Forgot password?
+                </a>
+              </div>
+
+              {/* Submit Login Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#0F527E',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  marginTop: '8px',
+                  transition: 'background-color 0.2s'
+                }}
+              >
+                {loading ? 'Signing in...' : 'Login'}
+              </button>
+            </form>
           )}
 
           {/* Divider */}
@@ -493,7 +484,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
               href="#signup"
               onClick={(e) => {
                 e.preventDefault();
-                handleSubmit(e);
+                if (onNavigateToSignup) onNavigateToSignup();
               }}
               style={{ color: '#D47700', fontWeight: 700, textDecoration: 'none' }}
             >

@@ -75,6 +75,7 @@ interface ClientContextType {
   updateTask: (taskId: string, title: string, description: string, budget: number) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   inviteManager: (name: string, email: string) => Promise<void>;
+  updateManager: (inviteId: string, name: string, email: string) => Promise<void>;
   deleteManager: (inviteId: string) => Promise<void>;
   approveDeliverable: (taskId: string, deliverableNo: number) => Promise<void>;
   rejectDeliverable: (taskId: string) => Promise<void>;
@@ -130,6 +131,17 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Requested services tracking
   const [requestedServices, setRequestedServices] = useState<Set<string>>(new Set());
 
+  // Reset state to 0 / [] for new accounts
+  React.useEffect(() => {
+    if (user?.isNewAccount) {
+      setTasks([]);
+      setManagers([]);
+      setContracts([]);
+      setDeliverables([]);
+      setApplications([]);
+    }
+  }, [user]);
+
   const addTask = async (title: string, description: string, budget: number, category?: string, duration?: string, skills?: string) => {
     const newTask: Task = {
       task_id: 'task-' + Date.now(),
@@ -164,6 +176,10 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createdAt: new Date().toISOString().split('T')[0],
     };
     setManagers(prev => [...prev, newInvite]);
+  };
+
+  const updateManager = async (inviteId: string, name: string, email: string) => {
+    setManagers(prev => prev.map(m => m.invite_id === inviteId ? { ...m, name, email } : m));
   };
 
   const deleteManager = async (inviteId: string) => {
@@ -218,6 +234,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       updateTask,
       deleteTask,
       inviteManager,
+      updateManager,
       deleteManager,
       approveDeliverable,
       rejectDeliverable,

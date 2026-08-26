@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { managerApi } from '../../services/api/manager/managerApi';
 
 export type AdminTier = 'OWNER' | 'SUPER_ADMIN' | 'FINANCIAL_ADMIN' | 'SUPPORT_ADMIN' | 'CONTENT_MODERATOR' | 'AUDITOR';
 
@@ -10,16 +11,19 @@ export interface UserSession {
   adminTier?: AdminTier;
   permissions?: string[];
   appliedTaskIds: string[];
+  isNewAccount?: boolean;
 }
 
 export interface AuthContextType {
   user: UserSession | null;
   isAuthenticated: boolean;
+  role: string | null;
   loading: boolean;
-  login: (email: string, role: string) => Promise<void>;
-  loginManager: (email: string, pass: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL') => Promise<boolean>;
+  login: (email: string, password?: string, roleHint?: string, customName?: string) => Promise<boolean>;
+  loginManager: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
-  logoutManager: () => void;
+  logoutManager: () => Promise<void>;
   updateUserSession: (patch: Partial<UserSession>) => void;
   hasPermission: (permission: string) => boolean;
 }
@@ -30,11 +34,12 @@ function normalizeRole(role: string): 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' 
   const upper = (role || '').toUpperCase().trim();
   if (upper.includes('ADMIN') || upper.includes('OWNER') || upper === 'SUPER_ADMIN') return 'SUPER_ADMIN';
   if (upper.includes('MGR') || upper.includes('MANAGER')) return 'MANAGER';
-  if (upper.includes('GIG') || upper.includes('FREELANCE') || upper === 'FREELANCER') return 'GIG_PROFESSIONAL';
+  if (upper.includes('GIG') || upper.includes('FREELANCE') || upper === 'FREELANCER' || upper === 'GIG_PROFESSIONAL') return 'GIG_PROFESSIONAL';
   return 'CLIENT';
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [loading, setLoading] = useState<boolean>(false);
   const [user, setUser] = useState<UserSession | null>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -63,25 +68,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const login = async (email: string, role: string) => {
-    const normalized = normalizeRole(role);
-    let defaultName = 'Aditya Deshmukh';
-    let defaultUserId = 'cli-01';
-    let adminTier: AdminTier | undefined = undefined;
-    let permissions: string[] = [];
+  const signup = async (name: string, email: string, _password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL'): Promise<boolean> => {
+    setLoading(true);
+    const newUserId = 'new-user-' + Date.now();
+    const newUserSession: UserSession = {
+      userId: newUserId,
+      role,
+      name,
+      email,
+      appliedTaskIds: [],
+      isNewAccount: true
+    };
+    setUser(newUserSession);
+    setLoading(false);
+    return true;
+  };
 
-    if (normalized === 'SUPER_ADMIN') {
-      defaultName = 'Chaitanya Anand';
-      defaultUserId = 'adm-01';
-      adminTier = 'OWNER';
-      permissions = ['*'];
-    } else if (normalized === 'MANAGER') {
-      defaultName = 'Leo Hudson';
-      defaultUserId = 'mgr-01';
-    } else if (normalized === 'GIG_PROFESSIONAL') {
-      defaultName = 'Elena Rodriguez';
-      defaultUserId = 'gig-01';
-    }
+  const login = async (email: string, _pass?: string, roleHint?: string, customName?: string): Promise<boolean> => {
+    setLoading(true);
+    const normalized = normalizeRole(roleHint || (email.includes('admin') ? 'SUPER_ADMIN' : email.includes('techstart') ? 'CLIENT' : 'GIG_PROFESSIONAL'));
+    let defaultName = customName || (normalized === 'SUPER_ADMIN' ? 'Chaitanya Anand' : normalized === 'MANAGER' ? 'Leo Hudson' : normalized === 'CLIENT' ? 'Aditya Deshmukh' : 'Elena Rodriguez');
+    let defaultUserId = normalized === 'SUPER_ADMIN' ? 'adm-01' : normalized === 'MANAGER' ? 'mgr-01' : normalized === 'CLIENT' ? 'cli-01' : 'gig-01';
+    let adminTier: AdminTier | undefined = normalized === 'SUPER_ADMIN' ? 'OWNER' : undefined;
+    let permissions: string[] = normalized === 'SUPER_ADMIN' ? ['*'] : [];
 
     try {
       const res = await fetch('http://localhost:5000/api/auth/login', {
@@ -111,12 +120,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       adminTier,
       permissions,
       appliedTaskIds: [],
+      isNewAccount: false
     };
+
     setUser(newUser);
+    setLoading(false);
+    return true;
   };
 
-  const loginManager = async (email: string, _pass: string): Promise<boolean> => {
-    await login(email || 'aditya@techstart.io', 'MANAGER');
+  const loginManager = async (email: string, pass?: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      await managerApi.login(email, pass || 'password5');
+    } catch (_) {}
+
+    await login(email || 'aditya@techstart.io', pass, 'MANAGER');
+    setLoading(false);
     return true;
   };
 
@@ -124,8 +143,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const logoutManager = () => {
+  const logoutManager = async () => {
+    setLoading(true);
+    try {
+      await managerApi.logout();
+    } catch (_) {}
     setUser(null);
+    setLoading(false);
   };
 
   const updateUserSession = (patch: Partial<UserSession>) => {
@@ -135,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hasPermission = (permission: string): boolean => {
     if (!user || user.role !== 'SUPER_ADMIN') return false;
     if (user.adminTier === 'OWNER') return true;
-    if (user.adminTier === 'AUDITOR') return false; // Auditors have 0 mutation permissions
+    if (user.adminTier === 'AUDITOR') return false;
     if (user.permissions?.includes('*')) return true;
     return user.permissions?.includes(permission) || false;
   };
@@ -145,7 +169,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         isAuthenticated: !!user,
-        loading: false,
+        role: user?.role || null,
+        loading,
+        signup,
         login,
         loginManager,
         logout,

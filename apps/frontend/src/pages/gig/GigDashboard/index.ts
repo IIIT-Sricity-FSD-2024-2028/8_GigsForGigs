@@ -1,2 +1,2 @@
-export { default } from './GigDashboard';
 export * from './GigDashboard';
+export { default } from './GigDashboard';

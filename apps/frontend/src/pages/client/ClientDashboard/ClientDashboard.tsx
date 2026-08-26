@@ -20,7 +20,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   const pendingCount = openTasks.length;
   
   // Total spent calculated dynamically (base mock of 4250 + completed tasks budgets)
-  const baseSpent = 425000;
+  const baseSpent = user?.isNewAccount ? 0 : 425000;
   const dynamicSpent = completedTasks.reduce((sum, t) => sum + t.budget, 0);
   const totalSpentFormatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
