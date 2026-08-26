@@ -46,7 +46,7 @@ export const ClientManagement: React.FC = () => {
 
   const handleVerifyKYC = async () => {
     if (!selectedClient) return;
-    await adminApi.updateUserStatus(selectedClient.id, 'ACTIVE', 'KYC verified by Super Admin');
+    await adminApi.verifyClientKYC(selectedClient.id);
     const updated = clients.map((c) =>
       c.id === selectedClient.id ? { ...c, isVerified: true, status: 'ACTIVE' as const } : c
     );

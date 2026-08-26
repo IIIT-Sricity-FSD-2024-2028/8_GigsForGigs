@@ -15,9 +15,16 @@ adminRouter.get('/analytics', (req, res) => adminController.getAnalytics(req, re
 
 // Master Directories
 adminRouter.get('/clients', (req, res) => adminController.getClients(req, res));
+adminRouter.patch('/clients/:id/kyc', (req, res) => adminController.verifyClientKYC(req, res));
+
 adminRouter.get('/gig-pros', (req, res) => adminController.getGigPros(req, res));
+adminRouter.patch('/gig-pros/:id/badge', (req, res) => adminController.updateGigProBadge(req, res));
+
 adminRouter.get('/managers', (req, res) => adminController.getManagers(req, res));
+
 adminRouter.get('/projects', (req, res) => adminController.getProjects(req, res));
+adminRouter.patch('/projects/:id/status', (req, res) => adminController.overrideProjectStatus(req, res));
+
 adminRouter.get('/payments', (req, res) => adminController.getPayments(req, res));
 adminRouter.get('/reviews', (req, res) => adminController.getReviews(req, res));
 adminRouter.get('/disputes', (req, res) => adminController.getDisputes(req, res));
@@ -26,8 +33,9 @@ adminRouter.get('/admin-staff', (req, res) => adminController.getAdminStaff(req,
 // User Governance & Moderation
 adminRouter.patch('/users/:id/status', (req, res) => adminController.updateUserStatus(req, res));
 
-// Staff & Delegated Provisioning
+// Staff & Cryptographic Delegated Provisioning
 adminRouter.post('/invitations', (req, res) => adminController.inviteAdminStaff(req, res));
+adminRouter.post('/invitations/accept', (req, res) => adminController.acceptAdminInvitation(req, res));
 adminRouter.post('/sessions/:id/revoke', (req, res) => adminController.revokeAdminSession(req, res));
 
 // Arbitration Court & Dispute Settlements

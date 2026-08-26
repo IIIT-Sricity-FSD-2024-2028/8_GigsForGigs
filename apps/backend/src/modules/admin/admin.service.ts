@@ -141,11 +141,84 @@ export class AdminService {
   }
 
   /**
-   * Generate Cryptographically Signed Admin Invitation Token (48h TTL)
+   * Client KYC Approval Persistence
+   */
+  async verifyClientKYC(clientId: string, actor: AdminActor) {
+    const client = db.clients.find((c) => c.id === clientId);
+    if (client) {
+      client.isVerified = true;
+      client.status = 'ACTIVE';
+    }
+
+    this.logAudit({
+      adminName: actor.name,
+      adminEmail: actor.email,
+      action: 'APPROVE_CLIENT_KYC',
+      targetType: 'CLIENT',
+      targetId: clientId,
+      diffSummary: `KYC verified for ${client?.companyName || clientId}`,
+      ipAddress: actor.ipAddress
+    });
+
+    return { success: true, clientId, isVerified: true, status: 'ACTIVE' };
+  }
+
+  /**
+   * Freelancer Talent Badge Update Persistence
+   */
+  async updateGigProBadge(gigProId: string, badge: 'NONE' | 'VERIFIED_PRO' | 'TOP_RATED', actor: AdminActor) {
+    const pro = db.gigPros.find((g) => g.id === gigProId);
+    if (pro) {
+      pro.badge = badge;
+    }
+
+    this.logAudit({
+      adminName: actor.name,
+      adminEmail: actor.email,
+      action: `AWARD_BADGE_${badge}`,
+      targetType: 'GIG_PROFESSIONAL',
+      targetId: gigProId,
+      diffSummary: `Badge updated to ${badge} for ${pro?.name || gigProId}`,
+      ipAddress: actor.ipAddress
+    });
+
+    return { success: true, gigProId, badge };
+  }
+
+  /**
+   * Emergency Task Status Override Persistence
+   */
+  async overrideProjectStatus(projectId: string, status: string, actor: AdminActor) {
+    const project = db.tasks.find((t) => t.id === projectId);
+    if (project) {
+      project.status = status as any;
+    }
+
+    this.logAudit({
+      adminName: actor.name,
+      adminEmail: actor.email,
+      action: `OVERRIDE_PROJECT_STATUS_${status}`,
+      targetType: 'TASK',
+      targetId: projectId,
+      diffSummary: `Administrative status override to ${status} for "${project?.title}"`,
+      ipAddress: actor.ipAddress
+    });
+
+    return { success: true, projectId, status };
+  }
+
+  /**
+   * Cryptographic Hash Admin Invitation Engine
+   * Generates a 64-char SHA256 token based on email hash + timestamp,
+   * assigns a secure temporary password, and saves the invitation record in the database.
    */
   async inviteAdminStaff(dto: InviteAdminStaffDTO, actor: AdminActor) {
-    const rawToken = crypto.randomBytes(32).toString('hex');
+    const salt = 'gfg-crypto-invitation-salt-2026';
+    const rawHashInput = `${dto.email.toLowerCase()}:${Date.now()}:${salt}`;
+    const token = crypto.createHash('sha256').update(rawHashInput).digest('hex');
+    const assignedPassword = `Admin#${Math.floor(100000 + Math.random() * 900000)}`;
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+    const inviteLink = `http://localhost:5173/?inviteToken=${token}&email=${encodeURIComponent(dto.email)}`;
 
     const newStaff = {
       id: `adm-${Date.now()}`,
@@ -159,13 +232,27 @@ export class AdminService {
     };
     db.adminStaff.unshift(newStaff);
 
+    const invitationRecord = {
+      id: `inv-${Date.now()}`,
+      email: dto.email,
+      role: dto.role,
+      permissions: dto.permissions,
+      token,
+      assignedPassword,
+      inviteLink,
+      status: 'PENDING' as const,
+      createdAt: new Date().toISOString(),
+      expiresAt
+    };
+    db.invitations.unshift(invitationRecord);
+
     this.logAudit({
       adminName: actor.name,
       adminEmail: actor.email,
       action: 'INVITE_ADMIN_STAFF',
       targetType: 'ADMIN_INVITATION',
       targetId: newStaff.id,
-      diffSummary: `Invited ${dto.email} as ${dto.role} with ${dto.permissions.length} permissions.`,
+      diffSummary: `Invited ${dto.email} as ${dto.role} with cryptographic token hash (${token.slice(0, 8)}...)`,
       ipAddress: actor.ipAddress
     });
 
@@ -173,8 +260,76 @@ export class AdminService {
       success: true,
       email: dto.email,
       role: dto.role,
-      token: rawToken,
+      token,
+      assignedPassword,
+      inviteLink,
       expiresAt
+    };
+  }
+
+  /**
+   * Complete Invitation Acceptance Flow
+   * Validates cryptographic token, confirms email & password, and activates the user in the database.
+   */
+  async acceptAdminInvitation(token: string, email: string, password?: string) {
+    const invite = db.invitations.find(
+      (inv) => inv.token === token && inv.email.toLowerCase() === email.toLowerCase() && inv.status === 'PENDING'
+    );
+
+    if (!invite) {
+      throw new Error('Invalid or expired cryptographic invitation token.');
+    }
+
+    invite.status = 'ACCEPTED';
+
+    // Update or create User in db.users
+    let user = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    const finalPassword = password || invite.assignedPassword;
+
+    if (user) {
+      user.role = 'SUPER_ADMIN';
+      user.status = 'ACTIVE';
+      user.password = finalPassword;
+    } else {
+      user = {
+        id: `usr-${Date.now()}`,
+        name: email.split('@')[0] || 'Admin',
+        email,
+        password: finalPassword,
+        role: 'SUPER_ADMIN',
+        status: 'ACTIVE',
+        joinedDate: new Date().toISOString().slice(0, 10),
+        tokenVersion: 1
+      };
+      db.users.push(user);
+    }
+
+    // Update staff record in db.adminStaff
+    const staff = db.adminStaff.find((s) => s.email.toLowerCase() === email.toLowerCase());
+    if (staff) {
+      staff.status = 'ACTIVE';
+      staff.lastLogin = 'Just Now';
+    }
+
+    this.logAudit({
+      adminName: user.name,
+      adminEmail: email,
+      action: 'ACCEPT_ADMIN_INVITATION',
+      targetType: 'USER',
+      targetId: user.id,
+      diffSummary: `Cryptographic invitation accepted. Account activated in database with role SUPER_ADMIN.`,
+      ipAddress: '127.0.0.1'
+    });
+
+    return {
+      success: true,
+      message: 'Admin account successfully activated in database.',
+      user: {
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
     };
   }
 

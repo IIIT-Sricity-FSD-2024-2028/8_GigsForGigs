@@ -10,6 +10,7 @@ export interface UserRecord {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: 'SUPER_ADMIN' | 'MANAGER' | 'CLIENT' | 'GIG_PROFESSIONAL';
   status: 'ACTIVE' | 'PENDING' | 'SUSPENDED' | 'BANNED';
   joinedDate: string;
@@ -132,6 +133,19 @@ export interface AdminStaffRecord {
   status: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
 }
 
+export interface AdminInvitationRecord {
+  id: string;
+  email: string;
+  role: string;
+  permissions: string[];
+  token: string;
+  assignedPassword: string;
+  inviteLink: string;
+  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED';
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface AuditLogRecord {
   id: string;
   adminName: string;
@@ -155,14 +169,14 @@ export interface PlatformConfigRecord {
 
 class InMemoryDatabase {
   users: UserRecord[] = [
-    { id: 'usr-01', name: 'Chaitanya Anand', email: 'chaitanya.admin@gigsforgigs.internal', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-01-10', tokenVersion: 1 },
-    { id: 'usr-02', name: 'Sarah Finance', email: 'sarah.finance@gigsforgigs.internal', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-02-14', tokenVersion: 1 },
-    { id: 'usr-03', name: 'Alex Support', email: 'alex.support@gigsforgigs.internal', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-03-01', tokenVersion: 1 },
-    { id: 'usr-04', name: 'Leo Hudson', email: 'aditya@techstart.io', role: 'MANAGER', status: 'ACTIVE', joinedDate: '2026-03-15', tokenVersion: 1 },
-    { id: 'usr-05', name: 'Aditya Deshmukh', email: 'aditya@gigsforgigs.com', role: 'CLIENT', status: 'ACTIVE', joinedDate: '2026-02-01', tokenVersion: 1 },
-    { id: 'usr-06', name: 'Elena Rodriguez', email: 'elena.rodriguez@freelance.dev', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-01-20', tokenVersion: 1 },
-    { id: 'usr-07', name: 'Marcus Chen', email: 'marcus.chen@designcraft.io', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-02-10', tokenVersion: 1 },
-    { id: 'usr-08', name: 'Sarah Jenkins', email: 'sarah.j@aisolutions.ai', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-03-05', tokenVersion: 1 }
+    { id: 'usr-01', name: 'Chaitanya Anand', email: 'chaitanya.admin@gigsforgigs.internal', password: 'AdminPassword123!', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-01-10', tokenVersion: 1 },
+    { id: 'usr-02', name: 'Sarah Finance', email: 'sarah.finance@gigsforgigs.internal', password: 'AdminPassword123!', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-02-14', tokenVersion: 1 },
+    { id: 'usr-03', name: 'Alex Support', email: 'alex.support@gigsforgigs.internal', password: 'AdminPassword123!', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-03-01', tokenVersion: 1 },
+    { id: 'usr-04', name: 'Leo Hudson', email: 'aditya@techstart.io', password: 'ManagerPassword123!', role: 'MANAGER', status: 'ACTIVE', joinedDate: '2026-03-15', tokenVersion: 1 },
+    { id: 'usr-05', name: 'Aditya Deshmukh', email: 'aditya@gigsforgigs.com', password: 'ClientPassword123!', role: 'CLIENT', status: 'ACTIVE', joinedDate: '2026-02-01', tokenVersion: 1 },
+    { id: 'usr-06', name: 'Elena Rodriguez', email: 'elena.rodriguez@freelance.dev', password: 'GigPassword123!', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-01-20', tokenVersion: 1 },
+    { id: 'usr-07', name: 'Marcus Chen', email: 'marcus.chen@designcraft.io', password: 'GigPassword123!', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-02-10', tokenVersion: 1 },
+    { id: 'usr-08', name: 'Sarah Jenkins', email: 'sarah.j@aisolutions.ai', password: 'GigPassword123!', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-03-05', tokenVersion: 1 }
   ];
 
   clients: ClientRecord[] = [
@@ -216,8 +230,10 @@ class InMemoryDatabase {
     { id: 'adm-03', name: 'Alex Morales', email: 'alex.support@gigsforgigs.internal', role: 'SUPPORT_ADMIN', permissions: ['users:read', 'users:ban', 'disputes:read', 'disputes:resolve'], isTwoFactorEnabled: false, lastLogin: 'Yesterday', status: 'ACTIVE' }
   ];
 
+  invitations: AdminInvitationRecord[] = [];
+
   auditLogs: AuditLogRecord[] = [
-    { id: 'log-001', adminName: 'Chaitanya Anand', adminEmail: 'chaitanya.admin@gigsforgigs.internal', action: 'UPDATE_PLATFORM_RAKE', targetType: 'PLATFORM_CONFIG', targetId: 'cfg-01', diffSummary: 'Adjusted commission rake from 8.5% to 10.0%', ipAddress: '192.168.1.42', createdAt: '2026-08-25 10:30' },
+    { id: 'log-001', adminName: 'Chaitanya Anand', adminEmail: 'chaitanya.admin@gigsforgigs.internal', action: 'UPDATE_PLATFORM_RAKE', targetType: 'PLATFORM_CONFIG', targetId: 'cfg-01', diffSummary: 'Adjusted commission rake to 10.0%', ipAddress: '192.168.1.42', createdAt: '2026-08-25 10:30' },
     { id: 'log-002', adminName: 'Chaitanya Anand', adminEmail: 'chaitanya.admin@gigsforgigs.internal', action: 'ARBITRATE_DISPUTE', targetType: 'DISPUTE_CASE', targetId: 'disp-089', diffSummary: 'Split settlement ruling issued (60% refund / 40% payout)', ipAddress: '192.168.1.42', createdAt: '2026-08-25 09:14' }
   ];
 

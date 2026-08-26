@@ -46,12 +46,35 @@ export class AdminController {
     }
   }
 
+  async verifyClientKYC(req: Request, res: Response): Promise<void> {
+    try {
+      const id = String(req.params.id || '');
+      const actor = extractAdminActor(req);
+      const data = await adminService.verifyClientKYC(id, actor);
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: 'Failed to verify client KYC', error: error?.message });
+    }
+  }
+
   async getGigPros(_req: Request, res: Response): Promise<void> {
     try {
       const data = await adminService.getGigPros();
       res.status(200).json({ success: true, data });
     } catch (error: any) {
       res.status(500).json({ success: false, message: 'Failed to fetch gig professionals', error: error?.message });
+    }
+  }
+
+  async updateGigProBadge(req: Request, res: Response): Promise<void> {
+    try {
+      const id = String(req.params.id || '');
+      const badge = req.body.badge;
+      const actor = extractAdminActor(req);
+      const data = await adminService.updateGigProBadge(id, badge, actor);
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: 'Failed to update freelancer badge', error: error?.message });
     }
   }
 
@@ -70,6 +93,18 @@ export class AdminController {
       res.status(200).json({ success: true, data });
     } catch (error: any) {
       res.status(500).json({ success: false, message: 'Failed to fetch projects', error: error?.message });
+    }
+  }
+
+  async overrideProjectStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const id = String(req.params.id || '');
+      const status = req.body.status;
+      const actor = extractAdminActor(req);
+      const data = await adminService.overrideProjectStatus(id, status, actor);
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: 'Failed to override project status', error: error?.message });
     }
   }
 
@@ -127,6 +162,16 @@ export class AdminController {
       res.status(201).json({ success: true, data: result });
     } catch (error: any) {
       res.status(400).json({ success: false, message: 'Failed to generate admin invitation', error: error?.message });
+    }
+  }
+
+  async acceptAdminInvitation(req: Request, res: Response): Promise<void> {
+    try {
+      const { token, email, password } = req.body;
+      const result = await adminService.acceptAdminInvitation(token, email, password);
+      res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error?.message || 'Failed to accept invitation' });
     }
   }
 

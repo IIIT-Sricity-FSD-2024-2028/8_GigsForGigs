@@ -45,8 +45,9 @@ export const Projects: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleOverrideStatus = (newStatus: PlatformProject['status']) => {
+  const handleOverrideStatus = async (newStatus: PlatformProject['status']) => {
     if (!selectedProject) return;
+    await adminApi.overrideProjectStatus(selectedProject.id, newStatus);
     const updated = projects.map((p) =>
       p.id === selectedProject.id ? { ...p, status: newStatus } : p
     );

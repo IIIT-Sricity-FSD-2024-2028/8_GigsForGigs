@@ -47,6 +47,7 @@ export const GigProfessionalManagement: React.FC = () => {
 
   const handleUpdateBadge = async (newBadge: GigProDetail['badge']) => {
     if (!selectedPro) return;
+    await adminApi.updateGigProBadge(selectedPro.id, newBadge);
     const updated = gigPros.map((p) =>
       p.id === selectedPro.id ? { ...p, badge: newBadge } : p
     );

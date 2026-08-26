@@ -31,6 +31,15 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+interface GeneratedInvite {
+  email: string;
+  role: string;
+  assignedPassword: string;
+  inviteLink: string;
+  token: string;
+  expiresAt: string;
+}
+
 export const AdminManagement: React.FC = () => {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'staff' | 'audit'>('staff');
@@ -46,6 +55,10 @@ export const AdminManagement: React.FC = () => {
     'disputes:resolve',
     'reviews:moderate'
   ]);
+
+  // Generated Link Modal State
+  const [generatedInvite, setGeneratedInvite] = useState<GeneratedInvite | null>(null);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
   // Revoke Dialog State
   const [targetStaff, setTargetStaff] = useState<AdminStaff | null>(null);
@@ -89,7 +102,7 @@ export const AdminManagement: React.FC = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
-    await adminApi.inviteAdmin(inviteEmail, inviteRole, selectedPermissions);
+    const res = await adminApi.inviteAdmin(inviteEmail, inviteRole, selectedPermissions);
 
     const newStaff: AdminStaff = {
       id: `adm-${Date.now()}`,
@@ -104,8 +117,20 @@ export const AdminManagement: React.FC = () => {
 
     setStaffList([newStaff, ...staffList]);
     setIsInviteModalOpen(false);
+
+    if (res) {
+      setGeneratedInvite(res);
+      setIsLinkModalOpen(true);
+    }
     setInviteEmail('');
     toast.success('Invitation Token Dispatched', `Cryptographic 48h token issued for ${inviteEmail}`);
+  };
+
+  const handleCopyInviteDetails = () => {
+    if (!generatedInvite) return;
+    const text = `👑 GigsForGigs Administrative Invitation\n\nYou have been provisioned as a ${generatedInvite.role} on GigsForGigs.\n\n🔗 Activation Link: ${generatedInvite.inviteLink}\n📧 Email: ${generatedInvite.email}\n🔑 Assigned Password: ${generatedInvite.assignedPassword}\n\n*Note: This cryptographic activation link expires in 48 hours.*`;
+    navigator.clipboard.writeText(text);
+    toast.info('Copied to Clipboard', 'Invitation link and credentials copied.');
   };
 
   const handleRevokeConfirm = async () => {
@@ -341,10 +366,83 @@ export const AdminManagement: React.FC = () => {
               type="submit"
               className="admin-btn admin-btn-primary"
             >
-              Dispatch Invitation Token
+              Generate Cryptographic Link
             </button>
           </div>
         </form>
+      </ActionModal>
+
+      {/* Shareable Cryptographic Invite Link Display Modal */}
+      <ActionModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        title="🔗 Shareable Admin Activation Link & Credentials"
+        maxWidth="640px"
+      >
+        {generatedInvite && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+            <div
+              style={{
+                backgroundColor: 'var(--color-success-bg)',
+                border: '1px solid var(--color-success-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--spacing-md)',
+                fontSize: 'var(--font-size-xs)',
+                color: 'var(--color-success-text)',
+                fontWeight: 600
+              }}
+            >
+              ✓ Cryptographic invitation token recorded in database. The invited user must use this activation link and assigned password to activate their Super Admin seat.
+            </div>
+
+            <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Recipient Email</span>
+                <div style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{generatedInvite.email}</div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Assigned Role</span>
+                <div><StatusBadge status={generatedInvite.role} /></div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Assigned Master Password</span>
+                <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '15px', color: 'var(--color-primary-dark)' }}>
+                  {generatedInvite.assignedPassword}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Shareable Activation Link (Contains Email & Token Hash)</span>
+                <input
+                  type="text"
+                  readOnly
+                  className="admin-input"
+                  value={generatedInvite.inviteLink}
+                  style={{ fontFamily: 'monospace', fontSize: '11px', marginTop: '2px' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
+              <button
+                type="button"
+                onClick={() => setIsLinkModalOpen(false)}
+                className="admin-btn admin-btn-secondary"
+              >
+                Done
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyInviteDetails}
+                className="admin-btn admin-btn-primary"
+              >
+                📋 Copy Invite Link & Credentials
+              </button>
+            </div>
+          </div>
+        )}
       </ActionModal>
 
       {/* Revoke Session Confirmation */}

@@ -3,7 +3,7 @@
  * @description
  * High-performance API client for the Super Admin vertical.
  * Communicates directly with Express backend REST endpoints (/api/admin/*)
- * with robust error handling and structured typing.
+ * with robust error handling, cryptographic link generation, and structured typing.
  */
 
 const API_BASE_URL = typeof window !== 'undefined'
@@ -62,8 +62,23 @@ export const adminApi = {
     return (await fetchJson<any[]>(`${API_BASE_URL}/clients`)) || [];
   },
 
+  async verifyClientKYC(clientId: string) {
+    return await fetchJson(`${API_BASE_URL}/clients/${clientId}/kyc`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }
+    });
+  },
+
   async getGigPros() {
     return (await fetchJson<any[]>(`${API_BASE_URL}/gig-pros`)) || [];
+  },
+
+  async updateGigProBadge(gigProId: string, badge: string) {
+    return await fetchJson(`${API_BASE_URL}/gig-pros/${gigProId}/badge`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ badge })
+    });
   },
 
   async getManagers() {
@@ -72,6 +87,14 @@ export const adminApi = {
 
   async getProjects() {
     return (await fetchJson<any[]>(`${API_BASE_URL}/projects`)) || [];
+  },
+
+  async overrideProjectStatus(projectId: string, status: string) {
+    return await fetchJson(`${API_BASE_URL}/projects/${projectId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
   },
 
   async getPayments() {
@@ -115,10 +138,18 @@ export const adminApi = {
   },
 
   async inviteAdmin(email: string, role: string, permissions: string[]) {
-    return await fetchJson(`${API_BASE_URL}/invitations`, {
+    return await fetchJson<any>(`${API_BASE_URL}/invitations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, role, permissions })
+    });
+  },
+
+  async acceptAdminInvitation(token: string, email: string, password?: string) {
+    return await fetchJson<any>(`${API_BASE_URL}/invitations/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, email, password })
     });
   },
 

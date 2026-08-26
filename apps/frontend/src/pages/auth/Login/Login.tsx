@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { adminApi } from '../../../services/api/admin/adminApi';
 
 interface LoginProps {
   onBackToLanding?: () => void;
@@ -13,6 +14,24 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Cryptographic Invitation Token Detection
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState<string | null>(null);
+  const [assignedPassword, setAssignedPassword] = useState('');
+  const [isActivating, setIsActivating] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('inviteToken');
+    const em = params.get('email');
+    if (token && em) {
+      setInviteToken(token);
+      setInviteEmail(em);
+      setEmail(em);
+      setRole('super_admin');
+    }
+  }, []);
+
   const handleRoleChange = (newRole: string) => {
     setRole(newRole);
     if (newRole === 'super_admin') setEmail('chaitanya.admin@gigsforgigs.internal');
@@ -24,6 +43,29 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
   const handleQuickLogin = async (quickRole: string, quickEmail: string) => {
     setErrorMsg(null);
     await login(quickEmail, quickRole);
+  };
+
+  const handleAcceptInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteToken || !inviteEmail || !assignedPassword.trim()) {
+      setErrorMsg('Please enter your assigned password to activate your seat.');
+      return;
+    }
+    setErrorMsg(null);
+    setIsActivating(true);
+    try {
+      const res = await adminApi.acceptAdminInvitation(inviteToken, inviteEmail, assignedPassword);
+      if (res) {
+        // Automatically log in to the newly activated Super Admin account
+        await login(inviteEmail, 'SUPER_ADMIN');
+      } else {
+        setErrorMsg('Invalid or expired cryptographic token.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to accept invitation.');
+    } finally {
+      setIsActivating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,18 +206,105 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Log in as Dropdown */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
-                Log in as
-              </label>
-              <select
-                value={role}
-                onChange={(e) => handleRoleChange(e.target.value)}
+          {inviteToken ? (
+            <form onSubmit={handleAcceptInvite} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ backgroundColor: '#E6F4EA', border: '1px solid #CEEAD6', padding: '16px', borderRadius: '10px' }}>
+                <div style={{ fontWeight: 800, color: '#137333', fontSize: '15px' }}>👑 Delegate Super Admin Invitation</div>
+                <div style={{ fontSize: '13px', color: '#3C4043', marginTop: '4px' }}>
+                  A cryptographic invitation token has been verified for <strong>{inviteEmail}</strong>.
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
+                  Invited Email Address
+                </label>
+                <input
+                  type="email"
+                  readOnly
+                  value={inviteEmail || ''}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #D5DDE0',
+                    backgroundColor: '#F8F9FA',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#084b83'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
+                  Enter Assigned Master Password (from Owner)
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="e.g. Admin#123456"
+                  value={assignedPassword}
+                  onChange={(e) => setAssignedPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #D5DDE0',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isActivating || loading}
                 style={{
                   width: '100%',
-                  padding: '12px 14px',
+                  padding: '14px',
+                  backgroundColor: '#0F527E',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {isActivating ? 'Activating Seat...' : '✓ Activate Admin Seat & Sign In'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  window.history.replaceState({}, '', window.location.pathname);
+                  setInviteToken(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#8C6A5E',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel and return to standard login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Log in as Dropdown */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
+                  Log in as
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
                   borderRadius: '8px',
                   border: '1px solid #D5DDE0',
                   fontSize: '15px',
@@ -283,6 +412,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
               {loading ? 'Signing in...' : 'Login'}
             </button>
           </form>
+          )}
 
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '28px 0' }}>
