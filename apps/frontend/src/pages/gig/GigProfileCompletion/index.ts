@@ -1,2 +1,2 @@
-export { default } from './GigProfileCompletion';
 export * from './GigProfileCompletion';
+export { default } from './GigProfileCompletion';

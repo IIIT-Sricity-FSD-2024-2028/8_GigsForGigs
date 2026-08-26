@@ -1,2 +1,2 @@
-export { default } from './GigProfile';
 export * from './GigProfile';
+export { default } from './GigProfile';

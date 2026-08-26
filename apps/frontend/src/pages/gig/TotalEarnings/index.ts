@@ -1,2 +1,2 @@
-export { default } from './TotalEarnings';
 export * from './TotalEarnings';
+export { default } from './TotalEarnings';
