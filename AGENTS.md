@@ -83,4 +83,12 @@ GigsForGigs is a comprehensive full-stack freelance & task marketplace being mig
 Briefed synchronizes commit summaries and structural diffs inside the block below. **Do not manually edit between the markers.**
 
 <!-- BRIEFED_START -->
+## [2026-08-26T08:50:28.981Z] 41027fea8ebc3f418dbb990254c9ec7a35f9699a (feat/client-frontend)
+FILES: apps/ (App.tsx, index.ts, AuthContext.tsx, ClientContext.tsx, ManagerContext.tsx, index.ts, index.css, ClientLayout.tsx, ManagerLayout.tsx, main.tsx, Login.tsx, AddManager.tsx, AddManagerFlow.tsx, ClientDashboard.tsx, ClientProfileCompletion.tsx, ClientProfileSelection.tsx, MyGigs.tsx, PostGig.tsx, ReviewDeliverables.tsx, ReviewShortlist.tsx, SearchTalent.tsx, TotalSpent.tsx, client.css, ManagerDashboard.tsx, index.ts, ManagerProfile.tsx, index.ts, ManagerTasks.tsx, index.ts, ReviewDeliverables.tsx, index.ts, SearchTalent.tsx, index.ts, LandingPage.tsx, index.ts, managerApi.ts, index.ts) | ./ (package.json)
+DEPS: 8092 insertions, 132 deletions
+
+## [2026-08-25T10:02:51.037Z] bffc740dcf73c05e38146f5142d0d898fd4e0199 (made)
+DEPS: 928 insertions, 7 deletions
+
+FILES: apps/ (Avatar.tsx, index.ts, Badge.tsx, index.ts, Breadcrumb.tsx, index.ts, Button.tsx, Card.tsx, ConfirmDialog.tsx, Dropdown.tsx, index.ts, EmptyState.tsx, ErrorState.tsx, index.ts, IconButton.tsx, index.ts, Input.tsx, Loader.tsx, Modal.tsx, ProgressBar.tsx, index.ts, SearchBar.tsx, index.ts, Select.tsx, index.ts, Table.tsx, index.ts, Tabs.tsx, index.ts, TextArea.tsx, index.ts, BaseCard.tsx, index.ts, ProjectCard.tsx, index.ts, ServiceCard.tsx, index.ts, StatCard.tsx, index.ts, TaskCard.tsx, index.ts, UserCard.tsx, index.ts, DashboardHeader.tsx, index.ts, DashboardSection.tsx, index.ts, DashboardWelcome.tsx, index.ts, QuickAction.tsx, index.ts, SummaryCard.tsx, index.ts, SummaryGrid.tsx, index.ts, FormActions.tsx, index.ts, FormContainer.tsx, index.ts, FormError.tsx, index.ts, FormField.tsx, index.ts, FormLabel.tsx, index.ts, FormSection.tsx, index.ts, index.ts, LogoutButton.tsx, index.ts, MobileNavigation.tsx, index.ts, Navbar.tsx, index.ts, Sidebar.tsx, index.ts, SidebarItem.tsx, index.ts, UserProfile.tsx, index.ts, ProgressStatus.tsx, index.ts, StatusBadge.tsx, index.ts, StatusIndicator.tsx, index.ts, AuthLayout.tsx, index.ts, DashboardLayout.tsx, index.ts, PublicLayout.tsx, index.ts, globals.css, reset.css, utilities.css, variables.css, colors.ts, index.ts, radius.ts, shadows.ts, spacing.ts, typography.ts)
 <!-- BRIEFED_END -->

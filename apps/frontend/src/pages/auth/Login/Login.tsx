@@ -6,18 +6,32 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
-  const { loginManager, loading } = useAuth();
-  const [role, setRole] = useState('manager');
-  const [email, setEmail] = useState('aditya@techstart.io');
+  const { login, loading } = useAuth();
+  const [role, setRole] = useState('super_admin');
+  const [email, setEmail] = useState('chaitanya.admin@gigsforgigs.internal');
   const [password, setPassword] = useState('password123');
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const handleRoleChange = (newRole: string) => {
+    setRole(newRole);
+    if (newRole === 'super_admin') setEmail('chaitanya.admin@gigsforgigs.internal');
+    else if (newRole === 'manager') setEmail('aditya@techstart.io');
+    else if (newRole === 'client') setEmail('aditya@gigsforgigs.com');
+    else if (newRole === 'freelancer') setEmail('elena.rodriguez@freelance.dev');
+  };
+
+  const handleQuickLogin = async (quickRole: string, quickEmail: string) => {
+    setErrorMsg(null);
+    await login(quickEmail, quickRole);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    const success = await loginManager(email, password);
-    if (!success) {
+    try {
+      await login(email, role);
+    } catch (err: any) {
       setErrorMsg('Invalid credentials or server error. Please try again.');
     }
   };
@@ -158,7 +172,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
               </label>
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
+                onChange={(e) => handleRoleChange(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px 14px',
@@ -171,9 +185,10 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
                   boxSizing: 'border-box'
                 }}
               >
-                <option value="manager">Manager</option>
-                <option value="client">Client</option>
-                <option value="freelancer">Gig Professional</option>
+                <option value="super_admin">👑 Super Admin (Platform Owner)</option>
+                <option value="manager">👔 Manager (Leo Hudson)</option>
+                <option value="client">💼 Client (Aditya Deshmukh)</option>
+                <option value="freelancer">⚡ Gig Professional (Elena Rodriguez)</option>
               </select>
             </div>
 
@@ -304,8 +319,45 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding }) => {
             Google
           </button>
 
+          {/* Quick Demo Role Selector */}
+          <div style={{ marginTop: '24px', padding: '16px', borderRadius: '10px', backgroundColor: '#EFF6FC', border: '1px solid #D5DDE0' }}>
+            <span style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#0F527E', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.04em' }}>
+              ⚡ 1-Click Instant Evaluation Demo:
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('super_admin', 'chaitanya.admin@gigsforgigs.internal')}
+                style={{ padding: '8px 10px', backgroundColor: '#084b83', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                👑 Super Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('manager', 'aditya@techstart.io')}
+                style={{ padding: '8px 10px', backgroundColor: '#0D568D', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                👔 Manager
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('client', 'aditya@gigsforgigs.com')}
+                style={{ padding: '8px 10px', backgroundColor: '#137333', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                💼 Client
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('freelancer', 'elena.rodriguez@freelance.dev')}
+                style={{ padding: '8px 10px', backgroundColor: '#bf6900', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                ⚡ Gig Pro
+              </button>
+            </div>
+          </div>
+
           {/* Footer prompt */}
-          <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '14px', color: '#5C443A' }}>
+          <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: '#5C443A' }}>
             Don't have an account?{' '}
             <a
               href="#signup"

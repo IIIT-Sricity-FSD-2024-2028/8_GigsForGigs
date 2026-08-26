@@ -19,6 +19,8 @@ export interface KPIStats {
   escrowHeld: number;
 }
 
+export type PlatformKPIs = KPIStats;
+
 export interface UserSummary {
   id: string;
   name: string;

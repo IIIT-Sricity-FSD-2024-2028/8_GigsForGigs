@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext/AuthContext';
 import {
   DashboardIcon,
   AnalyticsIcon,
@@ -48,6 +49,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   pageSubtitle,
   headerActions
 }) => {
+  const { logout } = useAuth();
   const [globalSearch, setGlobalSearch] = useState('');
 
   const navItems: NavItem[] = [
@@ -233,6 +235,23 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               PLATFORM OWNER
             </span>
           </div>
+          <button
+            onClick={() => logout()}
+            title="Sign Out"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              fontSize: '11px',
+              padding: '6px 10px',
+              borderRadius: '6px',
+              fontWeight: 600,
+              transition: 'background 0.2s'
+            }}
+          >
+            Logout
+          </button>
         </div>
       </aside>
 

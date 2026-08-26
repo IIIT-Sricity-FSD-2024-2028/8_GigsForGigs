@@ -8,87 +8,93 @@ export interface UserSession {
   appliedTaskIds: string[];
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: UserSession | null;
+  isAuthenticated: boolean;
+  loading: boolean;
   login: (email: string, role: string) => Promise<void>;
+  loginManager: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
+  logoutManager: () => void;
   updateUserSession: (patch: Partial<UserSession>) => void;
 }
 
 const AuthContextInstance = createContext<AuthContextType | undefined>(undefined);
 
 function normalizeRole(role: string): 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN' {
-  if (role === 'GIG') return 'GIG_PROFESSIONAL';
-  if (role === 'SUPER_ADMIN') return 'SUPER_ADMIN';
-  if (role === 'MANAGER') return 'MANAGER';
+  const upper = (role || '').toUpperCase().trim();
+  if (upper.includes('ADMIN') || upper.includes('OWNER') || upper === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+  if (upper.includes('MGR') || upper.includes('MANAGER')) return 'MANAGER';
+  if (upper.includes('GIG') || upper.includes('FREELANCE') || upper === 'FREELANCER') return 'GIG_PROFESSIONAL';
   return 'CLIENT';
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserSession | null>(() => {
-    // Read from window.__GFG_SESSION__ or window.name
     if (typeof window !== 'undefined') {
-      const win = window as any;
-      if (win.__GFG_SESSION__?.userId) {
-        return {
-          ...win.__GFG_SESSION__,
-          role: normalizeRole(win.__GFG_SESSION__.role),
-        };
-      }
-      if (win.name) {
-        try {
-          const parsed = JSON.parse(win.name);
-          if (parsed && parsed.userId) {
+      try {
+        const stored = localStorage.getItem('gfg_active_user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.userId && parsed.role) {
             return {
-              userId: parsed.userId,
-              role: normalizeRole(parsed.role),
-              name: parsed.name || 'Aditya',
-              email: parsed.email || 'aditya@gigsforgigs.com',
-              appliedTaskIds: Array.isArray(parsed.appliedTaskIds) ? parsed.appliedTaskIds : [],
+              ...parsed,
+              role: normalizeRole(parsed.role)
             };
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     }
-    
-    // Default fallback to Aditya as active Client user
-    return {
-      userId: 'cli-01',
-      role: 'CLIENT',
-      name: 'Aditya',
-      email: 'aditya@gigsforgigs.com',
-      appliedTaskIds: [],
-    };
+    // Default to unauthenticated so Login / Landing page is presented first
+    return null;
   });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const win = window as any;
       if (user) {
-        win.__GFG_SESSION__ = user;
-        win.name = JSON.stringify(user);
+        localStorage.setItem('gfg_active_user', JSON.stringify(user));
       } else {
-        win.__GFG_SESSION__ = null;
-        win.name = '';
+        localStorage.removeItem('gfg_active_user');
       }
     }
   }, [user]);
 
   const login = async (email: string, role: string) => {
-    const defaultName = role === 'CLIENT' ? 'Aditya' : 'Elena Rodriguez';
-    const defaultUserId = role === 'CLIENT' ? 'cli-01' : role === 'MANAGER' ? 'mgr-01' : 'gig-01';
-    
+    const normalized = normalizeRole(role);
+    let defaultName = 'Aditya Deshmukh';
+    let defaultUserId = 'cli-01';
+
+    if (normalized === 'SUPER_ADMIN') {
+      defaultName = 'Chaitanya Anand';
+      defaultUserId = 'adm-01';
+    } else if (normalized === 'MANAGER') {
+      defaultName = 'Leo Hudson';
+      defaultUserId = 'mgr-01';
+    } else if (normalized === 'GIG_PROFESSIONAL') {
+      defaultName = 'Elena Rodriguez';
+      defaultUserId = 'gig-01';
+    }
+
     const newUser: UserSession = {
       userId: defaultUserId,
-      role: normalizeRole(role),
+      role: normalized,
       name: defaultName,
-      email: email,
+      email: email || (normalized === 'SUPER_ADMIN' ? 'chaitanya.admin@gigsforgigs.internal' : `${normalized.toLowerCase()}@gigsforgigs.com`),
       appliedTaskIds: [],
     };
     setUser(newUser);
   };
 
+  const loginManager = async (email: string, _pass: string): Promise<boolean> => {
+    await login(email || 'aditya@techstart.io', 'MANAGER');
+    return true;
+  };
+
   const logout = () => {
+    setUser(null);
+  };
+
+  const logoutManager = () => {
     setUser(null);
   };
 
@@ -103,7 +109,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContextInstance.Provider value={{ user, login, logout, updateUserSession }}>
+    <AuthContextInstance.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading: false,
+        login,
+        loginManager,
+        logout,
+        logoutManager,
+        updateUserSession,
+      }}
+    >
       {children}
     </AuthContextInstance.Provider>
   );

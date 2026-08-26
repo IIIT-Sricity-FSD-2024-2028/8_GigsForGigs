@@ -1,5 +1,5 @@
-<<<<<<< HEAD
 @import "./styles/globals.css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 html, body, #root {
   width: 100%;
@@ -9,10 +9,6 @@ html, body, #root {
   background-color: var(--color-background, #EFF6F7);
 }
 
-#root {
-  display: flex;
-  flex-direction: column;
-=======
 /* ==========================================================================
    GigsForGigs — Master Super Admin Design Tokens & Global Stylesheet
    Design Palette:
@@ -24,8 +20,6 @@ html, body, #root {
    - Text Muted: #805c54 (Muted Espresso - Subtitles, helper text)
    - Border Color: #dbdfdf (Clean neutral dividers)
    ========================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   /* Core Color Tokens */
@@ -275,5 +269,4 @@ html, body, #root {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #a3abab;
->>>>>>> bffc740dcf73c05e38146f5142d0d898fd4e0199
 }
