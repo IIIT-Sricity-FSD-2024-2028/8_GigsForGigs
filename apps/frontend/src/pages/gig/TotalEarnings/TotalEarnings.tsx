@@ -7,23 +7,35 @@
 
 import React, { useEffect, useState } from 'react';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { EarningsSummary } from '../../../types/gig';
 
 export const TotalEarnings: React.FC = () => {
   const [earnings, setEarnings] = useState<EarningsSummary>({ totalEarnings: 0, completedTasks: 0, payments: [] });
   const [loading, setLoading] = useState<boolean>(true);
   const [withdrawing, setWithdrawing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    gigApi.getEarnings().then((res) => {
-      if (mounted) {
-        setEarnings(res);
-        setLoading(false);
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const res = await gigApi.getEarnings();
+        if (mounted) {
+          setEarnings(res);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load earnings.');
+          setLoading(false);
+        }
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -55,6 +67,21 @@ export const TotalEarnings: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* Banner & Withdrawal Action */}
       <div
         className="admin-card"

@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
 
 export const ExploreTasks: React.FC = () => {
@@ -17,17 +18,28 @@ export const ExploreTasks: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    gigApi.getMarketplaceTasks().then((res) => {
-      if (mounted) {
-        setTasks(res);
-        setLoading(false);
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const res = await gigApi.getMarketplaceTasks();
+        if (mounted) {
+          setTasks(res);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load marketplace tasks.');
+          setLoading(false);
+        }
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -39,12 +51,13 @@ export const ExploreTasks: React.FC = () => {
   const handleApply = async (taskId: string) => {
     if (appliedTaskIds.includes(taskId)) return;
     setApplyingId(taskId);
+    setError(null);
     try {
       await gigApi.applyForTask(taskId);
       const updated = Array.from(new Set([...appliedTaskIds, taskId]));
       updateUserSession({ appliedTaskIds: updated });
     } catch (err) {
-      console.error('Failed to apply for task:', err);
+      setError(err instanceof ApiError ? err.message : 'Failed to apply for task.');
     } finally {
       setApplyingId(null);
     }
@@ -69,6 +82,21 @@ export const ExploreTasks: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* Search Header */}
       <div
         className="admin-card"

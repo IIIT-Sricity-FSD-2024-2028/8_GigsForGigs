@@ -21,6 +21,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
       onNavigate('my-gigs');
     } catch (err) {
       console.error('Approve hire failed:', err);
+      alert('Failed to approve this candidate. Please try again.');
     }
   };
 
@@ -30,6 +31,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
       alert('Candidate application discarded.');
     } catch (err) {
       console.error('Reject hire failed:', err);
+      alert('Failed to reject this candidate. Please try again.');
     }
   };
 
@@ -59,17 +61,15 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
           <thead>
             <tr>
               <th>Candidate</th>
-              <th>Project Role</th>
-              <th>Shortlisted By</th>
-              <th>Rating</th>
-              <th>Hourly Rate</th>
+              <th>Project</th>
+              <th>Task Budget</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {currentApplications.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
                   No pending hire approvals found.
                 </td>
               </tr>
@@ -88,19 +88,8 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                     </div>
                   </td>
                   <td>{a.task_title}</td>
-                  <td>
-                    <div className="pro-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div className="pro-photo" style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--color-secondary)', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
-                        CL
-                      </div>
-                      Manager (David Vance)
-                    </div>
-                  </td>
-                  <td>
-                    <span className="star" style={{ color: '#f59e0b' }}>★</span> {a.rating}
-                  </td>
                   <td className="budget-cell">
-                    ₹{a.rate}/hr
+                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(a.rate)}
                   </td>
                   <td>
                     <div className="actions-cell" style={{ display: 'flex', gap: '6px' }}>

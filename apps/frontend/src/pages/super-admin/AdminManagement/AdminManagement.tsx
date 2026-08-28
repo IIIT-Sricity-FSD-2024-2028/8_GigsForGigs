@@ -1,121 +1,104 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
-import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { PlusIcon } from '../../../components/super-admin/Icons';
-import {
-  mockAdminStaff,
-  mockAuditLogs,
-  type AdminStaff,
-  type AuditLogEntry
-} from '../../../mock/adminMockData';
+import { adminApi } from '../../../services/api/super-admin/adminApi';
+import { ApiError } from '../../../services/api/httpClient';
+import type { AdminUser } from '../../../types/super-admin';
+import { mockAuditLogs, type AuditLogEntry } from '../../../mock/adminMockData';
 
 /**
  * @file AdminManagement.tsx
  * @description
- * Multi-tier administrative staff governance view.
- * Features cryptographic time-limited invitation engine, permission bitmask editor,
- * session revocation, and an immutable SOC-2 compliant audit log inspector.
+ * "Staff" tab is real: it lists real USERS rows with role === 'admin' via
+ * `/api/admin/users`, and invite/revoke map onto real
+ * createUser({role:'admin'}) / deleteUser calls.
+ *
+ * The permission-bitmask, 2FA-enrolled, and tiered-role (OWNER/
+ * FINANCIAL_ADMIN/SUPPORT_ADMIN/...) concepts from the old mock do NOT exist
+ * on the schema — Role is a flat enum with a single "admin" value, no
+ * per-admin permissions table. Those UI affordances have been dropped from
+ * the invite form (no permission picker, no role-tier picker) since there is
+ * nothing real to persist them to.
+ *
+ * The "Security & Audit Log Trail" tab has NO backing table anywhere in the
+ * schema (no audit-log model) — it is left on its original mock data
+ * unmodified; do not treat it as live data.
  */
 
 export const AdminManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'staff' | 'audit'>('staff');
-  const [staffList, setStaffList] = useState<AdminStaff[]>(mockAdminStaff);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(mockAuditLogs);
+  const [staffList, setStaffList] = useState<AdminUser[]>([]);
+  const [auditLogs] = useState<AuditLogEntry[]>(mockAuditLogs); // unbacked — see file comment
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  // Invitation Modal State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<AdminStaff['role']>('SUPPORT_ADMIN');
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([
-    'disputes:read',
-    'disputes:resolve',
-    'reviews:moderate'
-  ]);
+  const [invitePassword, setInvitePassword] = useState('');
 
-  // Revoke Dialog State
-  const [targetStaff, setTargetStaff] = useState<AdminStaff | null>(null);
+  const [targetStaff, setTargetStaff] = useState<AdminUser | null>(null);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
 
-  const availablePermissions = [
-    { key: 'users:read', label: 'View Users & Profiles' },
-    { key: 'users:ban', label: 'Suspend & Ban Users' },
-    { key: 'payments:read', label: 'View Financial Ledger' },
-    { key: 'payments:refund', label: 'Execute Escrow Refunds' },
-    { key: 'payments:release', label: 'Force Release Escrow' },
-    { key: 'disputes:resolve', label: 'Arbitrate Disputes' },
-    { key: 'reviews:moderate', label: 'Moderate & Hide Reviews' },
-    { key: 'settings:manage', label: 'Modify Platform Settings' },
-    { key: 'admins:invite', label: 'Invite Delegate Admins' }
-  ];
-
-  const handleTogglePermission = (key: string) => {
-    setSelectedPermissions((prev) =>
-      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]
-    );
-  };
-
-  const handleSendInvite = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim()) return;
-
-    const newStaff: AdminStaff = {
-      id: `adm-${Date.now()}`,
-      name: inviteEmail.split('@')[0],
-      email: inviteEmail,
-      role: inviteRole,
-      permissions: selectedPermissions,
-      isTwoFactorEnabled: false,
-      lastLogin: 'Never (Invited)',
-      status: 'INVITED'
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const users = await adminApi.listUsers();
+        if (!cancelled) setStaffList(users.filter((u) => u.role === 'admin'));
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load admin staff.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
+  }, []);
 
-    setStaffList([newStaff, ...staffList]);
-    setAuditLogs([
-      {
-        id: `log-${Date.now()}`,
-        adminName: 'Chaitanya Anand',
-        adminEmail: 'chaitanya.admin@gigsforgigs.internal',
-        action: 'INVITE_ADMIN_STAFF',
-        targetType: 'ADMIN_INVITATION',
-        targetId: newStaff.id,
-        diffSummary: `Invited ${inviteEmail} as ${inviteRole}`,
-        ipAddress: '192.168.1.42',
-        createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
-      },
-      ...auditLogs
-    ]);
-
-    setIsInviteModalOpen(false);
-    setInviteEmail('');
-    alert(`Cryptographic invitation token dispatched to ${inviteEmail} (48-hour expiration).`);
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim() || !inviteName.trim() || !invitePassword.trim()) return;
+    setActionError(null);
+    try {
+      const created = await adminApi.createUser({
+        name: inviteName,
+        email: inviteEmail,
+        password: invitePassword,
+        role: 'admin'
+      });
+      setStaffList((prev) => [created, ...prev]);
+      setIsInviteModalOpen(false);
+      setInviteName('');
+      setInviteEmail('');
+      setInvitePassword('');
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Failed to create admin user.');
+    }
   };
 
-  const handleRevokeConfirm = () => {
+  const handleRevokeConfirm = async () => {
     if (!targetStaff) return;
-    setStaffList(staffList.filter((s) => s.id !== targetStaff.id));
-    setAuditLogs([
-      {
-        id: `log-${Date.now()}`,
-        adminName: 'Chaitanya Anand',
-        adminEmail: 'chaitanya.admin@gigsforgigs.internal',
-        action: 'REVOKE_ADMIN_ACCESS',
-        targetType: 'USER',
-        targetId: targetStaff.id,
-        diffSummary: `Revoked access and invalidated sessions for ${targetStaff.name}`,
-        ipAddress: '192.168.1.42',
-        createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
-      },
-      ...auditLogs
-    ]);
-    setIsRevokeDialogOpen(false);
-    setTargetStaff(null);
+    setActionError(null);
+    try {
+      await adminApi.deleteUser(targetStaff.userId);
+      setStaffList((prev) => prev.filter((s) => s.userId !== targetStaff.userId));
+      setIsRevokeDialogOpen(false);
+      setTargetStaff(null);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Failed to revoke admin access.');
+      setIsRevokeDialogOpen(false);
+    }
   };
 
-  // Staff Table Columns
-  const staffColumns: ColumnDef<AdminStaff>[] = [
+  const staffColumns: ColumnDef<AdminUser>[] = [
     {
       header: 'Admin Name',
       cell: (row) => (
@@ -144,50 +127,28 @@ export const AdminManagement: React.FC = () => {
       )
     },
     {
-      header: 'Tier & Role',
-      cell: (row) => <StatusBadge status={row.role} />
-    },
-    {
-      header: '2FA Status',
-      cell: (row) => (
-        <span className={`admin-badge ${row.isTwoFactorEnabled ? 'badge-success' : 'badge-warning'}`}>
-          {row.isTwoFactorEnabled ? '2FA Active' : 'Unenrolled'}
-        </span>
-      )
-    },
-    {
-      header: 'Account Status',
-      cell: (row) => <StatusBadge status={row.status} />
-    },
-    {
-      header: 'Last Session',
-      accessorKey: 'lastLogin'
+      header: 'Joined',
+      cell: (row) => new Date(row.createdAt).toLocaleDateString()
     },
     {
       header: 'Actions',
       align: 'right',
       cell: (row) => (
-        row.role !== 'OWNER' ? (
-          <button
-            className="admin-btn admin-btn-danger admin-btn-sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setTargetStaff(row);
-              setIsRevokeDialogOpen(true);
-            }}
-          >
-            Revoke Access
-          </button>
-        ) : (
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-            Root Authority
-          </span>
-        )
+        <button
+          className="admin-btn admin-btn-danger admin-btn-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setActionError(null);
+            setTargetStaff(row);
+            setIsRevokeDialogOpen(true);
+          }}
+        >
+          Revoke Access
+        </button>
       )
     }
   ];
 
-  // Audit Logs Columns
   const auditColumns: ColumnDef<AuditLogEntry>[] = [
     { header: 'Timestamp', accessorKey: 'createdAt', width: '160px' },
     {
@@ -208,41 +169,53 @@ export const AdminManagement: React.FC = () => {
     { header: 'IP Address', accessorKey: 'ipAddress' }
   ];
 
+  if (loading) {
+    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading admin staff…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-      {/* ── Tab Navigation ──────────────────────────────────────────────── */}
+      {actionError && (
+        <div className="admin-badge badge-danger" style={{ width: '100%', padding: '8px 12px' }}>
+          {actionError}
+        </div>
+      )}
+
       <AdminTabs
         tabs={[
           { id: 'staff', label: 'Admin Staff Directory', count: staffList.length },
-          { id: 'audit', label: 'Security & Audit Log Trail', count: auditLogs.length }
+          { id: 'audit', label: 'Security & Audit Log Trail (unbacked, mock)', count: auditLogs.length }
         ]}
         activeTab={activeTab}
-        onChange={(t) => setActiveTab(t as any)}
+        onChange={(t) => setActiveTab(t as 'staff' | 'audit')}
       />
 
-      {/* ── Staff Tab Content ───────────────────────────────────────────── */}
       {activeTab === 'staff' && (
         <DataTable
-          title="Administrative Staff & Privilege Bitmasks"
+          title="Administrative Staff"
           columns={staffColumns}
           data={staffList}
           pageSize={6}
           searchPlaceholder="Search admin staff by name or email..."
           actions={
-            <button
-              className="admin-btn admin-btn-primary admin-btn-sm"
-              onClick={() => setIsInviteModalOpen(true)}
-            >
-              <PlusIcon size={16} /> Invite Admin Staff
+            <button className="admin-btn admin-btn-primary admin-btn-sm" onClick={() => setIsInviteModalOpen(true)}>
+              <PlusIcon size={16} /> Add Admin User
             </button>
           }
         />
       )}
 
-      {/* ── Audit Trail Tab Content ─────────────────────────────────────── */}
       {activeTab === 'audit' && (
         <DataTable
-          title="Immutable Administrative Audit Trail"
+          title="Administrative Audit Trail (mock data — no backing table)"
           columns={auditColumns}
           data={auditLogs}
           pageSize={8}
@@ -250,109 +223,65 @@ export const AdminManagement: React.FC = () => {
         />
       )}
 
-      {/* ── Invite Admin Staff Modal ────────────────────────────────────── */}
       <ActionModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
-        title="Invite Delegate Administrator"
-        subtitle="Dispatches a cryptographically signed 48-hour invitation token."
-        width="560px"
+        title="Create Admin User"
+        subtitle="Creates a real USERS row with role = admin."
+        width="480px"
         footer={
           <>
-            <button
-              type="button"
-              className="admin-btn admin-btn-outline"
-              onClick={() => setIsInviteModalOpen(false)}
-            >
+            <button type="button" className="admin-btn admin-btn-outline" onClick={() => setIsInviteModalOpen(false)}>
               Cancel
             </button>
-            <button
-              type="button"
-              className="admin-btn admin-btn-primary"
-              onClick={handleSendInvite}
-            >
-              Send Signed Invitation
+            <button type="button" className="admin-btn admin-btn-primary" onClick={handleSendInvite}>
+              Create
             </button>
           </>
         }
       >
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+        <form onSubmit={handleSendInvite} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              STAFF EMAIL ADDRESS
+              NAME
+            </label>
+            <input className="admin-input" value={inviteName} onChange={(e) => setInviteName(e.target.value)} required />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+              EMAIL
             </label>
             <input
               type="email"
               className="admin-input"
-              placeholder="e.g. colleague.admin@gigsforgigs.internal"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               required
             />
           </div>
-
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              ADMINISTRATIVE ROLE TIER
+              TEMPORARY PASSWORD
             </label>
-            <select
-              className="admin-select"
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as any)}
-            >
-              <option value="FINANCIAL_ADMIN">Financial Admin (Escrow, Ledger, Payouts)</option>
-              <option value="SUPPORT_ADMIN">Support Admin (Disputes, Arbitration, User Oversight)</option>
-              <option value="CONTENT_MODERATOR">Content Moderator (Reviews, Verification Badges)</option>
-              <option value="AUDITOR">Auditor (Read-only Compliance & Logs)</option>
-              <option value="SUPER_ADMIN">Super Admin (Full Operational Access)</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-              GRANULAR PERMISSION BITMASK
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {availablePermissions.map((perm) => {
-                const isChecked = selectedPermissions.includes(perm.key);
-                return (
-                  <label
-                    key={perm.key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '6px 10px',
-                      borderRadius: 'var(--radius-sm)',
-                      backgroundColor: isChecked ? 'rgba(8, 75, 131, 0.06)' : 'var(--color-bg-light)',
-                      border: `1px solid ${isChecked ? 'var(--color-primary-dark)' : 'var(--color-border)'}`,
-                      cursor: 'pointer',
-                      fontSize: 'var(--font-size-xs)'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleTogglePermission(perm.key)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    <span style={{ fontWeight: isChecked ? 600 : 400 }}>{perm.label}</span>
-                  </label>
-                );
-              })}
-            </div>
+            <input
+              type="password"
+              className="admin-input"
+              value={invitePassword}
+              onChange={(e) => setInvitePassword(e.target.value)}
+              minLength={6}
+              required
+            />
           </div>
         </form>
       </ActionModal>
 
-      {/* ── Revoke Access Confirm Dialog ────────────────────────────────── */}
       <ConfirmDialog
         isOpen={isRevokeDialogOpen}
         onClose={() => setIsRevokeDialogOpen(false)}
         onConfirm={handleRevokeConfirm}
         title="Revoke Admin Access"
-        message={`Are you sure you want to revoke administrative credentials for ${targetStaff?.name} (${targetStaff?.email})? All active JWT tokens will be invalidated immediately via tokenVersion increment.`}
-        confirmLabel="Revoke & Invalidate Sessions"
+        message={`Are you sure you want to permanently delete the admin account for ${targetStaff?.name} (${targetStaff?.email})?`}
+        confirmLabel="Revoke & Delete"
         isDangerous={true}
       />
     </div>

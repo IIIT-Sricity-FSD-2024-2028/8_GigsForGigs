@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth, MOCK_USERS_DB } from '../../../context/AuthContext/AuthContext';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
 
 interface LoginProps {
   onBackToLanding?: () => void;
@@ -7,23 +7,12 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignup }) => {
-  const { login, loading } = useAuth();
+  const { login, loading, authError } = useAuth();
   const [role, setRole] = useState<'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONAL' | 'SUPER_ADMIN' | ''>('CLIENT');
-  const [email, setEmail] = useState('aditya@techstart.io');
-  const [password, setPassword] = useState('password1');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleRoleChange = (newRole: 'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONAL' | 'SUPER_ADMIN' | '') => {
-    setRole(newRole);
-    if (newRole) {
-      const firstMatch = MOCK_USERS_DB.find(u => u.role === newRole);
-      if (firstMatch) {
-        setEmail(firstMatch.email);
-        setPassword(firstMatch.password || 'password123');
-      }
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,9 +21,12 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
       setErrorMsg('Please select your role.');
       return;
     }
+    // Manager accounts authenticate through a separate backend endpoint
+    // (/auth/manager/login); the role field otherwise just labels the form
+    // — the actual role always comes back from the server's JWT.
     const success = await login(email, password, role);
     if (!success) {
-      setErrorMsg('Invalid login credentials or server error. Please try again.');
+      setErrorMsg(authError || 'Invalid login credentials or server error. Please try again.');
     }
   };
 
@@ -169,7 +161,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               </label>
               <select
                 value={role}
-                onChange={(e) => handleRoleChange(e.target.value as any)}
+                onChange={(e) => setRole(e.target.value as any)}
                 style={{
                   width: '100%',
                   padding: '12px 14px',

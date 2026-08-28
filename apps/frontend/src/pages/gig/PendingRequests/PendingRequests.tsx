@@ -8,6 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { PendingRequest } from '../../../types/gig';
 
 export const PendingRequests: React.FC = () => {
@@ -15,17 +16,28 @@ export const PendingRequests: React.FC = () => {
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    gigApi.getPendingRequests().then((res) => {
-      if (mounted) {
-        setRequests(res);
-        setLoading(false);
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const res = await gigApi.getPendingRequests();
+        if (mounted) {
+          setRequests(res);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load pending requests.');
+          setLoading(false);
+        }
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -34,6 +46,7 @@ export const PendingRequests: React.FC = () => {
 
   const handleRespond = async (applicationId: string, action: 'accepted' | 'declined') => {
     setProcessingId(applicationId);
+    setError(null);
     try {
       await gigApi.respondToRequest(applicationId, action);
       triggerRefresh();
@@ -41,7 +54,7 @@ export const PendingRequests: React.FC = () => {
         setActiveTab('active-tasks');
       }
     } catch (err) {
-      console.error('Failed responding to request:', err);
+      setError(err instanceof ApiError ? err.message : 'Failed responding to request.');
     } finally {
       setProcessingId(null);
     }
@@ -60,6 +73,21 @@ export const PendingRequests: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="admin-card" style={{ padding: 'var(--spacing-xl)' }}>
         <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>

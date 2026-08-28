@@ -50,6 +50,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
       onNavigate('dashboard');
     } catch (err) {
       console.error('Save task failed:', err);
+      alert('Failed to save this task. Please try again.');
     }
   };
 

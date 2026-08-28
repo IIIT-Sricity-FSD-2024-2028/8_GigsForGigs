@@ -13,6 +13,15 @@ import { mockRevenueVelocity } from '../../../mock/adminMockData';
  * @description
  * Deep-dive business intelligence and financial metrics for the GigsForGigs platform.
  * Features cohort analysis, category demand distribution, and dataset export tools.
+ *
+ * NOT WIRED TO THE REAL BACKEND: every figure on this page (GMV/take-rate/AOV/
+ * repeat-client-rate KPI tiles, the category demand matrix, the revenue
+ * velocity time series) has no backing endpoint — `/api/admin/dashboard/stats`
+ * only returns lifetime aggregate counts, not a per-category breakdown or a
+ * daily time series, and there's no category/tag field on Task at all. Left
+ * entirely on mock/adminMockData.ts + the local mockCategories fixture below
+ * rather than fabricating a fake aggregation endpoint. Real dashboard KPIs
+ * that DO exist have been wired instead on the Dashboard page.
  */
 
 interface CategoryDemand {

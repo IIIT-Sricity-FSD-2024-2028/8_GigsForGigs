@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useClient } from '../../../context/ClientContext';
 
 export interface ReviewDeliverablesProps {
@@ -7,42 +7,62 @@ export interface ReviewDeliverablesProps {
 }
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNavigate, params }) => {
-  const { deliverables, approveDeliverable, rejectDeliverable, contracts } = useClient();
-  const taskId = params?.taskId || 'task-2'; // Fallback to task-2 mock data
+  const { deliverables, approveDeliverable, rejectDeliverable, contracts, fetchTaskDeliverables } = useClient();
+  const taskId = params?.taskId;
 
-  const currentDeliverable = deliverables.find(d => d.task_id === taskId) || {
-    task_id: taskId,
-    deliverable_no: 1,
-    content: 'Hi Team! I have attached the final brand guidelines PDF as well as the ZIP file containing all vector formats for the new logo. Let me know if you need any adjustments before approval. Thanks for the great project!',
-    status: 'PENDING',
-    createdAt: '2026-08-25'
-  };
+  useEffect(() => {
+    if (taskId) {
+      fetchTaskDeliverables(taskId).catch((err) => console.error('Failed to load deliverables:', err));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
 
-  const currentContract = contracts.find(c => c.task_id === taskId) || {
-    gig_pro_name: 'Elena Rodriguez',
-    task_title: 'Brand Identity Redesign',
-    budget: 2400
+  const taskDeliverables = taskId ? deliverables.filter(d => d.task_id === taskId) : [];
+  // Prefer the most recently submitted deliverable awaiting review.
+  const currentDeliverable = taskDeliverables.find(d => d.status === 'PENDING')
+    ?? taskDeliverables[taskDeliverables.length - 1]
+    ?? null;
+
+  const currentContract = contracts.find(c => c.task_id === taskId) ?? {
+    gig_pro_name: 'Unassigned',
+    task_title: 'Task',
+    budget: 0,
   };
 
   const handleApprove = async () => {
+    if (!taskId || !currentDeliverable) return;
     try {
       await approveDeliverable(taskId, currentDeliverable.deliverable_no);
       alert('Deliverable approved and escrow funds released!');
       onNavigate('dashboard');
     } catch (err) {
       console.error('Approve failed:', err);
+      alert('Failed to approve the deliverable. Please try again.');
     }
   };
 
   const handleRequestChanges = async () => {
+    if (!taskId || !currentDeliverable) return;
     try {
-      await rejectDeliverable(taskId);
+      await rejectDeliverable(taskId, currentDeliverable.deliverable_no);
       alert('Changes requested. The freelancer has been notified.');
       onNavigate('dashboard');
     } catch (err) {
       console.error('Revision request failed:', err);
+      alert('Failed to request changes. Please try again.');
     }
   };
+
+  if (!taskId || !currentDeliverable) {
+    return (
+      <div>
+        <div className="page-header" style={{ marginBottom: 'var(--spacing-xl)' }}>
+          <h1 className="page-title">Review Deliverables</h1>
+          <p className="page-subtitle">No deliverable has been submitted for this task yet.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

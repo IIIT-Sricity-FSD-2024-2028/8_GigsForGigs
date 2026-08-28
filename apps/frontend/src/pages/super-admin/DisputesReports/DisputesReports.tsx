@@ -9,6 +9,11 @@ import { mockDisputes, type DisputeCase } from '../../../mock/adminMockData';
  * @description
  * High-stakes Dispute Arbitration Court for unresolved conflicts between Clients and Freelancers.
  * Features multi-pane evidence inspection and a 1-click settlement engine (Full Refund, Full Release, or Split).
+ *
+ * NOT WIRED TO THE REAL BACKEND: there is no dispute/escrow concept anywhere
+ * in db/prisma/schema.prisma (no DISPUTE table, no escrow status on Payment).
+ * Left entirely on mock/adminMockData.ts rather than inventing a fake
+ * disputes endpoint.
  */
 
 export const DisputesReports: React.FC = () => {

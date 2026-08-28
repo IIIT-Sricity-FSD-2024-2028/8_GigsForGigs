@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
 
 export const SubmitDeliverables: React.FC = () => {
@@ -18,18 +19,29 @@ export const SubmitDeliverables: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    gigApi.getActiveTasks().then((active) => {
-      if (mounted) {
-        const found = active.find((t) => t.task_id === selectedTaskId) || active[0] || null;
-        setTask(found);
-        setLoading(false);
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const active = await gigApi.getActiveTasks();
+        if (mounted) {
+          const found = active.find((t) => t.task_id === selectedTaskId) || active[0] || null;
+          setTask(found);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load task.');
+          setLoading(false);
+        }
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -40,11 +52,12 @@ export const SubmitDeliverables: React.FC = () => {
     e.preventDefault();
     if (!task) return;
     if (!content.trim()) {
-      alert('Please provide deliverable submission details or links.');
+      setError('Please provide deliverable submission details or links.');
       return;
     }
 
     setSubmitting(true);
+    setError(null);
     try {
       await gigApi.submitDeliverable({
         taskId: task.task_id,
@@ -54,8 +67,7 @@ export const SubmitDeliverables: React.FC = () => {
       triggerRefresh();
       setActiveTab('submission-success');
     } catch (err) {
-      console.error('Failed submitting deliverable:', err);
-      alert('Error submitting deliverable.');
+      setError(err instanceof ApiError ? err.message : 'Error submitting deliverable.');
     } finally {
       setSubmitting(false);
     }
@@ -88,6 +100,21 @@ export const SubmitDeliverables: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* Task Context Card */}
       <div className="admin-card" style={{ padding: 'var(--spacing-xl)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>

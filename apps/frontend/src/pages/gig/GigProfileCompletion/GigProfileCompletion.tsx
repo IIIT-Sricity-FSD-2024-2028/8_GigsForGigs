@@ -8,6 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 
 export const GigProfileCompletion: React.FC = () => {
   const { setActiveTab, triggerRefresh } = useGig();
@@ -16,6 +17,7 @@ export const GigProfileCompletion: React.FC = () => {
   const [portfolio, setPortfolio] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -26,8 +28,11 @@ export const GigProfileCompletion: React.FC = () => {
         setPortfolio((prof.portfolio || []).join(', '));
         setLoading(false);
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
+    }).catch((err) => {
+      if (mounted) {
+        setError(err instanceof ApiError ? err.message : 'Failed to load profile.');
+        setLoading(false);
+      }
     });
 
     return () => {
@@ -38,6 +43,7 @@ export const GigProfileCompletion: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     try {
       const skillsArray = skills.split(',').map((s) => s.trim()).filter(Boolean);
       const portfolioArray = portfolio.split(',').map((p) => p.trim()).filter(Boolean);
@@ -49,11 +55,9 @@ export const GigProfileCompletion: React.FC = () => {
       });
 
       triggerRefresh();
-      alert('Profile updated successfully!');
       setActiveTab('profile');
     } catch (err) {
-      console.error('Failed updating profile:', err);
-      alert('Failed updating profile.');
+      setError(err instanceof ApiError ? err.message : 'Failed updating profile.');
     } finally {
       setSaving(false);
     }
@@ -78,6 +82,21 @@ export const GigProfileCompletion: React.FC = () => {
           Highlight your software skills, past client experience, and work sample links to attract top clients.
         </p>
       </div>
+
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {/* Form */}
       <form className="admin-card" style={{ padding: 'var(--spacing-xl)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }} onSubmit={handleSubmit}>

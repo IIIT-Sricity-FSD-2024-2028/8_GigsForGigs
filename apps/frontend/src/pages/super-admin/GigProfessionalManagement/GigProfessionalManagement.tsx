@@ -1,84 +1,105 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
-import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
-import { ReviewIcon } from '../../../components/super-admin/Icons';
-import { mockGigPros, type GigProDetail } from '../../../mock/adminMockData';
+import { adminApi } from '../../../services/api/super-admin/adminApi';
+import { ApiError } from '../../../services/api/httpClient';
+import type { AdminGigProfile } from '../../../types/super-admin';
 
 /**
  * @file GigProfessionalManagement.tsx
  * @description
- * Freelancer talent directory, identity verification, badge approvals, and moderation.
- * Allows Super Admins to award "Verified Pro" / "Top Rated" badges, inspect portfolios,
- * and enforce marketplace quality standards.
+ * Freelancer directory backed by real `/api/admin/gig-profiles` data.
+ *
+ * The old mock (`GigProDetail`) modeled hourlyRate, rating, reviewsCount,
+ * totalEarnings, completedProjectsCount, a TOP_RATED/VERIFIED_PRO badge tier,
+ * and an ACTIVE/SUSPENDED status — none of that exists on the real
+ * `GigProfessionalProfile`/`User` models (no rate/earnings/status columns;
+ * ratings live on `Review` rows per-task, not aggregated per-profile
+ * anywhere), so badge-award/suspend actions and those metrics have been
+ * dropped rather than faked. What IS real and wired here: list, inspect,
+ * edit bio, and delete.
  */
 
 export const GigProfessionalManagement: React.FC = () => {
-  const [gigPros, setGigPros] = useState<GigProDetail[]>(mockGigPros);
-  const [selectedPro, setSelectedPro] = useState<GigProDetail | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isSuspendDialogOpen, setIsSuspendDialogOpen] = useState(false);
+  const [gigPros, setGigPros] = useState<AdminGigProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleOpenProDrawer = (pro: GigProDetail) => {
+  const [selectedPro, setSelectedPro] = useState<AdminGigProfile | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBio, setEditBio] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await adminApi.listGigProfiles();
+        if (!cancelled) setGigPros(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load gig professionals.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleOpenProDrawer = (pro: AdminGigProfile) => {
     setSelectedPro(pro);
+    setEditBio(pro.bio ?? '');
+    setIsEditing(false);
+    setActionError(null);
     setIsDrawerOpen(true);
   };
 
-  const handleUpdateBadge = (newBadge: GigProDetail['badge']) => {
+  const handleSaveEdit = async () => {
     if (!selectedPro) return;
-    const updated = gigPros.map((p) =>
-      p.id === selectedPro.id ? { ...p, badge: newBadge } : p
-    );
-    setGigPros(updated);
-    setSelectedPro({ ...selectedPro, badge: newBadge });
-    alert(`Badge updated to ${newBadge} for ${selectedPro.name}.`);
+    setActionError(null);
+    try {
+      const updated = await adminApi.updateGigProfile(selectedPro.gigProfileId, { bio: editBio });
+      setGigPros((prev) =>
+        prev.map((p) => (p.gigProfileId === updated.gigProfileId ? { ...p, ...updated } : p))
+      );
+      setSelectedPro((prev) => (prev ? { ...prev, ...updated } : prev));
+      setIsEditing(false);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Failed to update profile.');
+    }
   };
 
-  const handleSuspendConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!selectedPro) return;
-    const updated = gigPros.map((p) =>
-      p.id === selectedPro.id ? { ...p, status: 'SUSPENDED' as const } : p
-    );
-    setGigPros(updated);
-    setIsSuspendDialogOpen(false);
-    setIsDrawerOpen(false);
-    alert(`Freelancer ${selectedPro.name} suspended from bidding on new tasks.`);
+    setActionError(null);
+    try {
+      await adminApi.deleteGigProfile(selectedPro.gigProfileId);
+      setGigPros((prev) => prev.filter((p) => p.gigProfileId !== selectedPro.gigProfileId));
+      setIsDeleteDialogOpen(false);
+      setIsDrawerOpen(false);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Failed to delete profile.');
+      setIsDeleteDialogOpen(false);
+    }
   };
 
-  const columns: ColumnDef<GigProDetail>[] = [
+  const columns: ColumnDef<AdminGigProfile>[] = [
     {
       header: 'Freelancer',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.name}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.headline}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.user.name}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.bio || 'No bio yet'}</span>
         </div>
       )
     },
-    { header: 'Category', accessorKey: 'category' },
-    {
-      header: 'Rating & Feedback',
-      cell: (row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <ReviewIcon size={14} color="#bf6900" />
-          <span style={{ fontWeight: 700 }}>{row.rating.toFixed(2)}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>({row.reviewsCount})</span>
-        </div>
-      )
-    },
-    {
-      header: 'Rate',
-      cell: (row) => <span>${row.hourlyRate}/hr</span>
-    },
-    {
-      header: 'Earnings',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>${row.totalEarnings.toLocaleString()}</span>
-    },
-    {
-      header: 'Tier & Badge',
-      cell: (row) => <StatusBadge status={row.badge} />
-    },
+    { header: 'Email', cell: (row) => row.user.email },
     {
       header: 'Actions',
       align: 'right',
@@ -96,6 +117,18 @@ export const GigProfessionalManagement: React.FC = () => {
     }
   ];
 
+  if (loading) {
+    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading gig professionals…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
       <DataTable
@@ -103,16 +136,15 @@ export const GigProfessionalManagement: React.FC = () => {
         columns={columns}
         data={gigPros}
         pageSize={6}
-        searchPlaceholder="Search freelancers by skill, name, or category..."
+        searchPlaceholder="Search freelancers by name, email, or bio..."
         onRowClick={handleOpenProDrawer}
       />
 
-      {/* ── Freelancer Inspector Drawer ────────────────────────────────── */}
       <ActionModal
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title={selectedPro?.name || 'Freelancer Profile'}
-        subtitle={selectedPro?.headline}
+        title={selectedPro?.user.name || 'Freelancer Profile'}
+        subtitle={selectedPro?.user.email}
         width="560px"
         isDrawer={true}
         footer={
@@ -120,88 +152,59 @@ export const GigProfessionalManagement: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
               <button
                 className="admin-btn admin-btn-danger admin-btn-sm"
-                onClick={() => setIsSuspendDialogOpen(true)}
+                onClick={() => setIsDeleteDialogOpen(true)}
               >
-                Suspend Freelancer
+                Delete Profile
               </button>
-
-              <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
-                <button
-                  className="admin-btn admin-btn-outline admin-btn-sm"
-                  onClick={() => handleUpdateBadge('VERIFIED_PRO')}
-                >
-                  Award Verified Pro
+              {isEditing ? (
+                <button className="admin-btn admin-btn-primary admin-btn-sm" onClick={handleSaveEdit}>
+                  Save Bio
                 </button>
-                <button
-                  className="admin-btn admin-btn-primary admin-btn-sm"
-                  onClick={() => handleUpdateBadge('TOP_RATED')}
-                >
-                  Award Top Rated
+              ) : (
+                <button className="admin-btn admin-btn-primary admin-btn-sm" onClick={() => setIsEditing(true)}>
+                  Edit Bio
                 </button>
-              </div>
+              )}
             </div>
           )
         }
       >
         {selectedPro && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-            {/* Financial & Completion Metrics */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
-              <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>LIFETIME EARNINGS</span>
-                <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                  ${selectedPro.totalEarnings.toLocaleString()}
-                </h4>
+            {actionError && (
+              <div className="admin-badge badge-danger" style={{ width: '100%', padding: '8px 12px' }}>
+                {actionError}
               </div>
-              <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>COMPLETED PROJECTS</span>
-                <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                  {selectedPro.completedProjectsCount} Tasks
-                </h4>
-              </div>
-            </div>
-
-            {/* Skills Taxonomy */}
+            )}
             <div>
               <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: '8px' }}>
-                Verified Skill Tags
+                Bio
               </h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {selectedPro.skills.map((skill, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      backgroundColor: 'rgba(8, 75, 131, 0.08)',
-                      color: 'var(--color-primary-dark)',
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: 'var(--font-size-xs)',
-                      fontWeight: 600
-                    }}
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
+              {isEditing ? (
+                <textarea
+                  className="admin-textarea"
+                  rows={4}
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                />
+              ) : (
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)' }}>
+                  {selectedPro.bio || 'No bio provided.'}
+                </p>
+              )}
             </div>
-
-            {/* Verification Metadata */}
             <div>
               <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: '8px' }}>
-                Platform Compliance
+                Account
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 'var(--font-size-sm)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Email Contact:</span>
-                  <span>{selectedPro.email}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Active Tier Badge:</span>
-                  <StatusBadge status={selectedPro.badge} />
+                  <span>{selectedPro.user.email}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Marketplace Member Since:</span>
-                  <span>{selectedPro.createdAt}</span>
+                  <span>{new Date(selectedPro.user.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
@@ -209,14 +212,13 @@ export const GigProfessionalManagement: React.FC = () => {
         )}
       </ActionModal>
 
-      {/* ── Suspend Confirmation Dialog ─────────────────────────────────── */}
       <ConfirmDialog
-        isOpen={isSuspendDialogOpen}
-        onClose={() => setIsSuspendDialogOpen(false)}
-        onConfirm={handleSuspendConfirm}
-        title="Suspend Freelancer Profile"
-        message={`Are you sure you want to suspend ${selectedPro?.name}? The freelancer will be blocked from submitting proposals or receiving new milestone contracts.`}
-        confirmLabel="Suspend Freelancer"
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Freelancer Profile"
+        message={`Are you sure you want to permanently delete ${selectedPro?.user.name}'s gig professional profile? This cannot be undone.`}
+        confirmLabel="Delete Profile"
         isDangerous={true}
       />
     </div>

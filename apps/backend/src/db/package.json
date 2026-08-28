@@ -5,13 +5,17 @@
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "index.js",
+  "main": "./index.ts",
   "scripts": {
+    "build": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.23.1",
+    "bcrypt": "^6.0.0",
     "prisma": "^7.9.1",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"
@@ -21,5 +25,11 @@
     "@prisma/client": "^7.9.1",
     "dotenv": "^17.4.2",
     "pg": "^8.23.0"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

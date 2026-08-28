@@ -7,7 +7,7 @@ interface SignupProps {
 }
 
 export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLogin }) => {
-  const { signup, loading } = useAuth();
+  const { signup, loading, authError } = useAuth();
   const [role, setRole] = useState<'CLIENT' | 'GIG_PROFESSIONAL' | ''>('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -34,8 +34,8 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
       return;
     }
 
-    if (password.length < 4) {
-      setErrorMsg('Password must be at least 4 characters long.');
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
       return;
     }
 
@@ -46,7 +46,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
 
     const success = await signup(fullName, email, password, role);
     if (!success) {
-      setErrorMsg('Registration failed. Please try again.');
+      setErrorMsg(authError || 'Registration failed. Please try again.');
     }
   };
 

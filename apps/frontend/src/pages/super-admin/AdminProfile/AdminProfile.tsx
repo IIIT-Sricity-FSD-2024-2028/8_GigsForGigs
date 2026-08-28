@@ -7,6 +7,13 @@ import { ShieldIcon } from '../../../components/super-admin/Icons';
  * @description
  * Super Admin personal profile & security management.
  * Features 2FA enrollment, session revocation, and security audit metrics.
+ *
+ * NOT WIRED TO THE REAL BACKEND: there is no 2FA column on User, no session
+ * table (JWTs are stateless — nothing to "revoke" server-side), and no
+ * /api/auth/change-password route. Left entirely on local mock UI state
+ * rather than faking a persistence layer. (The identity card's name/email/
+ * "OWNER" badge are also hardcoded fixtures, not the logged-in admin's own
+ * user record — there's no GET /api/admin/me equivalent either.)
  */
 
 export const AdminProfile: React.FC = () => {

@@ -24,6 +24,7 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
       onNavigate('profile-selection');
     } catch (err) {
       console.error('Invite manager failed:', err);
+      alert('Failed to send the manager invite. Please try again.');
     }
   };
 

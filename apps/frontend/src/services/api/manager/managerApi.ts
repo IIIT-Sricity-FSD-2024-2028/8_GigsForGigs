@@ -163,43 +163,8 @@ let mockTalents: TalentProfile[] = [
 ];
 
 export const managerApi = {
-  // Authentication
-  login: async (email: string, pass: string): Promise<{ success: boolean; token?: string; user?: any }> => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/auth/manager/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pass })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.token) localStorage.setItem('g4g_manager_token', data.token);
-        return data;
-      }
-    } catch {
-      // Fallback
-    }
-    const token = 'demo_manager_token_123';
-    localStorage.setItem('g4g_manager_token', token);
-    return {
-      success: true,
-      token,
-      user: mockProfile.user
-    };
-  },
-
-  logout: async (): Promise<{ success: boolean }> => {
-    try {
-      await fetch(`${API_BASE_URL}/auth/manager/logout`, {
-        method: 'POST',
-        headers: getAuthHeaders()
-      });
-    } catch {
-      // Fallback
-    }
-    localStorage.removeItem('g4g_manager_token');
-    return { success: true };
-  },
+  // Authentication lives in services/api/auth/authApi.ts (authApi.managerLogin /
+  // authApi.managerLogout), wired through AuthContext — not duplicated here.
 
   // GET /api/managers/me
   getProfile: async (): Promise<ManagerProfile> => {

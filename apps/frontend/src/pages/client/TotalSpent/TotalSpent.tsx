@@ -9,13 +9,14 @@ export const TotalSpent: React.FC<TotalSpentProps> = () => {
   const { contracts, tasks } = useClient();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Calculations
+  // Calculations. There is no payment-ledger endpoint exposed to clients on
+  // the backend, so "spent" is approximated as the sum of completed tasks'
+  // budgets — no fabricated base amount is added on top.
   const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
   const activeContractsCount = contracts.filter(c => c.status === 'IN_PROGRESS').length;
-  
-  const baseSpent = 425000; // Base INR mock spent
+
   const completedSpent = completedTasks.reduce((sum, t) => sum + t.budget, 0);
-  const totalSpent = baseSpent + completedSpent;
+  const totalSpent = completedSpent;
 
   // Format currency helper
   const formatCurrency = (val: number) => {
@@ -26,13 +27,17 @@ export const TotalSpent: React.FC<TotalSpentProps> = () => {
     }).format(val);
   };
 
-  const transactionList = [
-    { name: 'Brand Identity Redesign', pro: 'Elena Rodriguez', amount: 2400, date: '2026-08-25', status: 'IN_PROGRESS' },
-    { name: 'Q3 Marketing Strategy', pro: 'Sarah Jenkins', amount: 1850, date: '2026-08-24', status: 'REVIEWING' },
-    { name: 'Mobile App Development', pro: 'David Lau', amount: 5000, date: '2026-08-20', status: 'SCHEDULED' },
-    { name: 'SQL Schema Optimizations', pro: 'Vikram Joshi', amount: 3500, date: '2026-07-15', status: 'COMPLETED' },
-    { name: 'Landing Page Copywriter', pro: 'Sarah Jenkins', amount: 800, date: '2026-06-12', status: 'COMPLETED' }
-  ];
+  // The backend exposes no payment/transaction-history endpoint for
+  // clients (client.service.ts has no ledger query) — "recent transactions"
+  // is approximated from the real contracts list (derived from accepted
+  // applications) rather than kept as a fully invented mock array.
+  const transactionList = contracts.map(c => ({
+    name: c.task_title,
+    pro: c.gig_pro_name,
+    amount: c.budget,
+    date: c.createdAt,
+    status: c.status,
+  }));
 
   const filteredTransactions = transactionList.filter(t =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -60,7 +65,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = () => {
           <div className="spent-meta" style={{ display: 'flex', gap: 'var(--spacing-xl)', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 'var(--spacing-md)' }}>
             <div className="spent-meta-block">
               <div className="label" style={{ fontSize: '0.75rem', opacity: 0.7 }}>This Month</div>
-              <div className="value" style={{ fontWeight: 700 }}>{formatCurrency(completedSpent || 1850)}</div>
+              <div className="value" style={{ fontWeight: 700 }}>{formatCurrency(completedSpent)}</div>
               <div className="sub" style={{ fontSize: '0.7rem', color: 'var(--color-secondary)' }}>+8.2% vs last month</div>
             </div>
             <div className="spent-meta-block">
@@ -80,6 +85,13 @@ export const TotalSpent: React.FC<TotalSpentProps> = () => {
             </span>
           </div>
           
+          {/*
+            There is no "budget allocation" concept anywhere in the schema
+            or client routes — this 650000 figure (and the "on track" copy
+            below) is decorative mock content left in place intentionally,
+            since there is no real data to back a quarterly-allocation
+            widget. Flagged as a known gap in the task report.
+          */}
           <div style={{ margin: 'var(--spacing-sm) 0' }}>
             <div className="spent-budget-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--spacing-xs)', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
               <span>Quarterly Allocated Budget</span>

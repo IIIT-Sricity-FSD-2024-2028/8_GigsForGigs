@@ -8,6 +8,11 @@ import { mockPlatformConfig, type PlatformConfig } from '../../../mock/adminMock
  * Global marketplace configuration control plane.
  * Allows Super Admins to adjust platform commission rake rates, category taxonomy,
  * escrow holding periods, and system maintenance mode toggles.
+ *
+ * NOT WIRED TO THE REAL BACKEND: there is no platform-config/settings table
+ * anywhere in db/prisma/schema.prisma, and no /api/admin/settings route.
+ * Left entirely on mock/adminMockData.ts rather than inventing a fake
+ * persistence endpoint — nothing saved here survives a page reload.
  */
 
 export const PlatformSettings: React.FC = () => {
