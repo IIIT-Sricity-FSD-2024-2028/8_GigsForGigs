@@ -3,18 +3,25 @@ import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
 import { GigProvider, useGig } from './context/GigContext/GigContext';
+import { ToastProvider } from './components/super-admin/Toast';
 
-// Layouts
+// 👑 Super Admin Layout & 12 Views
+import { AdminLayout } from './layouts/AdminLayout';
+import { Dashboard } from './pages/super-admin/Dashboard';
+import { AdminAnalytics } from './pages/super-admin/AdminAnalytics';
+import { ClientManagement } from './pages/super-admin/ClientManagement';
+import { GigProfessionalManagement } from './pages/super-admin/GigProfessionalManagement';
+import { ManagersManagement } from './pages/super-admin/ManagersManagement';
+import { Projects } from './pages/super-admin/Projects';
+import { PaymentsRevenue } from './pages/super-admin/PaymentsRevenue';
+import { Reviews } from './pages/super-admin/Reviews';
+import { DisputesReports } from './pages/super-admin/DisputesReports';
+import { AdminManagement } from './pages/super-admin/AdminManagement';
+import { AdminProfile } from './pages/super-admin/AdminProfile';
+import { PlatformSettings } from './pages/super-admin/PlatformSettings';
+
+// 💼 Client Pages & Layout
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
-import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
-import { GigLayout } from './layouts/GigLayout/GigLayout';
-
-// Public & Auth Pages
-import { LandingPage } from './pages/public/LandingPage/LandingPage';
-import { Login } from './pages/auth/Login/Login';
-import { Signup } from './pages/auth/Signup/Signup';
-
-// Client Pages
 import { ClientDashboard } from './pages/client/ClientDashboard/ClientDashboard';
 import { SearchTalent as ClientSearchTalent } from './pages/client/SearchTalent/SearchTalent';
 import { MyGigs } from './pages/client/MyGigs/MyGigs';
@@ -26,14 +33,16 @@ import { PostGig } from './pages/client/PostGig/PostGig';
 import { ReviewDeliverables as ClientReviewDeliverables } from './pages/client/ReviewDeliverables/ReviewDeliverables';
 import { ReviewShortlist } from './pages/client/ReviewShortlist/ReviewShortlist';
 
-// Manager Pages
+// 👔 Manager Pages & Layout
+import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
 import { ManagerDashboard } from './pages/manager/ManagerDashboard/ManagerDashboard';
 import { SearchTalent as ManagerSearchTalent } from './pages/manager/SearchTalent/SearchTalent';
 import { ManagerTasks } from './pages/manager/ManagerTasks/ManagerTasks';
 import { ReviewDeliverables as ManagerReviewDeliverables } from './pages/manager/ReviewDeliverables/ReviewDeliverables';
 import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
 
-// Gig Professional Pages
+// ⚡ Gig Professional Pages & Layout
+import { GigLayout } from './layouts/GigLayout/GigLayout';
 import { GigDashboard } from './pages/gig/GigDashboard/GigDashboard';
 import { ExploreTasks } from './pages/gig/ExploreTasks/ExploreTasks';
 import { ActiveTasks } from './pages/gig/ActiveTasks/ActiveTasks';
@@ -48,11 +57,69 @@ import { ProjectDetail } from './pages/gig/ProjectDetail/ProjectDetail';
 import { GigProfile } from './pages/gig/GigProfile/GigProfile';
 import { GigProfileCompletion } from './pages/gig/GigProfileCompletion/GigProfileCompletion';
 
+// 🌐 Public & Auth Pages
+import { LandingPage } from './pages/public/LandingPage/LandingPage';
+import { Login } from './pages/auth/Login/Login';
+import { Signup } from './pages/auth/Signup/Signup';
+
 type UnauthView = 'landing' | 'login' | 'signup';
 type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
 
 /**
- * Inner view component rendered when active user is a Gig Professional.
+ * 👑 Super Admin Platform Portal (12 Views Suite)
+ */
+function SuperAdminPortal() {
+  const [currentView, setCurrentView] = useState('dashboard');
+
+  const viewMetadata: Record<string, { title: string; subtitle: string }> = {
+    dashboard: { title: 'Executive Overview', subtitle: 'Real-time platform health, KPIs, and operational activity' },
+    analytics: { title: 'Business Intelligence & Trends', subtitle: 'Marketplace volume velocity, rake take rates, and cohort retention' },
+    clients: { title: 'Client Organizations', subtitle: 'Client master directory, KYC approvals, and enterprise spend oversight' },
+    'gig-pros': { title: 'Gig Professionals & Talent', subtitle: 'Freelancer directory, skill verification, and badge moderation' },
+    managers: { title: 'Manager Oversight', subtitle: 'Organizational hierarchy linkages and RBAC permission enforcement' },
+    projects: { title: 'Projects & Tasks Monitor', subtitle: 'Platform-wide task lifecycle tracking and emergency milestone overrides' },
+    payments: { title: 'Financial Ledger & Escrow', subtitle: 'Milestone escrow tracking, commission rake accounting, and disbursements' },
+    reviews: { title: 'Reviews & Reputation Moderation', subtitle: 'Marketplace feedback queue, profanity detection, and rating recalculation' },
+    disputes: { title: 'Arbitration Court & Disputes', subtitle: 'Evidence inspector and 1-click binding dispute settlement engine' },
+    'admin-staff': { title: 'Admin Staff & Governance', subtitle: 'Multi-tier delegate admin provisioning and SOC-2 compliant audit trails' },
+    profile: { title: 'Administrator Profile & Security', subtitle: 'Root credentials, TOTP two-factor authentication, and session revocation' },
+    settings: { title: 'Platform Configuration', subtitle: 'Commission rake percentages, minimum budgets, and maintenance controls' }
+  };
+
+  const activeMeta = viewMetadata[currentView] || { title: 'Super Admin', subtitle: 'GigsForGigs Portal' };
+
+  const renderActiveView = () => {
+    switch (currentView) {
+      case 'dashboard': return <Dashboard onNavigate={setCurrentView} />;
+      case 'analytics': return <AdminAnalytics />;
+      case 'clients': return <ClientManagement />;
+      case 'gig-pros': return <GigProfessionalManagement />;
+      case 'managers': return <ManagersManagement />;
+      case 'projects': return <Projects />;
+      case 'payments': return <PaymentsRevenue />;
+      case 'reviews': return <Reviews />;
+      case 'disputes': return <DisputesReports />;
+      case 'admin-staff': return <AdminManagement />;
+      case 'profile': return <AdminProfile />;
+      case 'settings': return <PlatformSettings />;
+      default: return <Dashboard onNavigate={setCurrentView} />;
+    }
+  };
+
+  return (
+    <AdminLayout
+      currentView={currentView}
+      onNavigate={setCurrentView}
+      pageTitle={activeMeta.title}
+      pageSubtitle={activeMeta.subtitle}
+    >
+      {renderActiveView()}
+    </AdminLayout>
+  );
+}
+
+/**
+ * ⚡ Gig Professional Portal
  */
 function GigAppContent() {
   const { activeTab } = useGig();
@@ -77,7 +144,7 @@ function GigAppContent() {
 }
 
 /**
- * Inner view component rendered when active user is a Manager.
+ * 👔 Manager Portal
  */
 function ManagerAppContent() {
   const { selectTask } = useManager();
@@ -109,12 +176,37 @@ function ManagerAppContent() {
 }
 
 /**
+ * 💼 Client Portal
+ */
+function ClientAppContent() {
+  const [clientView, setClientView] = useState<string>('dashboard');
+
+  const handleClientNavigate = (viewId: string, _params?: Record<string, string>) => {
+    setClientView(viewId);
+  };
+
+  return (
+    <ClientLayout currentView={clientView} onNavigate={handleClientNavigate}>
+      {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
+      {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
+      {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
+      {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
+      {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
+      {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
+      {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
+      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
+      {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} />}
+      {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} />}
+    </ClientLayout>
+  );
+}
+
+/**
  * Main application router deciding layout and portal shell based on user role.
  */
 function MainAppContent() {
-  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, login } = useAuth();
   const [unauthView, setUnauthView] = useState<UnauthView>('landing');
-  const [clientView, setClientView] = useState<string>('dashboard');
 
   if (authLoading) {
     return (
@@ -150,81 +242,75 @@ function MainAppContent() {
     );
   }
 
-  // Helper to handle Logout and return to Landing Page
-  const handleLogoutToLanding = () => {
-    logout();
-    setUnauthView('landing');
-  };
-
-  // 2. Manager Portal Flow
-  if (user.role === 'MANAGER') {
-    return (
-      <ManagerProvider>
-        <ManagerAppContent />
-      </ManagerProvider>
-    );
-  }
-
-  // 3. Gig Professional Flow
-  if (user.role === 'GIG_PROFESSIONAL') {
-    return (
-      <GigProvider>
-        <GigAppContent />
-      </GigProvider>
-    );
-  }
-
-  // 4. Super Admin Flow
-  if (user.role === 'SUPER_ADMIN') {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#EFF6F7', padding: '48px', fontFamily: 'sans-serif' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '16px', border: '1px solid #D9E0E3', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-          <h1 style={{ fontSize: '24px', color: '#0D568D', margin: '0 0 12px 0', fontWeight: 700 }}>
-            Super Admin Control Center
-          </h1>
-          <p style={{ color: '#76594F', fontSize: '15px', lineHeight: 1.6 }}>
-            Logged in as {user.name} ({user.email}) with full platform administration privileges.
-          </p>
-          <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-            <button
-              onClick={handleLogoutToLanding}
-              style={{ padding: '10px 20px', backgroundColor: '#0D568D', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
-            >
-              Logout to Landing Page
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 5. Client Portal Flow (Default for CLIENT)
-  const handleClientNavigate = (viewId: string, _params?: Record<string, string>) => {
-    setClientView(viewId);
-  };
-
   return (
-    <ClientProvider>
-      <ClientLayout currentView={clientView} onNavigate={handleClientNavigate}>
-        {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
-        {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
-        {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
-        {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
-        {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
-        {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
-        {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
-        {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
-        {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} />}
-        {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} />}
-      </ClientLayout>
-    </ClientProvider>
+    <div style={{ position: 'relative' }}>
+      {/* Universal Floating Role Switcher for Cross-Device Evaluation */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '16px',
+          right: '16px',
+          zIndex: 9999,
+          backgroundColor: '#084b83',
+          color: '#ffffff',
+          padding: '6px 12px',
+          borderRadius: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+          fontSize: '12px',
+          fontFamily: 'Inter, sans-serif'
+        }}
+      >
+        <span style={{ fontWeight: 600, opacity: 0.8 }}>ROLE:</span>
+        <select
+          value={user.role}
+          onChange={(e) => login(user.email, 'password123', e.target.value)}
+          style={{
+            background: '#ffffff',
+            color: '#084b83',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '2px 8px',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: 'pointer'
+          }}
+        >
+          <option value="SUPER_ADMIN">👑 Super Admin</option>
+          <option value="MANAGER">👔 Manager</option>
+          <option value="CLIENT">💼 Client</option>
+          <option value="GIG_PROFESSIONAL">⚡ Gig Professional</option>
+        </select>
+      </div>
+
+      {user.role === 'SUPER_ADMIN' && <SuperAdminPortal />}
+      {user.role === 'MANAGER' && (
+        <ManagerProvider>
+          <ManagerAppContent />
+        </ManagerProvider>
+      )}
+      {user.role === 'CLIENT' && (
+        <ClientProvider>
+          <ClientAppContent />
+        </ClientProvider>
+      )}
+      {user.role === 'GIG_PROFESSIONAL' && (
+        <GigProvider>
+          <GigAppContent />
+        </GigProvider>
+      )}
+    </div>
   );
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <MainAppContent />
+      <ToastProvider>
+        <MainAppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }

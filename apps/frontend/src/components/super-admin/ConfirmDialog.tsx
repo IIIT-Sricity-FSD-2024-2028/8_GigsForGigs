@@ -11,31 +11,38 @@ import { DisputeIcon } from './Icons';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
+  onCancel?: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
   isDangerous?: boolean;
+  isDanger?: boolean;
   isLoading?: boolean;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title,
   message,
   confirmLabel = 'Confirm Action',
   cancelLabel = 'Cancel',
   isDangerous = false,
+  isDanger = false,
   isLoading = false
 }) => {
+  const handleClose = onClose || onCancel || (() => {});
+  const isDestructive = isDangerous || isDanger;
+
   return (
     <ActionModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={title}
       width="440px"
       footer={
@@ -43,14 +50,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             type="button"
             className="admin-btn admin-btn-outline"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isLoading}
           >
             {cancelLabel}
           </button>
           <button
             type="button"
-            className={`admin-btn ${isDangerous ? 'admin-btn-danger' : 'admin-btn-primary'}`}
+            className={`admin-btn ${isDestructive ? 'admin-btn-danger' : 'admin-btn-primary'}`}
             onClick={onConfirm}
             disabled={isLoading}
           >
@@ -64,8 +71,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           style={{
             padding: '10px',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: isDangerous ? 'var(--color-danger-bg)' : 'var(--color-warning-bg)',
-            color: isDangerous ? 'var(--color-danger-text)' : 'var(--color-warning-text)'
+            backgroundColor: isDestructive ? 'var(--color-danger-bg)' : 'var(--color-warning-bg)',
+            color: isDestructive ? 'var(--color-danger-text)' : 'var(--color-warning-text)'
           }}
         >
           <DisputeIcon size={24} />

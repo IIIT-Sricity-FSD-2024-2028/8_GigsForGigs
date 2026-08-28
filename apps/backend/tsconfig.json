@@ -5,19 +5,12 @@
     "rootDir": "./src",
     "outDir": "./dist",
 
-    // Type-check against db's original .ts source (never a re-emitted
-    // .d.ts — see src/db/tsconfig.json for why). Node's own runtime
-    // resolution is untouched by "paths" and still uses the "db" package's
-    // compiled dist/index.js via the node_modules symlink.
-    "paths": {
-      "db": ["./src/db/index.ts"]
-    },
-
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "target": "esnext",
-    "types": ["node"],
+    "types": ["node", "express"],
     // For nodejs:
     // "lib": ["esnext"],
     // and npm install -D @types/node

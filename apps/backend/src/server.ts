@@ -1,8 +1,8 @@
-import { app } from "./app.js";
+import { app } from './app';
 
-const port = Number(process.env.PORT ?? 3000);
+const PORT = process.env.PORT || 5000;
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`GigsForGigs API listening on :${port}`);
+app.listen(PORT, () => {
+  console.log(`🚀 GigsForGigs Express Backend API is running on http://localhost:${PORT}`);
+  console.log(`📡 Health Check Endpoint: http://localhost:${PORT}/health`);
 });

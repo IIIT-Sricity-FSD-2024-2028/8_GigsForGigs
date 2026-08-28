@@ -6,11 +6,15 @@ import { decodeJwtPayload } from '../../utils/helpers/jwt';
 
 export type FrontendRole = 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
 
+export type AdminTier = 'OWNER' | 'SUPER_ADMIN' | 'FINANCIAL_ADMIN' | 'SUPPORT_ADMIN' | 'CONTENT_MODERATOR' | 'AUDITOR';
+
 export interface UserSession {
   userId: number;
   role: FrontendRole;
   name: string;
   email: string;
+  adminTier?: AdminTier;
+  permissions?: string[];
   appliedTaskIds: string[];
   isNewAccount?: boolean;
   // Present only for the roles whose JWT payload carries them — see lib/jwt.ts on the backend.
@@ -80,6 +84,7 @@ interface AuthContextType {
   logout: () => void;
   logoutManager: () => Promise<void>;
   updateUserSession: (patch: Partial<UserSession>) => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContextInstance = createContext<AuthContextType | undefined>(undefined);
@@ -93,13 +98,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const win = window as any;
       if (user) {
-        win.__GFG_SESSION__ = user;
-        win.name = JSON.stringify(user);
+        localStorage.setItem('gfg_active_user', JSON.stringify(user));
       } else {
-        win.__GFG_SESSION__ = null;
-        win.name = '';
+        localStorage.removeItem('gfg_active_user');
       }
     }
   }, [user]);
@@ -208,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContextInstance);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
