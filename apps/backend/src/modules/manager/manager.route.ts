@@ -6,6 +6,7 @@ import { validate } from "../../middleware/validate.js";
 import {
   createDeliverableSchema,
   reviewDeliverableSchema,
+  shortlistApplicationSchema,
   updateManagerProfileSchema,
   updateManagerSchema,
 } from "./manager.dto.js";
@@ -45,6 +46,19 @@ managerRouter.get(
   managerOnly,
   taskAccessGuard,
   managerController.getAssignedTask,
+);
+managerRouter.get(
+  "/managers/me/tasks/:taskId/applications",
+  managerOnly,
+  taskAccessGuard,
+  managerController.listTaskApplications,
+);
+managerRouter.patch(
+  "/managers/me/tasks/:taskId/applications/:applicationId/shortlist",
+  managerOnly,
+  taskAccessGuard,
+  validate(shortlistApplicationSchema),
+  managerController.shortlistApplication,
 );
 managerRouter.get(
   "/managers/me/tasks/:taskId/deliverables",

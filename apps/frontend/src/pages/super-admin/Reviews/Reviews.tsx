@@ -1,12 +1,7 @@
-<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
-=======
-import React, { useState, useEffect } from 'react';
->>>>>>> origin/main
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { ReviewIcon } from '../../../components/super-admin/Icons';
-<<<<<<< HEAD
 import { adminApi } from '../../../services/api/super-admin/adminApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { AdminReview } from '../../../types/super-admin';
@@ -63,56 +58,6 @@ export const Reviews: React.FC = () => {
       setActionError(err instanceof ApiError ? err.message : 'Failed to delete review.');
       setIsDeleteDialogOpen(false);
     }
-=======
-import { useToast } from '../../../components/super-admin/Toast';
-import { adminApi } from '../../../services/api/admin/adminApi';
-
-export interface ModerationReview {
-  id: string;
-  taskId: string;
-  taskTitle: string;
-  reviewerName: string;
-  reviewerRole: 'CLIENT' | 'GIG_PROFESSIONAL';
-  targetUserName: string;
-  rating: number;
-  comment: string;
-  flagCount: number;
-  flagReason?: string;
-  status: 'APPROVED' | 'FLAGGED' | 'HIDDEN';
-  createdAt: string;
-}
-
-export const Reviews: React.FC = () => {
-  const toast = useToast();
-  const [reviews, setReviews] = useState<ModerationReview[]>([]);
-  const [activeTab, setActiveTab] = useState<'all' | 'flagged' | 'hidden'>('all');
-
-  useEffect(() => {
-    let isMounted = true;
-    async function loadReviews() {
-      const data = await adminApi.getReviews();
-      if (isMounted) {
-        setReviews(data);
-      }
-    }
-    loadReviews();
-    return () => { isMounted = false; };
-  }, []);
-
-  const filteredReviews = reviews.filter((r) => {
-    if (activeTab === 'flagged') return r.status === 'FLAGGED' || r.flagCount > 0;
-    if (activeTab === 'hidden') return r.status === 'HIDDEN';
-    return true;
-  });
-
-  const handleModerate = async (id: string, newStatus: ModerationReview['status']) => {
-    await adminApi.moderateReview(id, newStatus);
-    const updated = reviews.map((r) =>
-      r.id === id ? { ...r, status: newStatus } : r
-    );
-    setReviews(updated);
-    toast.info('Review Moderated', `Review status changed to ${newStatus}. Aggregate ratings recalculated.`);
->>>>>>> origin/main
   };
 
   const columns: ColumnDef<AdminReview>[] = [
@@ -141,12 +86,6 @@ export const Reviews: React.FC = () => {
     {
       header: 'Feedback Comment',
       cell: (row) => (
-<<<<<<< HEAD
-        <div style={{ maxWidth: '320px' }}>
-          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)', lineHeight: 1.4 }}>
-            "{row.comment || '—'}"
-          </p>
-=======
         <div style={{ maxWidth: '380px' }}>
           <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)' }}>
             "{row.comment}"
@@ -156,27 +95,10 @@ export const Reviews: React.FC = () => {
               🚩 Flag Reason: {row.flagReason}
             </span>
           )}
->>>>>>> origin/main
         </div>
       )
     },
     {
-<<<<<<< HEAD
-      header: 'Actions',
-      align: 'right',
-      cell: (row) => (
-        <button
-          className="admin-btn admin-btn-danger admin-btn-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            setActionError(null);
-            setTargetReview(row);
-            setIsDeleteDialogOpen(true);
-          }}
-        >
-          Delete
-        </button>
-=======
       header: 'Status',
       cell: (row) => <StatusBadge status={row.status} />
     },
@@ -203,7 +125,6 @@ export const Reviews: React.FC = () => {
             </button>
           )}
         </div>
->>>>>>> origin/main
       )
     }
   ];
@@ -222,31 +143,6 @@ export const Reviews: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-<<<<<<< HEAD
-      {actionError && (
-        <div className="admin-badge badge-danger" style={{ width: '100%', padding: '8px 12px' }}>
-          {actionError}
-        </div>
-      )}
-
-      <DataTable
-        title="Marketplace Feedback Moderation"
-        columns={columns}
-        data={reviews}
-        pageSize={6}
-        searchPlaceholder="Search reviews by party or comment..."
-      />
-
-      <ConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Review"
-        message={`Are you sure you want to permanently delete this review by ${targetReview?.reviewer.name}? This cannot be undone.`}
-        confirmLabel="Delete Review"
-        isDangerous={true}
-      />
-=======
       <AdminTabs
         tabs={[
           { id: 'all', label: 'All Reviews', count: reviews.length },
@@ -265,7 +161,6 @@ export const Reviews: React.FC = () => {
           searchPlaceholder="Search reviews by task, party, or feedback..."
         />
       </div>
->>>>>>> origin/main
     </div>
   );
 };

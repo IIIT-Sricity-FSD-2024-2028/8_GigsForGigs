@@ -33,6 +33,24 @@ const SERVICE_PER_GIG = 2;
 const SERVICE_REQUEST_COUNT = 15;
 const MANAGER_INVITE_COUNT = 10;
 
+// Mirrors PostGig.tsx's <select> option values exactly.
+const TASK_CATEGORIES = ["design", "dev", "writing", "marketing"];
+const TASK_DURATIONS = ["one-time", "less-month", "1-3-months", "3-6-months", "ongoing"];
+const TASK_SKILL_POOL = [
+  "React",
+  "Node.js",
+  "TypeScript",
+  "Figma",
+  "SEO",
+  "Copywriting",
+  "PostgreSQL",
+  "Vue",
+  "Python",
+  "Data Analysis",
+  "UI/UX Design",
+  "Video Editing",
+];
+
 function pickUniquePairs<A, B>(
   count: number,
   as: A[],
@@ -193,20 +211,6 @@ async function seedGigProfiles(gigUsers: Array<{ userId: number }>) {
 }
 
 async function seedProfileJoinTables(profiles: Array<{ gigProfileId: number }>) {
-  const skillPool = [
-    "React",
-    "Node.js",
-    "TypeScript",
-    "Figma",
-    "SEO",
-    "Copywriting",
-    "PostgreSQL",
-    "Vue",
-    "Python",
-    "Data Analysis",
-    "UI/UX Design",
-    "Video Editing",
-  ];
   const toolPool = ["VS Code", "Figma", "Slack", "Jira", "Notion", "GitHub", "Postman", "Docker"];
 
   const skillRows: Array<{ gigProfileId: number; skill: string }> = [];
@@ -214,7 +218,7 @@ async function seedProfileJoinTables(profiles: Array<{ gigProfileId: number }>) 
   const portfolioRows: Array<{ gigProfileId: number; url: string }> = [];
 
   for (const profile of profiles) {
-    const skills = faker.helpers.arrayElements(skillPool, faker.number.int({ min: 2, max: 3 }));
+    const skills = faker.helpers.arrayElements(TASK_SKILL_POOL, faker.number.int({ min: 2, max: 3 }));
     for (const skill of skills) {
       skillRows.push({ gigProfileId: profile.gigProfileId, skill });
     }
@@ -247,6 +251,9 @@ async function seedTasks(clients: Array<{ clientId: number }>) {
           clientId: client.clientId,
           title: faker.hacker.phrase().replace(/^\w/, (c) => c.toUpperCase()),
           description: faker.lorem.paragraph(),
+          category: faker.helpers.arrayElement(TASK_CATEGORIES),
+          duration: faker.helpers.arrayElement(TASK_DURATIONS),
+          skills: faker.helpers.arrayElements(TASK_SKILL_POOL, faker.number.int({ min: 2, max: 4 })),
           budget: faker.number.int({ min: 200, max: 8000 }),
           dueDate: faker.date.future(),
           status: faker.helpers.arrayElement([TaskStatus.open, TaskStatus.in_progress, TaskStatus.completed]),
@@ -268,15 +275,26 @@ async function seedApplications(
     (a, b) => `${a.gigProfileId}:${b.taskId}`,
   );
 
-  const rows = pairs.map(({ a, b }) => ({
-    gigProfileId: a.gigProfileId,
-    taskId: b.taskId,
-    status: faker.helpers.arrayElement([
+  const rows = pairs.map(({ a, b }) => {
+    const status = faker.helpers.arrayElement([
       ApplicationStatus.pending,
+      ApplicationStatus.shortlisted,
       ApplicationStatus.accepted,
       ApplicationStatus.declined,
-    ]),
-  }));
+    ]);
+    const isShortlistedOrFurther = status !== ApplicationStatus.pending;
+    return {
+      gigProfileId: a.gigProfileId,
+      taskId: b.taskId,
+      status,
+      ...(isShortlistedOrFurther
+        ? {
+            rating: faker.number.int({ min: 1, max: 5 }),
+            hourlyRate: faker.number.int({ min: 10, max: 150 }),
+          }
+        : {}),
+    };
+  });
 
   await prisma.application.createMany({ data: rows });
   return rows;

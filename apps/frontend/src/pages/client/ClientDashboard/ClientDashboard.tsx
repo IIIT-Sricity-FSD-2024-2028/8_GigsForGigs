@@ -61,11 +61,25 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
       {loading && tasks.length === 0 && (
         <p style={{ color: 'var(--color-text-muted)' }}>Loading your workspace…</p>
       )}
-      {/* Welcome greeting */}
-      <h1 className="welcome-greeting" id="client-greeting">
-        Welcome back, {user?.name || 'Aditya'}!
-      </h1>
-      <p className="welcome-subtitle">Here's a summary of your workspace activities for today.</p>
+      {/* Welcome hero banner — mirrors the Gig/Manager portal headers */}
+      <div
+        className="admin-card"
+        style={{
+          padding: 'var(--spacing-xl)',
+          background: 'linear-gradient(135deg, var(--color-primary-dark) 0%, #0c61a6 100%)',
+          color: '#ffffff',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-md)',
+          marginBottom: 'var(--spacing-xl)',
+        }}
+      >
+        <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--spacing-xs)' }} id="client-greeting">
+          Welcome back, {user?.name || 'there'}!
+        </h1>
+        <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 'var(--font-size-sm)' }}>
+          Here's a summary of your workspace activities for today.
+        </p>
+      </div>
 
       {/* Metric cards row */}
       <div className="metrics-row">
@@ -120,11 +134,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
 
       </div>
 
-      {/* Posted Tasks */}
+      {/* Pending Tasks (open — posted but not yet in progress) */}
       <div className="activity-section">
         <div className="activity-header">
           <h2 className="activity-title">
-            Posted Tasks{' '}
+            Pending Tasks{' '}
             <span id="client-posted-count" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: '6px' }}>
               ({openTasks.length})
             </span>

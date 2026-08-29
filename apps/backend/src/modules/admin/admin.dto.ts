@@ -43,6 +43,9 @@ export const createTaskSchema = z.object({
   clientId: z.coerce.number().int().positive(),
   title: z.string().min(1).max(255),
   description: z.string().optional(),
+  category: z.string().max(50).optional(),
+  duration: z.string().max(50).optional(),
+  skills: z.array(z.string()).optional(),
   budget: z.coerce.number().positive(),
   dueDate: z.coerce.date().optional(),
   status: z.enum(["open", "in_progress", "completed"]).optional(),
@@ -55,12 +58,12 @@ export type UpdateTaskDto = z.infer<typeof updateTaskSchema>;
 export const createApplicationSchema = z.object({
   gigProfileId: z.coerce.number().int().positive(),
   taskId: z.coerce.number().int().positive(),
-  status: z.enum(["pending", "accepted", "declined"]).optional(),
+  status: z.enum(["pending", "shortlisted", "accepted", "declined"]).optional(),
 });
 export type CreateApplicationDto = z.infer<typeof createApplicationSchema>;
 
 export const updateApplicationSchema = z.object({
-  status: z.enum(["pending", "accepted", "declined"]).optional(),
+  status: z.enum(["pending", "shortlisted", "accepted", "declined"]).optional(),
 });
 export type UpdateApplicationDto = z.infer<typeof updateApplicationSchema>;
 

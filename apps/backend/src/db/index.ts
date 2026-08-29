@@ -17,6 +17,11 @@ if (!connectionString) {
 
 const adapter = new PrismaPg({ connectionString });
 
-export const prisma = new PrismaClient({ adapter });
+// Global omit: hashPassword must never leave the process over the wire,
+// no matter which module/service pulls in a related User row.
+export const prisma = new PrismaClient({
+  adapter,
+  omit: { user: { hashPassword: true } },
+});
 
 export * from "./generated/prisma/client.js";

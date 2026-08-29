@@ -14,3 +14,9 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 export type LoginDto = z.infer<typeof loginSchema>;
+
+export const acceptManagerInviteSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6).max(72),
+});
+export type AcceptManagerInviteDto = z.infer<typeof acceptManagerInviteSchema>;

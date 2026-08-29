@@ -41,7 +41,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
 
     try {
       if (editId) {
-        await updateTask(editId, title, description, Number(budget));
+        await updateTask(editId, title, description, Number(budget), category, duration, skills);
         alert('Task updated successfully!');
       } else {
         await addTask(title, description, Number(budget), category, duration, skills);

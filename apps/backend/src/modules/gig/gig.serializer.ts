@@ -13,8 +13,12 @@ import type {
   Review as DbReview,
   Service as DbService,
   Task as DbTask,
-  User as DbUser,
+  User as DbUserWithPassword,
 } from "db";
+
+// The shared PrismaClient (db/index.ts) globally omits User.hashPassword, so
+// every query result actually matches this, not the full generated model.
+type DbUser = Omit<DbUserWithPassword, "hashPassword">;
 
 function upper<T extends string>(value: T): Uppercase<T> {
   return value.toUpperCase() as Uppercase<T>;

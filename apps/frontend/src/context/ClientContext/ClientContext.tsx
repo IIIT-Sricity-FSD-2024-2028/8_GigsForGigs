@@ -16,14 +16,11 @@ import { apiFetch, ApiError } from '../../services/api/httpClient';
  *
  * KNOWN GAPS vs. the real backend (see final task report for the full
  * writeup — kept brief here as inline comments at each affected mapping):
- *  - TASKS has no category/duration/skills columns — PostGig's form fields
- *    for those are UI-only and are never persisted or returned by the API.
- *  - There is no accept-invite endpoint anywhere in the backend, so a row
- *    created via POST /manager-invites can never become a row returned by
- *    GET /managers through any exposed API today.
- *  - APPLICATION has no rating/hourly-rate/role/reviewing-manager columns;
- *    ReviewShortlist's "rating"/"rate"/"shortlisted by" concepts have no
- *    backing data and are approximated or omitted (see that page).
+ *  - The backend has POST /api/auth/manager/accept-invite to turn a
+ *    MANAGER_INVITE row into a real MANAGER row, but no frontend flow calls
+ *    it yet — invited managers still can't self-activate from this app.
+ *  - APPLICATION has no dedicated "candidate role"/reviewing-manager
+ *    columns; ReviewShortlist approximates "role" from GigProfile.bio.
  */
 
 export interface Task {
@@ -34,8 +31,6 @@ export interface Task {
   status: 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'REVIEWING' | 'COMPLETED' | 'CANCELLED';
   createdAt: string;
   dueDate?: string | null;
-  // NOT backed by the TASKS table — see file header gap note. Always
-  // undefined once a task round-trips through the real API.
   skills?: string[];
   category?: string;
   duration?: string;
@@ -96,9 +91,8 @@ export interface Application {
   candidate_name: string;
   candidate_role: string;
   status: 'PENDING' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
-  // Neither exists on APPLICATION/GIG_PROFESSIONAL_PROFILE in the schema —
-  // left optional/derived rather than fabricated. See file header gap note.
   rating?: number;
+  hourlyRate?: number;
   rate: number;
   createdAt: string;
 }
@@ -113,7 +107,7 @@ interface ClientContextType {
   loading: boolean;
   error: string | null;
   addTask: (title: string, description: string, budget: number, category?: string, duration?: string, skills?: string) => Promise<void>;
-  updateTask: (taskId: string, title: string, description: string, budget: number) => Promise<void>;
+  updateTask: (taskId: string, title: string, description: string, budget: number, category?: string, duration?: string, skills?: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   inviteManager: (name: string, email: string) => Promise<void>;
   updateManager: (inviteId: string, name: string, email: string) => Promise<void>;
@@ -152,6 +146,9 @@ interface RawTask {
   clientId: number;
   title: string;
   description: string | null;
+  category: string | null;
+  duration: string | null;
+  skills: string[];
   budget: string;
   dueDate: string | null;
   status: RawTaskStatus;
@@ -163,7 +160,9 @@ interface RawApplication {
   applicationId: number;
   gigProfileId: number;
   taskId: number;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'shortlisted' | 'accepted' | 'declined';
+  rating: number | null;
+  hourlyRate: string | null;
   createdAt: string;
   task?: RawTask;
   gigProfile?: RawGigProfile;
@@ -255,6 +254,9 @@ function mapTask(raw: RawTask): Task {
     status: mapTaskStatus(raw.status),
     createdAt: raw.createdAt,
     dueDate: raw.dueDate,
+    category: raw.category ?? undefined,
+    duration: raw.duration ?? undefined,
+    skills: raw.skills,
   };
 }
 
@@ -310,14 +312,14 @@ function mapDeliverable(raw: RawDeliverable): Deliverable {
 
 function mapApplicationStatus(status: RawApplication['status']): Application['status'] {
   switch (status) {
+    case 'shortlisted':
+      return 'SHORTLISTED';
     case 'accepted':
       return 'ACCEPTED';
     case 'declined':
       return 'REJECTED';
     default:
-      // 'pending' is the only actionable state a client reviews — there is
-      // no distinct backend-side "shortlisted" status.
-      return 'SHORTLISTED';
+      return 'PENDING';
   }
 }
 
@@ -332,6 +334,8 @@ function mapApplication(raw: RawApplication): Application {
     // closest descriptive field available.
     candidate_role: raw.gigProfile?.bio || 'Gig Professional',
     status: mapApplicationStatus(raw.status),
+    rating: raw.rating ?? undefined,
+    hourlyRate: raw.hourlyRate ? Number(raw.hourlyRate) : undefined,
     rate: raw.task?.budget ? Number(raw.task.budget) : 0,
     createdAt: raw.createdAt,
   };
@@ -462,22 +466,25 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [user?.role, refreshTasks, refreshApplications, refreshContracts, refreshServices, refreshServiceRequests, refreshManagers]);
 
-  // category/duration/skills are accepted for call-signature compatibility
-  // with PostGig's form but are never sent — TASKS has no columns for them.
+  const parseSkills = (skills?: string): string[] | undefined =>
+    skills === undefined
+      ? undefined
+      : skills.split(',').map((s) => s.trim()).filter(Boolean);
+
   const addTask = async (
     title: string,
     description: string,
     budget: number,
-    _category?: string,
-    _duration?: string,
-    _skills?: string,
+    category?: string,
+    duration?: string,
+    skills?: string,
   ) => {
     setError(null);
     try {
       await apiFetch('/tasks', {
         method: 'POST',
         actor: 'client',
-        body: { title, description, budget },
+        body: { title, description, budget, category, duration, skills: parseSkills(skills) },
       });
       await refreshTasks();
     } catch (err) {
@@ -485,13 +492,21 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const updateTask = async (taskId: string, title: string, description: string, budget: number) => {
+  const updateTask = async (
+    taskId: string,
+    title: string,
+    description: string,
+    budget: number,
+    category?: string,
+    duration?: string,
+    skills?: string,
+  ) => {
     setError(null);
     try {
       await apiFetch(`/tasks/${taskId}`, {
         method: 'PATCH',
         actor: 'client',
-        body: { title, description, budget },
+        body: { title, description, budget, category, duration, skills: parseSkills(skills) },
       });
       await refreshTasks();
     } catch (err) {

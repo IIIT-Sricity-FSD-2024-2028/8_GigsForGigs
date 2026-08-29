@@ -4,20 +4,6 @@ import { useToast } from '../../../components/super-admin/Toast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
-<<<<<<< HEAD
-/**
- * @file PlatformSettings.tsx
- * @description
- * Global marketplace configuration control plane.
- * Allows Super Admins to adjust platform commission rake rates, category taxonomy,
- * escrow holding periods, and system maintenance mode toggles.
- *
- * NOT WIRED TO THE REAL BACKEND: there is no platform-config/settings table
- * anywhere in db/prisma/schema.prisma, and no /api/admin/settings route.
- * Left entirely on mock/adminMockData.ts rather than inventing a fake
- * persistence endpoint — nothing saved here survives a page reload.
- */
-=======
 export interface PlatformConfig {
   platformRakePercentage: number;
   minimumGigBudget: number;
@@ -26,7 +12,6 @@ export interface PlatformConfig {
   isMaintenanceMode: boolean;
   allowedCategories: string[];
 }
->>>>>>> origin/main
 
 export const PlatformSettings: React.FC = () => {
   const { hasPermission } = useAuth();

@@ -42,6 +42,7 @@ model Manager {
   clientId    Int                    @map("client_id")
   managerId   Int                    @unique @default(autoincrement()) @map("manager_id")
   userId      Int                    @unique @map("user_id")
+  createdAt   DateTime               @default(now()) @map("created_at")
   assignments GigManagerAssignment[]
   client      Client                 @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
   user        User                   @relation(fields: [userId], references: [userId])
@@ -99,6 +100,9 @@ model Task {
   clientId     Int                    @map("client_id")
   title        String                 @db.VarChar(255)
   description  String?
+  category     String?                @db.VarChar(50)
+  duration     String?                @db.VarChar(50)
+  skills       String[]               @default([])
   budget       Decimal                @db.Decimal(10, 2)
   dueDate      DateTime?              @map("due_date") @db.Date
   status       TaskStatus             @default(open)
@@ -119,6 +123,8 @@ model Application {
   gigProfileId  Int                    @map("gig_profile_id")
   taskId        Int                    @map("task_id")
   status        ApplicationStatus      @default(pending)
+  rating        Int?
+  hourlyRate    Decimal?               @map("hourly_rate") @db.Decimal(8, 2)
   createdAt     DateTime               @default(now()) @map("created_at")
   gigProfile    GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
   task          Task                   @relation(fields: [taskId], references: [taskId])
@@ -262,6 +268,7 @@ enum TaskStatus {
 
 enum ApplicationStatus {
   pending
+  shortlisted
   accepted
   declined
 }

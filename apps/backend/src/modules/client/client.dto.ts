@@ -9,6 +9,9 @@ export type UpdateClientProfileDto = z.infer<typeof updateClientProfileSchema>;
 export const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().optional(),
+  category: z.string().max(50).optional(),
+  duration: z.string().max(50).optional(),
+  skills: z.array(z.string()).optional(),
   budget: z.coerce.number().positive(),
   dueDate: z.coerce.date().optional(),
 });
@@ -17,6 +20,9 @@ export type CreateTaskDto = z.infer<typeof createTaskSchema>;
 export const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
+  category: z.string().max(50).optional(),
+  duration: z.string().max(50).optional(),
+  skills: z.array(z.string()).optional(),
   budget: z.coerce.number().positive().optional(),
   dueDate: z.coerce.date().optional(),
   status: z.enum(["open", "in_progress", "completed"]).optional(),

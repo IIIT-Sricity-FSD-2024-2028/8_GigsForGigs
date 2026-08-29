@@ -3,8 +3,8 @@ import type { User } from "db";
 import { comparePassword, hashPassword } from "../../lib/password.js";
 import { signToken } from "../../lib/jwt.js";
 import type { TokenPayload } from "../../lib/jwt.js";
-import { conflict, unauthorized } from "../../lib/httpError.js";
-import type { LoginDto, SignupDto } from "./auth.dto.js";
+import { conflict, notFound, unauthorized } from "../../lib/httpError.js";
+import type { AcceptManagerInviteDto, LoginDto, SignupDto } from "./auth.dto.js";
 
 function sanitizeUser(user: User) {
   return { userId: user.userId, name: user.name, email: user.email, role: user.role };
@@ -86,7 +86,12 @@ export async function signup(dto: SignupDto) {
 
 /** Shared by /login and /manager/login. requiredRole narrows manager login to manager accounts only. */
 async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) {
-  const user = await prisma.user.findUnique({ where: { email: dto.email } });
+  // Global User.hashPassword omit (db/index.ts) must be overridden here —
+  // login is the one place that legitimately needs it, to compare against.
+  const user = await prisma.user.findUnique({
+    where: { email: dto.email },
+    omit: { hashPassword: false },
+  });
 
   // Same message whether the email is unknown, the role doesn't match, or
   // the password is wrong — never reveal which one it was.
@@ -109,4 +114,49 @@ export function login(dto: LoginDto) {
 
 export function managerLogin(dto: LoginDto) {
   return authenticate(dto, "manager");
+}
+
+/** Turns a pending ManagerInvite into a real User+Manager. The invite's own
+ * email is authoritative — the caller can't pick a different one. */
+export async function acceptManagerInvite(dto: AcceptManagerInviteDto) {
+  const invite = await prisma.managerInvite.findFirst({
+    where: { email: dto.email, status: "pending" },
+  });
+  if (!invite) {
+    throw notFound("No pending invite for this email");
+  }
+
+  const existingUser = await prisma.user.findUnique({ where: { email: dto.email } });
+  if (existingUser) {
+    throw conflict("Email already in use");
+  }
+
+  const hashedPassword = await hashPassword(dto.password);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see buildTokenPayload comment above
+  const { user, manager } = await prisma.$transaction(async (tx: any) => {
+    const created = await tx.user.create({
+      data: { name: invite.name, email: invite.email, hashPassword: hashedPassword, role: "manager" },
+    });
+    const createdManager = await tx.manager.create({
+      data: { userId: created.userId, clientId: invite.clientId },
+    });
+    await tx.client.update({
+      where: { clientId: invite.clientId },
+      data: { numberOfManager: { increment: 1 } },
+    });
+    await tx.managerInvite.update({
+      where: { inviteId: invite.inviteId },
+      data: { status: "accepted", acceptedUserId: created.userId },
+    });
+    return { user: created, manager: createdManager };
+  });
+
+  const payload: TokenPayload = {
+    role: "manager",
+    userId: user.userId,
+    managerId: manager.managerId,
+    clientId: manager.clientId,
+  };
+  return { success: true, token: signToken(payload), user: sanitizeUser(user) };
 }

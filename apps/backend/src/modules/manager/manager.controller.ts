@@ -3,6 +3,7 @@ import { getValidated } from "../../middleware/validate.js";
 import type { ClientTokenPayload, ManagerTokenPayload } from "../../lib/jwt.js";
 import * as managerService from "./manager.service.js";
 import {
+  serializeApplication,
   serializeDeliverable,
   serializeManagerProfile,
   serializeTalent,
@@ -11,6 +12,7 @@ import {
 import type {
   CreateDeliverableDto,
   ReviewDeliverableDto,
+  ShortlistApplicationDto,
   UpdateManagerDto,
   UpdateManagerProfileDto,
 } from "./manager.dto.js";
@@ -68,6 +70,20 @@ export async function getAssignedTask(req: Request, res: Response): Promise<void
   const taskId = Number(req.params.taskId);
   const task = await managerService.getAssignedTask(taskId);
   res.status(200).json(serializeTask(task));
+}
+
+export async function listTaskApplications(req: Request, res: Response): Promise<void> {
+  const taskId = Number(req.params.taskId);
+  const applications = await managerService.listTaskApplications(taskId);
+  res.status(200).json(applications.map(serializeApplication));
+}
+
+export async function shortlistApplication(req: Request, res: Response): Promise<void> {
+  const taskId = Number(req.params.taskId);
+  const applicationId = Number(req.params.applicationId);
+  const dto = getValidated<ShortlistApplicationDto>(res, "body");
+  const application = await managerService.shortlistApplication(taskId, applicationId, dto);
+  res.status(200).json(serializeApplication(application));
 }
 
 export async function listTaskDeliverables(req: Request, res: Response): Promise<void> {

@@ -6,19 +6,6 @@ import { useToast } from '../../../components/super-admin/Toast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
-<<<<<<< HEAD
-/**
- * @file DisputesReports.tsx
- * @description
- * High-stakes Dispute Arbitration Court for unresolved conflicts between Clients and Freelancers.
- * Features multi-pane evidence inspection and a 1-click settlement engine (Full Refund, Full Release, or Split).
- *
- * NOT WIRED TO THE REAL BACKEND: there is no dispute/escrow concept anywhere
- * in db/prisma/schema.prisma (no DISPUTE table, no escrow status on Payment).
- * Left entirely on mock/adminMockData.ts rather than inventing a fake
- * disputes endpoint.
- */
-=======
 export interface DisputeCase {
   id: string;
   taskId: string;
@@ -34,7 +21,6 @@ export interface DisputeCase {
   slaHoursLeft: number;
   createdAt: string;
 }
->>>>>>> origin/main
 
 export const DisputesReports: React.FC = () => {
   const { hasPermission } = useAuth();

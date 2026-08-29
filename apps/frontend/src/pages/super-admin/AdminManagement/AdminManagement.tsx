@@ -1,38 +1,9 @@
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react';
-=======
 import React, { useState, useEffect } from 'react';
->>>>>>> origin/main
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { PlusIcon } from '../../../components/super-admin/Icons';
-<<<<<<< HEAD
-import { adminApi } from '../../../services/api/super-admin/adminApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { AdminUser } from '../../../types/super-admin';
-import { mockAuditLogs, type AuditLogEntry } from '../../../mock/adminMockData';
-
-/**
- * @file AdminManagement.tsx
- * @description
- * "Staff" tab is real: it lists real USERS rows with role === 'admin' via
- * `/api/admin/users`, and invite/revoke map onto real
- * createUser({role:'admin'}) / deleteUser calls.
- *
- * The permission-bitmask, 2FA-enrolled, and tiered-role (OWNER/
- * FINANCIAL_ADMIN/SUPPORT_ADMIN/...) concepts from the old mock do NOT exist
- * on the schema — Role is a flat enum with a single "admin" value, no
- * per-admin permissions table. Those UI affordances have been dropped from
- * the invite form (no permission picker, no role-tier picker) since there is
- * nothing real to persist them to.
- *
- * The "Security & Audit Log Trail" tab has NO backing table anywhere in the
- * schema (no audit-log model) — it is left on its original mock data
- * unmodified; do not treat it as live data.
- */
-=======
 import { useToast } from '../../../components/super-admin/Toast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
@@ -68,49 +39,19 @@ interface GeneratedInvite {
   token: string;
   expiresAt: string;
 }
->>>>>>> origin/main
 
 export const AdminManagement: React.FC = () => {
   const { hasPermission } = useAuth();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'staff' | 'audit'>('staff');
-<<<<<<< HEAD
-  const [staffList, setStaffList] = useState<AdminUser[]>([]);
-  const [auditLogs] = useState<AuditLogEntry[]>(mockAuditLogs); // unbacked — see file comment
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-=======
   const [staffList, setStaffList] = useState<AdminStaff[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
->>>>>>> origin/main
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePassword, setInvitePassword] = useState('');
 
-<<<<<<< HEAD
-  const [targetStaff, setTargetStaff] = useState<AdminUser | null>(null);
-  const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const users = await adminApi.listUsers();
-        if (!cancelled) setStaffList(users.filter((u) => u.role === 'admin'));
-      } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load admin staff.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-=======
   // Generated Link Modal State
   const [generatedInvite, setGeneratedInvite] = useState<GeneratedInvite | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
@@ -168,45 +109,8 @@ export const AdminManagement: React.FC = () => {
       isTwoFactorEnabled: false,
       lastLogin: 'Never (Invited)',
       status: 'INVITED'
->>>>>>> origin/main
     };
-  }, []);
 
-<<<<<<< HEAD
-  const handleSendInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim() || !inviteName.trim() || !invitePassword.trim()) return;
-    setActionError(null);
-    try {
-      const created = await adminApi.createUser({
-        name: inviteName,
-        email: inviteEmail,
-        password: invitePassword,
-        role: 'admin'
-      });
-      setStaffList((prev) => [created, ...prev]);
-      setIsInviteModalOpen(false);
-      setInviteName('');
-      setInviteEmail('');
-      setInvitePassword('');
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Failed to create admin user.');
-    }
-  };
-
-  const handleRevokeConfirm = async () => {
-    if (!targetStaff) return;
-    setActionError(null);
-    try {
-      await adminApi.deleteUser(targetStaff.userId);
-      setStaffList((prev) => prev.filter((s) => s.userId !== targetStaff.userId));
-      setIsRevokeDialogOpen(false);
-      setTargetStaff(null);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Failed to revoke admin access.');
-      setIsRevokeDialogOpen(false);
-    }
-=======
     setStaffList([newStaff, ...staffList]);
     setIsInviteModalOpen(false);
 
@@ -232,7 +136,6 @@ export const AdminManagement: React.FC = () => {
     toast.warning('Admin Access Revoked', `All active JWT sessions for ${targetStaff.name} were invalidated.`);
     setIsRevokeDialogOpen(false);
     setTargetStaff(null);
->>>>>>> origin/main
   };
 
   const staffColumns: ColumnDef<AdminUser>[] = [
@@ -246,30 +149,6 @@ export const AdminManagement: React.FC = () => {
       )
     },
     {
-<<<<<<< HEAD
-      header: 'Joined',
-      cell: (row) => new Date(row.createdAt).toLocaleDateString()
-    },
-    {
-      header: 'Actions',
-      align: 'right',
-      cell: (row) => (
-        <button
-          className="admin-btn admin-btn-danger admin-btn-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            setActionError(null);
-            setTargetStaff(row);
-            setIsRevokeDialogOpen(true);
-          }}
-        >
-          Revoke Access
-        </button>
-      )
-    }
-  ];
-
-=======
       header: 'Tier / Role',
       cell: (row) => <StatusBadge status={row.role} />
     },
@@ -340,7 +219,6 @@ export const AdminManagement: React.FC = () => {
   ];
 
   // Audit Logs Table Columns
->>>>>>> origin/main
   const auditColumns: ColumnDef<AuditLogEntry>[] = [
     {
       header: 'Timestamp',
@@ -387,35 +265,6 @@ export const AdminManagement: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-<<<<<<< HEAD
-      {actionError && (
-        <div className="admin-badge badge-danger" style={{ width: '100%', padding: '8px 12px' }}>
-          {actionError}
-        </div>
-      )}
-
-      <AdminTabs
-        tabs={[
-          { id: 'staff', label: 'Admin Staff Directory', count: staffList.length },
-          { id: 'audit', label: 'Security & Audit Log Trail (unbacked, mock)', count: auditLogs.length }
-        ]}
-        activeTab={activeTab}
-        onChange={(t) => setActiveTab(t as 'staff' | 'audit')}
-      />
-
-      {activeTab === 'staff' && (
-        <DataTable
-          title="Administrative Staff"
-          columns={staffColumns}
-          data={staffList}
-          pageSize={6}
-          searchPlaceholder="Search admin staff by name or email..."
-          actions={
-            <button className="admin-btn admin-btn-primary admin-btn-sm" onClick={() => setIsInviteModalOpen(true)}>
-              <PlusIcon size={16} /> Add Admin User
-            </button>
-          }
-=======
       {/* Tab Switcher & Invite Action Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <AdminTabs
@@ -425,7 +274,6 @@ export const AdminManagement: React.FC = () => {
           ]}
           activeTab={activeTab}
           onChange={(tabId) => setActiveTab(tabId as any)}
->>>>>>> origin/main
         />
 
         {activeTab === 'staff' && hasPermission('admins:invite') && (
@@ -461,45 +309,6 @@ export const AdminManagement: React.FC = () => {
         </div>
       )}
 
-<<<<<<< HEAD
-      {activeTab === 'audit' && (
-        <DataTable
-          title="Administrative Audit Trail (mock data — no backing table)"
-          columns={auditColumns}
-          data={auditLogs}
-          pageSize={8}
-          searchPlaceholder="Filter audit records..."
-        />
-      )}
-
-      <ActionModal
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
-        title="Create Admin User"
-        subtitle="Creates a real USERS row with role = admin."
-        width="480px"
-        footer={
-          <>
-            <button type="button" className="admin-btn admin-btn-outline" onClick={() => setIsInviteModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className="admin-btn admin-btn-primary" onClick={handleSendInvite}>
-              Create
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSendInvite} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              NAME
-            </label>
-            <input className="admin-input" value={inviteName} onChange={(e) => setInviteName(e.target.value)} required />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              EMAIL
-=======
       {/* Cryptographic Invitation Modal */}
       <ActionModal
         isOpen={isInviteModalOpen}
@@ -510,34 +319,17 @@ export const AdminManagement: React.FC = () => {
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
               Delegate Email Address
->>>>>>> origin/main
             </label>
             <input
               type="email"
               required
               className="admin-input"
-<<<<<<< HEAD
-=======
               placeholder="e.g. finance.lead@gigsforgigs.internal"
->>>>>>> origin/main
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
             />
           </div>
           <div>
-<<<<<<< HEAD
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              TEMPORARY PASSWORD
-            </label>
-            <input
-              type="password"
-              className="admin-input"
-              value={invitePassword}
-              onChange={(e) => setInvitePassword(e.target.value)}
-              minLength={6}
-              required
-            />
-=======
             <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
               Administrative Role Tier
             </label>
@@ -570,7 +362,6 @@ export const AdminManagement: React.FC = () => {
                 </label>
               ))}
             </div>
->>>>>>> origin/main
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-sm)' }}>
@@ -591,8 +382,6 @@ export const AdminManagement: React.FC = () => {
         </form>
       </ActionModal>
 
-<<<<<<< HEAD
-=======
       {/* Shareable Cryptographic Invite Link Display Modal */}
       <ActionModal
         isOpen={isLinkModalOpen}
@@ -667,7 +456,6 @@ export const AdminManagement: React.FC = () => {
       </ActionModal>
 
       {/* Revoke Session Confirmation */}
->>>>>>> origin/main
       <ConfirmDialog
         isOpen={isRevokeDialogOpen}
         title={`Revoke Access for ${targetStaff?.name}?`}
@@ -675,14 +463,7 @@ export const AdminManagement: React.FC = () => {
         confirmLabel="Revoke All Access"
         isDanger={true}
         onConfirm={handleRevokeConfirm}
-<<<<<<< HEAD
-        title="Revoke Admin Access"
-        message={`Are you sure you want to permanently delete the admin account for ${targetStaff?.name} (${targetStaff?.email})?`}
-        confirmLabel="Revoke & Delete"
-        isDangerous={true}
-=======
         onCancel={() => setIsRevokeDialogOpen(false)}
->>>>>>> origin/main
       />
     </div>
   );

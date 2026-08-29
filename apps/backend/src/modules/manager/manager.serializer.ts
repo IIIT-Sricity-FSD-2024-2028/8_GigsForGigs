@@ -6,13 +6,22 @@
  * gig.serializer.ts.
  */
 import type {
+  Application as DbApplication,
   Deliverable as DbDeliverable,
   GigManagerAssignment as DbAssignment,
   GigProfessionalProfile as DbGigProfile,
   Manager as DbManager,
   Task as DbTask,
-  User as DbUser,
+  User as DbUserWithPassword,
 } from "db";
+
+// The shared PrismaClient (db/index.ts) globally omits User.hashPassword, so
+// every query result actually matches this, not the full generated model.
+type DbUser = Omit<DbUserWithPassword, "hashPassword">;
+
+type ApplicationWithGigProfile = DbApplication & {
+  gigProfile?: (DbGigProfile & { user: DbUser }) | null;
+};
 
 type DeliverableWithGigProfile = DbDeliverable & {
   gigProfile?: (DbGigProfile & { user: DbUser }) | null;
@@ -66,6 +75,21 @@ export function serializeDeliverable(deliverable: DeliverableWithGigProfile) {
     createdAt: deliverable.createdAt.toISOString(),
     ...(deliverable.gigProfile
       ? { gigProfile: { user: { name: deliverable.gigProfile.user.name } } }
+      : {}),
+  };
+}
+
+export function serializeApplication(application: ApplicationWithGigProfile) {
+  return {
+    applicationId: application.applicationId,
+    gigProfileId: application.gigProfileId,
+    taskId: application.taskId,
+    status: application.status,
+    rating: application.rating,
+    hourlyRate: application.hourlyRate !== null ? Number(application.hourlyRate) : null,
+    createdAt: application.createdAt.toISOString(),
+    ...(application.gigProfile
+      ? { gigProfile: { user: { name: application.gigProfile.user.name } } }
       : {}),
   };
 }

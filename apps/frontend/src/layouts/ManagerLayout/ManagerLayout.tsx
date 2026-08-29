@@ -1,6 +1,11 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext/AuthContext';
 import { useManager } from '../../context/ManagerContext/ManagerContext';
+// Despite the name, this stylesheet's own header calls it out as
+// "Section 8 — Client & Manager Portal Styles" — Manager pages just never
+// picked it up. Importing it here makes metric-card/activity-table/
+// status-badge/etc. available to every Manager page, matching Client.
+import '../../pages/client/client.css';
 
 export interface ManagerLayoutProps {
   children: React.ReactNode;

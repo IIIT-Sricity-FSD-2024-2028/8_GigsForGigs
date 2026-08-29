@@ -26,3 +26,9 @@ export const reviewDeliverableSchema = z.object({
   feedback: z.string().max(500).optional(),
 });
 export type ReviewDeliverableDto = z.infer<typeof reviewDeliverableSchema>;
+
+export const shortlistApplicationSchema = z.object({
+  rating: z.coerce.number().int().min(1).max(5).optional(),
+  hourlyRate: z.coerce.number().positive().optional(),
+});
+export type ShortlistApplicationDto = z.infer<typeof shortlistApplicationSchema>;

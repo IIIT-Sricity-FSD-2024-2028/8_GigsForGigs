@@ -4,6 +4,7 @@ import { notFound } from "../../lib/httpError.js";
 import type {
   CreateDeliverableDto,
   ReviewDeliverableDto,
+  ShortlistApplicationDto,
   UpdateManagerDto,
   UpdateManagerProfileDto,
 } from "./manager.dto.js";
@@ -83,6 +84,35 @@ export function listAssignedTasks(managerId: number) {
 /** taskId access already verified by taskAccessGuard. */
 export function getAssignedTask(taskId: number) {
   return prisma.task.findUniqueOrThrow({ where: { taskId }, include: taskInclude });
+}
+
+export function listTaskApplications(taskId: number) {
+  return prisma.application.findMany({
+    where: { taskId },
+    include: { gigProfile: { include: { user: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/** taskId access already verified by taskAccessGuard. */
+export async function shortlistApplication(
+  taskId: number,
+  applicationId: number,
+  dto: ShortlistApplicationDto,
+) {
+  const application = await prisma.application.findUnique({ where: { applicationId } });
+  if (!application || application.taskId !== taskId) {
+    throw notFound("Application not found");
+  }
+
+  return prisma.application.update({
+    where: { applicationId },
+    data: {
+      status: "shortlisted",
+      ...(dto.rating !== undefined ? { rating: dto.rating } : {}),
+      ...(dto.hourlyRate !== undefined ? { hourlyRate: dto.hourlyRate } : {}),
+    },
+  });
 }
 
 export function listTaskDeliverables(taskId: number) {

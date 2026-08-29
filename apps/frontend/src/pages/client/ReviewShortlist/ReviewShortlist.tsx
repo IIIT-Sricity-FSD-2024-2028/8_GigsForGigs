@@ -62,6 +62,8 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
             <tr>
               <th>Candidate</th>
               <th>Project</th>
+              <th>Rating</th>
+              <th>Hourly Rate</th>
               <th>Task Budget</th>
               <th>Actions</th>
             </tr>
@@ -69,7 +71,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
           <tbody>
             {currentApplications.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
                   No pending hire approvals found.
                 </td>
               </tr>
@@ -88,6 +90,12 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                     </div>
                   </td>
                   <td>{a.task_title}</td>
+                  <td>{a.rating ? `${a.rating} / 5` : '—'}</td>
+                  <td>
+                    {a.hourlyRate
+                      ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(a.hourlyRate)
+                      : '—'}
+                  </td>
                   <td className="budget-cell">
                     {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(a.rate)}
                   </td>

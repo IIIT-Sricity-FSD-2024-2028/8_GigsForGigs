@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react';
-=======
 import React, { useState, useEffect } from 'react';
->>>>>>> origin/main
 import { KPICard } from '../../../components/super-admin/KPICard';
 import { DonutChart, HorizontalBarChart } from '../../../components/super-admin/SimpleCharts';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
@@ -12,13 +8,7 @@ import {
   PaymentIcon,
   ProjectIcon
 } from '../../../components/super-admin/Icons';
-<<<<<<< HEAD
-import { adminApi } from '../../../services/api/super-admin/adminApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { AdminDashboardStats, AdminTask, AdminUser } from '../../../types/super-admin';
-=======
 import { adminApi } from '../../../services/api/admin/adminApi';
->>>>>>> origin/main
 
 /**
  * @file Dashboard.tsx
@@ -53,69 +43,6 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-<<<<<<< HEAD
-  const [stats, setStats] = useState<AdminDashboardStats | null>(null);
-  const [recentUsers, setRecentUsers] = useState<AdminUser[]>([]);
-  const [recentTasks, setRecentTasks] = useState<AdminTask[]>([]);
-  const [tasksByStatus, setTasksByStatus] = useState<{ label: string; count: number; color: string }[]>([]);
-  const [usersByRole, setUsersByRole] = useState<{ label: string; count: number; color: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [dashboardStats, users, tasks] = await Promise.all([
-          adminApi.getDashboardStats(),
-          adminApi.listUsers(),
-          adminApi.listTasks()
-        ]);
-        if (cancelled) return;
-        setStats(dashboardStats);
-        setRecentUsers(users.slice(0, 5));
-        setRecentTasks(tasks.slice(0, 5));
-
-        const statusCounts = tasks.reduce<Record<string, number>>((acc, t) => {
-          acc[t.status] = (acc[t.status] ?? 0) + 1;
-          return acc;
-        }, {});
-        setTasksByStatus(
-          Object.entries(statusCounts).map(([label, count]) => ({
-            label,
-            count,
-            color: STATUS_COLORS[label] ?? '#888'
-          }))
-        );
-
-        const roleCounts = users.reduce<Record<string, number>>((acc, u) => {
-          acc[u.role] = (acc[u.role] ?? 0) + 1;
-          return acc;
-        }, {});
-        setUsersByRole(
-          Object.entries(roleCounts).map(([label, count]) => ({
-            label,
-            count,
-            color: ROLE_COLORS[label] ?? '#888'
-          }))
-        );
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load dashboard data.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const userColumns: ColumnDef<AdminUser>[] = [
-=======
   const [kpis, setKpis] = useState({
     grossMerchandiseVolume: 0,
     platformRevenue: 0,
@@ -180,7 +107,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   // Table Columns
   const userColumns: ColumnDef<any>[] = [
->>>>>>> origin/main
     {
       header: 'Organization / Name',
       cell: (row) => (
@@ -196,27 +122,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     },
     {
       header: 'Joined',
-<<<<<<< HEAD
-      cell: (row) => new Date(row.createdAt).toLocaleString()
-    }
-  ];
-
-  const taskColumns: ColumnDef<AdminTask>[] = [
-=======
       accessorKey: 'joinedDate'
     }
   ];
 
   const projectColumns: ColumnDef<any>[] = [
->>>>>>> origin/main
     {
       header: 'Task Title',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.title}</span>
-<<<<<<< HEAD
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Client: {row.client.clientName}</span>
-=======
           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{row.id}</span>
         </div>
       )
@@ -227,7 +142,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-primary-dark)' }}>{row.clientName}</span>
           <span style={{ color: 'var(--color-text-muted)' }}>$\\rightarrow$ {row.gigProName || 'Open Bidding'}</span>
->>>>>>> origin/main
         </div>
       )
     },
@@ -238,13 +152,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     {
       header: 'Status',
       cell: (row) => <StatusBadge status={row.status} />
-<<<<<<< HEAD
-    },
-    {
-      header: 'Due Date',
-      cell: (row) => (row.dueDate ? new Date(row.dueDate).toLocaleDateString() : '—')
-=======
->>>>>>> origin/main
     }
   ];
 
@@ -269,20 +176,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
-<<<<<<< HEAD
-      {/* ── KPI Metrics Grid ────────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: 'var(--spacing-lg)'
-        }}
-      >
-        <KPICard
-          title="Platform GMV"
-          value={`$${(stats?.grossMerchandiseVolume ?? 0).toLocaleString()}`}
-          subtitle="Sum of completed payments"
-=======
       {/* Urgent Dispute Alert Callout */}
       {kpis.pendingDisputes > 0 && (
         <div
@@ -330,93 +223,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           deltaText="+18.4% vs last mo"
           isPositive={true}
           subtitle="Total platform contract flow"
->>>>>>> origin/main
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-blue)"
         />
         <KPICard
-<<<<<<< HEAD
-          title="Active Contracts"
-          value={(stats?.activeTasks ?? 0).toLocaleString()}
-          subtitle="Open + in-progress tasks"
-          icon={<ProjectIcon size={20} />}
-          accentColor="var(--color-primary-dark)"
-        />
-        <KPICard
-          title="Total Registered Users"
-          value={(stats?.totalUsers ?? 0).toLocaleString()}
-          subtitle={`${stats?.totalClients ?? 0} Clients · ${stats?.totalGigPros ?? 0} Gig Pros · ${stats?.totalManagers ?? 0} Managers`}
-          icon={<UsersIcon size={20} />}
-          accentColor="var(--color-secondary)"
-        />
-        <KPICard
-          title="Avg. Platform Rating"
-          value={(stats?.avgPlatformRating ?? 0).toFixed(2)}
-          subtitle={`${stats?.totalApplications ?? 0} total applications`}
-          icon={<PaymentIcon size={20} />}
-          accentColor="var(--color-primary-blue)"
-        />
-      </div>
-
-      {/* ── Chart Visualizations ────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-          gap: 'var(--spacing-lg)'
-        }}
-      >
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
-          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>
-            Tasks by Lifecycle Status
-          </h3>
-          <DonutChart data={tasksByStatus} size={160} />
-        </div>
-
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
-          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>
-            User Community Distribution
-          </h3>
-          <HorizontalBarChart data={usersByRole} />
-        </div>
-      </div>
-      {/* Note: a 7-day GMV velocity time series (as in the old mock) has no
-          backing endpoint — dashboard/stats only returns lifetime aggregates,
-          not a daily breakdown — so that chart has been dropped rather than
-          faked. Same for escrow-held and pending-disputes: no such tables. */}
-
-      {/* ── Recent Activity Tables ──────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))',
-          gap: 'var(--spacing-lg)'
-        }}
-      >
-        <DataTable
-          title="Recent User Registrations"
-          columns={userColumns}
-          data={recentUsers}
-          pageSize={5}
-          searchPlaceholder="Filter recent signups..."
-          onRowClick={(user) => {
-            if (onNavigate) {
-              if (user.role === 'client') onNavigate('clients');
-              else if (user.role === 'gig_professional') onNavigate('gig-pros');
-              else if (user.role === 'manager') onNavigate('managers');
-            }
-          }}
-        />
-
-        <DataTable
-          title="Recent Platform Tasks"
-          columns={taskColumns}
-          data={recentTasks}
-          pageSize={5}
-          searchPlaceholder="Filter recent tasks..."
-          onRowClick={() => onNavigate && onNavigate('projects')}
-        />
-=======
           title="Platform Take Revenue"
           value={`$${kpis.platformRevenue.toLocaleString()}`}
           deltaText="+10.0% standard rake"
@@ -531,7 +341,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             searchPlaceholder="Filter tasks..."
           />
         </div>
->>>>>>> origin/main
       </div>
     </div>
   );

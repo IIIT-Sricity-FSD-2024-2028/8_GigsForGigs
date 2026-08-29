@@ -187,6 +187,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser((prev) => (prev ? { ...prev, ...patch } : null));
   }, []);
 
+  // No permission/ACL table exists on the backend — admin is a flat role.
+  // Any authenticated super admin can do anything an admin route allows;
+  // this just satisfies the super-admin pages that gate on named permissions.
+  const hasPermission = useCallback(
+    (_permission: string) => user?.role === 'SUPER_ADMIN',
+    [user],
+  );
+
   return (
     <AuthContextInstance.Provider
       value={{
@@ -201,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         logoutManager,
         updateUserSession,
+        hasPermission,
       }}
     >
       {children}
