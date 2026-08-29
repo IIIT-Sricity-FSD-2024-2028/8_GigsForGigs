@@ -16,7 +16,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
   const nonOpenTasks = tasks.filter(t => t.status !== 'OPEN');
 
-  const activeCount = activeTasks.length;
+  const activeCount = activeTasks.length;                                                 
   const pendingCount = openTasks.length;
   
   // Total spent calculated dynamically (base mock of 4250 + completed tasks budgets)

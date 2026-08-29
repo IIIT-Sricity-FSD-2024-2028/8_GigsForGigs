@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useClient } from '../../../context/ClientContext';
 
+// Props received from the parent component.
+// onNavigate is a callback function supplied by the parent for navigation.
+// params contains optional parameters such as editId when editing an existing task.
 export interface PostGigProps {
   onNavigate: (viewId: string) => void;
   params?: Record<string, string>;
 }
-
+// Destructure the props passed by the parent component.
+// onNavigate -> callback from parent
+// params -> optional data from parent
 export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
+// Access shared task data and task operations from ClientContext.
+// tasks -> shared task data
+// addTask -> creates a new task
+// updateTask -> updates an existing task
   const { addTask, updateTask, tasks } = useClient();
+  // params is a prop received from the parent.
+// editId is extracted to determine whether this page is being
+// used to create a new task or edit an existing task.
   const editId = params?.editId;
-
+// Local state stores the values entered in the form.
+// These values belong to the PostGig component.
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState<number | ''>('');
@@ -47,6 +60,9 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
         await addTask(title, description, Number(budget), category, duration, skills);
         alert('Task published successfully!');
       }
+// Callback received from the parent.
+// Calling onNavigate() sends an event/message from this child component
+// back to the parent, asking it to navigate to the dashboard.
       onNavigate('dashboard');
     } catch (err) {
       console.error('Save task failed:', err);
@@ -74,6 +90,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
             type="text"
             id="gig-title"
             className="form-input"
+              // Updates the local title state whenever the user types.
             placeholder="e.g. Need a Senior React Developer for 3 months"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -200,6 +217,9 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
           <button
             type="button"
             className="btn btn-outline"
+// Child-to-parent communication using the callback prop.
+  // The child does not perform navigation directly;
+  // it calls the parent's navigation function.
             onClick={() => onNavigate('dashboard')}
           >
             Cancel
