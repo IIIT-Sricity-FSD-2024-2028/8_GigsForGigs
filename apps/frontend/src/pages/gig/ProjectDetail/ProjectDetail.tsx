@@ -8,24 +8,36 @@
 import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
 
 export const ProjectDetail: React.FC = () => {
   const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable } = useGig();
   const [task, setTask] = useState<GigTask | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    gigApi.getActiveTasks().then((active) => {
-      if (mounted) {
-        const found = active.find((t) => t.task_id === selectedTaskId) || active[0] || null;
-        setTask(found);
-        setLoading(false);
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const active = await gigApi.getActiveTasks();
+        if (mounted) {
+          const found = active.find((t) => t.task_id === selectedTaskId) || active[0] || null;
+          setTask(found);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load task.');
+          setLoading(false);
+        }
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -48,7 +60,7 @@ export const ProjectDetail: React.FC = () => {
       <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center' }}>
         <h2 style={{ color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>Task Not Found</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-lg)' }}>
-          The requested task could not be found or is no longer active.
+          {error || 'The requested task could not be found or is no longer active.'}
         </p>
         <button className="admin-btn admin-btn-primary" onClick={() => setActiveTab('active-tasks')}>
           Back to Active Tasks

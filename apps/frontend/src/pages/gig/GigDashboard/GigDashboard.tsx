@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask, PendingRequest, CompletedProject, EarningsSummary } from '../../../types/gig';
 
 export const GigDashboard: React.FC = () => {
@@ -19,27 +20,39 @@ export const GigDashboard: React.FC = () => {
   const [completedProjects, setCompletedProjects] = useState<CompletedProject[]>([]);
   const [earnings, setEarnings] = useState<EarningsSummary>({ totalEarnings: 0, completedTasks: 0, payments: [] });
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
 
-    Promise.all([
-      gigApi.getActiveTasks(),
-      gigApi.getPendingRequests(),
-      gigApi.getCompletedProjects(),
-      gigApi.getEarnings()
-    ]).then(([active, pending, completed, earn]) => {
+    const load = async () => {
       if (mounted) {
-        setActiveTasks(active);
-        setPendingRequests(pending);
-        setCompletedProjects(completed);
-        setEarnings(earn);
-        setLoading(false);
+        setLoading(true);
+        setError(null);
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+      try {
+        const [active, pending, completed, earn] = await Promise.all([
+          gigApi.getActiveTasks(),
+          gigApi.getPendingRequests(),
+          gigApi.getCompletedProjects(),
+          gigApi.getEarnings()
+        ]);
+        if (mounted) {
+          setActiveTasks(active);
+          setPendingRequests(pending);
+          setCompletedProjects(completed);
+          setEarnings(earn);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load dashboard data.');
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -51,7 +64,7 @@ export const GigDashboard: React.FC = () => {
       await gigApi.respondToRequest(applicationId, action);
       triggerRefresh();
     } catch (err) {
-      console.error('Failed responding to request:', err);
+      setError(err instanceof ApiError ? err.message : 'Failed responding to request.');
     }
   };
 
@@ -71,6 +84,21 @@ export const GigDashboard: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* ── Page Header Banner ────────────────────────────────────────────── */}
       <div
         className="admin-card"

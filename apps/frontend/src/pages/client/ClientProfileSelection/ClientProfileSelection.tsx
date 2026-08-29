@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useClient, type ManagerInvite } from '../../../context/ClientContext';
 
 export interface ClientProfileSelectionProps {
@@ -7,25 +7,28 @@ export interface ClientProfileSelectionProps {
 }
 
 export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ onNavigate }) => {
-  const { login } = useAuth();
+  const { user } = useAuth();
   const { managers, updateManager, deleteManager } = useClient();
 
   const [editingManager, setEditingManager] = useState<ManagerInvite | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
 
-  const handleProfileSelect = async (role: string, email: string, name?: string) => {
-    await login(email, 'password5', role, name);
-    if (role === 'MANAGER') {
-      onNavigate('manager-dashboard');
-    } else {
-      onNavigate('dashboard');
-    }
+  // There is no backend concept of a client "becoming" a manager without
+  // that manager's own credentials, so selecting the client's own avatar
+  // just returns to the dashboard; manager avatars are management-only here
+  // (edit/delete) — a manager must sign in themselves via the manager login.
+  const handleProfileSelect = () => {
+    onNavigate('dashboard');
   };
 
   const handleStartEdit = (e: React.MouseEvent, mgr: ManagerInvite) => {
     e.stopPropagation();
     e.preventDefault();
+    if (mgr.kind !== 'manager') {
+      alert('This manager has only been invited and has not accepted yet — nothing to edit until they accept.');
+      return;
+    }
     setEditingManager(mgr);
     setEditName(mgr.name);
     setEditEmail(mgr.email);
@@ -34,16 +37,30 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingManager && editName && editEmail) {
-      await updateManager(editingManager.invite_id, editName, editEmail);
-      setEditingManager(null);
+      try {
+        await updateManager(editingManager.invite_id, editName, editEmail);
+        setEditingManager(null);
+      } catch (err) {
+        console.error('Update manager failed:', err);
+        alert('Failed to update this manager. Please try again.');
+      }
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+  const handleDelete = async (e: React.MouseEvent, mgr: ManagerInvite) => {
     e.stopPropagation();
     e.preventDefault();
-    if (window.confirm(`Are you sure you want to remove ${name} from your team?`)) {
-      await deleteManager(id);
+    if (mgr.kind !== 'manager') {
+      alert('This manager has only been invited and has not accepted yet — nothing to remove yet.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to remove ${mgr.name} from your team?`)) {
+      try {
+        await deleteManager(mgr.invite_id);
+      } catch (err) {
+        console.error('Delete manager failed:', err);
+        alert('Failed to remove this manager. Please try again.');
+      }
     }
   };
 
@@ -80,16 +97,16 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
           
           {/* Admin Profile */}
           <button
-            onClick={() => handleProfileSelect('CLIENT', 'aditya@gigsforgigs.com', 'Aditya')}
+            onClick={handleProfileSelect}
             className="profile-avatar-btn"
             type="button"
             style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
           >
             <div className="avatar-square" style={{ width: '120px', height: '120px', borderRadius: '16px', backgroundColor: '#0D568D', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 800, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-              A
+              {(user?.name || '?').charAt(0).toUpperCase()}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '12px' }}>
-              <span className="avatar-name" style={{ fontSize: '1.125rem', color: '#1A202C', fontWeight: 700 }}>Aditya</span>
+              <span className="avatar-name" style={{ fontSize: '1.125rem', color: '#1A202C', fontWeight: 700 }}>{user?.name || 'You'}</span>
               <span className="avatar-role" style={{ fontSize: '0.85rem', color: '#76594F', fontWeight: 600 }}>Client Owner</span>
             </div>
           </button>
@@ -113,11 +130,9 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 position: 'relative'
               }}
             >
-              <button
-                onClick={() => handleProfileSelect('MANAGER', mgr.email, mgr.name)}
+              <div
                 className="profile-avatar-btn"
-                type="button"
-                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                style={{ padding: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
               >
                 <div
                   className="avatar-square"
@@ -141,13 +156,13 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                     {mgr.name}
                   </span>
                   <span className="avatar-role" style={{ fontSize: '0.78rem', color: '#76594F', fontWeight: 600, marginTop: '2px' }}>
-                    Manager
+                    {mgr.kind === 'manager' ? 'Manager' : 'Manager (Invite Pending)'}
                   </span>
                   <span style={{ fontSize: '0.72rem', color: '#A0AEC0', marginTop: '2px' }}>
                     {mgr.email}
                   </span>
                 </div>
-              </button>
+              </div>
 
               {/* Action Buttons: Edit & Delete */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
@@ -172,7 +187,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                   ✏️ Edit
                 </button>
                 <button
-                  onClick={(e) => handleDelete(e, mgr.invite_id, mgr.name)}
+                  onClick={(e) => handleDelete(e, mgr)}
                   title="Remove manager"
                   type="button"
                   style={{

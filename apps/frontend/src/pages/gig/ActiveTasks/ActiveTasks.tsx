@@ -9,23 +9,35 @@
 import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
 
 export const ActiveTasks: React.FC = () => {
   const { navigateToTaskDetail, navigateToSubmitDeliverable, refreshTrigger } = useGig();
   const [activeTasks, setActiveTasks] = useState<GigTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    gigApi.getActiveTasks().then((tasks) => {
-      if (mounted) {
-        setActiveTasks(tasks);
-        setLoading(false);
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const tasks = await gigApi.getActiveTasks();
+        if (mounted) {
+          setActiveTasks(tasks);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load active tasks.');
+          setLoading(false);
+        }
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -45,6 +57,21 @@ export const ActiveTasks: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* Header */}
       <div className="admin-card" style={{ padding: 'var(--spacing-xl)' }}>
         <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>

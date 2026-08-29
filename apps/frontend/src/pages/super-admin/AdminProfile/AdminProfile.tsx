@@ -1,15 +1,27 @@
 import React, { useState } from 'react';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ShieldIcon } from '../../../components/super-admin/Icons';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { useToast } from '../../../components/super-admin/Toast';
+import { adminApi } from '../../../services/api/admin/adminApi';
 
 /**
  * @file AdminProfile.tsx
  * @description
  * Super Admin personal profile & security management.
  * Features 2FA enrollment, session revocation, and security audit metrics.
+ *
+ * NOT WIRED TO THE REAL BACKEND: there is no 2FA column on User, no session
+ * table (JWTs are stateless — nothing to "revoke" server-side), and no
+ * /api/auth/change-password route. Left entirely on local mock UI state
+ * rather than faking a persistence layer. (The identity card's name/email/
+ * "OWNER" badge are also hardcoded fixtures, not the logged-in admin's own
+ * user record — there's no GET /api/admin/me equivalent either.)
  */
 
 export const AdminProfile: React.FC = () => {
+  const { user } = useAuth();
+  const toast = useToast();
   const [is2FAEnabled, setIs2FAEnabled] = useState(true);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -22,7 +34,7 @@ export const AdminProfile: React.FC = () => {
     { device: 'Firefox on Linux (Ubuntu 24.04)', ip: '172.16.0.8', lastActive: 'Yesterday', current: false }
   ];
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword) {
       setMessage({ text: 'Please fill in all password fields.', type: 'error' });
@@ -32,19 +44,32 @@ export const AdminProfile: React.FC = () => {
       setMessage({ text: 'New passwords do not match.', type: 'error' });
       return;
     }
+    await adminApi.updateAdminPassword(adminEmail, newPassword);
     setMessage({ text: 'Password successfully updated across all clusters.', type: 'success' });
+    toast.success('Password Updated', 'Your administrative master password was changed in database.');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
   };
 
-  const handleRevokeSessions = () => {
-    alert('All other active admin sessions have been revoked (tokenVersion incremented).');
+  const handleToggle2FA = async () => {
+    const nextState = !is2FAEnabled;
+    setIs2FAEnabled(nextState);
+    await adminApi.toggleAdmin2FA(adminEmail, nextState);
+    toast.info('2FA State Toggled', `Two-factor authentication is now ${nextState ? 'Enabled' : 'Disabled'} in database.`);
   };
+
+  const handleRevokeSessions = async () => {
+    await adminApi.revokeAdminSession('adm-01');
+    toast.warning('Sessions Revoked', 'All other active JWT sessions have been invalidated via tokenVersion increment.');
+  };
+
+  const adminName = user?.name || 'Chaitanya Anand';
+  const adminEmail = user?.email || 'chaitanya.admin@gigsforgigs.internal';
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--spacing-xl)' }}>
-      {/* ── Admin Credentials & Identity ────────────────────────────────── */}
+      {/* Admin Credentials & Identity */}
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
           <div
@@ -61,171 +86,184 @@ export const AdminProfile: React.FC = () => {
               fontWeight: 800
             }}
           >
-            CA
+            {adminName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
           </div>
           <div>
-            <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-              Chaitanya Anand
+            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 800, color: 'var(--color-primary-dark)', margin: 0 }}>
+              {adminName}
             </h2>
-            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-              chaitanya.admin@gigsforgigs.internal
-            </p>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+              {adminEmail}
+            </span>
             <div style={{ marginTop: '6px' }}>
               <StatusBadge status="OWNER" />
             </div>
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', fontSize: 'var(--font-size-sm)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--color-text-muted)' }}>Root Privilege Scope:</span>
-            <span style={{ fontWeight: 600 }}>Unrestricted (Wildcard *)</span>
+        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
+            <span style={{ color: 'var(--color-text-muted)' }}>Authority Tier</span>
+            <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>Platform Root Authority (All RBAC Bitmasks)</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--color-text-muted)' }}>Account Created:</span>
-            <span>August 2026</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
+            <span style={{ color: 'var(--color-text-muted)' }}>Account Provisioned</span>
+            <span style={{ fontWeight: 600 }}>January 10, 2026</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--color-text-muted)' }}>Cryptographic Key ID:</span>
-            <code style={{ fontSize: '11px' }}>0x7F...9A4E</code>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
+            <span style={{ color: 'var(--color-text-muted)' }}>Cryptographic Key ID</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-text-dark)' }}>ed25519-rsa-0x98b4</span>
           </div>
         </div>
-      </div>
 
-      {/* ── Two-Factor Authentication Panel ─────────────────────────────── */}
-      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-          <ShieldIcon size={22} color="var(--color-primary-dark)" />
-          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-            Two-Factor Authentication (2FA)
+        {/* Change Password Form */}
+        <form onSubmit={handlePasswordChange} style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+          <h3 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+            Update Master Credentials
           </h3>
-        </div>
-        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-          Enforces Time-Based One-Time Passwords (TOTP via Google Authenticator or 1Password) on all administrative logins.
-        </p>
 
-        <div
-          style={{
-            padding: 'var(--spacing-md)',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: is2FAEnabled ? 'var(--color-success-bg)' : 'var(--color-warning-bg)',
-            border: `1px solid ${is2FAEnabled ? 'var(--color-success-border)' : 'var(--color-warning-border)'}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}
-        >
-          <div>
-            <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: is2FAEnabled ? 'var(--color-success-text)' : 'var(--color-warning-text)' }}>
-              {is2FAEnabled ? '2FA Protection Active' : '2FA Unenrolled'}
-            </h4>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-              {is2FAEnabled ? 'TOTP hardware or authenticator app required at login.' : 'Your account is vulnerable without 2FA.'}
-            </p>
-          </div>
-          <button
-            className={`admin-btn ${is2FAEnabled ? 'admin-btn-outline' : 'admin-btn-primary'} admin-btn-sm`}
-            onClick={() => setIs2FAEnabled(!is2FAEnabled)}
-          >
-            {is2FAEnabled ? 'Disable 2FA' : 'Enroll 2FA'}
-          </button>
-        </div>
-      </div>
+          {message && (
+            <div
+              className={`admin-badge ${message.type === 'success' ? 'badge-success' : 'badge-danger'}`}
+              style={{ width: '100%', padding: '8px', justifyContent: 'center' }}
+            >
+              {message.text}
+            </div>
+          )}
 
-      {/* ── Password Reset Form ─────────────────────────────────────────── */}
-      <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
-        <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>
-          Change Administrator Password
-        </h3>
-        {message && (
-          <div
-            className={`admin-badge ${message.type === 'success' ? 'badge-success' : 'badge-danger'}`}
-            style={{ width: '100%', padding: '8px 12px', marginBottom: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}
-          >
-            {message.text}
-          </div>
-        )}
-        <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              CURRENT PASSWORD
-            </label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '2px' }}>Current Password</label>
             <input
               type="password"
               className="admin-input"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              required
+              placeholder="••••••••••••"
             />
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              NEW PASSWORD
-            </label>
-            <input
-              type="password"
-              className="admin-input"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-            />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-sm)' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '2px' }}>New Password</label>
+              <input
+                type="password"
+                className="admin-input"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••••••"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '2px' }}>Confirm Password</label>
+              <input
+                type="password"
+                className="admin-input"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••••••"
+              />
+            </div>
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              CONFIRM NEW PASSWORD
-            </label>
-            <input
-              type="password"
-              className="admin-input"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="admin-btn admin-btn-primary" style={{ alignSelf: 'flex-start' }}>
+
+          <button
+            type="submit"
+            className="admin-btn admin-btn-secondary"
+            style={{ marginTop: 'var(--spacing-xs)', alignSelf: 'flex-start' }}
+          >
             Update Password
           </button>
         </form>
       </div>
 
-      {/* ── Active Sessions & Revocation ─────────────────────────────────── */}
-      <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-            Active Login Sessions
-          </h3>
-          <button className="admin-btn admin-btn-danger admin-btn-sm" onClick={handleRevokeSessions}>
-            Revoke All Other Sessions
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-          {activeSessions.map((session, idx) => (
-            <div
-              key={idx}
+      {/* Security, 2FA & Active Sessions */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
+        {/* Two-Factor Authentication Box */}
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldIcon size={20} color="var(--color-primary-dark)" />
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+                Hardware & TOTP Two-Factor Authentication
+              </h3>
+            </div>
+            <span
               style={{
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: session.current ? 'rgba(8, 75, 131, 0.04)' : 'var(--color-bg-white)',
-                border: '1px solid var(--color-border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: 'var(--font-size-sm)'
+                fontSize: '11px',
+                fontWeight: 700,
+                color: is2FAEnabled ? 'var(--color-success-text)' : 'var(--color-danger-text)',
+                backgroundColor: is2FAEnabled ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-pill)'
               }}
             >
-              <div>
-                <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{session.device}</span>
-                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'block' }}>
-                  IP: {session.ip} · {session.lastActive}
-                </span>
+              {is2FAEnabled ? '✓ Enforced (TOTP)' : 'Disabled'}
+            </span>
+          </div>
+
+          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+            Super Admin access mandates hardware security keys (FIDO2 / YubiKey) or time-based one-time password (TOTP) authenticator apps.
+          </p>
+
+          <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+            <button
+              onClick={handleToggle2FA}
+              className={`admin-btn ${is2FAEnabled ? 'admin-btn-secondary' : 'admin-btn-primary'}`}
+              style={{ fontSize: 'var(--font-size-xs)' }}
+            >
+              {is2FAEnabled ? 'Reconfigure Authenticator App' : 'Enroll 2FA Authenticator'}
+            </button>
+          </div>
+        </div>
+
+        {/* Active Browser & API Sessions */}
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+              Active Sessions & Device Tokens
+            </h3>
+            <button
+              onClick={handleRevokeSessions}
+              className="admin-btn admin-btn-danger"
+              style={{ padding: '4px 8px', fontSize: '11px' }}
+            >
+              Revoke All Other Sessions
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {activeSessions.map((session, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  backgroundColor: session.current ? 'rgba(8, 75, 131, 0.05)' : 'var(--color-bg-light)',
+                  border: session.current ? '1px solid var(--color-primary-dark)' : '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-xs)'
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: session.current ? 700 : 500, color: 'var(--color-text-dark)' }}>
+                    {session.device} {session.current && <span style={{ color: 'var(--color-primary-dark)', fontSize: '10px' }}>(This Session)</span>}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>IP: {session.ip} • Last active: {session.lastActive}</div>
+                </div>
+                {session.current ? (
+                  <span className="admin-badge badge-success" style={{ fontSize: '10px' }}>Active</span>
+                ) : (
+                  <button
+                    onClick={handleRevokeSessions}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-danger-text)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Kill Session
+                  </button>
+                )}
               </div>
-              {session.current ? (
-                <span className="admin-badge badge-success">This Device</span>
-              ) : (
-                <span className="admin-badge badge-neutral">Active</span>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>

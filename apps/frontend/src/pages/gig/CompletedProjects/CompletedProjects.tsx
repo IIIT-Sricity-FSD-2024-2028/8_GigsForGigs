@@ -7,22 +7,34 @@
 
 import React, { useEffect, useState } from 'react';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { CompletedProject } from '../../../types/gig';
 
 export const CompletedProjects: React.FC = () => {
   const [projects, setProjects] = useState<CompletedProject[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    gigApi.getCompletedProjects().then((res) => {
-      if (mounted) {
-        setProjects(res);
-        setLoading(false);
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const res = await gigApi.getCompletedProjects();
+        if (mounted) {
+          setProjects(res);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load completed projects.');
+          setLoading(false);
+        }
       }
-    }).catch(() => {
-      if (mounted) setLoading(false);
-    });
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -42,6 +54,21 @@ export const CompletedProjects: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* Banner */}
       <div className="admin-card" style={{ padding: 'var(--spacing-xl)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>

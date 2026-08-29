@@ -24,22 +24,25 @@ model User {
 }
 
 model Client {
-  clientId        Int       @id @default(autoincrement()) @map("client_id")
-  userId          Int       @unique @map("user_id")
-  clientName      String    @map("client_name") @db.VarChar(100)
-  numberOfManager Int       @default(0) @map("number_of_manager")
-  domain          String?   @db.VarChar(100)
-  user            User      @relation(fields: [userId], references: [userId])
+  clientId        Int              @id @default(autoincrement()) @map("client_id")
+  userId          Int              @unique @map("user_id")
+  clientName      String           @map("client_name") @db.VarChar(100)
+  numberOfManager Int              @default(0) @map("number_of_manager")
+  domain          String?          @db.VarChar(100)
+  user            User             @relation(fields: [userId], references: [userId])
   managers        Manager[]
   tasks           Task[]
+  managerInvites  ManagerInvite[]
+  serviceRequests ServiceRequest[]
 
   @@map("CLIENT")
 }
 
 model Manager {
   clientId    Int                    @map("client_id")
-  managerId   Int                    @unique @map("manager_id")
+  managerId   Int                    @unique @default(autoincrement()) @map("manager_id")
   userId      Int                    @unique @map("user_id")
+  createdAt   DateTime               @default(now()) @map("created_at")
   assignments GigManagerAssignment[]
   client      Client                 @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
   user        User                   @relation(fields: [userId], references: [userId])
@@ -60,6 +63,7 @@ model GigProfessionalProfile {
   portfolio    ProfilePortfolio[]
   skills       ProfileSkill[]
   tools        ProfileTool[]
+  services     Service[]
 
   @@map("GIG_PROFESSIONAL_PROFILE")
 }
@@ -96,9 +100,14 @@ model Task {
   clientId     Int                    @map("client_id")
   title        String                 @db.VarChar(255)
   description  String?
+  category     String?                @db.VarChar(50)
+  duration     String?                @db.VarChar(50)
+  skills       String[]               @default([])
   budget       Decimal                @db.Decimal(10, 2)
   dueDate      DateTime?              @map("due_date") @db.Date
   status       TaskStatus             @default(open)
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
   applications Application[]
   deliverables Deliverable[]
   assignments  GigManagerAssignment[]
@@ -114,6 +123,8 @@ model Application {
   gigProfileId  Int                    @map("gig_profile_id")
   taskId        Int                    @map("task_id")
   status        ApplicationStatus      @default(pending)
+  rating        Int?
+  hourlyRate    Decimal?               @map("hourly_rate") @db.Decimal(8, 2)
   createdAt     DateTime               @default(now()) @map("created_at")
   gigProfile    GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
   task          Task                   @relation(fields: [taskId], references: [taskId])
@@ -142,6 +153,7 @@ model Deliverable {
   gigProfileId   Int                    @map("gig_profile_id")
   description    String                 @db.VarChar(500)
   submissionPath String                 @map("submission_path") @db.VarChar(500)
+  feedback       String?                @db.VarChar(500)
   status         DeliverableStatus      @default(submitted)
   createdAt      DateTime               @default(now()) @map("created_at")
   gigProfile     GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
@@ -182,10 +194,70 @@ model Review {
   @@map("REVIEWS")
 }
 
+/// A service offered by a gig professional, browsable by clients.
+model Service {
+  serviceId    Int                    @id @default(autoincrement()) @map("service_id")
+  gigProfileId Int                    @map("gig_profile_id")
+  title        String                 @db.VarChar(255)
+  description  String?
+  price        Decimal                @db.Decimal(10, 2)
+  thumbnail    String?                @db.VarChar(500)
+  status       ServiceStatus          @default(active)
+  createdAt    DateTime               @default(now()) @map("created_at")
+  profile      GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId], onDelete: Cascade)
+  tags         ServiceTag[]
+  requests     ServiceRequest[]
+
+  @@map("SERVICE")
+}
+
+/// Free-form tags on a service. Mirrors the PROFILE_SKILLS join-table pattern.
+model ServiceTag {
+  serviceId Int     @map("service_id")
+  tag       String  @db.VarChar(100)
+  service   Service @relation(fields: [serviceId], references: [serviceId], onDelete: Cascade)
+
+  @@id([serviceId, tag])
+  @@map("SERVICE_TAGS")
+}
+
+/// A client requesting a gig professional's service. Distinct from APPLICATION,
+/// which runs the other direction (gig professional applies to a client's task).
+model ServiceRequest {
+  requestId Int                  @id @default(autoincrement()) @map("request_id")
+  serviceId Int                  @map("service_id")
+  clientId  Int                  @map("client_id")
+  status    ServiceRequestStatus @default(pending)
+  createdAt DateTime             @default(now()) @map("created_at")
+  service   Service              @relation(fields: [serviceId], references: [serviceId])
+  client    Client               @relation(fields: [clientId], references: [clientId])
+
+  @@unique([serviceId, clientId], map: "uq_service_request")
+  @@map("SERVICE_REQUEST")
+}
+
+/// Stands alone by design: a client invites by name + email BEFORE a USERS row
+/// exists, so this cannot hang off MANAGER (which requires a user_id).
+/// On accept it records acceptedUserId and the MANAGER row is created.
+model ManagerInvite {
+  inviteId       Int          @id @default(autoincrement()) @map("invite_id")
+  clientId       Int          @map("client_id")
+  name           String       @db.VarChar(100)
+  email          String       @db.VarChar(100)
+  status         InviteStatus @default(pending)
+  acceptedUserId Int?         @map("accepted_user_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  client         Client       @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@unique([clientId, email], map: "uq_manager_invite")
+  @@map("MANAGER_INVITE")
+}
+
 enum Role {
   client
   gig_professional
   manager
+  admin
 }
 
 enum TaskStatus {
@@ -196,6 +268,7 @@ enum TaskStatus {
 
 enum ApplicationStatus {
   pending
+  shortlisted
   accepted
   declined
 }
@@ -204,10 +277,29 @@ enum DeliverableStatus {
   submitted
   approved
   revision_requested
+  closed
 }
 
 enum PaymentStatus {
   pending
   completed
   failed
+}
+
+enum ServiceStatus {
+  active
+  paused
+  archived
+}
+
+enum ServiceRequestStatus {
+  pending
+  accepted
+  declined
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  revoked
 }

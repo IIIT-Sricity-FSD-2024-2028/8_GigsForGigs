@@ -1,67 +1,91 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
-import { mockProjects, type PlatformProject } from '../../../mock/adminMockData';
+import { adminApi } from '../../../services/api/super-admin/adminApi';
+import { ApiError } from '../../../services/api/httpClient';
+import type { AdminTask, TaskStatus } from '../../../types/super-admin';
 
 /**
  * @file Projects.tsx
  * @description
- * Platform-wide task and contract supervisor across all lifecycle stages.
- * Provides deep milestone inspection and emergency administrative status overrides.
+ * Platform-wide task monitor backed by real `/api/admin/tasks` data.
+ *
+ * The real `TaskStatus` enum is only `open | in_progress | completed` — the
+ * mock's REVIEWING/ASSIGNED/DISPUTED/CANCELLED statuses and milestone/
+ * deliverables-submitted counters don't exist on the schema, so the status
+ * override dropdown only offers the three real values and the milestone
+ * counters have been dropped rather than faked.
  */
 
 export const Projects: React.FC = () => {
-  const [projects, setProjects] = useState<PlatformProject[]>(mockProjects);
-  const [selectedProject, setSelectedProject] = useState<PlatformProject | null>(null);
+  const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const [selectedTask, setSelectedTask] = useState<AdminTask | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
-  const [overrideStatus, setOverrideStatus] = useState<PlatformProject['status']>('COMPLETED');
+  const [overrideStatus, setOverrideStatus] = useState<TaskStatus>('completed');
 
-  const handleOpenDrawer = (project: PlatformProject) => {
-    setSelectedProject(project);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await adminApi.listTasks();
+        if (!cancelled) setTasks(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load tasks.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleOpenDrawer = (task: AdminTask) => {
+    setSelectedTask(task);
+    setActionError(null);
     setIsDrawerOpen(true);
   };
 
-  const handleOverrideStatus = (e: React.FormEvent) => {
+  const handleOverrideStatus = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProject) return;
-
-    const updated = projects.map((p) =>
-      p.id === selectedProject.id ? { ...p, status: overrideStatus } : p
-    );
-    setProjects(updated);
-    setSelectedProject({ ...selectedProject, status: overrideStatus });
-    setIsOverrideModalOpen(false);
-    alert(`Task status forcibly updated to ${overrideStatus}.`);
+    if (!selectedTask) return;
+    setActionError(null);
+    try {
+      const updated = await adminApi.updateTask(selectedTask.taskId, { status: overrideStatus });
+      setTasks((prev) => prev.map((t) => (t.taskId === updated.taskId ? { ...t, ...updated } : t)));
+      setSelectedTask((prev) => (prev ? { ...prev, ...updated } : prev));
+      setIsOverrideModalOpen(false);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Failed to update task status.');
+    }
   };
 
-  const columns: ColumnDef<PlatformProject>[] = [
+  const columns: ColumnDef<AdminTask>[] = [
     {
-      header: 'Task Title',
+      header: 'Task Title & ID',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.title}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>ID: {row.id} · {row.category}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>ID: {row.taskId}</span>
         </div>
       )
     },
     {
-      header: 'Client & Freelancer',
-      cell: (row) => (
-        <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
-          <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.clientName}</span>
-          <span style={{ color: 'var(--color-text-muted)' }}>{row.gigProName || 'Unassigned'}</span>
-        </div>
-      )
+      header: 'Client',
+      cell: (row) => <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.client.clientName}</span>
     },
+    { header: 'Category', accessorKey: 'category' },
     {
       header: 'Budget',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${row.budget.toLocaleString()}</span>
-    },
-    {
-      header: 'Deliverables',
-      cell: (row) => <span>{row.deliverablesSubmitted} / {row.milestonesCount} Milestones</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${Number(row.budget).toLocaleString()}</span>
     },
     {
       header: 'Status',
@@ -69,18 +93,15 @@ export const Projects: React.FC = () => {
     },
     {
       header: 'Due Date',
-      accessorKey: 'dueDate'
+      cell: (row) => (row.dueDate ? new Date(row.dueDate).toLocaleDateString() : '—')
     },
     {
       header: 'Actions',
-      align: 'right',
       cell: (row) => (
         <button
-          className="admin-btn admin-btn-outline admin-btn-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenDrawer(row);
-          }}
+          onClick={() => handleOpenModal(row)}
+          className="admin-btn admin-btn-secondary"
+          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
         >
           Inspect
         </button>
@@ -88,87 +109,82 @@ export const Projects: React.FC = () => {
     }
   ];
 
+  if (loading) {
+    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading tasks…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
       <DataTable
         title="Global Project & Task Monitor"
         columns={columns}
-        data={projects}
+        data={tasks}
         pageSize={6}
-        searchPlaceholder="Search tasks by title, client, or freelancer..."
+        searchPlaceholder="Search tasks by title or client..."
         onRowClick={handleOpenDrawer}
       />
 
-      {/* ── Project Inspector Drawer ───────────────────────────────────── */}
       <ActionModal
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title={selectedProject?.title || 'Task Details'}
-        subtitle={`ID: ${selectedProject?.id} · Created: ${selectedProject?.createdAt}`}
+        title={selectedTask?.title || 'Task Details'}
+        subtitle={`ID: ${selectedTask?.taskId} · Created: ${selectedTask ? new Date(selectedTask.createdAt).toLocaleDateString() : ''}`}
         width="540px"
         isDrawer={true}
         footer={
-          selectedProject && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+          selectedTask && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
               <button
-                className="admin-btn admin-btn-danger admin-btn-sm"
+                className="admin-btn admin-btn-primary admin-btn-sm"
                 onClick={() => {
-                  setOverrideStatus('CANCELLED');
+                  setOverrideStatus(selectedTask.status);
                   setIsOverrideModalOpen(true);
                 }}
               >
-                Force Cancel & Refund
-              </button>
-
-              <button
-                className="admin-btn admin-btn-primary admin-btn-sm"
-                onClick={() => setIsOverrideModalOpen(true)}
-              >
-                Emergency Status Override
+                Override Status
               </button>
             </div>
           )
         }
       >
-        {selectedProject && (
+        {selectedTask && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-            {/* Project Overview */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
-              <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOTAL BUDGET</span>
-                <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                  ${selectedProject.budget.toLocaleString()}
-                </h4>
+            {actionError && (
+              <div className="admin-badge badge-danger" style={{ width: '100%', padding: '8px 12px' }}>
+                {actionError}
               </div>
-              <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>MILESTONES DELIVERED</span>
-                <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                  {selectedProject.deliverablesSubmitted} / {selectedProject.milestonesCount}
-                </h4>
-              </div>
+            )}
+            <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOTAL BUDGET</span>
+              <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+                ${Number(selectedTask.budget).toLocaleString()}
+              </h4>
             </div>
 
-            {/* Contract Entities */}
             <div>
               <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: '8px' }}>
-                Contract Parties
+                Contract Details
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 'var(--font-size-sm)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Hiring Client:</span>
-                  <span style={{ fontWeight: 600 }}>{selectedProject.clientName}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Assigned Freelancer:</span>
-                  <span style={{ fontWeight: 600 }}>{selectedProject.gigProName || 'Unassigned (Bidding Open)'}</span>
+                  <span style={{ fontWeight: 600 }}>{selectedTask.client.clientName}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Current Status:</span>
-                  <StatusBadge status={selectedProject.status} />
+                  <StatusBadge status={selectedTask.status} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Agreed Deadline:</span>
-                  <span>{selectedProject.dueDate}</span>
+                  <span>{selectedTask.dueDate ? new Date(selectedTask.dueDate).toLocaleDateString() : '—'}</span>
                 </div>
               </div>
             </div>
@@ -176,12 +192,11 @@ export const Projects: React.FC = () => {
         )}
       </ActionModal>
 
-      {/* ── Status Override Dialog ──────────────────────────────────────── */}
       <ActionModal
         isOpen={isOverrideModalOpen}
         onClose={() => setIsOverrideModalOpen(false)}
-        title="Emergency Task Status Override"
-        subtitle={`Task: ${selectedProject?.title}`}
+        title="Task Status Override"
+        subtitle={`Task: ${selectedTask?.title}`}
         width="460px"
         footer={
           <>
@@ -192,11 +207,7 @@ export const Projects: React.FC = () => {
             >
               Cancel
             </button>
-            <button
-              type="button"
-              className="admin-btn admin-btn-primary"
-              onClick={handleOverrideStatus}
-            >
+            <button type="button" className="admin-btn admin-btn-primary" onClick={handleOverrideStatus}>
               Confirm Override
             </button>
           </>
@@ -210,14 +221,11 @@ export const Projects: React.FC = () => {
             <select
               className="admin-select"
               value={overrideStatus}
-              onChange={(e) => setOverrideStatus(e.target.value as any)}
+              onChange={(e) => setOverrideStatus(e.target.value as TaskStatus)}
             >
-              <option value="OPEN">Open (Re-open for Bidding)</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="REVIEWING">Reviewing Deliverables</option>
-              <option value="COMPLETED">Completed (Force Complete)</option>
-              <option value="DISPUTED">Disputed (Escalate to Arbitration)</option>
-              <option value="CANCELLED">Cancelled (Force Refund)</option>
+              <option value="open">Open (Re-open for Bidding)</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
             </select>
           </div>
         </form>

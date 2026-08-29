@@ -2,26 +2,31 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "rootDir": ".",
+    "outDir": "./dist",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "target": "ES2023",
     "strict": true,
     "esModuleInterop": true,
     "ignoreDeprecations": "6.0",
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "types": [],
+    "types": ["node"],
     // For nodejs:
     // "lib": ["esnext"],
-    // "types": ["node"],
     // and npm install -D @types/node
 
     // Other Outputs
     "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
+    // Declarations are deliberately OFF: re-emitting a .d.ts for Prisma's
+    // @ts-nocheck-generated client collapses its types to `any` (checking
+    // is skipped, so declaration emission can't infer the real shape).
+    // apps/backend's tsconfig "paths" redirects type-checking to this
+    // package's .ts source directly instead of a rebuilt .d.ts; only the
+    // runtime .js output from this build is actually consumed.
+    "declaration": false,
+    "declarationMap": false,
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
@@ -43,5 +48,6 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  "include": ["index.ts"]
 }

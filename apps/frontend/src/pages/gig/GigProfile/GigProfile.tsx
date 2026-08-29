@@ -8,6 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 import type { GigProfile as IGigProfile, GigService } from '../../../types/gig';
 
 export const GigProfile: React.FC = () => {
@@ -15,20 +16,29 @@ export const GigProfile: React.FC = () => {
   const [profile, setProfile] = useState<IGigProfile | null>(null);
   const [services, setServices] = useState<GigService[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([gigApi.getProfile(), gigApi.getServices()])
-      .then(([prof, srvs]) => {
+
+    const load = async () => {
+      if (mounted) setError(null);
+      try {
+        const [prof, srvs] = await Promise.all([gigApi.getProfile(), gigApi.getServices()]);
         if (mounted) {
           setProfile(prof);
           setServices(srvs);
           setLoading(false);
         }
-      })
-      .catch(() => {
-        if (mounted) setLoading(false);
-      });
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof ApiError ? err.message : 'Failed to load profile.');
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
 
     return () => {
       mounted = false;
@@ -49,7 +59,9 @@ export const GigProfile: React.FC = () => {
   if (!profile) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center' }}>
-        <p style={{ color: 'var(--color-text-muted)' }}>Unable to load Gig Professional profile.</p>
+        <p style={{ color: 'var(--color-text-muted)' }}>
+          {error || 'Unable to load Gig Professional profile.'}
+        </p>
       </div>
     );
   }

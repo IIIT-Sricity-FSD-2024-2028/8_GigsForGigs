@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
+import { ApiError } from '../../../services/api/httpClient';
 
 export const PostService: React.FC = () => {
   const { setActiveTab, triggerRefresh } = useGig();
@@ -18,15 +19,17 @@ export const PostService: React.FC = () => {
   const [delivery, setDelivery] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim() || !price || Number(price) <= 0) {
-      alert('Please fill out all required service fields.');
+      setError('Please fill out all required service fields.');
       return;
     }
 
     setSubmitting(true);
+    setError(null);
     try {
       const tags = [category, delivery].filter(Boolean);
       await gigApi.postService({
@@ -39,8 +42,7 @@ export const PostService: React.FC = () => {
       triggerRefresh();
       setActiveTab('service-published');
     } catch (err) {
-      console.error('Failed to post service:', err);
-      alert('Failed to publish service.');
+      setError(err instanceof ApiError ? err.message : 'Failed to publish service.');
     } finally {
       setSubmitting(false);
     }
@@ -57,6 +59,21 @@ export const PostService: React.FC = () => {
           Create a fixed-price or custom service tier visible to hiring clients and platform managers.
         </p>
       </div>
+
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FDE8E8',
+            color: '#9B1C1C',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {/* Form Card */}
       <form className="admin-card" style={{ padding: 'var(--spacing-xl)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }} onSubmit={handleSubmit}>

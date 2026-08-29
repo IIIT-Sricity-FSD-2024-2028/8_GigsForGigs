@@ -54,7 +54,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
 
     try {
       if (editId) {
-        await updateTask(editId, title, description, Number(budget));
+        await updateTask(editId, title, description, Number(budget), category, duration, skills);
         alert('Task updated successfully!');
       } else {
         await addTask(title, description, Number(budget), category, duration, skills);
@@ -66,6 +66,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
       onNavigate('dashboard');
     } catch (err) {
       console.error('Save task failed:', err);
+      alert('Failed to save this task. Please try again.');
     }
   };
 

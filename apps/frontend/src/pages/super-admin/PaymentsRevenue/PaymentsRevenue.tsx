@@ -1,24 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KPICard } from '../../../components/super-admin/KPICard';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
-import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { PaymentIcon } from '../../../components/super-admin/Icons';
-import { mockPayments, type PaymentLedgerItem } from '../../../mock/adminMockData';
+import { useToast } from '../../../components/super-admin/Toast';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { adminApi } from '../../../services/api/admin/adminApi';
 
-/**
- * @file PaymentsRevenue.tsx
- * @description
- * Marketplace financial ledger, escrow security supervisor, and platform commission tracker.
- * Provides emergency escrow release and refund override capabilities with mandatory audit notes.
- */
+export interface PaymentLedgerItem {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  clientName: string;
+  gigProName: string;
+  grossAmount: number;
+  platformRake: number;
+  netPayout: number;
+  escrowStatus: 'HELD_IN_ESCROW' | 'RELEASED' | 'REFUNDED' | 'DISPUTED';
+  createdAt: string;
+}
 
 export const PaymentsRevenue: React.FC = () => {
-  const [payments, setPayments] = useState<PaymentLedgerItem[]>(mockPayments);
+  const { hasPermission } = useAuth();
+  const toast = useToast();
+  const [payments, setPayments] = useState<PaymentLedgerItem[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<PaymentLedgerItem | null>(null);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
   const [overrideAction, setOverrideAction] = useState<'RELEASE' | 'REFUND'>('RELEASE');
   const [auditReason, setAuditReason] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadPayments() {
+      const data = await adminApi.getPayments();
+      if (isMounted) {
+        setPayments(data);
+      }
+    }
+    loadPayments();
+    return () => { isMounted = false; };
+  }, []);
+
+  const totalGross = payments.reduce((sum, p) => sum + p.grossAmount, 0);
+  const totalRake = payments.reduce((sum, p) => sum + p.platformRake, 0);
+  const totalInEscrow = payments
+    .filter((p) => p.escrowStatus === 'HELD_IN_ESCROW')
+    .reduce((sum, p) => sum + p.grossAmount, 0);
 
   const handleOpenOverride = (payment: PaymentLedgerItem, action: 'RELEASE' | 'REFUND') => {
     setSelectedPayment(payment);
@@ -27,49 +54,48 @@ export const PaymentsRevenue: React.FC = () => {
     setIsOverrideModalOpen(true);
   };
 
-  const handleExecuteOverride = (e: React.FormEvent) => {
+  const handleExecuteOverride = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPayment || !auditReason.trim()) return;
 
+    await adminApi.overrideEscrow(selectedPayment.id, overrideAction, auditReason);
     const newStatus = overrideAction === 'RELEASE' ? 'RELEASED' : 'REFUNDED';
     const updated = payments.map((p) =>
       p.id === selectedPayment.id ? { ...p, escrowStatus: newStatus as any } : p
     );
     setPayments(updated);
     setIsOverrideModalOpen(false);
-    alert(`Escrow ${overrideAction === 'RELEASE' ? 'released to freelancer' : 'refunded to client'} successfully.`);
+    toast.success(
+      `Escrow ${overrideAction === 'RELEASE' ? 'Released' : 'Refunded'}`,
+      `Successfully updated ${selectedPayment.id} ($${selectedPayment.grossAmount.toLocaleString()})`
+    );
   };
 
   const columns: ColumnDef<PaymentLedgerItem>[] = [
     {
-      header: 'Transaction & Task',
+      header: 'Task',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.taskTitle}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{row.id}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.task.title}</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>#{row.paymentId}</span>
         </div>
       )
     },
     {
-      header: 'Client $\\rightarrow$ Freelancer',
-      cell: (row) => (
-        <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
-          <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.clientName}</span>
-          <span style={{ color: 'var(--color-text-muted)' }}>$\\rightarrow$ {row.gigProName}</span>
-        </div>
-      )
+      header: 'Amount',
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${Number(row.amount).toLocaleString()}</span>
     },
     {
-      header: 'Gross Volume',
+      header: 'Gross Amount',
       cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${row.grossAmount.toLocaleString()}</span>
     },
     {
-      header: 'Platform Rake (10%)',
-      cell: (row) => <span style={{ color: 'var(--color-primary-blue)', fontWeight: 600 }}>+${row.platformRake.toLocaleString()}</span>
+      header: 'Platform Rake',
+      cell: (row) => <span style={{ fontWeight: 600, color: 'var(--color-success-text)' }}>+${row.platformRake.toLocaleString()}</span>
     },
     {
       header: 'Net Payout',
-      cell: (row) => <span>${row.netPayout.toLocaleString()}</span>
+      cell: (row) => <span style={{ color: 'var(--color-text-muted)' }}>${row.netPayout.toLocaleString()}</span>
     },
     {
       header: 'Escrow Status',
@@ -77,142 +103,135 @@ export const PaymentsRevenue: React.FC = () => {
     },
     {
       header: 'Actions',
-      align: 'right',
       cell: (row) => (
-        row.escrowStatus === 'HELD_IN_ESCROW' ? (
-          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-            <button
-              className="admin-btn admin-btn-primary admin-btn-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenOverride(row, 'RELEASE');
-              }}
-            >
-              Release
-            </button>
-            <button
-              className="admin-btn admin-btn-outline admin-btn-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenOverride(row, 'REFUND');
-              }}
-            >
-              Refund
-            </button>
-          </div>
-        ) : (
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-            Settled
-          </span>
-        )
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {row.escrowStatus === 'HELD_IN_ESCROW' && (
+            hasPermission('payments:release') ? (
+              <>
+                <button
+                  onClick={() => handleOpenOverride(row, 'RELEASE')}
+                  className="admin-btn admin-btn-primary"
+                  style={{ padding: '4px 8px', fontSize: '11px' }}
+                >
+                  Force Release
+                </button>
+                <button
+                  onClick={() => handleOpenOverride(row, 'REFUND')}
+                  className="admin-btn admin-btn-danger"
+                  style={{ padding: '4px 8px', fontSize: '11px' }}
+                >
+                  Force Refund
+                </button>
+              </>
+            ) : (
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Read Only (Auditor)</span>
+            )
+          )}
+        </div>
       )
     }
   ];
 
+  if (loading) {
+    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading payments…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
-      {/* ── Financial Ledger KPI Tiles ─────────────────────────────────── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 'var(--spacing-lg)'
-        }}
-      >
+      {/* Financial Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
-          title="Escrow Held in Trust"
-          value="$118,400"
-          deltaText="Protected"
-          subtitle="Milestones in progress"
+          title="Total Gross Transacted"
+          value={`$${totalGross.toLocaleString()}`}
+          deltaText="100% Verified Ledger"
+          isPositive={true}
+          subtitle="Cumulative platform volume"
+          icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-blue)"
-          icon={<PaymentIcon size={20} />}
         />
         <KPICard
-          title="Disbursed to Freelancers"
-          value="$310,500"
-          deltaText="+16.4%"
-          subtitle="Released upon completion"
-          accentColor="var(--color-secondary)"
+          title="Retained Platform Take"
+          value={`$${totalRake.toLocaleString()}`}
+          deltaText="10.0% Avg Rake"
+          isPositive={true}
+          subtitle="Net platform fee earnings"
           icon={<PaymentIcon size={20} />}
-        />
-        <KPICard
-          title="Commission Rake Earned"
-          value="$42,890"
-          deltaText="+22.0%"
-          subtitle="Net platform revenue (10%)"
           accentColor="var(--color-primary-dark)"
-          icon={<PaymentIcon size={20} />}
         />
         <KPICard
-          title="Dispute Refunds Issued"
-          value="$8,200"
-          subtitle="Arbitrated client returns"
-          accentColor="var(--color-danger-text)"
+          title="Total Escrow Held"
+          value={`$${totalInEscrow.toLocaleString()}`}
+          deltaText="Active Contracts"
+          isPositive={true}
+          subtitle="Protected funds in escrow"
           icon={<PaymentIcon size={20} />}
+          accentColor="var(--color-secondary)"
         />
       </div>
 
-      {/* ── Transactions & Escrow Table ────────────────────────────────── */}
-      <DataTable
-        title="Marketplace Financial Ledger & Escrow Registry"
-        columns={columns}
-        data={payments}
-        pageSize={6}
-        searchPlaceholder="Search by transaction ID, task, or party..."
-      />
+      {/* Ledger Table */}
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <DataTable
+          data={payments}
+          columns={columns}
+          pageSize={10}
+          searchPlaceholder="Search financial ledger by task, client, or ID..."
+        />
+      </div>
 
-      {/* ── Escrow Action Override Modal ────────────────────────────────── */}
+      {/* Escrow Override Modal */}
       <ActionModal
         isOpen={isOverrideModalOpen}
         onClose={() => setIsOverrideModalOpen(false)}
-        title={`Manual Escrow ${overrideAction === 'RELEASE' ? 'Release' : 'Refund'} Override`}
-        subtitle={`Task: ${selectedPayment?.taskTitle} · Amount: $${selectedPayment?.grossAmount.toLocaleString()}`}
-        width="500px"
-        footer={
-          <>
-            <button
-              type="button"
-              className="admin-btn admin-btn-outline"
-              onClick={() => setIsOverrideModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className={`admin-btn ${overrideAction === 'RELEASE' ? 'admin-btn-primary' : 'admin-btn-danger'}`}
-              onClick={handleExecuteOverride}
-            >
-              Execute {overrideAction}
-            </button>
-          </>
-        }
+        title={`Escrow Override: ${overrideAction === 'RELEASE' ? 'Release to Freelancer' : 'Refund to Client'}`}
       >
-        <form onSubmit={handleExecuteOverride} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: 'var(--color-text-muted)' }}>Net Payout to Freelancer:</span>
-              <span style={{ fontWeight: 700 }}>${selectedPayment?.netPayout.toLocaleString()}</span>
+        {selectedPayment && (
+          <form onSubmit={handleExecuteOverride} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
+              <div><strong>Task:</strong> {selectedPayment.taskTitle}</div>
+              <div><strong>Transaction ID:</strong> {selectedPayment.id}</div>
+              <div><strong>Amount:</strong> ${selectedPayment.grossAmount.toLocaleString()}</div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--color-text-muted)' }}>Platform Commission Retained:</span>
-              <span style={{ fontWeight: 700, color: 'var(--color-primary-blue)' }}>${selectedPayment?.platformRake.toLocaleString()}</span>
-            </div>
-          </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              MANDATORY ADMINISTRATIVE JUSTIFICATION NOTE
-            </label>
-            <textarea
-              className="admin-textarea"
-              rows={3}
-              placeholder="Provide clear audit justification for this manual escrow disbursement..."
-              value={auditReason}
-              onChange={(e) => setAuditReason(e.target.value)}
-              required
-            />
-          </div>
-        </form>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
+                Administrative Override Reason (Logged in SOC-2 Audit Trail)
+              </label>
+              <textarea
+                className="admin-textarea"
+                rows={3}
+                required
+                placeholder="State the reason for manual escrow balance override..."
+                value={auditReason}
+                onChange={(e) => setAuditReason(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)' }}>
+              <button
+                type="button"
+                onClick={() => setIsOverrideModalOpen(false)}
+                className="admin-btn admin-btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className={`admin-btn ${overrideAction === 'RELEASE' ? 'admin-btn-primary' : 'admin-btn-danger'}`}
+              >
+                Confirm {overrideAction === 'RELEASE' ? 'Escrow Release' : 'Escrow Refund'}
+              </button>
+            </div>
+          </form>
+        )}
       </ActionModal>
     </div>
   );

@@ -8,7 +8,7 @@ export interface ClientDashboardProps {
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { tasks } = useClient();
+  const { tasks, contracts, loading, error } = useClient();
 
   // Metrics
   const activeTasks = tasks.filter(t => t.status === 'IN_PROGRESS');
@@ -18,15 +18,16 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
 
   const activeCount = activeTasks.length;                                                 
   const pendingCount = openTasks.length;
-  
-  // Total spent calculated dynamically (base mock of 4250 + completed tasks budgets)
-  const baseSpent = user?.isNewAccount ? 0 : 425000;
-  const dynamicSpent = completedTasks.reduce((sum, t) => sum + t.budget, 0);
+
+  // Total spent = sum of completed tasks' budgets. There is no payment
+  // ledger exposed to clients on the backend, so this is the closest real
+  // approximation (no fabricated "base" amount added).
+  const totalSpent = completedTasks.reduce((sum, t) => sum + t.budget, 0);
   const totalSpentFormatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 0
-  }).format(baseSpent + dynamicSpent);
+  }).format(totalSpent);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
@@ -42,20 +43,43 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
     }
   };
 
-  const getProgressPercent = (status: string) => {
-    if (status === 'COMPLETED') return 100;
-    if (status === 'IN_PROGRESS') return 65;
-    if (status === 'REVIEWING') return 100;
-    return 8;
+  // Real progress comes from the matching contract (derived server-side from
+  // deliverable completion); fall back to 0/100 for tasks with no contract yet.
+  const getProgressPercent = (taskId: string, status: string) => {
+    const contract = contracts.find(c => c.task_id === taskId);
+    if (contract) return contract.progress;
+    return status === 'COMPLETED' ? 100 : 0;
   };
 
   return (
     <div>
-      {/* Welcome greeting */}
-      <h1 className="welcome-greeting" id="client-greeting">
-        Welcome back, {user?.name || 'Aditya'}!
-      </h1>
-      <p className="welcome-subtitle">Here's a summary of your workspace activities for today.</p>
+      {error && (
+        <div style={{ marginBottom: 'var(--spacing-md)', padding: 'var(--spacing-sm) var(--spacing-md)', borderRadius: 'var(--radius-sm)', backgroundColor: '#fde8e8', color: '#c94c4c', fontSize: '0.875rem' }}>
+          {error}
+        </div>
+      )}
+      {loading && tasks.length === 0 && (
+        <p style={{ color: 'var(--color-text-muted)' }}>Loading your workspace…</p>
+      )}
+      {/* Welcome hero banner — mirrors the Gig/Manager portal headers */}
+      <div
+        className="admin-card"
+        style={{
+          padding: 'var(--spacing-xl)',
+          background: 'linear-gradient(135deg, var(--color-primary-dark) 0%, #0c61a6 100%)',
+          color: '#ffffff',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-md)',
+          marginBottom: 'var(--spacing-xl)',
+        }}
+      >
+        <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--spacing-xs)' }} id="client-greeting">
+          Welcome back, {user?.name || 'there'}!
+        </h1>
+        <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 'var(--font-size-sm)' }}>
+          Here's a summary of your workspace activities for today.
+        </p>
+      </div>
 
       {/* Metric cards row */}
       <div className="metrics-row">
@@ -110,11 +134,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
 
       </div>
 
-      {/* Posted Tasks */}
+      {/* Pending Tasks (open — posted but not yet in progress) */}
       <div className="activity-section">
         <div className="activity-header">
           <h2 className="activity-title">
-            Posted Tasks{' '}
+            Pending Tasks{' '}
             <span id="client-posted-count" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: '6px' }}>
               ({openTasks.length})
             </span>
@@ -220,7 +244,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
               </tr>
             ) : (
               nonOpenTasks.map(t => {
-                const pct = getProgressPercent(t.status);
+                const pct = getProgressPercent(t.task_id, t.status);
                 const progressFillClass = t.status === 'COMPLETED'
                   ? 'progress-bar-fill-seagrass'
                   : t.status === 'REVIEWING'

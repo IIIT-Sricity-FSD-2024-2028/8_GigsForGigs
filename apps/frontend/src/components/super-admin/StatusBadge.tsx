@@ -67,7 +67,27 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
   }
 
   return (
-    <span className={`admin-badge ${badgeClass} ${className}`}>
+    <span
+      className={`admin-badge ${badgeClass} ${className}`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        fontWeight: 600,
+        letterSpacing: '0.01em',
+        transition: 'all 0.15s ease'
+      }}
+    >
+      <span
+        className="status-dot-pulse"
+        style={{
+          width: '6px',
+          height: '6px',
+          borderRadius: '50%',
+          backgroundColor: 'currentColor',
+          flexShrink: 0
+        }}
+      />
       {displayLabel}
     </span>
   );

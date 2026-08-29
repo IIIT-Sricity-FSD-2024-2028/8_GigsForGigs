@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
 
 interface ManagerDashboardProps {
@@ -8,267 +8,297 @@ interface ManagerDashboardProps {
 
 export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateToTask, onNavigateToQueue }) => {
   const { profile, tasks, deliverables, reviewDeliverable, closeDeliverable } = useManager();
-  const [showQueue, setShowQueue] = useState(false);
 
-  const managerName = profile?.user?.name || 'Leo Hudson';
-  const activeTasks = tasks.filter(t => t.status === 'in_progress' || t.status === 'open');
+  const managerName = profile?.user?.name || 'Manager';
+  const pendingTasks = tasks.filter(t => t.status === 'open');
+  const activeTasks = tasks.filter(t => t.status === 'in_progress');
   const pendingDeliverables = deliverables.filter(d => d.status === 'submitted');
 
+  const formatBudget = (budget: number | string) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(budget));
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'in_progress': return 'status-in-progress';
+      case 'completed': return 'status-completed';
+      default: return 'status-scheduled';
+    }
+  };
+
+  const getProgress = (task: typeof tasks[number]) =>
+    task.progress ?? (task.status === 'completed' ? 100 : task.status === 'in_progress' ? 50 : 0);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      {/* Welcome Header */}
-      <div>
-        <h1 style={{ fontSize: '28px', color: '#0D568D', margin: 0, fontWeight: 700 }}>
-          Welcome back, {managerName}!
-        </h1>
-        <p style={{ color: '#76594F', fontSize: '15px', marginTop: '6px', margin: 0 }}>
-          Here's a summary of your hiring activity and assigned operational tasks.
-        </p>
-      </div>
-
-      {/* 3 Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-        {/* Active Projects */}
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '20px 24px',
-            border: '1px solid #D9E0E3',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            position: 'relative'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#E4F2EF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#55A99A' }}>
-              ✓
-            </div>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#55A99A', backgroundColor: '#E4F2EF', padding: '2px 8px', borderRadius: '10px' }}>
-              +12%
-            </span>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#76594F', marginTop: '16px', letterSpacing: '0.5px' }}>
-            ACTIVE PROJECTS
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: 700, color: '#3A1F16', margin: '4px 0' }}>
-            {activeTasks.length}
-          </div>
-          <div style={{ fontSize: '12px', color: '#927D74' }}>Currently in progress</div>
-        </div>
-
-        {/* Pending Applications / Deliverables */}
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '20px 24px',
-            border: '1px solid #D9E0E3',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            position: 'relative'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#F8EBD9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D47700' }}>
-              📋
-            </div>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#B86300', backgroundColor: '#F8EBD9', padding: '2px 8px', borderRadius: '10px' }}>
-              Action Req.
-            </span>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#76594F', marginTop: '16px', letterSpacing: '0.5px' }}>
-            PENDING DELIVERABLES
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: 700, color: '#3A1F16', margin: '4px 0' }}>
-            {pendingDeliverables.length}
-          </div>
-          <div style={{ fontSize: '12px', color: '#927D74' }}>Awaiting your review</div>
-        </div>
-
-        {/* Tasks Posted / Assigned */}
-        <div
-          onClick={onNavigateToQueue}
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '20px 24px',
-            border: '1px solid #D9E0E3',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            position: 'relative',
-            cursor: 'pointer'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#E4EEF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0D568D' }}>
-              📅
-            </div>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#0D568D', backgroundColor: '#E4EEF5', padding: '2px 8px', borderRadius: '10px' }}>
-              Assigned
-            </span>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#76594F', marginTop: '16px', letterSpacing: '0.5px' }}>
-            TASKS ASSIGNED TO YOU
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: 700, color: '#3A1F16', margin: '4px 0' }}>
-            {tasks.length}
-          </div>
-          <div style={{ fontSize: '12px', color: '#927D74' }}>Delegated by client</div>
-        </div>
-      </div>
-
-      {/* Recent Project Activity Card */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {/* Welcome hero banner — mirrors the Gig portal's gradient header */}
       <div
+        className="admin-card"
         style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          padding: '24px',
-          border: '1px solid #D9E0E3',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+          padding: 'var(--spacing-xl)',
+          background: 'linear-gradient(135deg, var(--color-primary-dark) 0%, #0c61a6 100%)',
+          color: '#ffffff',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-md)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 'var(--spacing-md)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', color: '#0D568D', margin: 0, fontWeight: 700 }}>
-            Recent Project Activity
-          </h2>
-          <button
-            onClick={() => setShowQueue(!showQueue)}
-            style={{ backgroundColor: 'transparent', border: 'none', color: '#55A99A', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
-          >
-            {showQueue ? 'Hide Pending Queue ↑' : 'Go to Pending Queue →'}
-          </button>
+        <div>
+          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--spacing-xs)' }}>
+            Welcome back, {managerName}!
+          </h1>
+          <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 'var(--font-size-sm)' }}>
+            Here's a summary of your hiring activity and assigned operational tasks.
+          </p>
+        </div>
+        <button
+          className="admin-btn admin-btn-outline"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}
+          onClick={onNavigateToQueue}
+        >
+          Go to Pending Queue &rarr;
+        </button>
+      </div>
+
+      {/* Metric cards row */}
+      <div className="metrics-row">
+        <div className="metric-card">
+          <div className="metric-card-head">
+            <div className="metric-icon metric-icon-blue">
+              <svg fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20" viewBox="0 0 24 24">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <span className="metric-badge metric-badge-neutral">Assigned</span>
+          </div>
+          <div className="metric-label">Active Tasks</div>
+          <div className="metric-value">{activeTasks.length}</div>
+          <div className="metric-description">Currently in progress</div>
         </div>
 
-        {/* Activity Table */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #E5E4E7' }}>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#76594F', letterSpacing: '0.5px' }}>PROJECT NAME</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#76594F', letterSpacing: '0.5px' }}>STATUS</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#76594F', letterSpacing: '0.5px' }}>PROGRESS</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#76594F', letterSpacing: '0.5px' }}>BUDGET</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#76594F', letterSpacing: '0.5px', textAlign: 'center' }}>ACTIONS</th>
+        <div className="metric-card">
+          <div className="metric-card-head">
+            <div className="metric-icon metric-icon-copper">
+              <svg fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+            </div>
+            <span className="metric-badge metric-badge-action">Requires Action</span>
+          </div>
+          <div className="metric-label">Pending Tasks</div>
+          <div className="metric-value">{String(pendingTasks.length).padStart(2, '0')}</div>
+          <div className="metric-description">Not yet started</div>
+        </div>
+
+        <div className="metric-card">
+          <div className="metric-card-head">
+            <div className="metric-icon metric-icon-seagrass">
+              <svg fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <span className="metric-badge metric-badge-up">Awaiting Review</span>
+          </div>
+          <div className="metric-label">Pending Deliverables</div>
+          <div className="metric-value">{pendingDeliverables.length}</div>
+          <div className="metric-description">Submitted by gig professionals</div>
+        </div>
+      </div>
+
+      {/* Pending Tasks */}
+      <div className="activity-section">
+        <div className="activity-header">
+          <h2 className="activity-title">
+            Pending Tasks{' '}
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: '6px' }}>
+              ({pendingTasks.length})
+            </span>
+          </h2>
+        </div>
+        <table className="activity-table">
+          <thead>
+            <tr>
+              <th>Task Name</th>
+              <th>Client</th>
+              <th>Budget</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingTasks.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xl)' }}>
+                  No pending tasks — everything assigned to you is underway.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {tasks.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#76594F' }}>
-                    No assigned tasks found.
+            ) : (
+              pendingTasks.map(task => (
+                <tr key={task.taskId}>
+                  <td>
+                    <div className="task-name-cell">{task.title}</div>
+                  </td>
+                  <td>{task.client?.clientName ?? '—'}</td>
+                  <td className="budget-cell">{formatBudget(task.budget)}</td>
+                  <td>
+                    <div className="actions-cell">
+                      <button
+                        className="btn-icon-action"
+                        title="View task details"
+                        onClick={() => onNavigateToTask(task.taskId)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ) : (
-                tasks.map(task => (
-                  <tr key={task.taskId} style={{ borderBottom: '1px solid #F0F4F6' }}>
-                    <td style={{ padding: '16px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#3A1F16' }}>{task.title}</div>
-                      <div style={{ fontSize: '12px', color: '#927D74', marginTop: '2px' }}>
-                        {task.assignments?.[0]?.gigProfile?.user?.name ? `Assigned to: ${task.assignments[0].gigProfile.user.name}` : 'Client delegated'}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Recent Project Activity */}
+      <div className="activity-section">
+        <div className="activity-header">
+          <h2 className="activity-title">Recent Project Activity</h2>
+        </div>
+        <table className="activity-table">
+          <thead>
+            <tr>
+              <th>Task Name</th>
+              <th>Status</th>
+              <th>Progress</th>
+              <th>Budget</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xl)' }}>
+                  No assigned tasks found.
+                </td>
+              </tr>
+            ) : (
+              tasks.map(task => {
+                const pct = getProgress(task);
+                const fillClass = task.status === 'completed'
+                  ? 'progress-bar-fill-seagrass'
+                  : task.status === 'in_progress'
+                    ? 'progress-bar-fill-blue'
+                    : 'progress-bar-fill-copper';
+                return (
+                  <tr key={task.taskId}>
+                    <td>
+                      <div className="task-name-cell">{task.title}</div>
+                      <div className="task-category">
+                        {task.assignments?.[0]?.gigProfile?.user?.name
+                          ? `Assigned to: ${task.assignments[0].gigProfile.user.name}`
+                          : 'Client delegated'}
                       </div>
                     </td>
-                    <td style={{ padding: '16px' }}>
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          backgroundColor: task.status === 'in_progress' ? '#E4EEF5' : task.status === 'completed' ? '#E4F2EF' : '#F8EBD9',
-                          color: task.status === 'in_progress' ? '#0D568D' : task.status === 'completed' ? '#438F82' : '#B86300'
-                        }}
-                      >
-                        {task.status.replace('_', ' ').toUpperCase()}
+                    <td>
+                      <span className={`status-badge ${getStatusBadgeClass(task.status)}`}>
+                        {task.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td style={{ padding: '16px', width: '180px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ flex: 1, height: '6px', backgroundColor: '#D9E0E3', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div
-                            style={{
-                              height: '100%',
-                              width: `${task.progress || (task.status === 'completed' ? 100 : task.status === 'in_progress' ? 50 : 10)}%`,
-                              backgroundColor: task.status === 'completed' ? '#55A99A' : '#0D568D',
-                              borderRadius: '3px'
-                            }}
-                          />
-                        </div>
-                        <span style={{ fontSize: '11px', color: '#76594F', fontWeight: 600 }}>
-                          {task.progress || (task.status === 'completed' ? 100 : task.status === 'in_progress' ? 50 : 10)}%
-                        </span>
+                    <td className="progress-cell">
+                      <div className="progress-bar-track">
+                        <div className={`progress-bar-fill ${fillClass}`} style={{ width: `${pct}%` }}></div>
                       </div>
+                      <div className="progress-label">{pct}%</div>
                     </td>
-                    <td style={{ padding: '16px', fontWeight: 700, color: '#3A1F16', fontSize: '14px' }}>
-                      ₹{typeof task.budget === 'number' ? task.budget.toLocaleString() : task.budget}
-                    </td>
-                    <td style={{ padding: '16px', textAlign: 'center' }}>
-                      <button
-                        onClick={() => onNavigateToTask(task.taskId)}
-                        title="View Task Details & Deliverables"
-                        style={{
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          color: '#0D568D',
-                          cursor: 'pointer',
-                          fontSize: '16px'
-                        }}
-                      >
-                        👁
-                      </button>
+                    <td className="budget-cell">{formatBudget(task.budget)}</td>
+                    <td>
+                      <div className="actions-cell">
+                        <button
+                          className="btn-icon-action"
+                          title="View task details & deliverables"
+                          onClick={() => onNavigateToTask(task.taskId)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                          <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pending Queue Expandable Section */}
-        {showQueue && (
-          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #D9E0E3' }}>
-            <h3 style={{ fontSize: '16px', color: '#0D568D', marginBottom: '12px' }}>
-              Pending Deliverables Awaiting Review ({pendingDeliverables.length})
-            </h3>
-            {pendingDeliverables.length === 0 ? (
-              <p style={{ fontSize: '13px', color: '#76594F' }}>No deliverables currently awaiting review.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {pendingDeliverables.map(del => (
-                  <div
-                    key={`${del.taskId}-${del.deliverableNo}`}
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      backgroundColor: '#EFF6F7',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: '#3A1F16' }}>
-                        Deliverable #{del.deliverableNo}: {del.description}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#76594F', marginTop: '2px' }}>
-                        Link: <a href={del.submissionPath} target="_blank" rel="noreferrer" style={{ color: '#0D568D' }}>{del.submissionPath}</a>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'approved' })}
-                        style={{ backgroundColor: '#0D568D', color: '#FFFFFF', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => closeDeliverable(del.taskId, del.deliverableNo)}
-                        style={{ backgroundColor: '#55A99A', color: '#FFFFFF', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                );
+              })
             )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pending Deliverables Awaiting Review — always visible, no toggle */}
+      <div className="activity-section">
+        <div className="activity-header">
+          <h2 className="activity-title">
+            Pending Deliverables Awaiting Review{' '}
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: '6px' }}>
+              ({pendingDeliverables.length})
+            </span>
+          </h2>
+        </div>
+        {pendingDeliverables.length === 0 ? (
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
+            No deliverables currently awaiting review.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+            {pendingDeliverables.map(del => (
+              <div
+                key={`${del.taskId}-${del.deliverableNo}`}
+                style={{
+                  padding: 'var(--spacing-md)',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--color-bg-light)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 'var(--spacing-md)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div>
+                  <div className="task-name-cell">
+                    Deliverable #{del.deliverableNo}: {del.description}
+                  </div>
+                  <div className="task-category">
+                    Link: <a href={del.submissionPath} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary-dark)' }}>{del.submissionPath}</a>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                    onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'approved' })}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                    onClick={() => closeDeliverable(del.taskId, del.deliverableNo)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -29,14 +29,15 @@ export const KPICard: React.FC<KPICardProps> = ({
 }) => {
   return (
     <div
-      className="admin-card"
+      className="admin-card interactive-hover-card"
       style={{
         padding: 'var(--spacing-lg)',
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--spacing-sm)',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        cursor: 'default'
       }}
     >
       {/* Top accent highlight bar */}

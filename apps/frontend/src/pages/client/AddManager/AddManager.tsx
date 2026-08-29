@@ -23,6 +23,7 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
       onNavigate('profile-selection');
     } catch (err) {
       console.error('Add manager failed:', err);
+      alert('Failed to send the manager invite. Please try again.');
     }
   };
 

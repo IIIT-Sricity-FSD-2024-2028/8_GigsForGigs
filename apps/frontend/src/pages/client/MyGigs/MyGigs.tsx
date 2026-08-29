@@ -10,8 +10,13 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
 
   const handleDeleteTask = async (taskId: string) => {
     if (confirm('Are you sure you want to delete / cancel this contract task?')) {
-      await deleteTask(taskId);
-      alert('Project contract deleted successfully!');
+      try {
+        await deleteTask(taskId);
+        alert('Project contract deleted successfully!');
+      } catch (err) {
+        console.error('Delete task failed:', err);
+        alert('Failed to delete this task. Please try again.');
+      }
     }
   };
 

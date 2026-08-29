@@ -1,188 +1,199 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { managerApi } from '../../services/api/manager/managerApi';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authApi } from '../../services/api/auth/authApi';
+import type { AuthUser } from '../../services/api/auth/authApi';
+import { ApiError, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
+import { decodeJwtPayload } from '../../utils/helpers/jwt';
+
+export type FrontendRole = 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
+
+export type AdminTier = 'OWNER' | 'SUPER_ADMIN' | 'FINANCIAL_ADMIN' | 'SUPPORT_ADMIN' | 'CONTENT_MODERATOR' | 'AUDITOR';
 
 export interface UserSession {
-  userId: string;
-  role: 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
+  userId: number;
+  role: FrontendRole;
   name: string;
   email: string;
+  adminTier?: AdminTier;
+  permissions?: string[];
   appliedTaskIds: string[];
   isNewAccount?: boolean;
+  // Present only for the roles whose JWT payload carries them — see lib/jwt.ts on the backend.
+  clientId?: number;
+  managerId?: number;
+  gigProfileId?: number;
 }
 
-export interface MockUserRecord {
-  user_id: string;
-  name: string;
-  email: string;
-  password?: string;
-  role: 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
-  isNewAccount?: boolean;
+interface TokenPayload {
+  userId: number;
+  role: 'client' | 'gig_professional' | 'manager' | 'admin';
+  clientId?: number;
+  managerId?: number;
+  gigProfileId?: number;
 }
 
-export const MOCK_USERS_DB: MockUserRecord[] = [
-  { user_id: 'u0', name: 'Alex Rivera', email: 'admin@gigsforge.com', password: 'admin123', role: 'SUPER_ADMIN' },
-  { user_id: 'u1', name: 'Aditya Deshmukh', email: 'aditya@techstart.io', password: 'password1', role: 'CLIENT' },
-  { user_id: 'u6', name: 'Priya Sharma', email: 'priya@designco.in', password: 'password2', role: 'CLIENT' },
-  { user_id: 'u2', name: 'Leo Hudson', email: 'leo@techstart.io', password: 'password5', role: 'MANAGER' },
-  { user_id: 'u10', name: 'Casey Smith', email: 'casey@mgmt.com', password: 'pass', role: 'MANAGER' },
-  { user_id: 'u3', name: 'Arham Kansal', email: 'arham@dev.com', password: 'password3', role: 'GIG_PROFESSIONAL' },
-  { user_id: 'u4', name: 'Elena Torres', email: 'elena@code.dev', password: 'password4', role: 'GIG_PROFESSIONAL' }
-];
+function roleToActor(role: FrontendRole): ActorRole {
+  switch (role) {
+    case 'CLIENT':
+      return 'client';
+    case 'MANAGER':
+      return 'manager';
+    case 'GIG_PROFESSIONAL':
+      return 'gig_professional';
+    case 'SUPER_ADMIN':
+      return 'admin';
+  }
+}
+
+function backendRoleToFrontend(role: TokenPayload['role']): FrontendRole {
+  switch (role) {
+    case 'client':
+      return 'CLIENT';
+    case 'gig_professional':
+      return 'GIG_PROFESSIONAL';
+    case 'manager':
+      return 'MANAGER';
+    case 'admin':
+      return 'SUPER_ADMIN';
+  }
+}
+
+function sessionFromAuthResponse(user: AuthUser, token: string): UserSession {
+  const payload = decodeJwtPayload<TokenPayload>(token);
+  const role = backendRoleToFrontend(payload?.role ?? user.role);
+  return {
+    userId: user.userId,
+    role,
+    name: user.name,
+    email: user.email,
+    appliedTaskIds: [],
+    ...(payload?.clientId !== undefined ? { clientId: payload.clientId } : {}),
+    ...(payload?.managerId !== undefined ? { managerId: payload.managerId } : {}),
+    ...(payload?.gigProfileId !== undefined ? { gigProfileId: payload.gigProfileId } : {}),
+  };
+}
 
 interface AuthContextType {
   user: UserSession | null;
   isAuthenticated: boolean;
   role: string | null;
   loading: boolean;
+  authError: string | null;
   signup: (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL') => Promise<boolean>;
-  login: (email: string, password?: string, roleHint?: string, customName?: string) => Promise<boolean>;
-  loginManager: (email: string, password?: string) => Promise<boolean>;
+  login: (email: string, password: string, roleHint?: string) => Promise<boolean>;
+  loginManager: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   logoutManager: () => Promise<void>;
   updateUserSession: (patch: Partial<UserSession>) => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContextInstance = createContext<AuthContextType | undefined>(undefined);
 
-function normalizeRole(role: string): 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN' {
-  const upper = (role || '').toUpperCase();
-  if (upper === 'GIG' || upper === 'FREELANCER' || upper === 'GIG_PROFESSIONAL') return 'GIG_PROFESSIONAL';
-  if (upper === 'SUPER_ADMIN' || upper === 'ADMIN') return 'SUPER_ADMIN';
-  if (upper === 'MANAGER') return 'MANAGER';
-  return 'CLIENT';
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
-  
+  const [authError, setAuthError] = useState<string | null>(null);
+
   // Initial user state is null so http://localhost:5173/ always loads the Landing Page first!
   const [user, setUser] = useState<UserSession | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const win = window as any;
       if (user) {
-        win.__GFG_SESSION__ = user;
-        win.name = JSON.stringify(user);
+        localStorage.setItem('gfg_active_user', JSON.stringify(user));
       } else {
-        win.__GFG_SESSION__ = null;
-        win.name = '';
+        localStorage.removeItem('gfg_active_user');
       }
     }
   }, [user]);
 
-  const signup = async (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL'): Promise<boolean> => {
-    setLoading(true);
-    const newUserId = 'new-user-' + Date.now();
-    const newRecord: MockUserRecord = {
-      user_id: newUserId,
-      name,
-      email,
-      password,
-      role,
-      isNewAccount: true
+  // A 401 from any request for the current actor means the token expired or
+  // was revoked server-side — drop the session so the app falls back to the
+  // right (role-specific) login screen instead of showing broken data.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ actor: ActorRole }>).detail;
+      setUser((prev) => (prev && roleToActor(prev.role) === detail.actor ? null : prev));
     };
-    MOCK_USERS_DB.push(newRecord);
+    window.addEventListener(UNAUTHORIZED_EVENT, handler);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handler);
+  }, []);
 
-    const newUserSession: UserSession = {
-      userId: newUserId,
-      role,
-      name,
-      email,
-      appliedTaskIds: [],
-      isNewAccount: true
-    };
+  const signup = useCallback(
+    async (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL'): Promise<boolean> => {
+      setLoading(true);
+      setAuthError(null);
+      try {
+        const backendRole = role === 'CLIENT' ? 'client' : 'gig_professional';
+        const res = await authApi.signup(name, email, password, backendRole);
+        const session = sessionFromAuthResponse(res.user, res.token);
+        setToken(roleToActor(session.role), res.token);
+        setUser({ ...session, isNewAccount: true });
+        return true;
+      } catch (err) {
+        setAuthError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
-    setUser(newUserSession);
-    setLoading(false);
-    return true;
-  };
-
-  const login = async (email: string, _pass?: string, roleHint?: string, customName?: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, roleHint?: string): Promise<boolean> => {
     setLoading(true);
-    const found = MOCK_USERS_DB.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (found) {
-      const targetRole = roleHint ? normalizeRole(roleHint) : found.role;
-      setUser({
-        userId: found.user_id,
-        role: targetRole,
-        name: customName || found.name,
-        email: found.email,
-        appliedTaskIds: [],
-        isNewAccount: !!found.isNewAccount
-      });
-      setLoading(false);
+    setAuthError(null);
+    try {
+      const res =
+        roleHint === 'MANAGER' ? await authApi.managerLogin(email, password) : await authApi.login(email, password);
+      const session = sessionFromAuthResponse(res.user, res.token);
+      setToken(roleToActor(session.role), res.token);
+      setUser(session);
       return true;
+    } catch (err) {
+      setAuthError(err instanceof ApiError ? err.message : 'Invalid login credentials or server error.');
+      return false;
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    // Fallback user creation if email not in mock list
-    const normRole = normalizeRole(roleHint || 'CLIENT');
-    const fallbackName = customName || (normRole === 'CLIENT' ? 'Aditya Deshmukh' : normRole === 'MANAGER' ? 'Leo Hudson' : 'Arham Kansal');
-    setUser({
-      userId: 'u-' + Date.now(),
-      role: normRole,
-      name: fallbackName,
-      email: email,
-      appliedTaskIds: [],
-      isNewAccount: false
+  const loginManager = useCallback(
+    (email: string, password: string) => login(email, password, 'MANAGER'),
+    [login],
+  );
+
+  const logout = useCallback(() => {
+    setUser((prev) => {
+      if (prev) clearToken(roleToActor(prev.role));
+      return null;
     });
-    setLoading(false);
-    return true;
-  };
+  }, []);
 
-  const loginManager = async (email: string, pass?: string): Promise<boolean> => {
+  const logoutManager = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
-      await managerApi.login(email, pass || 'password5');
-    } catch (_) {}
-    
-    const found = MOCK_USERS_DB.find(u => u.email.toLowerCase() === email.toLowerCase() && u.role === 'MANAGER');
-    if (found) {
-      setUser({
-        userId: found.user_id,
-        role: 'MANAGER',
-        name: found.name,
-        email: found.email,
-        appliedTaskIds: []
-      });
+      await authApi.managerLogout();
+    } catch {
+      // Logout is stateless server-side (see auth.controller.ts) — a failed
+      // request here still means the client should drop its local token.
+    } finally {
+      clearToken('manager');
+      setUser(null);
       setLoading(false);
-      return true;
     }
+  }, []);
 
-    setUser({
-      userId: 'u2',
-      role: 'MANAGER',
-      name: 'Leo Hudson',
-      email: email || 'leo@techstart.io',
-      appliedTaskIds: []
-    });
-    setLoading(false);
-    return true;
-  };
+  const updateUserSession = useCallback((patch: Partial<UserSession>) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : null));
+  }, []);
 
-  const logout = () => {
-    setUser(null);
-  };
-
-  const logoutManager = async () => {
-    setLoading(true);
-    try {
-      await managerApi.logout();
-    } catch (_) {}
-    setUser(null);
-    setLoading(false);
-  };
-
-  const updateUserSession = (patch: Partial<UserSession>) => {
-    setUser(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        ...patch,
-      };
-    });
-  };
+  // No permission/ACL table exists on the backend — admin is a flat role.
+  // Any authenticated super admin can do anything an admin route allows;
+  // this just satisfies the super-admin pages that gate on named permissions.
+  const hasPermission = useCallback(
+    (_permission: string) => user?.role === 'SUPER_ADMIN',
+    [user],
+  );
 
   return (
     <AuthContextInstance.Provider
@@ -191,12 +202,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         role: user?.role || null,
         loading,
+        authError,
         signup,
         login,
         loginManager,
         logout,
         logoutManager,
-        updateUserSession
+        updateUserSession,
+        hasPermission,
       }}
     >
       {children}
@@ -206,7 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContextInstance);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
