@@ -28,8 +28,7 @@ export const MyServices: React.FC = () => {
                 price: 5000,
                 tags: ['Software Development', 'React', 'Node.js'],
                 thumbnail: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                createdAt: new Date().toISOString()
               },
               {
                 service_id: 'srv-102',
@@ -38,8 +37,7 @@ export const MyServices: React.FC = () => {
                 description: 'Comprehensive brand identity package including color palette, typography hierarchy, component library, and Figma design system.',
                 price: 3500,
                 tags: ['UI/UX Design', 'Figma', 'Branding'],
-                createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-                updatedAt: new Date(Date.now() - 86400000 * 3).toISOString()
+                createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
               }
             ]);
           }
@@ -87,7 +85,7 @@ export const MyServices: React.FC = () => {
           borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-md)',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 'var(--spacing-md)'
@@ -122,7 +120,7 @@ export const MyServices: React.FC = () => {
               border: '1px solid #DBDFDF',
               display: 'flex',
               flexDirection: 'column',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               gap: 'var(--spacing-md)'
             }}
           >

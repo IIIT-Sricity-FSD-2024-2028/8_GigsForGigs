@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../../services/api/auth/authApi';
 import type { AuthUser } from '../../services/api/auth/authApi';
-import { ApiError, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
+import { ApiError, getToken, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
 import { decodeJwtPayload } from '../../utils/helpers/jwt';
 
 export type FrontendRole = 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
@@ -57,14 +57,37 @@ function backendRoleToFrontend(role: TokenPayload['role']): FrontendRole {
   }
 }
 
+export const TIER_PERMISSIONS: Record<AdminTier, string[]> = {
+  OWNER: ['*'],
+  SUPER_ADMIN: ['*'],
+  FINANCIAL_ADMIN: ['users:read', 'payments:read', 'payments:release', 'payments:refund', 'projects:read'],
+  SUPPORT_ADMIN: ['users:read', 'projects:read', 'disputes:resolve', 'reviews:moderate'],
+  CONTENT_MODERATOR: ['reviews:moderate', 'users:read'],
+  AUDITOR: ['users:read', 'payments:read', 'projects:read', 'audit:read']
+};
+
+function determineAdminTier(email: string): AdminTier {
+  const clean = email.toLowerCase();
+  if (clean.includes('auditor')) return 'AUDITOR';
+  if (clean.includes('finance')) return 'FINANCIAL_ADMIN';
+  if (clean.includes('support')) return 'SUPPORT_ADMIN';
+  if (clean.includes('moderator') || clean.includes('mod')) return 'CONTENT_MODERATOR';
+  return 'OWNER';
+}
+
 function sessionFromAuthResponse(user: AuthUser, token: string): UserSession {
   const payload = decodeJwtPayload<TokenPayload>(token);
   const role = backendRoleToFrontend(payload?.role ?? user.role);
+  const adminTier = role === 'SUPER_ADMIN' ? determineAdminTier(user.email) : undefined;
+  const permissions = adminTier ? TIER_PERMISSIONS[adminTier] : undefined;
+
   return {
     userId: user.userId,
     role,
     name: user.name,
     email: user.email,
+    adminTier,
+    permissions,
     appliedTaskIds: [],
     ...(payload?.clientId !== undefined ? { clientId: payload.clientId } : {}),
     ...(payload?.managerId !== undefined ? { managerId: payload.managerId } : {}),
@@ -93,8 +116,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Initial user state is null so http://localhost:5173/ always loads the Landing Page first!
-  const [user, setUser] = useState<UserSession | null>(null);
+  // Initialize user session from localStorage if present so page refresh preserves active session
+  const [user, setUser] = useState<UserSession | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem('gfg_active_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -250,11 +281,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser((prev) => (prev ? { ...prev, ...patch } : null));
   }, []);
 
-  // No permission/ACL table exists on the backend — admin is a flat role.
-  // Any authenticated super admin can do anything an admin route allows;
-  // this just satisfies the super-admin pages that gate on named permissions.
+  // Granular Multi-Tier Admin RBAC evaluation
   const hasPermission = useCallback(
-    (_permission: string) => user?.role === 'SUPER_ADMIN',
+    (permission: string): boolean => {
+      if (!user) return false;
+      if (user.role !== 'SUPER_ADMIN') return false;
+
+      const userPermissions = user.permissions || (user.adminTier ? TIER_PERMISSIONS[user.adminTier] : ['*']);
+
+      if (userPermissions.includes('*')) return true;
+      return userPermissions.includes(permission);
+    },
     [user],
   );
 

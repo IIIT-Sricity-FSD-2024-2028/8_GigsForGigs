@@ -8,7 +8,7 @@ export interface MyGigsProps {
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const { contracts, deleteTask } = useClient();
-  const { payments, confirmEscrowPayment } = usePayments();
+  const { payments } = usePayments();
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<EscrowPayment | null>(null);
 
   const handleDeleteTask = async (taskId: string) => {
@@ -29,12 +29,6 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
       currency: 'INR',
       maximumFractionDigits: 0
     }).format(val);
-  };
-
-  const handlePayNow = async (paymentId: string) => {
-    await confirmEscrowPayment(paymentId);
-    setSelectedTaskPayment(null);
-    alert('Payment successful! ₹5,100 has been securely processed. Work can now continue!');
   };
 
   return (

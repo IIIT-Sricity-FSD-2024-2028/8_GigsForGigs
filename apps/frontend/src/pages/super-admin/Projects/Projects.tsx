@@ -2,90 +2,98 @@ import React, { useEffect, useState } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
-import { adminApi } from '../../../services/api/super-admin/adminApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { AdminTask, TaskStatus } from '../../../types/super-admin';
+import { useToast } from '../../../components/super-admin/Toast';
+import { adminApi } from '../../../services/api/admin/adminApi';
 
-/**
- * @file Projects.tsx
- * @description
- * Platform-wide task monitor backed by real `/api/admin/tasks` data.
- *
- * The real `TaskStatus` enum is only `open | in_progress | completed` — the
- * mock's REVIEWING/ASSIGNED/DISPUTED/CANCELLED statuses and milestone/
- * deliverables-submitted counters don't exist on the schema, so the status
- * override dropdown only offers the three real values and the milestone
- * counters have been dropped rather than faked.
- */
+export interface ProjectTask {
+  id: string;
+  title: string;
+  clientName: string;
+  gigProName?: string;
+  managerName?: string;
+  category: string;
+  budget: number;
+  status: 'OPEN' | 'IN_PROGRESS' | 'REVIEWING' | 'COMPLETED' | 'CANCELLED';
+  dueDate?: string;
+  createdAt: string;
+}
 
 export const Projects: React.FC = () => {
-  const [tasks, setTasks] = useState<AdminTask[]>([]);
+  const toast = useToast();
+  const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
 
-  const [selectedTask, setSelectedTask] = useState<AdminTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<ProjectTask | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
-  const [overrideStatus, setOverrideStatus] = useState<TaskStatus>('completed');
+  const [overrideStatus, setOverrideStatus] = useState<ProjectTask['status']>('COMPLETED');
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
+    async function loadTasks() {
       try {
-        const data = await adminApi.listTasks();
-        if (!cancelled) setTasks(data);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load tasks.');
+        setLoading(true);
+        setError(null);
+        const data = await adminApi.getProjects();
+        if (!cancelled) setTasks(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'Failed to load projects & tasks.');
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    }
+    loadTasks();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const handleOpenDrawer = (task: AdminTask) => {
+  const handleOpenDrawer = (task: ProjectTask) => {
     setSelectedTask(task);
-    setActionError(null);
     setIsDrawerOpen(true);
   };
 
   const handleOverrideStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTask) return;
-    setActionError(null);
     try {
-      const updated = await adminApi.updateTask(selectedTask.taskId, { status: overrideStatus });
-      setTasks((prev) => prev.map((t) => (t.taskId === updated.taskId ? { ...t, ...updated } : t)));
-      setSelectedTask((prev) => (prev ? { ...prev, ...updated } : prev));
+      await adminApi.overrideProjectStatus(selectedTask.id, overrideStatus);
+      const updated = tasks.map((t) =>
+        t.id === selectedTask.id ? { ...t, status: overrideStatus } : t
+      );
+      setTasks(updated);
+      setSelectedTask({ ...selectedTask, status: overrideStatus });
       setIsOverrideModalOpen(false);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Failed to update task status.');
+      toast.success('Task Status Overridden', `Project ${selectedTask.id} status updated to ${overrideStatus}.`);
+    } catch (err: any) {
+      toast.error('Override Failed', err?.message || 'Failed to update task status.');
     }
   };
 
-  const columns: ColumnDef<AdminTask>[] = [
+  const columns: ColumnDef<any>[] = [
     {
       header: 'Task Title & ID',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.title}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>ID: {row.taskId}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>ID: {row.taskId || row.id}</span>
         </div>
       )
     },
     {
       header: 'Client',
-      cell: (row) => <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.client.clientName}</span>
+      cell: (row) => (
+        <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
+          <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.client?.clientName || row.clientName || 'Direct Client'}</span>
+          <span style={{ color: 'var(--color-text-muted)' }}>{row.gigProName ? `→ ${row.gigProName}` : 'Open Bidding'}</span>
+        </div>
+      )
     },
-    { header: 'Category', cell: (row: any) => row.category || 'General' },
+    { header: 'Category', cell: (row) => row.category || 'General' },
     {
       header: 'Budget',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${Number(row.budget).toLocaleString()}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${Number(row.budget || 0).toLocaleString()}</span>
     },
     {
       header: 'Status',
@@ -136,7 +144,7 @@ export const Projects: React.FC = () => {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         title={selectedTask?.title || 'Task Details'}
-        subtitle={`ID: ${selectedTask?.taskId} · Created: ${selectedTask ? new Date(selectedTask.createdAt).toLocaleDateString() : ''}`}
+        subtitle={`ID: ${selectedTask?.id} · Created: ${selectedTask ? new Date(selectedTask.createdAt).toLocaleDateString() : ''}`}
         width="540px"
         isDrawer={true}
         footer={
@@ -157,11 +165,6 @@ export const Projects: React.FC = () => {
       >
         {selectedTask && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-            {actionError && (
-              <div className="admin-badge badge-danger" style={{ width: '100%', padding: '8px 12px' }}>
-                {actionError}
-              </div>
-            )}
             <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
               <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOTAL BUDGET</span>
               <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
@@ -176,7 +179,11 @@ export const Projects: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 'var(--font-size-sm)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Hiring Client:</span>
-                  <span style={{ fontWeight: 600 }}>{selectedTask.client.clientName}</span>
+                  <span style={{ fontWeight: 600 }}>{selectedTask.clientName}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Assigned Professional:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedTask.gigProName || 'Open Bidding'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Current Status:</span>
@@ -221,11 +228,13 @@ export const Projects: React.FC = () => {
             <select
               className="admin-select"
               value={overrideStatus}
-              onChange={(e) => setOverrideStatus(e.target.value as TaskStatus)}
+              onChange={(e) => setOverrideStatus(e.target.value as any)}
             >
-              <option value="open">Open (Re-open for Bidding)</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
+              <option value="OPEN">Open (Re-open for Bidding)</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="REVIEWING">Under Review</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
         </form>

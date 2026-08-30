@@ -149,7 +149,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
                     <span className="star" style={{ color: '#f59e0b' }}>★</span> 4.9 <span className="review-count" style={{ color: 'var(--color-text-muted)' }}>(vetted)</span>
                   </div>
                   <div className="talent-skills" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: 'var(--spacing-lg)' }}>
-                    {service.skills.map((skill, idx) => (
+                    {service.skills.map((skill: string, idx: number) => (
                       <span key={idx} className="skill-chip">
                         {skill}
                       </span>

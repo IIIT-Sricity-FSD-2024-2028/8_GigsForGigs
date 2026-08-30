@@ -6,10 +6,11 @@
  * the one place that instantiates `PrismaClient`; every other package/module
  * must import `prisma` from here rather than constructing its own client.
  */
+import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.js";
 
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/gigsforge";
+const connectionString = process.env.DATABASE_URL || "postgresql://postgres@127.0.0.1:5433/gigsforge";
 
 const adapter = new PrismaPg({ connectionString });
 

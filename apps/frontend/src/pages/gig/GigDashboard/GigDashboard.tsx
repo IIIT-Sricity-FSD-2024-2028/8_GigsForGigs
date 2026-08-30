@@ -119,7 +119,7 @@ export const GigDashboard: React.FC = () => {
           borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-md)',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center'
         }}
       >

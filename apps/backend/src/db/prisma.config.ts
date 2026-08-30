@@ -8,6 +8,6 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/gigsforge",
+    url: process.env.DATABASE_URL || "postgresql://postgres@127.0.0.1:5433/gigsforge",
   },
 });

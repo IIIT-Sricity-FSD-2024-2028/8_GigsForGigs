@@ -8,7 +8,7 @@ export const TotalEarnings: React.FC = () => {
   const [withdrawing, setWithdrawing] = useState<boolean>(false);
 
   const gigPayments = payments.filter(
-    p => p.gigProfileId === user?.userId || p.gigProName.toLowerCase().includes(user?.name?.toLowerCase() || 'elena')
+    p => p.gigProfileId === String(user?.userId) || p.gigProName.toLowerCase().includes(user?.name?.toLowerCase() || 'elena')
   );
 
   const formatCurrency = (val: number) => {
@@ -53,7 +53,7 @@ export const TotalEarnings: React.FC = () => {
           background: 'linear-gradient(135deg, var(--color-primary-dark) 0%, #053661 100%)',
           color: '#ffffff',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 'var(--spacing-lg)'

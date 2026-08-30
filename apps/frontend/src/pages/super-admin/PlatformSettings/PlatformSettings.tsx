@@ -32,7 +32,12 @@ export const PlatformSettings: React.FC = () => {
     async function loadSettings() {
       const data = await adminApi.getPlatformSettings();
       if (isMounted && data) {
-        setConfig(data);
+        setConfig({
+          ...data,
+          allowedCategories: Array.isArray(data.allowedCategories) ? data.allowedCategories : [
+            'Software Development', 'Design & Creative', 'AI & Data Science', '3D & Spatial Computing'
+          ]
+        });
       }
     }
     loadSettings();

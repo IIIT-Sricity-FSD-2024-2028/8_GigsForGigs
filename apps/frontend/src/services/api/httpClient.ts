@@ -83,8 +83,11 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   if (!res.ok) {
     if (res.status === 401 && actor) {
-      clearToken(actor);
-      window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { actor } }));
+      const token = getToken(actor);
+      if (token && token !== 'mock-dev-jwt-token') {
+        clearToken(actor);
+        window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { actor } }));
+      }
     }
     const message =
       (data as { message?: string } | null)?.message ?? `Request failed with status ${res.status}`;

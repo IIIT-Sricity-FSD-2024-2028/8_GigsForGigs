@@ -133,7 +133,7 @@ export const SubmitDeliverables: React.FC = () => {
         </div>
         <button
           className="admin-btn admin-btn-outline admin-btn-sm"
-          onClick={() => navigateToTaskDetail(task.task_id)}
+          onClick={() => setActiveTab('project-detail')}
         >
           View Full Spec
         </button>

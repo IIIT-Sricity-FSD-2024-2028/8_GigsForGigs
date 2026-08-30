@@ -60,8 +60,10 @@ temp/
 playwright-report/
 test-results/
 
-# Prisma
+# Prisma & Database
 prisma/*.db
 prisma/*.db-journal
+local_pg_data/
+**/local_pg_data/
 
 references

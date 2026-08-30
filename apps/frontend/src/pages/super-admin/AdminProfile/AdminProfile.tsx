@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ShieldIcon } from '../../../components/super-admin/Icons';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
@@ -28,11 +28,33 @@ export const AdminProfile: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const activeSessions = [
-    { device: 'Chrome on Windows 11 (This Device)', ip: '192.168.1.42', lastActive: 'Active Now', current: true },
-    { device: 'Safari on macOS Sonoma', ip: '10.0.4.19', lastActive: '2 hours ago', current: false },
-    { device: 'Firefox on Linux (Ubuntu 24.04)', ip: '172.16.0.8', lastActive: 'Yesterday', current: false }
-  ];
+  const env = React.useMemo(() => {
+    if (typeof window === 'undefined') return { browser: 'Google Chrome on Windows 11', ip: '127.0.0.1' };
+    const ua = navigator.userAgent;
+    let b = 'Google Chrome';
+    if (ua.includes('Edg/')) b = 'Microsoft Edge';
+    else if (ua.includes('Firefox/')) b = 'Mozilla Firefox';
+    else if (ua.includes('Safari/') && !ua.includes('Chrome')) b = 'Apple Safari';
+
+    let o = 'Windows 11';
+    if (ua.includes('Macintosh') || ua.includes('Mac OS')) o = 'macOS Sonoma';
+    else if (ua.includes('Linux')) o = 'Linux (Ubuntu)';
+
+    return {
+      browser: `${b} on ${o}`,
+      ip: window.location.hostname === 'localhost' ? '127.0.0.1 (Localhost)' : window.location.hostname
+    };
+  }, []);
+
+  const [activeSessions, setActiveSessions] = useState([
+    { id: 'sess-current', device: 'This Device (Active)', isCurrent: true, ip: '127.0.0.1 (Localhost)', lastActive: 'Active Now' },
+    { id: 'sess-sec-01', device: 'Apple Safari on macOS (Backup Portal)', isCurrent: false, ip: '192.168.1.104', lastActive: '3 hours ago' },
+    { id: 'sess-sec-02', device: 'Firefox Developer Edition (Mobile)', isCurrent: false, ip: '10.0.4.52', lastActive: 'Yesterday' }
+  ]);
+
+  useEffect(() => {
+    setActiveSessions(prev => prev.map(s => s.isCurrent ? { ...s, device: `${env.browser} (This Device)`, ip: env.ip } : s));
+  }, [env]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,9 +81,15 @@ export const AdminProfile: React.FC = () => {
     toast.info('2FA State Toggled', `Two-factor authentication is now ${nextState ? 'Enabled' : 'Disabled'} in database.`);
   };
 
-  const handleRevokeSessions = async () => {
+  const handleRevokeSessions = async (sessionId?: string) => {
     await adminApi.revokeAdminSession('adm-01');
-    toast.warning('Sessions Revoked', 'All other active JWT sessions have been invalidated via tokenVersion increment.');
+    if (sessionId) {
+      setActiveSessions(prev => prev.filter(s => s.id !== sessionId));
+      toast.warning('Session Terminated', `Device session ${sessionId} has been invalidated.`);
+    } else {
+      setActiveSessions(prev => prev.filter(s => s.isCurrent));
+      toast.warning('All Sessions Revoked', 'All other active JWT browser sessions have been invalidated via tokenVersion increment.');
+    }
   };
 
   const adminName = user?.name || 'Chaitanya Anand';
@@ -96,7 +124,7 @@ export const AdminProfile: React.FC = () => {
               {adminEmail}
             </span>
             <div style={{ marginTop: '6px' }}>
-              <StatusBadge status="OWNER" />
+              <StatusBadge status={user?.adminTier || 'OWNER'} />
             </div>
           </div>
         </div>
@@ -104,7 +132,12 @@ export const AdminProfile: React.FC = () => {
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
             <span style={{ color: 'var(--color-text-muted)' }}>Authority Tier</span>
-            <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>Platform Root Authority (All RBAC Bitmasks)</span>
+            <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+              {user?.adminTier === 'AUDITOR' ? 'Auditor Compliance (Read-Only Inspection)' :
+               user?.adminTier === 'FINANCIAL_ADMIN' ? 'Financial Administration & Escrow Authority' :
+               user?.adminTier === 'SUPPORT_ADMIN' ? 'Support & Arbitration Authority' :
+               'Platform Root Authority (All RBAC Bitmasks)'}
+            </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
             <span style={{ color: 'var(--color-text-muted)' }}>Account Provisioned</span>
@@ -222,7 +255,7 @@ export const AdminProfile: React.FC = () => {
               Active Sessions & Device Tokens
             </h3>
             <button
-              onClick={handleRevokeSessions}
+              onClick={() => handleRevokeSessions()}
               className="admin-btn admin-btn-danger"
               style={{ padding: '4px 8px', fontSize: '11px' }}
             >
@@ -231,31 +264,31 @@ export const AdminProfile: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {activeSessions.map((session, i) => (
+            {activeSessions.map((session) => (
               <div
-                key={i}
+                key={session.id}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '8px 12px',
-                  backgroundColor: session.current ? 'rgba(8, 75, 131, 0.05)' : 'var(--color-bg-light)',
-                  border: session.current ? '1px solid var(--color-primary-dark)' : '1px solid var(--color-border)',
+                  backgroundColor: session.isCurrent ? 'rgba(8, 75, 131, 0.05)' : 'var(--color-bg-light)',
+                  border: session.isCurrent ? '1px solid var(--color-primary-dark)' : '1px solid var(--color-border)',
                   borderRadius: 'var(--radius-md)',
                   fontSize: 'var(--font-size-xs)'
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: session.current ? 700 : 500, color: 'var(--color-text-dark)' }}>
-                    {session.device} {session.current && <span style={{ color: 'var(--color-primary-dark)', fontSize: '10px' }}>(This Session)</span>}
+                  <div style={{ fontWeight: session.isCurrent ? 700 : 500, color: 'var(--color-text-dark)' }}>
+                    {session.device} {session.isCurrent && <span style={{ color: 'var(--color-primary-dark)', fontSize: '10px' }}>(This Session)</span>}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>IP: {session.ip} • Last active: {session.lastActive}</div>
                 </div>
-                {session.current ? (
+                {session.isCurrent ? (
                   <span className="admin-badge badge-success" style={{ fontSize: '10px' }}>Active</span>
                 ) : (
                   <button
-                    onClick={handleRevokeSessions}
+                    onClick={() => handleRevokeSessions(session.id)}
                     style={{ background: 'none', border: 'none', color: 'var(--color-danger-text)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}
                   >
                     Kill Session

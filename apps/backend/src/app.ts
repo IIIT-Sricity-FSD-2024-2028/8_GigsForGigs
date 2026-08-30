@@ -48,10 +48,10 @@ app.get("/health", (_req, res) => {
 // get first chance to match/handle their own routes; only requests that
 // don't match any of them fall through to clientRouter's routes.
 app.use("/api/auth", authRouter);
-app.use("/api/payments", paymentRouter);
-app.use("/api", managerRouter);
-app.use("/api/gig", gigRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/payments", paymentRouter);
+app.use("/api/gig", gigRouter);
+app.use("/api", managerRouter);
 app.use("/api", clientRouter);
 
 app.use(notFoundHandler);

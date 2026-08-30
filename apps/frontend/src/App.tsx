@@ -20,6 +20,7 @@ import { DisputesReports } from './pages/super-admin/DisputesReports';
 import { AdminManagement } from './pages/super-admin/AdminManagement';
 import { AdminProfile } from './pages/super-admin/AdminProfile';
 import { PlatformSettings } from './pages/super-admin/PlatformSettings';
+import { AdminInviteActivation } from './pages/super-admin/AdminInviteActivation/AdminInviteActivation';
 
 // 💼 Client Pages & Layout
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
@@ -138,7 +139,7 @@ function GigAppContent() {
       {activeTab === 'submit-deliverables' && <SubmitDeliverables />}
       {activeTab === 'submission-success' && <SubmissionSuccess />}
       {activeTab === 'post-service' && <PostService />}
-      {activeTab === 'service-published' && <MyServices />}
+      {activeTab === 'service-published' && <ServicePublished />}
       {activeTab === 'project-detail' && <ProjectDetail />}
       {activeTab === 'profile' && <GigProfile />}
       {activeTab === 'profile-completion' && <GigProfileCompletion />}
@@ -195,7 +196,7 @@ function ClientAppContent() {
       {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
       {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
       {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
-      {clientView === 'total-spent' && <MyGigs onNavigate={handleClientNavigate} />}
+      {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
       {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
@@ -212,12 +213,29 @@ function ClientAppContent() {
 function MainAppContent() {
   const { user, isAuthenticated, loading: authLoading, login } = useAuth();
   const [unauthView, setUnauthView] = useState<UnauthView>('landing');
+  const [isInviteFlowActive, setIsInviteFlowActive] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.location.pathname.startsWith('/admin/invite') || window.location.search.includes('token=inv_');
+  });
 
   if (authLoading) {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFF6F7', color: '#0D568D', fontWeight: 600 }}>
         Loading GigsForGigs Workspace...
       </div>
+    );
+  }
+
+  if (isInviteFlowActive) {
+    return (
+      <AdminInviteActivation
+        onActivationSuccess={() => {
+          setIsInviteFlowActive(false);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, document.title, '/');
+          }
+        }}
+      />
     );
   }
 
@@ -270,8 +288,23 @@ function MainAppContent() {
       >
         <span style={{ fontWeight: 600, opacity: 0.8 }}>ROLE:</span>
         <select
-          value={user.role}
-          onChange={(e) => login(user.email, 'password123', e.target.value)}
+          value={user.role === 'SUPER_ADMIN' ? (user.adminTier ? `ADMIN_${user.adminTier}` : 'ADMIN_OWNER') : user.role}
+          onChange={(e) => {
+            const target = e.target.value;
+            const emails: Record<string, string> = {
+              'ADMIN_OWNER': 'chaitanya.admin@gigsforgigs.internal',
+              'ADMIN_SUPER_ADMIN': 'jovan44@yahoo.com',
+              'ADMIN_AUDITOR': 'auditor.lead@gigsforgigs.internal',
+              'ADMIN_FINANCIAL_ADMIN': 'finance.officer@gigsforgigs.internal',
+              'ADMIN_SUPPORT_ADMIN': 'support.lead@gigsforgigs.internal',
+              'SUPER_ADMIN': 'chaitanya.admin@gigsforgigs.internal',
+              'MANAGER': 'alene11@gmail.com',
+              'CLIENT': 'margarete.olson@yahoo.com',
+              'GIG_PROFESSIONAL': 'colten.fadel@yahoo.com'
+            };
+            const role = target.startsWith('ADMIN_') ? 'SUPER_ADMIN' : target;
+            login(emails[target] || user.email, 'password123', role);
+          }}
           style={{
             background: '#ffffff',
             color: '#084b83',
@@ -283,7 +316,10 @@ function MainAppContent() {
             cursor: 'pointer'
           }}
         >
-          <option value="SUPER_ADMIN">👑 Super Admin</option>
+          <option value="ADMIN_OWNER">👑 Super Admin (Owner - Full Access)</option>
+          <option value="ADMIN_AUDITOR">🔍 Delegate Admin (Auditor - Read Only)</option>
+          <option value="ADMIN_FINANCIAL_ADMIN">💳 Delegate Admin (Financial Admin)</option>
+          <option value="ADMIN_SUPPORT_ADMIN">🛡️ Delegate Admin (Support & Disputes)</option>
           <option value="MANAGER">👔 Manager</option>
           <option value="CLIENT">💼 Client</option>
           <option value="GIG_PROFESSIONAL">⚡ Gig Professional</option>

@@ -1,73 +1,84 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
-import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
+import { StatusBadge } from '../../../components/super-admin/StatusBadge';
+import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { ReviewIcon } from '../../../components/super-admin/Icons';
-import { adminApi } from '../../../services/api/super-admin/adminApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { AdminReview } from '../../../types/super-admin';
+import { useToast } from '../../../components/super-admin/Toast';
+import { adminApi } from '../../../services/api/admin/adminApi';
 
-/**
- * @file Reviews.tsx
- * @description
- * Review moderation queue backed by real `/api/admin/reviews` data.
- *
- * The real `Review` model has no moderation status (no APPROVED/FLAGGED/
- * HIDDEN column, no flagCount) — reviews just exist or don't. The
- * "approve"/"hide" workflow from the mock has been replaced with what the
- * backend actually supports: deleting a review outright (the closest real
- * equivalent to "hide" — DELETE /admin/reviews/:reviewId).
- */
+export interface ModerationReview {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  reviewerName: string;
+  reviewerRole: 'CLIENT' | 'GIG_PROFESSIONAL';
+  targetUserName: string;
+  rating: number;
+  comment: string;
+  flagCount: number;
+  flagReason?: string;
+  status: 'APPROVED' | 'FLAGGED' | 'HIDDEN';
+  createdAt: string;
+}
 
 export const Reviews: React.FC = () => {
-  const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const toast = useToast();
+  const [reviews, setReviews] = useState<ModerationReview[]>([]);
+  const [activeTab, setActiveTab] = useState<'all' | 'flagged' | 'hidden'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const [targetReview, setTargetReview] = useState<AdminReview | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
+    let isMounted = true;
+    async function loadReviews() {
       try {
-        const data = await adminApi.listReviews();
-        if (!cancelled) setReviews(data);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load reviews.');
+        setLoading(true);
+        setError(null);
+        const data = await adminApi.getReviews();
+        if (isMounted) {
+          setReviews(Array.isArray(data) ? data : []);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || 'Failed to load reviews queue.');
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    }
+    loadReviews();
+    return () => { isMounted = false; };
   }, []);
 
-  const handleDeleteConfirm = async () => {
-    if (!targetReview) return;
-    setActionError(null);
+  const handleModerate = async (id: string, newStatus: ModerationReview['status']) => {
     try {
-      await adminApi.deleteReview(targetReview.reviewId);
-      setReviews((prev) => prev.filter((r) => r.reviewId !== targetReview.reviewId));
-      setIsDeleteDialogOpen(false);
-      setTargetReview(null);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Failed to delete review.');
-      setIsDeleteDialogOpen(false);
+      await adminApi.moderateReview(id, newStatus);
+      const updated = reviews.map((r) =>
+        r.id === id ? { ...r, status: newStatus } : r
+      );
+      setReviews(updated);
+      toast.info('Review Moderated', `Review status changed to ${newStatus}. Aggregate ratings recalculated.`);
+    } catch (err: any) {
+      toast.error('Moderation Failed', err?.message || 'Failed to update review status.');
     }
   };
 
-  const columns: ColumnDef<AdminReview>[] = [
+  const filteredReviews = reviews.filter((r) => {
+    if (activeTab === 'flagged') return r.status === 'FLAGGED' || r.flagCount > 0;
+    if (activeTab === 'hidden') return r.status === 'HIDDEN';
+    return true;
+  });
+
+  const columns: ColumnDef<ModerationReview>[] = [
     {
       header: 'Task & Parties',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.task.title}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.taskTitle}</span>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-            From: {row.reviewer.name} → To: {row.reviewee.name}
+            From: {row.reviewerName} ({row.reviewerRole}) → To: {row.targetUserName}
           </span>
         </div>
       )
@@ -77,9 +88,15 @@ export const Reviews: React.FC = () => {
       cell: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#bf6900' }}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <ReviewIcon key={i} size={14} color={i < row.rating ? '#bf6900' : 'var(--color-border)'} />
+            <ReviewIcon
+              key={i}
+              size={14}
+              color={i < row.rating ? '#bf6900' : 'var(--color-border)'}
+            />
           ))}
-          <span style={{ marginLeft: '4px', fontWeight: 700, color: 'var(--color-text-dark)' }}>{row.rating}/5</span>
+          <span style={{ marginLeft: '4px', fontWeight: 700, color: 'var(--color-text-dark)' }}>
+            {row.rating}/5
+          </span>
         </div>
       )
     },

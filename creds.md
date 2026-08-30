@@ -1,14 +1,18 @@
-# Test credentials (seeded data)
+# Test credentials (Live PostgreSQL Seeded Data)
 
 All seeded users share the same password: `password123`
 
-| Role | Email | Name |
-|---|---|---|
-| Client | lyda17@gmail.com | Burley Witting |
-| Manager | elaina83@yahoo.com | Sam Ullrich |
-| Gig Professional | elvera.fadel@yahoo.com | Gilbert Lesch |
-| Admin | gustave_rempel-ondricka87@yahoo.com | Foster Franecki |
+| Role | Email | Name | Notes |
+|---|---|---|---|
+| **Super Admin** | `chaitanya.admin@gigsforgigs.internal` | Chaitanya Anand | Master Admin (`*` full access) |
+| **Super Admin** | `jovan44@yahoo.com` | Jovan Miller | Master Admin |
+| **Super Admin** | `shanna_deckow81@yahoo.com` | Lela Parisian | Seeded Admin |
+| **Client** | `margarete.olson@yahoo.com` | Mack Gusikowski | Seeded Client |
+| **Manager** | `alene11@gmail.com` | Rosario Raynor | Seeded Manager |
+| **Gig Professional** | `colten.fadel@yahoo.com` | Rochelle Baumbach | Seeded Gig Pro |
 
-Notes:
-- These come from `apps/backend/src/db/prisma/seed.ts` — re-running `npx prisma db seed` wipes and regenerates all rows, so these exact emails will change after a reseed (query the DB again for fresh ones).
-- Log in at the frontend's Login page, selecting the matching role in "Log in as" (Client / Manager / Gig Professional / Super Admin — note Super Admin here maps to the `admin` DB role).
+### How to Log In:
+1. Open the frontend at [http://localhost:5173](http://localhost:5173)
+2. Select your role in "Log in as" (**Client**, **Manager**, **Gig Professional**, or **Super Admin**)
+3. Enter the email above and password `password123`
+

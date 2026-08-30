@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
+import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ReviewIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
@@ -26,13 +27,27 @@ export const GigProfessionalManagement: React.FC = () => {
   const [selectedPro, setSelectedPro] = useState<GigProDetail | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSuspendDialogOpen, setIsSuspendDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     async function loadGigPros() {
-      const data = await adminApi.getGigPros();
-      if (isMounted) {
-        setGigPros(data);
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await adminApi.getGigPros();
+        if (isMounted) {
+          setGigPros(Array.isArray(data) ? data : []);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || 'Failed to load gig professionals.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     loadGigPros();
@@ -41,9 +56,6 @@ export const GigProfessionalManagement: React.FC = () => {
 
   const handleOpenProDrawer = (pro: GigProDetail) => {
     setSelectedPro(pro);
-    setEditBio(pro.bio ?? '');
-    setIsEditing(false);
-    setActionError(null);
     setIsDrawerOpen(true);
   };
 
@@ -70,13 +82,13 @@ export const GigProfessionalManagement: React.FC = () => {
     toast.warning('Freelancer Suspended', `Account for ${selectedPro.name} paused.`);
   };
 
-  const columns: ColumnDef<AdminGigProfile>[] = [
+  const columns: ColumnDef<GigProDetail>[] = [
     {
       header: 'Freelancer',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.user.name}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.bio || 'No bio yet'}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.name}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.headline}</span>
         </div>
       )
     },

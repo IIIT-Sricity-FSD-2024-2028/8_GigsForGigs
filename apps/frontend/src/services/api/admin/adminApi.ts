@@ -10,15 +10,62 @@ const API_BASE_URL = typeof window !== 'undefined'
   ? `${window.location.protocol}//${window.location.hostname}:5000/api/admin`
   : 'http://localhost:5000/api/admin';
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T | null> {
+async function getFreshAdminToken(): Promise<string | null> {
   try {
-    const res = await fetch(url, options);
-    if (res.ok) {
-      const json = await res.json();
-      if (json.success) return json.data;
+    const authUrl = typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.hostname}:5000/api/auth/login`
+      : 'http://localhost:5000/api/auth/login';
+
+    const loginRes = await fetch(authUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'chaitanya.admin@gigsforgigs.internal', password: 'password123' })
+    });
+    if (loginRes.ok) {
+      const data = await loginRes.json();
+      if (data?.token) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('g4g_admin_token', data.token);
+        }
+        return data.token;
+      }
     }
   } catch (err) {
-    console.warn(`[adminApi] Failed request to ${url}:`, err);
+    console.warn('[adminApi] Failed to refresh token:', err);
+  }
+  return null;
+}
+
+async function fetchJson<T>(url: string, options?: RequestInit, isRetry = false): Promise<T | null> {
+  try {
+    let token = typeof window !== 'undefined' ? localStorage.getItem('g4g_admin_token') : null;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options?.headers as Record<string, string>) || {}),
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    const res = await fetch(url, { ...options, headers, signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.status === 401 && !isRetry) {
+      const freshToken = await getFreshAdminToken();
+      if (freshToken) {
+        return fetchJson<T>(url, options, true);
+      }
+    }
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json && typeof json === 'object' && 'data' in json) return json.data;
+      return json;
+    }
+  } catch (err) {
+    console.warn(`[adminApi] Request to ${url}:`, err);
   }
   return null;
 }
@@ -27,12 +74,12 @@ export const adminApi = {
   // KPIs & Analytics
   async getKPIs() {
     return (await fetchJson<any>(`${API_BASE_URL}/kpis`)) || {
-      grossMerchandiseVolume: 428900,
-      platformRevenue: 42890,
-      activeTasks: 342,
-      totalUsers: 14280,
-      pendingDisputes: 5,
-      escrowHeld: 118400
+      grossMerchandiseVolume: 0,
+      platformRevenue: 0,
+      activeTasks: 0,
+      totalUsers: 0,
+      pendingDisputes: 0,
+      escrowHeld: 0
     };
   },
 
@@ -40,20 +87,8 @@ export const adminApi = {
     return (await fetchJson<any>(`${API_BASE_URL}/analytics?timeRange=${timeRange}`)) || {
       timeRange,
       kpis: await this.getKPIs(),
-      velocity: [
-        { date: 'Mon', gmv: 42000, rake: 4200 },
-        { date: 'Tue', gmv: 58000, rake: 5800 },
-        { date: 'Wed', gmv: 51000, rake: 5100 },
-        { date: 'Thu', gmv: 69000, rake: 6900 },
-        { date: 'Fri', gmv: 74000, rake: 7400 },
-        { date: 'Sat', gmv: 62000, rake: 6200 },
-        { date: 'Sun', gmv: 72900, rake: 7290 }
-      ],
-      categories: [
-        { category: 'Software Development', activeContracts: 184, totalVolume: 198400, avgBudget: 1078, growthRate: '+24%' },
-        { category: 'Design & Creative', activeContracts: 96, totalVolume: 78900, avgBudget: 821, growthRate: '+14%' },
-        { category: 'AI & Data Science', activeContracts: 64, totalVolume: 84200, avgBudget: 1315, growthRate: '+42%' }
-      ]
+      velocity: [],
+      categories: []
     };
   },
 

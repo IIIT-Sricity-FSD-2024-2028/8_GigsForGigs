@@ -15,7 +15,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   const [payingPayment, setPayingPayment] = useState<EscrowPayment | null>(null);
 
   const clientPayments = payments.filter(
-    p => p.clientId === user?.userId || p.clientName.toLowerCase().includes(user?.name?.toLowerCase() || 'aditya')
+    p => p.clientId === String(user?.userId) || p.clientName.toLowerCase().includes(user?.name?.toLowerCase() || 'aditya')
   );
 
   const formatCurrency = (val: number) => {

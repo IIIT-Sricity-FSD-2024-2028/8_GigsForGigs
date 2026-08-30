@@ -67,6 +67,8 @@ export const gigApi = {
       .filter((r) => r.status === 'PENDING')
       .map((r) => ({
         application_id: r.request_id,
+        task_id: r.request_id,
+        gig_profile_id: '1',
         status: 'PENDING',
         budget: r.budget,
         createdAt: r.createdAt,
@@ -74,14 +76,9 @@ export const gigApi = {
           task_id: r.request_id,
           title: r.title,
           description: r.description,
-          budget: r.budget,
           client_id: r.client_name,
-          manager_id: r.manager_name,
-          category: 'Software Development',
-          status: 'PENDING',
-          progress: 0,
-          createdAt: r.createdAt,
-          updatedAt: r.createdAt
+          budget: r.budget,
+          createdAt: r.createdAt
         }
       }));
   },
@@ -103,12 +100,17 @@ export const gigApi = {
         description: `Delivered and verified. Manager: ${c.manager_name || 'Julian Lynch'}`,
         budget: c.budget,
         client_id: c.client_name,
-        completed_at: c.completedAt || new Date().toISOString(),
+        status: 'COMPLETED' as const,
+        completedAt: c.completedAt || new Date().toISOString(),
         payment: {
+          payment_id: 'PAY-' + c.task_id,
+          task_id: c.task_id,
+          gig_profile_id: '1',
           amount: c.budget,
-          status: 'COMPLETED'
+          paidAt: c.completedAt || new Date().toISOString()
         },
         reviews: c.reviews.client_to_gig ? [{
+          review_id: 'REV-' + c.task_id,
           rating: c.reviews.client_to_gig.rating,
           comment: c.reviews.client_to_gig.comment
         }] : undefined
@@ -132,12 +134,11 @@ export const gigApi = {
       completedTasks: paidContracts.length || 1,
       payments: [
         {
-          paymentId: 'PAY-1001',
-          taskId: '101',
-          taskTitle: 'Full Stack Marketplace Optimization',
-          clientName: 'Julian Lynch',
-          gigAmount: 5000,
-          status: 'ESCROWED',
+          payment_id: 'PAY-1001',
+          task_id: '101',
+          gig_profile_id: '1',
+          amount: 5000,
+          paidAt: new Date().toISOString(),
           createdAt: new Date().toISOString()
         }
       ]
@@ -210,6 +211,9 @@ export const gigApi = {
     } catch {
       return {
         gig_profile_id: '1',
+        user_id: 'usr-06',
+        name: 'Elena Rodriguez',
+        email: 'elena.rodriguez@freelance.dev',
         bio: 'Senior Full-Stack & Creative Professional specializing in React, Node.js, and UX Design.',
         skills: ['React', 'TypeScript', 'Node.js', 'UI/UX', 'Tailwind CSS'],
         tools: ['VS Code', 'Figma', 'Postman', 'Git'],
@@ -224,6 +228,9 @@ export const gigApi = {
     } catch {
       return {
         gig_profile_id: '1',
+        user_id: 'usr-06',
+        name: 'Elena Rodriguez',
+        email: 'elena.rodriguez@freelance.dev',
         bio: patch.bio || 'Senior Professional',
         skills: patch.skills || ['React', 'TypeScript'],
         tools: patch.tools || ['Figma'],
@@ -242,8 +249,7 @@ export const gigApi = {
       price: s.price,
       tags: s.tags,
       thumbnail: s.thumbnail,
-      createdAt: s.createdAt,
-      updatedAt: s.createdAt
+      createdAt: s.createdAt
     }));
   },
 
@@ -273,8 +279,7 @@ export const gigApi = {
       price: saved.price,
       tags: saved.tags,
       thumbnail: saved.thumbnail,
-      createdAt: saved.createdAt,
-      updatedAt: saved.createdAt
+      createdAt: saved.createdAt
     };
   },
 
@@ -296,7 +301,6 @@ export const gigApi = {
       deliverable_no: 1,
       content: dto.content,
       notes: dto.notes,
-      status: 'PENDING',
       createdAt: new Date().toISOString()
     };
   },

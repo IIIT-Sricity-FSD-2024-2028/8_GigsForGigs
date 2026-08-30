@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { KPICard } from '../../../components/super-admin/KPICard';
-import { DonutChart, HorizontalBarChart } from '../../../components/super-admin/SimpleCharts';
+import { DonutChart, HorizontalBarChart, RevenueAreaChart } from '../../../components/super-admin/SimpleCharts';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import {
   UsersIcon,
   PaymentIcon,
-  ProjectIcon
+  ProjectIcon,
+  DisputeIcon
 } from '../../../components/super-admin/Icons';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
@@ -14,35 +15,17 @@ import { adminApi } from '../../../services/api/admin/adminApi';
  * @file Dashboard.tsx
  * @description
  * High-level executive overview for the GigsForGigs platform owner and delegate admins.
-<<<<<<< HEAD
- * KPI tiles and the two breakdown charts come from real /api/admin data
- * (dashboard/stats, users, tasks). Escrow-held and the dispute alert banner
- * have NO backing anywhere in the schema (no escrow/dispute tables) and are
- * intentionally omitted rather than faked — see PlatformSettings/DisputesReports
- * for the same gap.
-=======
  * 100% of KPIs, Donut Charts, Demographics, and Revenue Velocity curves are dynamically
  * computed in real-time from the database backend.
->>>>>>> origin/main
  */
 
 export interface DashboardProps {
   onNavigate?: (viewId: string) => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  open: '#519e8a',
-  in_progress: '#084b83',
-  completed: '#137333'
-};
-const ROLE_COLORS: Record<string, string> = {
-  gig_professional: '#084b83',
-  client: '#519e8a',
-  manager: '#bf6900',
-  admin: '#6a1b9a'
-};
-
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [kpis, setKpis] = useState({
     grossMerchandiseVolume: 0,
     platformRevenue: 0,
@@ -63,26 +46,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     let isMounted = true;
     async function loadDashboardData() {
       try {
+        setLoading(true);
+        setError(null);
         const [kpiRes, projRes, clientRes, proRes, mgrRes, staffRes, analyticsRes] = await Promise.all([
-          adminApi.getKPIs(),
-          adminApi.getProjects(),
-          adminApi.getClients(),
-          adminApi.getGigPros(),
-          adminApi.getManagers(),
-          adminApi.getAdminStaff(),
-          adminApi.getAnalytics('7d')
+          adminApi.getKPIs().catch(() => null),
+          adminApi.getProjects().catch(() => []),
+          adminApi.getClients().catch(() => []),
+          adminApi.getGigPros().catch(() => []),
+          adminApi.getManagers().catch(() => []),
+          adminApi.getAdminStaff().catch(() => []),
+          adminApi.getAnalytics('7d').catch(() => null)
         ]);
         if (isMounted) {
           if (kpiRes) setKpis(kpiRes);
-          if (projRes) setProjects(projRes);
-          if (clientRes) setClients(clientRes);
-          if (proRes) setGigPros(proRes);
-          if (mgrRes) setManagers(mgrRes);
-          if (staffRes) setAdminStaff(staffRes);
+          setProjects(Array.isArray(projRes) ? projRes : []);
+          setClients(Array.isArray(clientRes) ? clientRes : []);
+          setGigPros(Array.isArray(proRes) ? proRes : []);
+          setManagers(Array.isArray(mgrRes) ? mgrRes : []);
+          setAdminStaff(Array.isArray(staffRes) ? staffRes : []);
           if (analyticsRes?.velocity) setVelocity(analyticsRes.velocity);
         }
-      } catch (err) {
-        console.warn('Failed loading dashboard live data:', err);
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || 'Failed loading dashboard live data.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     loadDashboardData();

@@ -29,7 +29,7 @@ export interface DataTableProps<T> {
 
 export function DataTable<T extends Record<string, any>>({
   columns,
-  data,
+  data = [],
   searchPlaceholder = 'Search records...',
   searchableKey,
   pageSize = 8,
@@ -40,12 +40,14 @@ export function DataTable<T extends Record<string, any>>({
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
   // Filter dataset by search term
   const filteredData = useMemo(() => {
-    if (!searchQuery.trim()) return data;
+    if (!searchQuery.trim()) return safeData;
     const query = searchQuery.toLowerCase();
 
-    return data.filter((item) => {
+    return safeData.filter((item) => {
       if (searchableKey) {
         const val = item[searchableKey];
         return String(val ?? '').toLowerCase().includes(query);
@@ -54,7 +56,7 @@ export function DataTable<T extends Record<string, any>>({
         String(val ?? '').toLowerCase().includes(query)
       );
     });
-  }, [data, searchQuery, searchableKey]);
+  }, [safeData, searchQuery, searchableKey]);
 
   // Compute pagination slices
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));

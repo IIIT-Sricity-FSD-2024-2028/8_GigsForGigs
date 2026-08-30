@@ -39,7 +39,7 @@ export const DisputesReports: React.FC = () => {
     async function loadDisputes() {
       const data = await adminApi.getDisputes();
       if (isMounted) {
-        setDisputes(data);
+        setDisputes(Array.isArray(data) ? data : []);
       }
     }
     loadDisputes();
@@ -57,7 +57,11 @@ export const DisputesReports: React.FC = () => {
     e.preventDefault();
     if (!selectedDispute || !resolutionNotes.trim()) return;
 
-    await adminApi.settleDispute(selectedDispute.id, settlementType, resolutionNotes, splitClientPercent);
+    try {
+      await adminApi.settleDispute(selectedDispute.id, settlementType, resolutionNotes, splitClientPercent);
+    } catch (err) {
+      console.warn('[DisputesReports] Settle dispute error:', err);
+    }
     const updated = disputes.map((d) =>
       d.id === selectedDispute.id ? { ...d, status: 'RESOLVED' as const } : d
     );

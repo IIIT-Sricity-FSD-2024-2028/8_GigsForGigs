@@ -26,12 +26,14 @@ import * as adminController from "./admin.controller.js";
 
 export const adminRouter = Router();
 
-// Every route in this router bypasses clientOwnershipGuard/taskAccessGuard
-// by construction — they are simply never mounted here. That absence, not a
-// per-route check, is what gives admin full cross-tenant access.
+// Public invitation acceptance route (exchanges one-time cryptographic invite token for session)
+adminRouter.post("/invitations/accept", adminController.acceptAdminInvitation);
+
+// Every route below requires valid Super Admin authentication
 adminRouter.use(authGuard, roleGuard("admin"));
 
 adminRouter.get("/dashboard/stats", adminController.getDashboardStats);
+adminRouter.get("/kpis", adminController.getDashboardStats);
 
 adminRouter.get("/users", adminController.listUsers);
 adminRouter.get("/users/:userId", adminController.getUser);
@@ -54,6 +56,7 @@ adminRouter.post("/managers", validate(createManagerSchema), adminController.cre
 adminRouter.delete("/managers/:clientId/:managerId", adminController.deleteManager);
 
 adminRouter.get("/gig-profiles", adminController.listGigProfiles);
+adminRouter.get("/gig-pros", adminController.listGigProfiles);
 adminRouter.get("/gig-profiles/:gigProfileId", adminController.getGigProfile);
 adminRouter.post(
   "/gig-profiles",
@@ -68,9 +71,11 @@ adminRouter.patch(
 adminRouter.delete("/gig-profiles/:gigProfileId", adminController.deleteGigProfile);
 
 adminRouter.get("/tasks", adminController.listTasks);
+adminRouter.get("/projects", adminController.listTasks);
 adminRouter.get("/tasks/:taskId", adminController.getTask);
 adminRouter.post("/tasks", validate(createTaskSchema), adminController.createTask);
 adminRouter.patch("/tasks/:taskId", validate(updateTaskSchema), adminController.updateTask);
+adminRouter.patch("/projects/:taskId/status", validate(updateTaskSchema), adminController.updateTask);
 adminRouter.delete("/tasks/:taskId", adminController.deleteTask);
 
 adminRouter.get("/applications", adminController.listApplications);
@@ -124,3 +129,15 @@ adminRouter.patch(
   adminController.updateReview,
 );
 adminRouter.delete("/reviews/:reviewId", adminController.deleteReview);
+
+adminRouter.get("/admin-staff", adminController.listAdminStaff);
+adminRouter.get("/disputes", adminController.listDisputes);
+adminRouter.patch("/disputes/:disputeId/resolve", adminController.resolveDispute);
+adminRouter.post("/disputes/:disputeId/settle", adminController.resolveDispute);
+adminRouter.patch("/payments/:paymentId/override", adminController.updatePayment);
+adminRouter.post("/payments/:paymentId/override", adminController.updatePayment);
+adminRouter.get("/audit-logs", adminController.listAuditLogs);
+adminRouter.get("/settings", adminController.getPlatformSettings);
+adminRouter.patch("/settings", adminController.updatePlatformSettings);
+adminRouter.get("/analytics", adminController.getAnalytics);
+adminRouter.post("/invitations", adminController.createAdminInvitation);

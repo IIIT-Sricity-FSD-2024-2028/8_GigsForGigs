@@ -209,7 +209,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       paymentId,
       taskId,
       taskTitle,
-      clientId: clientId || user?.userId || 'u1',
+      clientId: clientId || String(user?.userId || 'u1'),
       clientName: clientName || user?.name || 'Aditya Deshmukh',
       gigProfileId,
       gigProName,

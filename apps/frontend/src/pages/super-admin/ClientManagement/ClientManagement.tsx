@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
+import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
@@ -25,13 +26,27 @@ export const ClientManagement: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<ClientDetail | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSuspendDialogOpen, setIsSuspendDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     async function loadClients() {
-      const data = await adminApi.getClients();
-      if (isMounted) {
-        setClients(data);
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await adminApi.getClients();
+        if (isMounted) {
+          setClients(Array.isArray(data) ? data : []);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || 'Failed to load client directory.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     loadClients();
@@ -40,10 +55,6 @@ export const ClientManagement: React.FC = () => {
 
   const handleOpenClientDrawer = (client: ClientDetail) => {
     setSelectedClient(client);
-    setEditClientName(client.clientName);
-    setEditDomain(client.domain ?? '');
-    setIsEditing(false);
-    setActionError(null);
     setIsDrawerOpen(true);
   };
 
@@ -70,18 +81,18 @@ export const ClientManagement: React.FC = () => {
     toast.warning('Client Suspended', `Account for ${selectedClient.companyName} paused.`);
   };
 
-  const columns: ColumnDef<AdminClient>[] = [
+  const columns: ColumnDef<ClientDetail>[] = [
     {
       header: 'Client & Company',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.user.name}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.clientName}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.name}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.companyName}</span>
         </div>
       )
     },
     { header: 'Domain', cell: (row) => row.domain || '—' },
-    { header: 'Email', cell: (row) => row.user.email },
+    { header: 'Email', cell: (row) => row.email },
     {
       header: 'Managers',
       cell: (row) => <span>{row.assignedManagersCount} seats</span>

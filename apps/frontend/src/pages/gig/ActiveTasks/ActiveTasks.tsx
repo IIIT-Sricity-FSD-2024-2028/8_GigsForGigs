@@ -44,9 +44,6 @@ export const ActiveTasks: React.FC = () => {
     };
   }, [refreshTrigger]);
 
-  const formatCurrency = (amt: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amt);
-
   if (loading) {
     return (
       <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
@@ -91,7 +88,7 @@ export const ActiveTasks: React.FC = () => {
           {activeTasks.map((task) => {
             const deliverables = task.deliverables || [];
             const hasSubmissions = deliverables.length > 0;
-            const progress = task.progress || (hasSubmissions ? 60 : 20);
+            const progress = (task as any).progress || (hasSubmissions ? 60 : 20);
 
             return (
               <div

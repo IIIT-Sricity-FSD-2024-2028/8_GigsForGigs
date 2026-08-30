@@ -21,13 +21,27 @@ export const ManagersManagement: React.FC = () => {
   const [managers, setManagers] = useState<ManagerDetail[]>([]);
   const [selectedManager, setSelectedManager] = useState<ManagerDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     async function loadManagers() {
-      const data = await adminApi.getManagers();
-      if (isMounted) {
-        setManagers(data);
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await adminApi.getManagers();
+        if (isMounted) {
+          setManagers(Array.isArray(data) ? data : []);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || 'Failed to load managers directory.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     loadManagers();
@@ -56,8 +70,8 @@ export const ManagersManagement: React.FC = () => {
       header: 'Manager Name',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.user.name}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.user.email}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.name}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.email}</span>
         </div>
       )
     },

@@ -223,3 +223,57 @@ export async function deleteReview(req: Request, res: Response): Promise<void> {
 export async function getDashboardStats(_req: Request, res: Response): Promise<void> {
   res.status(200).json(await adminService.getDashboardStats());
 }
+
+// ---- Admin Staff & Invitations --------------------------------------------
+
+export async function listAdminStaff(_req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.listAdminStaff());
+}
+
+// ---- Disputes -------------------------------------------------------------
+
+export async function listDisputes(_req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.listDisputes());
+}
+
+export async function resolveDispute(req: Request, res: Response): Promise<void> {
+  const { resolution, refundRatio, settlementType, resolutionNotes, splitClientPercent } = req.body || {};
+  const finalResolution = resolution || settlementType || 'FULL_REFUND';
+  const finalRatio = refundRatio !== undefined ? refundRatio : (splitClientPercent !== undefined ? splitClientPercent / 100 : 1.0);
+  res.status(200).json(await adminService.resolveDispute(String(req.params.disputeId), finalResolution, finalRatio));
+}
+
+// ---- Audit Logs -----------------------------------------------------------
+
+export async function listAuditLogs(_req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.listAuditLogs());
+}
+
+// ---- Settings -------------------------------------------------------------
+
+export async function getPlatformSettings(_req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.getPlatformSettings());
+}
+
+export async function updatePlatformSettings(req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.updatePlatformSettings(req.body));
+}
+
+// ---- Analytics ------------------------------------------------------------
+
+export async function getAnalytics(req: Request, res: Response): Promise<void> {
+  const timeRange = (req.query.timeRange as string) || "30d";
+  res.status(200).json(await adminService.getAnalytics(timeRange));
+}
+
+// ---- Admin Invitations ---------------------------------------------------
+
+export async function createAdminInvitation(req: Request, res: Response): Promise<void> {
+  const { email, role, permissions } = req.body || {};
+  res.status(201).json(await adminService.createAdminInvitation(email, role, permissions || []));
+}
+
+export async function acceptAdminInvitation(req: Request, res: Response): Promise<void> {
+  const { token, email, password } = req.body || {};
+  res.status(200).json(await adminService.acceptAdminInvitation(token, email, password));
+}
