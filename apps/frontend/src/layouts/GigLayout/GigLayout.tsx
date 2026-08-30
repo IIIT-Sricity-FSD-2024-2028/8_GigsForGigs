@@ -53,11 +53,11 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
   const navItems: GigNavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
     { id: 'explore', label: 'Explore Tasks', icon: <SearchIcon size={18} /> },
-    { id: 'active-tasks', label: 'Active Tasks', icon: <ProjectIcon size={18} /> },
+    { id: 'my-services', label: 'My Services', icon: <ProjectIcon size={18} /> },
     { id: 'pending-requests', label: 'Pending Requests', icon: <BellIcon size={18} />, badgeCount: pendingCount },
+    { id: 'active-tasks', label: 'Active Tasks', icon: <ProjectIcon size={18} /> },
     { id: 'completed-projects', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },
     { id: 'earnings', label: 'Total Earnings', icon: <PaymentIcon size={18} /> },
-    { id: 'post-service', label: 'Post a Service', icon: <ProjectIcon size={18} /> },
     { id: 'profile', label: 'My Gig Profile', icon: <UsersIcon size={18} /> }
   ];
 
@@ -76,6 +76,8 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
         return 'Gig Dashboard';
       case 'explore':
         return 'Marketplace Tasks';
+      case 'my-services':
+        return 'My Posted Services';
       case 'active-tasks':
         return 'Active Engagements';
       case 'pending-requests':

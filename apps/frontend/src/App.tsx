@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
 import { GigProvider, useGig } from './context/GigContext/GigContext';
+import { PaymentProvider } from './context/PaymentContext/PaymentContext';
 import { ToastProvider } from './components/super-admin/Toast';
 
 // 👑 Super Admin Layout & 12 Views
@@ -56,6 +57,7 @@ import { ServicePublished } from './pages/gig/ServicePublished/ServicePublished'
 import { ProjectDetail } from './pages/gig/ProjectDetail/ProjectDetail';
 import { GigProfile } from './pages/gig/GigProfile/GigProfile';
 import { GigProfileCompletion } from './pages/gig/GigProfileCompletion/GigProfileCompletion';
+import { MyServices } from './pages/gig/MyServices/MyServices';
 
 // 🌐 Public & Auth Pages
 import { LandingPage } from './pages/public/LandingPage/LandingPage';
@@ -128,6 +130,7 @@ function GigAppContent() {
     <GigLayout>
       {activeTab === 'dashboard' && <GigDashboard />}
       {activeTab === 'explore' && <ExploreTasks />}
+      {activeTab === 'my-services' && <MyServices />}
       {activeTab === 'active-tasks' && <ActiveTasks />}
       {activeTab === 'pending-requests' && <PendingRequests />}
       {activeTab === 'completed-projects' && <CompletedProjects />}
@@ -135,7 +138,7 @@ function GigAppContent() {
       {activeTab === 'submit-deliverables' && <SubmitDeliverables />}
       {activeTab === 'submission-success' && <SubmissionSuccess />}
       {activeTab === 'post-service' && <PostService />}
-      {activeTab === 'service-published' && <ServicePublished />}
+      {activeTab === 'service-published' && <MyServices />}
       {activeTab === 'project-detail' && <ProjectDetail />}
       {activeTab === 'profile' && <GigProfile />}
       {activeTab === 'profile-completion' && <GigProfileCompletion />}
@@ -180,8 +183,10 @@ function ManagerAppContent() {
  */
 function ClientAppContent() {
   const [clientView, setClientView] = useState<string>('dashboard');
+  const [clientParams, setClientParams] = useState<Record<string, string>>({});
 
-  const handleClientNavigate = (viewId: string, _params?: Record<string, string>) => {
+  const handleClientNavigate = (viewId: string, params?: Record<string, string>) => {
+    if (params) setClientParams(params);
     setClientView(viewId);
   };
 
@@ -190,12 +195,12 @@ function ClientAppContent() {
       {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
       {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
       {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
-      {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
+      {clientView === 'total-spent' && <MyGigs onNavigate={handleClientNavigate} />}
       {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
       {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
-      {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} />}
+      {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} params={clientParams} />}
       {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} />}
     </ClientLayout>
   );
@@ -308,9 +313,11 @@ function MainAppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <MainAppContent />
-      </ToastProvider>
+      <PaymentProvider>
+        <ToastProvider>
+          <MainAppContent />
+        </ToastProvider>
+      </PaymentProvider>
     </AuthProvider>
   );
 }

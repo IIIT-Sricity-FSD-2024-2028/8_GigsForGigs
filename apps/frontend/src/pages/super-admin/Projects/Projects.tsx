@@ -82,7 +82,7 @@ export const Projects: React.FC = () => {
       header: 'Client',
       cell: (row) => <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.client.clientName}</span>
     },
-    { header: 'Category', accessorKey: 'category' },
+    { header: 'Category', cell: (row: any) => row.category || 'General' },
     {
       header: 'Budget',
       cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${Number(row.budget).toLocaleString()}</span>
@@ -99,7 +99,7 @@ export const Projects: React.FC = () => {
       header: 'Actions',
       cell: (row) => (
         <button
-          onClick={() => handleOpenModal(row)}
+          onClick={() => handleOpenDrawer(row)}
           className="admin-btn admin-btn-secondary"
           style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
         >

@@ -143,22 +143,47 @@ export const CompletedProjects: React.FC = () => {
                   )}
                 </div>
 
-                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'block' }}>Contract Value</span>
                     <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
                       {formatCurrency(proj.budget)}
                     </span>
                   </div>
-                  {payment ? (
-                    <span className="admin-badge badge-success">
-                      Paid {formatCurrency(payment.amount)}
-                    </span>
-                  ) : (
-                    <span className="admin-badge badge-warning">
-                      Payment Pending
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {payment ? (
+                      <span className="admin-badge badge-success">
+                        Paid {formatCurrency(payment.amount || proj.budget)}
+                      </span>
+                    ) : (
+                      <span className="admin-badge badge-warning">
+                        Payment Pending
+                      </span>
+                    )}
+
+                    {/* Gig -> Client Review Eligibility (Only allowed after payment completion) */}
+                    {payment ? (
+                      <button
+                        className="admin-btn admin-btn-outline admin-btn-sm"
+                        style={{ fontSize: '11px', padding: '4px 10px' }}
+                        onClick={() => {
+                          const rating = prompt('Rate Client Communication & Requirement Clarity (1 to 5 stars):', '5');
+                          if (rating) {
+                            const comment = prompt('Leave feedback for the Client:', 'Clear requirements and excellent communication throughout the project.');
+                            if (comment) {
+                              alert(`Review submitted for Client: ${rating} Stars - "${comment}"`);
+                            }
+                          }
+                        }}
+                      >
+                        ★ Review Client
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                        Review available after payment
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );

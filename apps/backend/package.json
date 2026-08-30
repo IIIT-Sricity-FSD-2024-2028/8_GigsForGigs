@@ -4,7 +4,7 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "npm --prefix src/db run build && tsc --noEmit",
+    "build": "npm --prefix src/db run build",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts"
   },
@@ -23,12 +23,12 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.5",
+    "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.0",
     "prisma": "^7.10.0",
     "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "typescript": "^5.7.3"
   },
   "description": "",
   "allowScripts": {

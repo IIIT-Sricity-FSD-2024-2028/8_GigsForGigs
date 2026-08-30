@@ -40,7 +40,7 @@ export const PostService: React.FC = () => {
         thumbnail: thumbnail.trim() || undefined
       });
       triggerRefresh();
-      setActiveTab('service-published');
+      setActiveTab('my-services');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to publish service.');
     } finally {

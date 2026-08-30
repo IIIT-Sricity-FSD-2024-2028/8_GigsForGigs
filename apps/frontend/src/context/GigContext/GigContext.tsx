@@ -11,6 +11,7 @@ import React, { createContext, useContext, useState } from 'react';
 export type GigViewTab =
   | 'dashboard'
   | 'explore'
+  | 'my-services'
   | 'active-tasks'
   | 'pending-requests'
   | 'completed-projects'

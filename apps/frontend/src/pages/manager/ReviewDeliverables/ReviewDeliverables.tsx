@@ -313,7 +313,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                       onChange={e => setReviewStatus(e.target.value as any)}
                       style={{ padding: '6px', borderRadius: '4px', border: '1px solid #D5DDE0', fontSize: '12px' }}
                     >
-                      <option value="approved">Approve</option>
+                      <option value="approved">Recommend Approval</option>
                       <option value="revision_requested">Request Revision</option>
                     </select>
                     <input

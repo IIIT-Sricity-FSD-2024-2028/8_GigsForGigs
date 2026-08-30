@@ -169,14 +169,18 @@ export interface PlatformConfigRecord {
 
 class InMemoryDatabase {
   users: UserRecord[] = [
-    { id: 'usr-01', name: 'Chaitanya Anand', email: 'chaitanya.admin@gigsforgigs.internal', password: 'AdminPassword123!', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-01-10', tokenVersion: 1 },
-    { id: 'usr-02', name: 'Sarah Finance', email: 'sarah.finance@gigsforgigs.internal', password: 'AdminPassword123!', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-02-14', tokenVersion: 1 },
-    { id: 'usr-03', name: 'Alex Support', email: 'alex.support@gigsforgigs.internal', password: 'AdminPassword123!', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-03-01', tokenVersion: 1 },
-    { id: 'usr-04', name: 'Leo Hudson', email: 'aditya@techstart.io', password: 'ManagerPassword123!', role: 'MANAGER', status: 'ACTIVE', joinedDate: '2026-03-15', tokenVersion: 1 },
-    { id: 'usr-05', name: 'Aditya Deshmukh', email: 'aditya@gigsforgigs.com', password: 'ClientPassword123!', role: 'CLIENT', status: 'ACTIVE', joinedDate: '2026-02-01', tokenVersion: 1 },
-    { id: 'usr-06', name: 'Elena Rodriguez', email: 'elena.rodriguez@freelance.dev', password: 'GigPassword123!', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-01-20', tokenVersion: 1 },
-    { id: 'usr-07', name: 'Marcus Chen', email: 'marcus.chen@designcraft.io', password: 'GigPassword123!', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-02-10', tokenVersion: 1 },
-    { id: 'usr-08', name: 'Sarah Jenkins', email: 'sarah.j@aisolutions.ai', password: 'GigPassword123!', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-03-05', tokenVersion: 1 }
+    { id: 'usr-01', name: 'Chaitanya Anand', email: 'chaitanya.admin@gigsforgigs.internal', password: 'password123', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-01-10', tokenVersion: 1 },
+    { id: 'usr-jovan', name: 'Jovan Miller', email: 'jovan44@yahoo.com', password: 'password123', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-01-15', tokenVersion: 1 },
+    { id: 'usr-curtis', name: 'Curtis Smith', email: 'curtis45@hotmail.com', password: 'password123', role: 'MANAGER', status: 'ACTIVE', joinedDate: '2026-02-01', tokenVersion: 1 },
+    { id: 'usr-julian', name: 'Julian Lynch', email: 'julian_lynch7@gmail.com', password: 'password123', role: 'CLIENT', status: 'ACTIVE', joinedDate: '2026-02-01', tokenVersion: 1 },
+    { id: 'usr-dessie', name: 'Dessie Davis', email: 'dessie8@yahoo.com', password: 'password123', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-02-10', tokenVersion: 1 },
+    { id: 'usr-02', name: 'Sarah Finance', email: 'sarah.finance@gigsforgigs.internal', password: 'password123', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-02-14', tokenVersion: 1 },
+    { id: 'usr-03', name: 'Alex Support', email: 'alex.support@gigsforgigs.internal', password: 'password123', role: 'SUPER_ADMIN', status: 'ACTIVE', joinedDate: '2026-03-01', tokenVersion: 1 },
+    { id: 'usr-04', name: 'Leo Hudson', email: 'aditya@techstart.io', password: 'password123', role: 'MANAGER', status: 'ACTIVE', joinedDate: '2026-03-15', tokenVersion: 1 },
+    { id: 'usr-05', name: 'Aditya Deshmukh', email: 'aditya@gigsforgigs.com', password: 'password123', role: 'CLIENT', status: 'ACTIVE', joinedDate: '2026-02-01', tokenVersion: 1 },
+    { id: 'usr-06', name: 'Elena Rodriguez', email: 'elena.rodriguez@freelance.dev', password: 'password123', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-01-20', tokenVersion: 1 },
+    { id: 'usr-07', name: 'Marcus Chen', email: 'marcus.chen@designcraft.io', password: 'password123', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-02-10', tokenVersion: 1 },
+    { id: 'usr-08', name: 'Sarah Jenkins', email: 'sarah.j@aisolutions.ai', password: 'password123', role: 'GIG_PROFESSIONAL', status: 'ACTIVE', joinedDate: '2026-03-05', tokenVersion: 1 }
   ];
 
   clients: ClientRecord[] = [

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useClient } from '../../../context/ClientContext';
+import { marketplaceStore } from '../../../services/marketplaceStore';
 
 export interface SearchTalentProps {
   onNavigate: (viewId: string) => void;
@@ -9,18 +10,38 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
   const { services, requestService, requestedServices } = useClient();
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [rateFilter, setRateFilter] = useState('all');
+  const [localRequested, setLocalRequested] = useState<Set<string>>(new Set());
+
+  // Merge live store services with context services
+  const allServices = useMemo(() => {
+    const storeList = marketplaceStore.getServices().map((s) => ({
+      service_id: s.service_id,
+      title: s.title,
+      price: s.price,
+      description: s.description,
+      skills: s.tags || ['Software Development'],
+      user: s.user,
+      gig_profile_id: s.gig_profile_id
+    }));
+
+    const map = new Map<string, any>();
+    storeList.forEach((s) => map.set(s.service_id, s));
+    services.forEach((s) => map.set(s.service_id, s));
+    return Array.from(map.values());
+  }, [services]);
 
   const handleHireClick = async (serviceId: string) => {
     try {
+      setLocalRequested((prev) => new Set(prev).add(serviceId));
       await requestService(serviceId);
-      alert('Hire request sent successfully!');
+      alert('Hiring request sent successfully! The Gig Professional will receive it in their Pending Requests.');
     } catch (err) {
       console.error('Request service failed:', err);
     }
   };
 
   // Filter logic
-  const filteredServices = services.filter(service => {
+  const filteredServices = allServices.filter(service => {
     // Mock category matching
     if (categoryFilter !== 'all') {
       const titleLower = service.title.toLowerCase();
@@ -40,8 +61,8 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
   });
 
   const getBannerClass = (serviceId: string) => {
-    if (serviceId === 'srv-1') return 'talent-banner-blue';
-    if (serviceId === 'srv-2') return 'talent-banner-gold';
+    if (serviceId.includes('101') || serviceId === 'srv-1') return 'talent-banner-blue';
+    if (serviceId.includes('102') || serviceId === 'srv-2') return 'talent-banner-gold';
     return 'talent-banner-pink';
   };
 
@@ -53,8 +74,8 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
   return (
     <div>
       <div className="page-header" style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <h1 className="page-title">Search Talent</h1>
-        <p className="page-subtitle">Browse vetted professionals and premium services available for immediate hire.</p>
+        <h1 className="page-title">Search Talent &amp; Marketplace Services ({allServices.length})</h1>
+        <p className="page-subtitle">Browse vetted professionals and premium services posted by Gig Professionals available for immediate hire.</p>
       </div>
 
       {/* Filter Bar */}
@@ -99,7 +120,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
           </p>
         ) : (
           filteredServices.map(service => {
-            const isRequested = requestedServices.has(service.service_id);
+            const isRequested = localRequested.has(service.service_id) || requestedServices.has(service.service_id);
             return (
               <article key={service.service_id} className="talent-card" style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-white)' }}>
                 <div className={`talent-banner ${getBannerClass(service.service_id)}`} style={{ height: '80px', position: 'relative' }}>

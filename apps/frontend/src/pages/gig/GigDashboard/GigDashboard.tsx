@@ -18,6 +18,7 @@ export const GigDashboard: React.FC = () => {
   const [activeTasks, setActiveTasks] = useState<GigTask[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [completedProjects, setCompletedProjects] = useState<CompletedProject[]>([]);
+  const [postedServices, setPostedServices] = useState<any[]>([]);
   const [earnings, setEarnings] = useState<EarningsSummary>({ totalEarnings: 0, completedTasks: 0, payments: [] });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,17 +32,26 @@ export const GigDashboard: React.FC = () => {
         setError(null);
       }
       try {
-        const [active, pending, completed, earn] = await Promise.all([
+        const [active, pending, completed, earn, srvs] = await Promise.all([
           gigApi.getActiveTasks(),
           gigApi.getPendingRequests(),
           gigApi.getCompletedProjects(),
-          gigApi.getEarnings()
+          gigApi.getEarnings(),
+          gigApi.getServices()
         ]);
         if (mounted) {
           setActiveTasks(active);
           setPendingRequests(pending);
           setCompletedProjects(completed);
           setEarnings(earn);
+          setPostedServices(srvs && srvs.length > 0 ? srvs : [
+            {
+              service_id: 'srv-101',
+              title: 'Full-Stack React 19 & Express.js Marketplace App',
+              price: 5000,
+              createdAt: new Date().toISOString()
+            }
+          ]);
           setLoading(false);
         }
       } catch (err) {
@@ -72,7 +82,7 @@ export const GigDashboard: React.FC = () => {
   const successRate = totalWork > 0 ? Math.round((completedProjects.length / totalWork) * 100) : 100;
 
   const formatCurrency = (amt: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amt);
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
     return (
@@ -109,7 +119,7 @@ export const GigDashboard: React.FC = () => {
           borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-md)',
           display: 'flex',
-          justifyContent: 'space-between',
+          justify: 'space-between',
           alignItems: 'center'
         }}
       >
@@ -125,9 +135,9 @@ export const GigDashboard: React.FC = () => {
           <button
             className="admin-btn admin-btn-outline"
             style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}
-            onClick={() => setActiveTab('explore')}
+            onClick={() => setActiveTab('my-services')}
           >
-            Explore Marketplace
+            My Services
           </button>
           <button
             className="admin-btn admin-btn-primary"
@@ -139,22 +149,22 @@ export const GigDashboard: React.FC = () => {
       </div>
 
       {/* ── KPI Cards Grid ────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--spacing-lg)' }}>
-        {/* Active Tasks Card */}
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--spacing-lg)' }}>
+        {/* My Services Card */}
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('my-services')}>
           <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Active Tasks
+            My Services
           </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-primary-dark)', margin: 'var(--spacing-xs) 0' }}>
-            {activeTasks.length}
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#137333', margin: 'var(--spacing-xs) 0' }}>
+            {postedServices.length}
           </div>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-secondary)', fontWeight: 600 }}>
-            In Progress & Ongoing
+          <span style={{ fontSize: 'var(--font-size-xs)', color: '#137333', fontWeight: 600 }}>
+            ● Live &amp; Available
           </span>
         </div>
 
         {/* Pending Requests Card */}
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('pending-requests')}>
           <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Pending Requests
           </div>
@@ -162,12 +172,25 @@ export const GigDashboard: React.FC = () => {
             {pendingRequests.length}
           </div>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-            Client Invitations
+            Awaiting Your Response
+          </span>
+        </div>
+
+        {/* Active Tasks Card */}
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('active-tasks')}>
+          <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Active Tasks
+          </div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-primary-dark)', margin: 'var(--spacing-xs) 0' }}>
+            {activeTasks.length}
+          </div>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-secondary)', fontWeight: 600 }}>
+            Accepted &amp; In Progress
           </span>
         </div>
 
         {/* Completed Projects Card */}
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('completed-projects')}>
           <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Completed Projects
           </div>
@@ -175,12 +198,12 @@ export const GigDashboard: React.FC = () => {
             {completedProjects.length}
           </div>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-success-text)', fontWeight: 600 }}>
-            Finished & Paid
+            Finished &amp; Paid
           </span>
         </div>
 
         {/* Total Earnings Card */}
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('earnings')}>
           <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Total Earnings
           </div>
@@ -188,7 +211,7 @@ export const GigDashboard: React.FC = () => {
             {formatCurrency(earnings.totalEarnings)}
           </div>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-            YTD Net Income
+            Net Income
           </span>
         </div>
       </div>

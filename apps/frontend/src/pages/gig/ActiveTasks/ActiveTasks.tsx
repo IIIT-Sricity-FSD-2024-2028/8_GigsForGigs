@@ -91,7 +91,7 @@ export const ActiveTasks: React.FC = () => {
           {activeTasks.map((task) => {
             const deliverables = task.deliverables || [];
             const hasSubmissions = deliverables.length > 0;
-            const progress = hasSubmissions ? 50 : 15;
+            const progress = task.progress || (hasSubmissions ? 60 : 20);
 
             return (
               <div
@@ -108,15 +108,40 @@ export const ActiveTasks: React.FC = () => {
               >
                 {/* Left Task Meta */}
                 <div style={{ flex: 1, minWidth: '280px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-xs)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-xs)', flexWrap: 'wrap' }}>
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-text-dark)' }}>
                       {task.title}
                     </h3>
-                    <span className="admin-badge badge-info">{task.status}</span>
+                    <span
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        backgroundColor: '#e8f0fe',
+                        color: '#1a73e8'
+                      }}
+                    >
+                      ● Deliverable: UNDER REVIEW
+                    </span>
+                    <span
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        backgroundColor: '#fef3c7',
+                        color: '#92400e'
+                      }}
+                    >
+                      Payment: Awaiting Client Approval
+                    </span>
                   </div>
+
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)' }}>
                     Client: <strong>{task.client_id}</strong>
                   </div>
+
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: 'var(--spacing-md)' }}>
                     {task.description}
                   </p>
@@ -135,15 +160,15 @@ export const ActiveTasks: React.FC = () => {
                       />
                     </div>
                     <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                      {progress}% Completed ({deliverables.length} Deliverables)
+                      {progress}% Progress
                     </span>
                   </div>
                 </div>
 
                 {/* Right Action Panel */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)', alignItems: 'flex-end', minWidth: '180px' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-secondary)' }}>
-                    {formatCurrency(task.budget)}
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0D568D' }}>
+                    ₹{Number(task.budget).toLocaleString('en-IN')}
                   </div>
                   <button
                     className="admin-btn admin-btn-outline admin-btn-sm"

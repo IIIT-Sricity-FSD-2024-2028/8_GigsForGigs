@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
+import { marketplaceStore } from '../../../services/marketplaceStore';
 
 export const SearchTalent: React.FC = () => {
   const { talents, searchTalent } = useManager();
@@ -11,9 +12,15 @@ export const SearchTalent: React.FC = () => {
     searchTalent(e.target.value);
   };
 
-  const handleHireClick = (name: string) => {
-    setHiredMsg(`Talent request submitted for ${name}. Your client will be notified.`);
-    setTimeout(() => setHiredMsg(null), 4000);
+  const handleHireClick = (talent: any) => {
+    marketplaceStore.createHiringRequest({
+      serviceId: String(talent.gigProfileId || 'srv-101'),
+      clientName: 'Julian Lynch',
+      managerName: 'Curtis Smith',
+      notes: `Hired via Manager Curtis Smith for client task.`
+    });
+    setHiredMsg(`Talent hiring request submitted for ${talent.name} on behalf of Client Julian Lynch! It now appears in the Gig Professional's Pending Requests.`);
+    setTimeout(() => setHiredMsg(null), 5000);
   };
 
   return (
@@ -165,7 +172,7 @@ export const SearchTalent: React.FC = () => {
 
               {/* Request / Hire Button */}
               <button
-                onClick={() => handleHireClick(talent.name)}
+                onClick={() => handleHireClick(talent)}
                 style={{
                   width: '100%',
                   backgroundColor: '#55A99A',
