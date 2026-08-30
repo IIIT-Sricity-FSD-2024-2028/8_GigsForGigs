@@ -6,6 +6,7 @@ import { PaymentIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
+import { marketplaceStore } from '../../../services/marketplaceStore';
 
 export interface EscrowPayment {
   paymentId: string;
@@ -39,28 +40,58 @@ export const PaymentsRevenue: React.FC = () => {
       try {
         setLoading(true);
         const data = await adminApi.getPayments();
+        const liveContracts = marketplaceStore.getContracts();
+
         if (isMounted) {
           const normalizeStatus = (raw: string): EscrowPayment['status'] => {
             const s = (raw || '').toUpperCase().replace(/\s+/g, '_');
-            if (s.includes('ESCROW') || s === 'PENDING' || s.includes('HELD')) return 'ESCROWED';
-            if (s.includes('WORK_SUBMITTED') || s.includes('SUBMITTED')) return 'WORK_SUBMITTED';
             if (s.includes('COMPLETED') || s.includes('RELEASED') || s === 'PAID') return 'RELEASED';
+            if (s.includes('WORK_SUBMITTED') || s.includes('SUBMITTED')) return 'WORK_SUBMITTED';
+            if (s.includes('ESCROW') || s === 'PENDING' || s.includes('HELD') || s.includes('PAYMENT_SECURED')) return 'ESCROWED';
             if (s.includes('DISPUTE')) return 'DISPUTED';
             if (s.includes('REFUND')) return 'REFUNDED';
             return 'ESCROWED';
           };
 
-          const list = Array.isArray(data) ? data.map((p: any) => ({
-            paymentId: p.paymentId || p.id || `PAY-${Math.random()}`,
-            taskId: p.taskId || 'tsk-01',
-            taskTitle: p.taskTitle || 'Milestone Delivery',
-            clientName: p.clientName || 'TechStart Labs',
-            gigProName: p.gigProName || 'Elena Rodriguez',
-            gigAmount: p.netPayout || Math.round(Number(p.amount || p.grossAmount || 3500) * 0.9),
-            platformFee: p.platformRake || Math.round(Number(p.amount || p.grossAmount || 3500) * 0.1),
-            totalAmount: Number(p.totalAmount || p.grossAmount || p.amount || 3500),
-            status: normalizeStatus(p.status || p.escrowStatus || 'ESCROWED')
-          })) : [];
+          const list: EscrowPayment[] = Array.isArray(data) ? data.map((p: any) => {
+            const gigAmount = Number(p.netPayout || p.gigAmount || p.budget || p.amount || 5000);
+            const platformFee = Math.round(gigAmount * 0.07);
+            const totalAmount = gigAmount + platformFee;
+            return {
+              paymentId: p.paymentId || p.id || `PAY-${Math.random().toString().slice(2, 6)}`,
+              taskId: p.taskId || 'tsk-01',
+              taskTitle: p.taskTitle || 'Milestone Delivery',
+              clientName: p.clientName || 'TechStart Labs',
+              gigProName: p.gigProName || 'Elena Rodriguez',
+              gigAmount,
+              platformFee,
+              totalAmount,
+              status: normalizeStatus(p.status || p.escrowStatus || 'ESCROWED'),
+              createdAt: p.createdAt || '2026-08-20'
+            };
+          }) : [];
+
+          for (const c of liveContracts) {
+            const cGigAmount = Number(c.budget || 5000);
+            const cPlatformFee = Math.round(cGigAmount * 0.07);
+            const cTotalAmount = cGigAmount + cPlatformFee;
+            const cStatus: EscrowPayment['status'] = c.payment_status === 'PAYMENT_COMPLETED' ? 'RELEASED' : (c.deliverables && c.deliverables.length > 0) ? 'WORK_SUBMITTED' : 'ESCROWED';
+
+            if (!list.some(item => item.taskId === c.task_id || item.taskTitle === c.task_title)) {
+              list.unshift({
+                paymentId: `PAY-${c.contract_id.replace(/[^0-9]/g, '') || Math.floor(1000 + Math.random() * 9000)}`,
+                taskId: c.task_id,
+                taskTitle: c.task_title,
+                clientName: c.client_name || 'Julian Lynch',
+                gigProName: c.gig_pro_name || 'Dessie Davis',
+                gigAmount: cGigAmount,
+                platformFee: cPlatformFee,
+                totalAmount: cTotalAmount,
+                status: cStatus,
+                createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+              });
+            }
+          }
           setPayments(list);
         }
       } finally {
@@ -73,8 +104,8 @@ export const PaymentsRevenue: React.FC = () => {
 
   const metrics = useMemo(() => {
     const totalVolume = payments.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
-    const totalEscrowFunds = payments.filter(p => p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
-    const platformFeesPendingRelease = Math.round(totalEscrowFunds * 0.1);
+    const totalEscrowFunds = payments.filter(p => p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED').reduce((sum, p) => sum + (p.gigAmount || 0), 0);
+    const platformFeesPendingRelease = payments.filter(p => p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED').reduce((sum, p) => sum + (p.platformFee || 0), 0);
     const totalGigPayouts = payments.filter(p => p.status === 'COMPLETED' || p.status === 'RELEASED').reduce((sum, p) => sum + (p.gigAmount || 0), 0);
     const totalPlatformRevenue = payments.filter(p => p.status === 'COMPLETED' || p.status === 'RELEASED').reduce((sum, p) => sum + (p.platformFee || 0), 0);
     const completedCount = payments.filter(p => p.status === 'COMPLETED' || p.status === 'RELEASED').length;
@@ -119,8 +150,8 @@ export const PaymentsRevenue: React.FC = () => {
 
     await adminApi.settleDispute(
       selectedPayment.paymentId,
-      overrideAction === 'RELEASE' ? 'FULL_RELEASE' : 'FULL_REFUND',
-      auditReason
+      overrideAction === 'RELEASE' ? 'RELEASE_TO_GIG_PRO' : 'REFUND_TO_CLIENT',
+      overrideAction === 'RELEASE' ? 0 : 100
     );
 
     setPayments(prev => prev.map(p => 
@@ -157,7 +188,7 @@ export const PaymentsRevenue: React.FC = () => {
       cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{formatCurrency(row.gigAmount)}</span>
     },
     {
-      header: 'Platform Revenue',
+      header: 'Platform Profit (7%)',
       cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-success-text)' }}>+{formatCurrency(row.platformFee)}</span>
     },
     {
@@ -255,11 +286,11 @@ export const PaymentsRevenue: React.FC = () => {
           accentColor="var(--color-success-text)"
         />
         <KPICard
-          title="Platform Revenue"
+          title="Platform Profit (7% Rake)"
           value={formatCurrency(metrics.totalPlatformRevenue)}
           deltaText={`${metrics.completedCount} Fees Retained`}
           isPositive={true}
-          subtitle="Net platform service fees"
+          subtitle="Total profit earned for Super Admin"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-dark)"
         />

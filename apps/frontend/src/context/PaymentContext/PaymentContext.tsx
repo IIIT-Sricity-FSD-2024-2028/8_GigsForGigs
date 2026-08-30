@@ -88,15 +88,15 @@ const INITIAL_MOCK_PAYMENTS: EscrowPayment[] = [
     gigProfileId: 'gig-01',
     gigProName: 'Elena Rodriguez',
     gigAmount: 5000,
-    platformFee: 100,
-    totalAmount: 5100,
+    platformFee: 350,
+    totalAmount: 5350,
     status: 'ESCROWED',
     paymentProvider: 'PLATFORM_ESCROW',
     transactionReference: 'TXN_ESCROW_8849',
     createdAt: '2026-08-20T10:00:00Z',
     escrowedAt: '2026-08-20T10:05:00Z',
     updatedAt: '2026-08-20T10:05:00Z',
-    auditLogs: [{ action: 'ESCROW_LOCKED', timestamp: '2026-08-20T10:05:00Z', note: 'Client paid ₹5,100 (₹5,000 Gig + ₹100 Fee)' }]
+    auditLogs: [{ action: 'ESCROW_LOCKED', timestamp: '2026-08-20T10:05:00Z', note: 'Client paid ₹5,350 (₹5,000 Gig + ₹350 Platform Fee at 7%)' }]
   },
   {
     paymentId: 'PAY-1002',
@@ -107,8 +107,8 @@ const INITIAL_MOCK_PAYMENTS: EscrowPayment[] = [
     gigProfileId: 'gig-03',
     gigProName: 'Arham Kansal',
     gigAmount: 12000,
-    platformFee: 100,
-    totalAmount: 12100,
+    platformFee: 840,
+    totalAmount: 12840,
     status: 'WORK_SUBMITTED',
     paymentProvider: 'PLATFORM_ESCROW',
     transactionReference: 'TXN_ESCROW_9102',
@@ -126,8 +126,8 @@ const INITIAL_MOCK_PAYMENTS: EscrowPayment[] = [
     gigProfileId: 'gig-01',
     gigProName: 'Vikram Joshi',
     gigAmount: 25000,
-    platformFee: 100,
-    totalAmount: 25100,
+    platformFee: 1750,
+    totalAmount: 26750,
     status: 'COMPLETED',
     paymentProvider: 'RAZORPAY',
     transactionReference: 'TXN_RZP_448102',
@@ -136,8 +136,8 @@ const INITIAL_MOCK_PAYMENTS: EscrowPayment[] = [
     releasedAt: '2026-08-18T16:45:00Z',
     updatedAt: '2026-08-18T16:45:00Z',
     auditLogs: [
-      { action: 'ESCROW_LOCKED', timestamp: '2026-08-10T09:02:00Z', note: '₹25,100 deposited to escrow' },
-      { action: 'RELEASED', timestamp: '2026-08-18T16:45:00Z', note: '₹25,000 released to Vikram Joshi, ₹100 retained as Platform Revenue' }
+      { action: 'ESCROW_LOCKED', timestamp: '2026-08-10T09:02:00Z', note: '₹26,750 deposited to escrow' },
+      { action: 'RELEASED', timestamp: '2026-08-18T16:45:00Z', note: '₹25,000 released to Vikram Joshi, ₹1,750 retained as Platform Revenue (7%)' }
     ]
   },
   {
@@ -149,8 +149,8 @@ const INITIAL_MOCK_PAYMENTS: EscrowPayment[] = [
     gigProfileId: 'gig-02',
     gigProName: 'Sarah Jenkins',
     gigAmount: 8500,
-    platformFee: 100,
-    totalAmount: 8600,
+    platformFee: 595,
+    totalAmount: 9095,
     status: 'DISPUTED',
     paymentProvider: 'STRIPE',
     transactionReference: 'TXN_ST_77192',
@@ -189,7 +189,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [user]);
 
   /**
-   * Initiate a payment record for a task.
+   * Initiate a payment record for a task with dynamic 7% platform fee.
    */
   const initiatePayment = async (
     taskId: string,
@@ -201,7 +201,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     clientName?: string
   ): Promise<EscrowPayment> => {
     setLoading(true);
-    const platformFee = 100;
+    const platformFee = Math.round(gigAmount * 0.07);
     const totalAmount = gigAmount + platformFee;
     const paymentId = 'PAY-' + Math.floor(1000 + Math.random() * 9000);
 
@@ -220,7 +220,7 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       paymentProvider: 'PLATFORM_ESCROW',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      auditLogs: [{ action: 'CREATED', timestamp: new Date().toISOString(), note: `Initiated payment total ₹${totalAmount}` }]
+      auditLogs: [{ action: 'CREATED', timestamp: new Date().toISOString(), note: `Initiated payment total ₹${totalAmount} (₹${gigAmount} Gig + ₹${platformFee} 7% Fee)` }]
     };
 
     setPayments(prev => [newPayment, ...prev]);

@@ -267,65 +267,6 @@ function MainAppContent() {
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Universal Floating Role Switcher for Cross-Device Evaluation */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '16px',
-          right: '16px',
-          zIndex: 9999,
-          backgroundColor: '#084b83',
-          color: '#ffffff',
-          padding: '6px 12px',
-          borderRadius: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
-          fontSize: '12px',
-          fontFamily: 'Inter, sans-serif'
-        }}
-      >
-        <span style={{ fontWeight: 600, opacity: 0.8 }}>ROLE:</span>
-        <select
-          value={user.role === 'SUPER_ADMIN' ? (user.adminTier ? `ADMIN_${user.adminTier}` : 'ADMIN_OWNER') : user.role}
-          onChange={(e) => {
-            const target = e.target.value;
-            const emails: Record<string, string> = {
-              'ADMIN_OWNER': 'chaitanya.admin@gigsforgigs.internal',
-              'ADMIN_SUPER_ADMIN': 'jovan44@yahoo.com',
-              'ADMIN_AUDITOR': 'auditor.lead@gigsforgigs.internal',
-              'ADMIN_FINANCIAL_ADMIN': 'finance.officer@gigsforgigs.internal',
-              'ADMIN_SUPPORT_ADMIN': 'support.lead@gigsforgigs.internal',
-              'SUPER_ADMIN': 'chaitanya.admin@gigsforgigs.internal',
-              'MANAGER': 'alene11@gmail.com',
-              'CLIENT': 'margarete.olson@yahoo.com',
-              'GIG_PROFESSIONAL': 'colten.fadel@yahoo.com'
-            };
-            const role = target.startsWith('ADMIN_') ? 'SUPER_ADMIN' : target;
-            login(emails[target] || user.email, 'password123', role);
-          }}
-          style={{
-            background: '#ffffff',
-            color: '#084b83',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '2px 8px',
-            fontSize: '11px',
-            fontWeight: 700,
-            cursor: 'pointer'
-          }}
-        >
-          <option value="ADMIN_OWNER">👑 Super Admin (Owner - Full Access)</option>
-          <option value="ADMIN_AUDITOR">🔍 Delegate Admin (Auditor - Read Only)</option>
-          <option value="ADMIN_FINANCIAL_ADMIN">💳 Delegate Admin (Financial Admin)</option>
-          <option value="ADMIN_SUPPORT_ADMIN">🛡️ Delegate Admin (Support & Disputes)</option>
-          <option value="MANAGER">👔 Manager</option>
-          <option value="CLIENT">💼 Client</option>
-          <option value="GIG_PROFESSIONAL">⚡ Gig Professional</option>
-        </select>
-      </div>
-
       {user.role === 'SUPER_ADMIN' && <SuperAdminPortal />}
       {user.role === 'MANAGER' && (
         <ManagerProvider>

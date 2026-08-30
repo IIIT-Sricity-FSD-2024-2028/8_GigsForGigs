@@ -180,7 +180,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 <strong>{formatCurrency(selectedTaskPayment.gigAmount)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Fee:</span>
+                <span>Platform Fee (7%):</span>
                 <strong>{formatCurrency(selectedTaskPayment.platformFee)}</strong>
               </div>
               <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>

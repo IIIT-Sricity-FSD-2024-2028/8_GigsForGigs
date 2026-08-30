@@ -191,7 +191,20 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEmail(val);
+                  const clean = val.trim().toLowerCase();
+                  if (clean === 'dessie8@yahoo.com' || clean.includes('dessie') || clean.includes('gig')) {
+                    setRole('GIG_PROFESSIONAL');
+                  } else if (clean === 'curtis45@hotmail.com' || clean.includes('curtis') || clean.includes('manager')) {
+                    setRole('MANAGER');
+                  } else if (clean === 'jovan44@yahoo.com' || clean.includes('jovan') || clean.includes('admin') || clean.includes('chaitanya')) {
+                    setRole('SUPER_ADMIN');
+                  } else if (clean === 'julian_lynch7@gmail.com' || clean.includes('client') || clean.includes('julian')) {
+                    setRole('CLIENT');
+                  }
+                }}
                 placeholder="aditya@techstart.io"
                 style={{
                   width: '100%',

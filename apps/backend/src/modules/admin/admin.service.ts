@@ -401,10 +401,10 @@ export const listPayments = async () => {
         clientName: 'TechStart Labs',
         gigProName: p.gigProfile?.user?.name || 'Elena Rodriguez',
         grossAmount: Number(p.amount),
-        totalAmount: Number(p.amount),
+        totalAmount: Math.round(Number(p.amount) * 1.07),
         amount: Number(p.amount),
-        platformRake: Math.round(Number(p.amount) * 0.1),
-        netPayout: Math.round(Number(p.amount) * 0.9),
+        platformRake: Math.round(Number(p.amount) * 0.07),
+        netPayout: Number(p.amount),
         escrowStatus: p.status === 'completed' ? 'RELEASED' : 'HELD_IN_ESCROW',
         status: p.status === 'completed' ? 'RELEASED' : 'HELD_IN_ESCROW',
         createdAt: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : '2026-08-14'
@@ -512,7 +512,7 @@ export async function getDashboardStats() {
 
     const totalVolume = Number(paymentAgg._sum.amount ?? 0);
     const gmv = totalVolume > 0 ? totalVolume : 148500;
-    const rake = Math.round(gmv * 0.1);
+    const rake = Math.round(gmv * 0.07);
 
     return {
       totalUsers: totalUsers > 0 ? totalUsers : 22,
@@ -537,7 +537,7 @@ export async function getDashboardStats() {
       activeTasks: db.tasks.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length || 8,
       totalApplications: 18,
       grossMerchandiseVolume: gmv,
-      platformRevenue: Math.round(gmv * 0.1),
+      platformRevenue: Math.round(gmv * 0.07),
       pendingDisputes: 2,
       escrowHeld: Math.round(gmv * 0.28),
       avgPlatformRating: 4.9,

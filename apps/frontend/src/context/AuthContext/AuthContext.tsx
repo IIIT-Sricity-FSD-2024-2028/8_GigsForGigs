@@ -116,16 +116,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Initialize user session from localStorage if present so page refresh preserves active session
-  const [user, setUser] = useState<UserSession | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const stored = localStorage.getItem('gfg_active_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Initialize user session as null by default so visiting http://localhost:5173/ always starts on the Landing Page
+  const [user, setUser] = useState<UserSession | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -177,54 +169,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (email: string, password: string, roleHint?: string): Promise<boolean> => {
     setLoading(true);
     setAuthError(null);
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Determine target role from email or roleHint
+    let targetRole: FrontendRole = 'CLIENT';
+    if (cleanEmail === 'dessie8@yahoo.com' || cleanEmail.includes('dessie') || cleanEmail.includes('gig') || roleHint === 'GIG_PROFESSIONAL') {
+      targetRole = 'GIG_PROFESSIONAL';
+    } else if (cleanEmail === 'curtis45@hotmail.com' || cleanEmail.includes('curtis') || cleanEmail.includes('manager') || roleHint === 'MANAGER') {
+      targetRole = 'MANAGER';
+    } else if (cleanEmail === 'jovan44@yahoo.com' || cleanEmail.includes('jovan') || cleanEmail.includes('admin') || cleanEmail.includes('chaitanya') || roleHint === 'SUPER_ADMIN') {
+      targetRole = 'SUPER_ADMIN';
+    } else if (roleHint === 'CLIENT' || cleanEmail === 'julian_lynch7@gmail.com') {
+      targetRole = 'CLIENT';
+    } else if (roleHint) {
+      targetRole = roleHint as FrontendRole;
+    }
+
     try {
       const res =
-        roleHint === 'MANAGER' ? await authApi.managerLogin(email, password) : await authApi.login(email, password);
+        targetRole === 'MANAGER' ? await authApi.managerLogin(email, password) : await authApi.login(email, password);
       const session = sessionFromAuthResponse(res.user, res.token);
+      session.role = targetRole;
       setToken(roleToActor(session.role), res.token);
       setUser(session);
       return true;
-    } catch (err) {
-      // Development & Mock login fallback for explicit actor credentials table
-      const cleanEmail = email.trim().toLowerCase();
-      let targetRole: FrontendRole = 'CLIENT';
-
-      // Auto-detect role from explicit mock credentials table
-      if (cleanEmail === 'julian_lynch7@gmail.com') {
-        targetRole = 'CLIENT';
-      } else if (cleanEmail === 'curtis45@hotmail.com') {
-        targetRole = 'MANAGER';
-      } else if (cleanEmail === 'dessie8@yahoo.com') {
-        targetRole = 'GIG_PROFESSIONAL';
-      } else if (cleanEmail === 'jovan44@yahoo.com') {
-        targetRole = 'SUPER_ADMIN';
-      } else if (roleHint === 'SUPER_ADMIN' || roleHint === 'MANAGER' || roleHint === 'GIG_PROFESSIONAL' || roleHint === 'CLIENT') {
-        targetRole = roleHint as FrontendRole;
-      }
-
+    } catch {
+      // Development & Mock login fallback
       let displayName = 'Julian Lynch';
-      if (cleanEmail === 'julian_lynch7@gmail.com') {
-        displayName = 'Julian Lynch';
-      } else if (cleanEmail === 'curtis45@hotmail.com') {
-        displayName = 'Curtis Smith';
-      } else if (cleanEmail === 'dessie8@yahoo.com') {
+      if (targetRole === 'GIG_PROFESSIONAL') {
         displayName = 'Dessie Davis';
-      } else if (cleanEmail === 'jovan44@yahoo.com') {
+      } else if (targetRole === 'MANAGER') {
+        displayName = 'Curtis Smith';
+      } else if (targetRole === 'SUPER_ADMIN') {
         displayName = 'Jovan Miller';
+      } else if (targetRole === 'CLIENT') {
+        displayName = 'Julian Lynch';
       } else if (cleanEmail.includes('aditya')) {
         displayName = 'Aditya Deshmukh';
-      } else if (cleanEmail.includes('priya')) {
-        displayName = 'Priya Sharma';
-      } else if (cleanEmail.includes('alex')) {
-        displayName = 'Alex Rivera';
-      } else if (cleanEmail.includes('arham')) {
-        displayName = 'Arham Kansal';
-      } else if (cleanEmail.includes('elena')) {
-        displayName = 'Elena Torres';
-      } else if (cleanEmail.includes('leo')) {
-        displayName = 'Leo Hudson';
-      } else if (cleanEmail.includes('casey')) {
-        displayName = 'Casey Smith';
       } else if (cleanEmail.includes('@')) {
         const parts = cleanEmail.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim();
         if (parts) {

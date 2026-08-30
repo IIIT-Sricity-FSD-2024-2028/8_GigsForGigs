@@ -94,7 +94,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
   const taskPayment = taskId ? getPaymentByTask(taskId) : payments[0];
   const gigAmount = contract.budget || 5000;
-  const platformFee = contract.platform_fee || 100;
+  const platformFee = Math.round(gigAmount * 0.07);
   const totalAmount = gigAmount + platformFee;
 
   const formatCurrency = (val: number) => {
@@ -312,7 +312,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <span style={{ fontWeight: 600 }}>{formatCurrency(gigAmount)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee:</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee (7%):</span>
                     <span style={{ fontWeight: 600 }}>{formatCurrency(platformFee)}</span>
                   </div>
                   <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
@@ -492,7 +492,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 <strong>{formatCurrency(gigAmount)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Fee:</span>
+                <span>Platform Fee (7%):</span>
                 <strong>{formatCurrency(platformFee)}</strong>
               </div>
               <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
