@@ -116,8 +116,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Initialize user session as null by default so visiting http://localhost:5173/ always starts on the Landing Page
-  const [user, setUser] = useState<UserSession | null>(null);
+  // Restore active user session from localStorage so page refreshes retain the logged-in session
+  const [user, setUser] = useState<UserSession | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gfg_active_user');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.email && parsed.role) {
+            return parsed;
+          }
+        } catch {
+          // ignore corrupted JSON
+        }
+      }
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
