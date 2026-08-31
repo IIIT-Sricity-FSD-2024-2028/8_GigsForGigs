@@ -109,30 +109,33 @@ export const ActiveTasks: React.FC = () => {
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-text-dark)' }}>
                       {task.title}
                     </h3>
-                    <span
-                      style={{
-                        padding: '3px 10px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor: '#e8f0fe',
-                        color: '#1a73e8'
-                      }}
-                    >
-                      ● Deliverable: UNDER REVIEW
-                    </span>
-                    <span
-                      style={{
-                        padding: '3px 10px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor: '#fef3c7',
-                        color: '#92400e'
-                      }}
-                    >
-                      Payment: Awaiting Client Approval
-                    </span>
+                    {hasSubmissions ? (
+                      <span
+                        style={{
+                          padding: '3px 10px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          backgroundColor: '#e8f0fe',
+                          color: '#1a73e8'
+                        }}
+                      >
+                        ● Deliverable Submitted
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          padding: '3px 10px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          backgroundColor: '#fef3c7',
+                          color: '#92400e'
+                        }}
+                      >
+                        ● Work In Progress
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)' }}>

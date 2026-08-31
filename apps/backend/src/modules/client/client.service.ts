@@ -12,6 +12,13 @@ import type {
 
 // ---- Profile ----------------------------------------------------------
 
+export function getProfile(clientId: number) {
+  return prisma.client.findUniqueOrThrow({
+    where: { clientId },
+    include: { user: true, managers: { include: { user: true } } },
+  });
+}
+
 export function updateProfile(clientId: number, dto: UpdateClientProfileDto) {
   return prisma.client.update({
     where: { clientId },
@@ -88,16 +95,50 @@ export async function reviewApplication(
 ) {
   const application = await prisma.application.findUnique({
     where: { applicationId },
-    include: { task: true },
+    include: { task: { include: { client: { include: { managers: true } } } } },
   });
 
   if (!application || application.task.clientId !== clientId) {
     throw notFound("Application not found");
   }
 
-  return prisma.application.update({
-    where: { applicationId },
-    data: { status: dto.status },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return prisma.$transaction(async (tx: any) => {
+    const updated = await tx.application.update({
+      where: { applicationId },
+      data: { status: dto.status },
+    });
+
+    if (dto.status === "accepted") {
+      await tx.task.update({
+        where: { taskId: application.taskId },
+        data: { status: "in_progress" },
+      });
+
+      const clientManagers = application.task.client.managers;
+      const anyManager = clientManagers.length > 0 ? clientManagers[0] : await tx.manager.findFirst();
+      if (anyManager) {
+        const existingAssignment = await tx.gigManagerAssignment.findUnique({
+          where: {
+            gigProfileId_taskId: {
+              gigProfileId: application.gigProfileId,
+              taskId: application.taskId,
+            },
+          },
+        });
+        if (!existingAssignment) {
+          await tx.gigManagerAssignment.create({
+            data: {
+              gigProfileId: application.gigProfileId,
+              taskId: application.taskId,
+              managerId: anyManager.managerId,
+            },
+          });
+        }
+      }
+    }
+
+    return updated;
   });
 }
 
@@ -117,11 +158,9 @@ export async function listContracts(clientId: number) {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma's
-  // generated client types collapse to `any` under this toolchain (see
-  // errorHandler.ts); the shape below matches the `include` above exactly.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return applications.map((application: any) => {
-    const assignment = application.gigProfile.assignments.find(
+    const assignment = application.gigProfile.assignments?.find(
       (a: any) => a.taskId === application.taskId,
     );
     const deliverables = assignment?.deliverables ?? [];
@@ -134,6 +173,7 @@ export async function listContracts(clientId: number) {
     return {
       taskId: application.taskId,
       taskTitle: application.task.title,
+      gigProfileId: application.gigProfileId,
       gigProfessionalName: application.gigProfile.user.name,
       status: application.task.status,
       progress,
@@ -194,19 +234,50 @@ export function listServices() {
 }
 
 export async function requestService(serviceId: number, clientId: number) {
-  const service = await prisma.service.findUnique({ where: { serviceId } });
+  const service = await prisma.service.findUnique({
+    where: { serviceId },
+    include: { profile: { include: { user: true } } },
+  });
   if (!service) {
     throw notFound("Service not found");
   }
 
-  const existing = await prisma.serviceRequest.findUnique({
-    where: { serviceId_clientId: { serviceId, clientId } },
-  });
-  if (existing) {
-    throw conflict("Service already requested");
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return prisma.$transaction(async (tx: any) => {
+    // 1. Create a Task for this requested service
+    const task = await tx.task.create({
+      data: {
+        clientId,
+        title: service.title,
+        description: service.description || `Service hire request for ${service.title}`,
+        budget: service.price,
+        status: "open",
+        category: "Software Development",
+        skills: ["Service Hire"],
+      },
+    });
 
-  return prisma.serviceRequest.create({ data: { serviceId, clientId } });
+    // 2. Create Application with status 'pending'
+    const application = await tx.application.create({
+      data: {
+        gigProfileId: service.gigProfileId,
+        taskId: task.taskId,
+        status: "pending",
+      },
+    });
+
+    // 3. Upsert ServiceRequest
+    const existing = await tx.serviceRequest.findUnique({
+      where: { serviceId_clientId: { serviceId, clientId } },
+    });
+    if (!existing) {
+      await tx.serviceRequest.create({
+        data: { serviceId, clientId, status: "pending" },
+      });
+    }
+
+    return { task, application };
+  });
 }
 
 export function listServiceRequests(clientId: number) {

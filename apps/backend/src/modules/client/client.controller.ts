@@ -17,9 +17,15 @@ function requireClientId(req: Request): number {
   return (req.user as ClientTokenPayload).clientId;
 }
 
+export async function getProfile(req: Request, res: Response): Promise<void> {
+  const clientId = requireClientId(req);
+  const client = await clientService.getProfile(clientId);
+  res.status(200).json(client);
+}
+
 export async function updateProfile(req: Request, res: Response): Promise<void> {
   const clientId = requireClientId(req);
-  if (Number(req.params.clientId) !== clientId) {
+  if (req.params.clientId && Number(req.params.clientId) !== clientId) {
     throw forbidden("Cannot edit another client's profile");
   }
   const dto = getValidated<UpdateClientProfileDto>(res, "body");

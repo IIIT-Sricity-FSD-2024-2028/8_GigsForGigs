@@ -11,11 +11,9 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
-import { usePayments } from '../../../context/PaymentContext/PaymentContext';
 
 export const SubmitDeliverables: React.FC = () => {
   const { selectedTaskId, setActiveTab, triggerRefresh } = useGig();
-  const { submitWorkDeliverable } = usePayments();
   const [task, setTask] = useState<GigTask | null>(null);
   const [content, setContent] = useState('');
   const [notes, setNotes] = useState('');
@@ -66,7 +64,6 @@ export const SubmitDeliverables: React.FC = () => {
         content: content.trim(),
         notes: notes.trim()
       });
-      await submitWorkDeliverable(task.task_id);
       triggerRefresh();
       setActiveTab('submission-success');
     } catch (err) {

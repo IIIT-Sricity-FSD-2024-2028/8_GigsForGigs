@@ -14,33 +14,56 @@ function sanitizeUser(user: User) {
 async function buildTokenPayload(user: User): Promise<TokenPayload> {
   switch (user.role) {
     case "client": {
-      const client = await prisma.client.findUnique({ where: { userId: user.userId } }).catch(() => null);
-      return { role: "client", userId: user.userId, clientId: client?.clientId || 1 };
+      let client = await prisma.client.findUnique({ where: { userId: user.userId } });
+      if (!client) {
+        client = await prisma.client.create({
+          data: { userId: user.userId, clientName: user.name },
+        });
+      }
+      return { role: "client", userId: user.userId, clientId: client.clientId };
     }
     case "manager": {
-      const manager = await prisma.manager.findUnique({ where: { userId: user.userId } }).catch(() => null);
+      let manager = await prisma.manager.findUnique({ where: { userId: user.userId } });
+      if (!manager) {
+        const client = await prisma.client.findFirst();
+        if (client) {
+          manager = await prisma.manager.create({
+            data: { userId: user.userId, clientId: client.clientId },
+          });
+        } else {
+          throw unauthorized("Manager profile not found for this account");
+        }
+      }
       return {
         role: "manager",
         userId: user.userId,
-        managerId: manager?.managerId || 1,
-        clientId: manager?.clientId || 1,
+        managerId: manager.managerId,
+        clientId: manager.clientId,
       };
     }
     case "gig_professional": {
-      const profile = await prisma.gigProfessionalProfile.findUnique({
+      let profile = await prisma.gigProfessionalProfile.findUnique({
         where: { userId: user.userId },
-      }).catch(() => null);
-      return { role: "gig_professional", userId: user.userId, gigProfileId: profile?.gigProfileId || 1 };
+      });
+      if (!profile) {
+        profile = await prisma.gigProfessionalProfile.create({
+          data: { userId: user.userId },
+        });
+      }
+      return { role: "gig_professional", userId: user.userId, gigProfileId: profile.gigProfileId };
     }
     case "admin":
       return { role: "admin", userId: user.userId };
     default:
-      return { role: "client", userId: user.userId, clientId: 1 };
+      throw unauthorized("Unknown user role");
   }
 }
 
 export async function signup(dto: SignupDto) {
-  const existing = await prisma.user.findUnique({ where: { email: dto.email } });
+  const cleanEmail = dto.email.trim();
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: cleanEmail, mode: "insensitive" } },
+  });
   if (existing) {
     throw conflict("Email already in use");
   }
@@ -53,7 +76,7 @@ export async function signup(dto: SignupDto) {
   // all still work correctly at runtime.
   const { user, payload } = await prisma.$transaction(async (tx: any) => {
     const created = await tx.user.create({
-      data: { name: dto.name, email: dto.email, hashPassword: hashedPassword, role: dto.role },
+      data: { name: dto.name, email: cleanEmail, hashPassword: hashedPassword, role: dto.role },
     });
 
     let tokenPayload: TokenPayload;
@@ -81,59 +104,30 @@ export async function signup(dto: SignupDto) {
 
 /** Shared by /login and /manager/login. requiredRole narrows manager login to manager accounts only. */
 async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email: dto.email },
-      omit: { hashPassword: false },
-    });
+  const cleanEmail = dto.email.trim();
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: cleanEmail, mode: "insensitive" } },
+    omit: { hashPassword: false },
+  });
 
-    if (user) {
-      if (requiredRole && user.role !== requiredRole) {
-        throw unauthorized("Invalid email or password");
-      }
-      const validPassword = dto.password === 'password123' || (await comparePassword(dto.password, user.hashPassword).catch(() => false));
-      if (!validPassword) {
-        throw unauthorized("Invalid email or password");
-      }
-      const payload = await buildTokenPayload(user);
-      return { success: true, token: signToken(payload), user: sanitizeUser(user) };
-    }
-  } catch (err: any) {
-    if (err?.statusCode === 401) throw err;
-  }
-
-  // Fallback for admin / demo users
-  const cleanEmail = dto.email.toLowerCase();
-  const isAdmin = cleanEmail.includes('admin') || cleanEmail.includes('auditor') || cleanEmail.includes('jovan') || cleanEmail.includes('chaitanya') || cleanEmail.includes('finance') || cleanEmail.includes('support');
-  const isGigPro = cleanEmail.includes('pro') || cleanEmail.includes('colten') || cleanEmail.includes('fadel') || cleanEmail.includes('elena') || cleanEmail.includes('casper') || cleanEmail.includes('orn') || cleanEmail.includes('leffler') || cleanEmail.includes('kuhlman');
-  const isMgr = cleanEmail.includes('manager') || cleanEmail.includes('woodrow') || cleanEmail.includes('strosin') || cleanEmail.includes('swift') || cleanEmail.includes('shanahan') || cleanEmail.includes('hudson');
-  const role: TokenPayload["role"] = isAdmin ? 'admin' : (isMgr ? 'manager' : (isGigPro ? 'gig_professional' : 'client'));
-
-  const isMasterPass = dto.password === 'password123';
-  const { db } = await import("../../db/dbClient.js");
-  const isInvPass = db.invitations.some(i => i.email.toLowerCase() === cleanEmail && i.assignedPassword === dto.password);
-  if (!isMasterPass && !isInvPass) {
+  if (!user) {
     throw unauthorized("Invalid email or password");
   }
 
-  const payload: TokenPayload = role === 'admin'
-    ? { role: 'admin', userId: 1 }
-    : role === 'manager'
-    ? { role: 'manager', userId: 2, managerId: 1, clientId: 1 }
-    : role === 'gig_professional'
-    ? { role: 'gig_professional', userId: 3, gigProfileId: 1 }
-    : { role: 'client', userId: 4, clientId: 1 };
+  if (requiredRole && user.role !== requiredRole) {
+    throw unauthorized("Invalid email or password for this role portal");
+  }
 
-  return {
-    success: true,
-    token: signToken(payload),
-    user: {
-      userId: payload.userId,
-      name: (cleanEmail.split('@')[0] || 'User').replace(/[^a-zA-Z]/g, ' '),
-      email: dto.email,
-      role
-    }
-  };
+  const validPassword =
+    dto.password === "password123" ||
+    (await comparePassword(dto.password, user.hashPassword).catch(() => false));
+
+  if (!validPassword) {
+    throw unauthorized("Invalid email or password");
+  }
+
+  const payload = await buildTokenPayload(user);
+  return { success: true, token: signToken(payload), user: sanitizeUser(user) };
 }
 
 export function login(dto: LoginDto) {

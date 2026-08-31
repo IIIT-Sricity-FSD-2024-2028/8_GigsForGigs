@@ -8,7 +8,10 @@
  * `err.status` instead of re-implementing fetch/try-catch per file.
  */
 
-export const API_BASE_URL = 'http://localhost:3000/api';
+export const API_BASE_URL =
+  typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+    : 'http://localhost:5000/api';
 
 /** One localStorage key per actor — a browser tab can hold a client, manager,
  * and gig session at once since each role logs in through a separate flow. */
@@ -71,7 +74,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
   } catch (err) {
-    throw new ApiError(0, err instanceof Error ? err.message : 'Network request failed');
+    throw new ApiError(0, err instanceof Error ? err.message : 'Network request failed. Ensure backend server is running.');
   }
 
   let data: unknown = null;
@@ -83,11 +86,8 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   if (!res.ok) {
     if (res.status === 401 && actor) {
-      const token = getToken(actor);
-      if (token && token !== 'mock-dev-jwt-token') {
-        clearToken(actor);
-        window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { actor } }));
-      }
+      clearToken(actor);
+      window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { actor } }));
     }
     const message =
       (data as { message?: string } | null)?.message ?? `Request failed with status ${res.status}`;

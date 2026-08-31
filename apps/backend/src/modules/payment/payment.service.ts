@@ -1,24 +1,22 @@
-/**
- * @file payment.service.ts
- * @description Centralized Payment Service containing financial calculations, escrow state transitions, and dispute arbitration logic.
- */
-
+import { prisma } from 'db';
 import type { PaymentRecord, FinancialCalculationResult, SuperAdminRevenueMetrics } from './payment.types.js';
 import { PaymentStatus } from './payment.types.js';
 
 export class PaymentService {
-  private static DEFAULT_PLATFORM_FEE = 100; // Standard ₹100 platform fee
+  private static DEFAULT_PLATFORM_FEE_RATE = 0.07; // Dynamic 7% platform fee
 
   /**
-   * Calculate financial totals on the server. Never trust amounts sent directly by the frontend.
+   * Calculate financial totals on the server with dynamic 7% platform fee.
    */
-  public static calculateFinancials(gigAmount: number, overrideFee?: number): FinancialCalculationResult {
-    const platformFee = typeof overrideFee === 'number' ? overrideFee : this.DEFAULT_PLATFORM_FEE;
+  public static calculateFinancials(gigAmount: number, overrideFee?: number): FinancialCalculationResult & { gigPayout: number; platformRevenue: number } {
+    const platformFee = typeof overrideFee === 'number' ? overrideFee : Math.round(gigAmount * this.DEFAULT_PLATFORM_FEE_RATE);
     const totalAmount = gigAmount + platformFee;
     return {
       gigAmount,
       platformFee,
-      totalAmount
+      totalAmount,
+      gigPayout: gigAmount,
+      platformRevenue: platformFee
     };
   }
 
@@ -43,6 +41,47 @@ export class PaymentService {
 
     const allowed = validTransitions[currentStatus] || [];
     return allowed.includes(targetStatus);
+  }
+
+  /**
+   * Save or update payment in PostgreSQL database via Prisma.
+   */
+  public static async persistPayment(taskId: number, gigProfileId: number, gigAmount: number, status: 'pending' | 'completed' = 'pending') {
+    return await prisma.payment.upsert({
+      where: { taskId_gigProfileId: { taskId, gigProfileId } },
+      update: { amount: gigAmount, status },
+      create: { taskId, gigProfileId, amount: gigAmount, status },
+      include: { task: true, gigProfile: { include: { user: true } } }
+    });
+  }
+
+  /**
+   * Get payment by taskId from PostgreSQL.
+   */
+  public static async getPaymentByTaskId(taskId: number) {
+    return await prisma.payment.findFirst({
+      where: { taskId },
+      include: { task: true, gigProfile: { include: { user: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  /**
+   * Release payment and mark Task as completed in PostgreSQL.
+   */
+  public static async releasePaymentInDb(taskId: number, gigProfileId: number, gigAmount?: number) {
+    const amount = gigAmount && gigAmount > 0 ? gigAmount : 5000;
+    return await prisma.$transaction([
+      prisma.payment.upsert({
+        where: { taskId_gigProfileId: { taskId, gigProfileId } },
+        update: { status: 'completed', ...(gigAmount ? { amount: gigAmount } : {}) },
+        create: { taskId, gigProfileId, amount, status: 'completed' }
+      }),
+      prisma.task.update({
+        where: { taskId },
+        data: { status: 'completed' }
+      })
+    ]);
   }
 
   /**

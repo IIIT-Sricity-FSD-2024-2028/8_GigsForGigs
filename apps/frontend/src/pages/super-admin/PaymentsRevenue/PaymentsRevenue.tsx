@@ -6,7 +6,6 @@ import { PaymentIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
-import { marketplaceStore } from '../../../services/marketplaceStore';
 
 export interface EscrowPayment {
   paymentId: string;
@@ -40,7 +39,6 @@ export const PaymentsRevenue: React.FC = () => {
       try {
         setLoading(true);
         const data = await adminApi.getPayments();
-        const liveContracts = marketplaceStore.getContracts();
 
         if (isMounted) {
           const normalizeStatus = (raw: string): EscrowPayment['status'] => {
@@ -58,49 +56,34 @@ export const PaymentsRevenue: React.FC = () => {
             const platformFee = Math.round(gigAmount * 0.07);
             const totalAmount = gigAmount + platformFee;
             return {
-              paymentId: p.paymentId || p.id || `PAY-${Math.random().toString().slice(2, 6)}`,
+              paymentId: p.paymentId || p.id || `PAY-${p.taskId || '1'}`,
               taskId: p.taskId || 'tsk-01',
-              taskTitle: p.taskTitle || 'Milestone Delivery',
-              clientName: p.clientName || 'TechStart Labs',
-              gigProName: p.gigProName || 'Elena Rodriguez',
+              taskTitle: p.taskTitle || 'Task Engagement',
+              clientName: p.clientName || 'Client',
+              gigProName: p.gigProName || 'Gig Professional',
               gigAmount,
               platformFee,
               totalAmount,
               status: normalizeStatus(p.status || p.escrowStatus || 'ESCROWED'),
-              createdAt: p.createdAt || '2026-08-20'
+              createdAt: p.createdAt || new Date().toISOString().split('T')[0]
             };
           }) : [];
 
-          for (const c of liveContracts) {
-            const cGigAmount = Number(c.budget || 5000);
-            const cPlatformFee = Math.round(cGigAmount * 0.07);
-            const cTotalAmount = cGigAmount + cPlatformFee;
-            const cStatus: EscrowPayment['status'] = c.payment_status === 'PAYMENT_COMPLETED' ? 'RELEASED' : (c.deliverables && c.deliverables.length > 0) ? 'WORK_SUBMITTED' : 'ESCROWED';
-
-            if (!list.some(item => item.taskId === c.task_id || item.taskTitle === c.task_title)) {
-              list.unshift({
-                paymentId: `PAY-${c.contract_id.replace(/[^0-9]/g, '') || Math.floor(1000 + Math.random() * 9000)}`,
-                taskId: c.task_id,
-                taskTitle: c.task_title,
-                clientName: c.client_name || 'Julian Lynch',
-                gigProName: c.gig_pro_name || 'Dessie Davis',
-                gigAmount: cGigAmount,
-                platformFee: cPlatformFee,
-                totalAmount: cTotalAmount,
-                status: cStatus,
-                createdAt: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-              });
-            }
-          }
           setPayments(list);
+        }
+      } catch (err) {
+        console.error('Failed to load admin payments:', err);
+        if (isMounted) {
+          toast.error('Failed to load payments from database.');
         }
       } finally {
         if (isMounted) setLoading(false);
       }
     }
+
     loadPayments();
     return () => { isMounted = false; };
-  }, []);
+  }, [toast]);
 
   const metrics = useMemo(() => {
     const totalVolume = payments.reduce((sum, p) => sum + (p.totalAmount || 0), 0);

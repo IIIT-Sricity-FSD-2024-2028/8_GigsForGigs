@@ -44,14 +44,7 @@ export const GigDashboard: React.FC = () => {
           setPendingRequests(pending);
           setCompletedProjects(completed);
           setEarnings(earn);
-          setPostedServices(srvs && srvs.length > 0 ? srvs : [
-            {
-              service_id: 'srv-101',
-              title: 'Full-Stack React 19 & Express.js Marketplace App',
-              price: 5000,
-              createdAt: new Date().toISOString()
-            }
-          ]);
+          setPostedServices(srvs || []);
           setLoading(false);
         }
       } catch (err) {

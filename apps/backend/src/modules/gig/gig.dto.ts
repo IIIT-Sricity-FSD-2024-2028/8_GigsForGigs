@@ -25,8 +25,8 @@ export type RespondToRequestDto = z.infer<typeof respondToRequestSchema>;
 
 export const submitDeliverableSchema = z.object({
   taskId: z.coerce.number().int().positive(),
-  content: z.string().min(1).max(500),
-  notes: z.string().max(500).optional(),
+  content: z.string().min(1),
+  notes: z.string().optional().nullable().or(z.literal("")),
 });
 export type SubmitDeliverableDto = z.infer<typeof submitDeliverableSchema>;
 

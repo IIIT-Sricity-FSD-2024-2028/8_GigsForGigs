@@ -73,20 +73,23 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               </tr>
             ) : (
               contracts.map(c => {
+                const gigAmt = c.budget || 5000;
+                const platformFee = Math.round(gigAmt * 0.07);
+                const totalAmt = gigAmt + platformFee;
                 const p = payments.find(pay => pay.taskId === c.task_id) || {
-                  paymentId: 'PAY-1001',
+                  paymentId: 'PAY-' + c.task_id,
                   taskId: c.task_id,
                   taskTitle: c.task_title,
-                  clientId: 'cli-01',
-                  clientName: 'Aditya Deshmukh',
-                  gigProfileId: 'gig-01',
+                  clientId: '',
+                  clientName: '',
+                  gigProfileId: '',
                   gigProName: c.gig_pro_name,
-                  gigAmount: c.budget || 5000,
-                  platformFee: 100,
-                  totalAmount: (c.budget || 5000) + 100,
-                  status: c.status === 'COMPLETED' ? 'COMPLETED' : c.status === 'REVIEWING' ? 'WORK_SUBMITTED' : 'ESCROWED',
+                  gigAmount: gigAmt,
+                  platformFee,
+                  totalAmount: totalAmt,
+                  status: c.status === 'COMPLETED' ? 'COMPLETED' : 'ESCROWED',
                   paymentProvider: 'PLATFORM_PAYMENT',
-                  createdAt: new Date().toISOString(),
+                  createdAt: c.createdAt || new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 } as EscrowPayment;
 

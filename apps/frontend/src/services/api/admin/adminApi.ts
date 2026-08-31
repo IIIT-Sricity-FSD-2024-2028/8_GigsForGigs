@@ -3,243 +3,176 @@
  * @description
  * High-performance API client for the Super Admin vertical.
  * Communicates directly with Express backend REST endpoints (/api/admin/*)
- * with robust error handling, cryptographic link generation, and structured typing.
+ * using the centralized apiFetch wrapper on port 5000.
  */
 
-const API_BASE_URL = typeof window !== 'undefined'
-  ? `${window.location.protocol}//${window.location.hostname}:3000/api/admin`
-  : 'http://localhost:3000/api/admin';
+import { apiFetch } from '../httpClient';
 
-async function getFreshAdminToken(): Promise<string | null> {
-  try {
-    const authUrl = typeof window !== 'undefined'
-      ? `${window.location.protocol}//${window.location.hostname}:3000/api/auth/login`
-      : 'http://localhost:3000/api/auth/login';
-
-    const loginRes = await fetch(authUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'chaitanya.admin@gigsforgigs.internal', password: 'password123' })
-    });
-    if (loginRes.ok) {
-      const data = await loginRes.json();
-      if (data?.token) {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('g4g_admin_token', data.token);
-        }
-        return data.token;
-      }
-    }
-  } catch (err) {
-    console.warn('[adminApi] Failed to refresh token:', err);
-  }
-  return null;
-}
-
-async function fetchJson<T>(url: string, options?: RequestInit, isRetry = false): Promise<T | null> {
-  try {
-    let token = typeof window !== 'undefined' ? localStorage.getItem('g4g_admin_token') : null;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...((options?.headers as Record<string, string>) || {}),
-    };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    const res = await fetch(url, { ...options, headers, signal: controller.signal });
-    clearTimeout(timeoutId);
-
-    if (res.status === 401 && !isRetry) {
-      const freshToken = await getFreshAdminToken();
-      if (freshToken) {
-        return fetchJson<T>(url, options, true);
-      }
-    }
-
-    if (res.ok) {
-      const json = await res.json();
-      if (json && typeof json === 'object' && 'data' in json) return json.data;
-      return json;
-    }
-  } catch (err) {
-    console.warn(`[adminApi] Request to ${url}:`, err);
-  }
-  return null;
-}
+const actor = 'admin' as const;
 
 export const adminApi = {
   // KPIs & Analytics
   async getKPIs() {
-    return (await fetchJson<any>(`${API_BASE_URL}/kpis`)) || {
-      grossMerchandiseVolume: 0,
-      platformRevenue: 0,
-      activeTasks: 0,
-      totalUsers: 0,
-      pendingDisputes: 0,
-      escrowHeld: 0
-    };
+    return apiFetch<any>('/admin/kpis', { actor });
   },
 
   async getAnalytics(timeRange: string = '30d') {
-    return (await fetchJson<any>(`${API_BASE_URL}/analytics?timeRange=${timeRange}`)) || {
-      timeRange,
-      kpis: await this.getKPIs(),
-      velocity: [],
-      categories: []
-    };
+    return apiFetch<any>(`/admin/analytics?timeRange=${timeRange}`, { actor });
+  },
+
+  async getDashboard() {
+    return apiFetch<any>('/admin/dashboard/stats', { actor });
   },
 
   // Master Directories
+  async getUsers() {
+    return apiFetch<any[]>('/admin/users', { actor });
+  },
+
   async getClients() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/clients`)) || [];
+    return apiFetch<any[]>('/admin/clients', { actor });
   },
 
   async verifyClientKYC(clientId: string) {
-    return await fetchJson(`${API_BASE_URL}/clients/${clientId}/kyc`, {
+    return apiFetch(`/admin/clients/${clientId}/kyc`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' }
+      actor,
     });
   },
 
   async getGigPros() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/gig-pros`)) || [];
+    return apiFetch<any[]>('/admin/gig-pros', { actor });
   },
 
   async updateGigProBadge(gigProId: string, badge: string) {
-    return await fetchJson(`${API_BASE_URL}/gig-pros/${gigProId}/badge`, {
+    return apiFetch(`/admin/gig-pros/${gigProId}/badge`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ badge })
+      body: { badge },
+      actor,
     });
   },
 
   async getManagers() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/managers`)) || [];
+    return apiFetch<any[]>('/admin/managers', { actor });
   },
 
   async getProjects() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/projects`)) || [];
+    return apiFetch<any[]>('/admin/projects', { actor });
+  },
+
+  async getTasks() {
+    return apiFetch<any[]>('/admin/tasks', { actor });
   },
 
   async overrideProjectStatus(projectId: string, status: string) {
-    return await fetchJson(`${API_BASE_URL}/projects/${projectId}/status`, {
+    return apiFetch(`/admin/projects/${projectId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      body: { status: status.toLowerCase() },
+      actor,
     });
   },
 
   async getPayments() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/payments`)) || [];
+    return apiFetch<any[]>('/admin/payments', { actor });
   },
 
   async getReviews() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/reviews`)) || [];
+    return apiFetch<any[]>('/admin/reviews', { actor });
   },
 
   async getDisputes() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/disputes`)) || [];
+    return apiFetch<any[]>('/admin/disputes', { actor });
   },
 
   async getAdminStaff() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/admin-staff`)) || [];
+    return apiFetch<any[]>('/admin/admin-staff', { actor });
   },
 
   async getAuditLogs() {
-    return (await fetchJson<any[]>(`${API_BASE_URL}/audit-logs`)) || [];
+    return apiFetch<any[]>('/admin/audit-logs', { actor });
   },
 
   async getPlatformSettings() {
-    return (await fetchJson<any>(`${API_BASE_URL}/settings`)) || {
-      platformRakePercentage: 10.0,
-      minimumGigBudget: 50,
-      escrowHoldingDays: 14,
-      maxFileUploadMb: 100,
-      isMaintenanceMode: false,
-      allowedCategories: ['Software Development', 'Design & Creative', 'AI & Data Science', '3D & Spatial Computing']
-    };
+    return apiFetch<any>('/admin/settings', { actor });
   },
 
   // Mutations
   async updateUserStatus(userId: string, status: string, reason: string) {
-    return await fetchJson(`${API_BASE_URL}/users/${userId}/status`, {
+    return apiFetch(`/admin/users/${userId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, reason })
+      body: { status, reason },
+      actor,
     });
   },
 
   async inviteAdmin(email: string, role: string, permissions: string[]) {
-    return await fetchJson<any>(`${API_BASE_URL}/invitations`, {
+    return apiFetch<any>('/admin/invitations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, role, permissions })
+      body: { email, role, permissions },
+      actor,
     });
   },
 
   async acceptAdminInvitation(token: string, email: string, password?: string) {
-    return await fetchJson<any>(`${API_BASE_URL}/invitations/accept`, {
+    return apiFetch<any>('/admin/invitations/accept', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, email, password })
+      body: { token, email, password },
+      actor,
     });
   },
 
   async revokeAdminSession(staffId: string) {
-    return await fetchJson(`${API_BASE_URL}/sessions/${staffId}/revoke`, {
+    return apiFetch(`/admin/sessions/${staffId}/revoke`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      actor,
     });
   },
 
   async settleDispute(disputeId: string, settlementType: string, resolutionNotes: string, splitClientPercent?: number) {
-    return await fetchJson(`${API_BASE_URL}/disputes/${disputeId}/settle`, {
+    return apiFetch(`/admin/disputes/${disputeId}/settle`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settlementType, resolutionNotes, splitClientPercent })
+      body: { settlementType, resolutionNotes, splitClientPercent },
+      actor,
     });
   },
 
   async overrideEscrow(paymentId: string, action: 'RELEASE' | 'REFUND', auditReason: string) {
-    return await fetchJson(`${API_BASE_URL}/payments/${paymentId}/override`, {
+    return apiFetch(`/admin/payments/${paymentId}/override`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, auditReason })
+      body: { action, auditReason },
+      actor,
     });
   },
 
   async moderateReview(reviewId: string, status: string, moderatorNotes?: string) {
-    return await fetchJson(`${API_BASE_URL}/reviews/${reviewId}/moderate`, {
+    return apiFetch(`/admin/reviews/${reviewId}/moderate`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, moderatorNotes })
+      body: { status, moderatorNotes },
+      actor,
     });
   },
 
   async updatePlatformSettings(settings: any) {
-    return await fetchJson(`${API_BASE_URL}/settings`, {
+    return apiFetch('/admin/settings', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings)
+      body: settings,
+      actor,
     });
   },
 
   async updateAdminPassword(email: string, newPassword: string) {
-    return await fetchJson(`${API_BASE_URL}/profile/password`, {
+    return apiFetch('/admin/profile/password', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, newPassword })
+      body: { email, newPassword },
+      actor,
     });
   },
 
   async toggleAdmin2FA(email: string, isEnabled: boolean) {
-    return await fetchJson(`${API_BASE_URL}/profile/2fa`, {
+    return apiFetch('/admin/profile/2fa', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, isEnabled })
+      body: { email, isEnabled },
+      actor,
     });
   }
 };

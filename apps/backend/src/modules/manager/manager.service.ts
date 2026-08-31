@@ -73,9 +73,17 @@ export async function updateOwnProfile(managerId: number, dto: UpdateManagerProf
   return getOwnProfile(managerId);
 }
 
-export function listAssignedTasks(managerId: number) {
+export async function listAssignedTasks(managerId: number) {
+  const manager = await prisma.manager.findUnique({ where: { managerId } });
+  const clientId = manager?.clientId;
+
   return prisma.task.findMany({
-    where: { assignments: { some: { managerId } } },
+    where: {
+      OR: [
+        { assignments: { some: { managerId } } },
+        ...(clientId ? [{ clientId }] : []),
+      ],
+    },
     include: taskInclude,
     orderBy: { createdAt: "desc" },
   });

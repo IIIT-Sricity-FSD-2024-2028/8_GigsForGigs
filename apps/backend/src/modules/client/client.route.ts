@@ -20,8 +20,15 @@ export const clientRouter = Router();
 // what keeps task CRUD and payment authority root-client-only.
 clientRouter.use(authGuard, roleGuard("client"));
 
+clientRouter.get("/clients/me", clientController.getProfile);
+clientRouter.get("/clients/:clientId/profile", clientController.getProfile);
 clientRouter.post(
   "/clients/:clientId/profile",
+  validate(updateClientProfileSchema),
+  clientController.updateProfile,
+);
+clientRouter.patch(
+  "/clients/me/profile",
   validate(updateClientProfileSchema),
   clientController.updateProfile,
 );

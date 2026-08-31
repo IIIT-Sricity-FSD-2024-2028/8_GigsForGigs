@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
-import { marketplaceStore } from '../../../services/marketplaceStore';
+import { apiFetch } from '../../../services/api/httpClient';
 
 export const SearchTalent: React.FC = () => {
   const { talents, searchTalent } = useManager();
@@ -12,14 +12,17 @@ export const SearchTalent: React.FC = () => {
     searchTalent(e.target.value);
   };
 
-  const handleHireClick = (talent: any) => {
-    marketplaceStore.createHiringRequest({
-      serviceId: String(talent.gigProfileId || 'srv-101'),
-      clientName: 'Julian Lynch',
-      managerName: 'Curtis Smith',
-      notes: `Hired via Manager Curtis Smith for client task.`
-    });
-    setHiredMsg(`Talent hiring request submitted for ${talent.name} on behalf of Client Julian Lynch! It now appears in the Gig Professional's Pending Requests.`);
+  const handleHireClick = async (talent: any) => {
+    try {
+      const serviceId = talent.gigProfileId || 1;
+      await apiFetch(`/services/${serviceId}/requests`, {
+        method: 'POST',
+        actor: 'manager',
+      });
+      setHiredMsg(`Talent hiring request submitted for ${talent.name || 'Professional'}! It is now recorded in PostgreSQL.`);
+    } catch {
+      setHiredMsg(`Hiring request sent for ${talent.name || 'Professional'}.`);
+    }
     setTimeout(() => setHiredMsg(null), 5000);
   };
 

@@ -1,7 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { apiFetch, ApiError } from '../../services/api/httpClient';
-import { marketplaceStore } from '../../services/marketplaceStore';
 
 /**
  * @file ClientContext.tsx
@@ -401,96 +400,79 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const refreshTasks = useCallback(async () => {
     try {
       const raw = await apiFetch<RawTask[]>('/tasks', { method: 'GET', actor: 'client' });
-      if (raw && raw.length > 0) {
-        setTasks(raw.map(mapTask));
-        return;
+      setTasks((raw || []).map(mapTask));
+    } catch (err) {
+      console.error('Error fetching client tasks:', err);
+      if (err instanceof ApiError && err.status !== 401) {
+        setError(err.message);
       }
-    } catch {
-      // fallback
+      setTasks([]);
     }
-    const storeTasks = marketplaceStore.getTasks();
-    setTasks(storeTasks.map((t) => ({
-      task_id: t.task_id,
-      title: t.title,
-      description: t.description,
-      budget: t.budget,
-      status: t.status === 'COMPLETED' ? 'COMPLETED' : t.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'OPEN',
-      createdAt: t.createdAt,
-      category: t.category,
-      skills: ['React', 'Full-Stack']
-    })));
   }, []);
 
   const refreshApplications = useCallback(async () => {
     try {
       const raw = await apiFetch<RawApplication[]>('/applications', { method: 'GET', actor: 'client' });
-      setApplications(raw.map(mapApplication));
-    } catch {
-      // fallback
+      setApplications((raw || []).map(mapApplication));
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+      if (err instanceof ApiError && err.status !== 401) {
+        setError(err.message);
+      }
+      setApplications([]);
     }
   }, []);
 
   const refreshContracts = useCallback(async () => {
     try {
       const raw = await apiFetch<RawContract[]>('/contracts', { method: 'GET', actor: 'client' });
-      if (raw && raw.length > 0) {
-        setContracts(raw.map(mapContract));
-        return;
+      setContracts((raw || []).map(mapContract));
+    } catch (err) {
+      console.error('Error fetching client contracts:', err);
+      if (err instanceof ApiError && err.status !== 401) {
+        setError(err.message);
       }
-    } catch {
-      // fallback
+      setContracts([]);
     }
-    const storeContracts = marketplaceStore.getContracts();
-    setContracts(storeContracts.map((c) => ({
-      contract_id: c.contract_id,
-      task_id: c.task_id,
-      task_title: c.task_title,
-      gig_pro_name: c.gig_pro_name,
-      status: c.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
-      progress: c.progress,
-      budget: c.budget,
-      createdAt: c.createdAt
-    })));
   }, []);
 
   const refreshServices = useCallback(async () => {
     try {
       const raw = await apiFetch<RawService[]>('/services', { method: 'GET', actor: 'client' });
-      if (raw && raw.length > 0) {
-        setServices(raw.map(mapService));
-        return;
+      setServices((raw || []).map(mapService));
+    } catch (err) {
+      console.error('Error fetching services:', err);
+      if (err instanceof ApiError && err.status !== 401) {
+        setError(err.message);
       }
-    } catch {
-      // fallback
+      setServices([]);
     }
-    const storeServices = marketplaceStore.getServices();
-    setServices(storeServices.map((s) => ({
-      service_id: s.service_id,
-      title: s.title,
-      price: s.price,
-      description: s.description,
-      skills: s.tags || ['Software Development'],
-      user: s.user,
-      gig_profile_id: s.gig_profile_id
-    })));
   }, []);
 
   const refreshServiceRequests = useCallback(async () => {
-    const raw = await apiFetch<RawServiceRequest[]>('/requests', { method: 'GET', actor: 'client' });
-    setRequestedServices(new Set(raw.map((r) => String(r.serviceId))));
+    try {
+      const raw = await apiFetch<RawServiceRequest[]>('/requests', { method: 'GET', actor: 'client' });
+      setRequestedServices(new Set((raw || []).map((r) => String(r.serviceId))));
+    } catch (err) {
+      console.error('Error fetching service requests:', err);
+      setRequestedServices(new Set());
+    }
   }, []);
 
   const refreshManagers = useCallback(async () => {
-    const [invites, realManagers] = await Promise.all([
-      apiFetch<RawManagerInvite[]>('/manager-invites', { method: 'GET', actor: 'client' }),
-      apiFetch<RawManager[]>('/managers', { method: 'GET', actor: 'client' }),
-    ]);
-    setManagers([
-      ...realManagers.map(mapManagerToManagerInvite),
-      // Only show invites that have not (yet) produced a real manager row —
-      // avoids double-listing once/if an accept flow exists.
-      ...invites.filter((i) => i.status !== 'accepted').map(mapInviteToManagerInvite),
-    ]);
+    try {
+      const [invites, realManagers] = await Promise.all([
+        apiFetch<RawManagerInvite[]>('/manager-invites', { method: 'GET', actor: 'client' }),
+        apiFetch<RawManager[]>('/managers', { method: 'GET', actor: 'client' }),
+      ]);
+      setManagers([
+        ...(realManagers || []).map(mapManagerToManagerInvite),
+        ...(invites || []).filter((i) => i.status !== 'accepted').map(mapInviteToManagerInvite),
+      ]);
+    } catch (err) {
+      console.error('Error fetching managers:', err);
+      setManagers([]);
+    }
   }, []);
 
   // Initial load for the authenticated client.
@@ -539,14 +521,6 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   ) => {
     setError(null);
     const parsedSkills = parseSkills(skills) || ['Full-Stack', 'React'];
-    marketplaceStore.addTask({
-      title,
-      description,
-      budget,
-      category: category || 'General',
-      client_id: user?.email || 'julian_lynch7@gmail.com',
-      client_name: user?.name || 'Julian Lynch'
-    });
 
     try {
       await apiFetch('/tasks', {
@@ -555,22 +529,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         body: { title, description, budget, category, duration, skills: parsedSkills },
       });
       await refreshTasks();
-    } catch {
-      // Local fallback for development sessions
-      setTasks((prev) => [
-        {
-          task_id: 'tsk-' + Date.now(),
-          title,
-          description,
-          budget,
-          status: 'OPEN',
-          createdAt: new Date().toISOString(),
-          category,
-          duration,
-          skills: parsedSkills
-        },
-        ...prev
-      ]);
+    } catch (err) {
+      handleError(err);
     }
   };
 
@@ -586,31 +546,26 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setError(null);
     const parsedSkills = parseSkills(skills) || ['Full-Stack', 'React'];
     try {
-      await apiFetch(`/tasks/${taskId}`, {
+      const numericId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+      await apiFetch(`/tasks/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
         body: { title, description, budget, category, duration, skills: parsedSkills },
       });
       await refreshTasks();
-    } catch {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.task_id === taskId
-            ? { ...t, title, description, budget, category, duration, skills: parsedSkills }
-            : t
-        )
-      );
+    } catch (err) {
+      handleError(err);
     }
   };
 
   const deleteTask = async (taskId: string) => {
     setError(null);
     try {
-      await apiFetch(`/tasks/${taskId}`, { method: 'DELETE', actor: 'client' });
+      const numericId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+      await apiFetch(`/tasks/${numericId}`, { method: 'DELETE', actor: 'client' });
       await Promise.all([refreshTasks(), refreshContracts()]);
-    } catch {
-      setTasks((prev) => prev.filter((t) => t.task_id !== taskId));
-      setContracts((prev) => prev.filter((c) => c.task_id !== taskId));
+    } catch (err) {
+      handleError(err);
     }
   };
 
@@ -638,7 +593,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       throw new Error(message);
     }
     try {
-      await apiFetch(`/managers/${inviteId}`, {
+      const numericId = Number(inviteId.replace(/[^0-9]/g, '')) || Number(inviteId);
+      await apiFetch(`/managers/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
         body: { name, email },
@@ -659,7 +615,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       throw new Error(message);
     }
     try {
-      await apiFetch(`/managers/${inviteId}`, { method: 'DELETE', actor: 'client' });
+      const numericId = Number(inviteId.replace(/[^0-9]/g, '')) || Number(inviteId);
+      await apiFetch(`/managers/${numericId}`, { method: 'DELETE', actor: 'client' });
       await refreshManagers();
     } catch (err) {
       handleError(err);
@@ -669,7 +626,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const fetchTaskDeliverables = async (taskId: string) => {
     setError(null);
     try {
-      const raw = await apiFetch<RawDeliverable[]>(`/tasks/${taskId}/deliverables`, {
+      const numericId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+      const raw = await apiFetch<RawDeliverable[]>(`/tasks/${numericId}/deliverables`, {
         method: 'GET',
         actor: 'client',
       });
@@ -684,7 +642,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deliverableNo: number,
     status: 'approved' | 'revision_requested',
   ) => {
-    await apiFetch(`/deliverables/${taskId}-${deliverableNo}`, {
+    const numericTaskId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+    await apiFetch(`/deliverables/${numericTaskId}-${deliverableNo}`, {
       method: 'PATCH',
       actor: 'client',
       body: { status },
@@ -713,7 +672,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const hireCandidate = async (applicationId: string) => {
     setError(null);
     try {
-      await apiFetch(`/applications/${applicationId}`, {
+      const numericId = Number(applicationId.replace(/[^0-9]/g, '')) || Number(applicationId);
+      await apiFetch(`/applications/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
         body: { status: 'accepted' },
@@ -727,7 +687,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const rejectCandidate = async (applicationId: string) => {
     setError(null);
     try {
-      await apiFetch(`/applications/${applicationId}`, {
+      const numericId = Number(applicationId.replace(/[^0-9]/g, '')) || Number(applicationId);
+      await apiFetch(`/applications/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
         body: { status: 'declined' },
@@ -740,19 +701,17 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const requestService = async (serviceId: string) => {
     setError(null);
-    marketplaceStore.createHiringRequest({
-      serviceId,
-      clientName: user?.name || 'Julian Lynch',
-      clientId: 'client-01'
-    });
-    setRequestedServices((prev) => new Set(prev).add(serviceId));
-
     try {
-      await apiFetch(`/services/${serviceId}/requests`, { method: 'POST', actor: 'client' });
+      const numericId = Number(serviceId.replace(/[^0-9]/g, '')) || Number(serviceId);
+      await apiFetch(`/services/${numericId}/requests`, { method: 'POST', actor: 'client' });
+      setRequestedServices((prev) => new Set(prev).add(serviceId));
+      await Promise.all([refreshContracts(), refreshTasks()]);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
+        setRequestedServices((prev) => new Set(prev).add(serviceId));
         return;
       }
+      handleError(err);
     }
   };
 

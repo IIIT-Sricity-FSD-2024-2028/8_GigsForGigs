@@ -113,19 +113,66 @@ export async function respondToRequest(
   gigProfileId: number,
   dto: RespondToRequestDto,
 ) {
-  const application = await prisma.application.findUnique({ where: { applicationId } });
+  const application = await prisma.application.findUnique({
+    where: { applicationId },
+    include: { task: { include: { client: { include: { managers: true } } } } },
+  });
   if (!application || application.gigProfileId !== gigProfileId) {
     throw notFound("Request not found");
   }
   if (application.status !== "pending") {
     throw forbidden("Request already resolved");
   }
-  return prisma.application.update({ where: { applicationId }, data: { status: dto.action } });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return prisma.$transaction(async (tx: any) => {
+    const updated = await tx.application.update({
+      where: { applicationId },
+      data: { status: dto.action },
+    });
+
+    if (dto.action === "accepted") {
+      await tx.task.update({
+        where: { taskId: application.taskId },
+        data: { status: "in_progress" },
+      });
+
+      const clientManagers = application.task.client.managers;
+      const anyManager = clientManagers.length > 0 ? clientManagers[0] : await tx.manager.findFirst();
+      if (anyManager) {
+        const existingAssignment = await tx.gigManagerAssignment.findUnique({
+          where: {
+            gigProfileId_taskId: {
+              gigProfileId,
+              taskId: application.taskId,
+            },
+          },
+        });
+        if (!existingAssignment) {
+          await tx.gigManagerAssignment.create({
+            data: {
+              gigProfileId,
+              taskId: application.taskId,
+              managerId: anyManager.managerId,
+            },
+          });
+        }
+      }
+    }
+
+    return updated;
+  });
 }
 
 export function listActiveTasks(gigProfileId: number) {
   return prisma.task.findMany({
-    where: { assignments: { some: { gigProfileId } }, status: { in: ["open", "in_progress"] } },
+    where: {
+      OR: [
+        { assignments: { some: { gigProfileId } } },
+        { applications: { some: { gigProfileId, status: "accepted" } } },
+      ],
+      status: { in: ["open", "in_progress"] },
+    },
     include: { client: true },
     orderBy: { createdAt: "desc" },
   });
@@ -137,11 +184,30 @@ export function listActiveTasks(gigProfileId: number) {
  * empty). See gig.serializer.ts for the read-side of this mapping.
  */
 export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliverableDto) {
-  const assignment = await prisma.gigManagerAssignment.findUnique({
+  let assignment = await prisma.gigManagerAssignment.findUnique({
     where: { gigProfileId_taskId: { gigProfileId, taskId: dto.taskId } },
   });
+
   if (!assignment) {
-    throw notFound("No assignment for that task");
+    const task = await prisma.task.findUnique({
+      where: { taskId: dto.taskId },
+      include: { client: { include: { managers: true } } },
+    });
+
+    const clientManagers = task?.client?.managers || [];
+    const chosenManager = clientManagers.length > 0 ? clientManagers[0] : await prisma.manager.findFirst();
+
+    if (chosenManager) {
+      assignment = await prisma.gigManagerAssignment.create({
+        data: {
+          gigProfileId,
+          taskId: dto.taskId,
+          managerId: chosenManager.managerId,
+        },
+      });
+    } else {
+      throw notFound("No manager available to record deliverable assignment");
+    }
   }
 
   const last = await prisma.deliverable.findFirst({
@@ -150,13 +216,16 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
   });
   const deliverableNo = (last?.deliverableNo ?? 0) + 1;
 
+  const contentText = (dto.content || "").trim().slice(0, 500);
+  const notesText = (dto.notes && dto.notes.trim() ? dto.notes.trim() : contentText).slice(0, 500);
+
   return prisma.deliverable.create({
     data: {
       taskId: dto.taskId,
       deliverableNo,
       gigProfileId,
-      description: dto.content,
-      submissionPath: dto.notes ?? dto.content,
+      description: contentText || "Deliverable submitted",
+      submissionPath: notesText || "Deliverable files / notes",
     },
   });
 }

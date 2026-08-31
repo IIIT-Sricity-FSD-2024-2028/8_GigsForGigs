@@ -15,32 +15,7 @@ export const MyServices: React.FC = () => {
       try {
         const data = await gigApi.getServices();
         if (mounted) {
-          if (data && data.length > 0) {
-            setServices(data);
-          } else {
-            // Default initial posted services for demo/fallback
-            setServices([
-              {
-                service_id: 'srv-101',
-                gig_profile_id: '1',
-                title: 'Full-Stack React 19 & Express.js Marketplace App',
-                description: 'End-to-end full-stack web application development including PostgreSQL database schema design, RESTful APIs, and responsive React frontend.',
-                price: 5000,
-                tags: ['Software Development', 'React', 'Node.js'],
-                thumbnail: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c',
-                createdAt: new Date().toISOString()
-              },
-              {
-                service_id: 'srv-102',
-                gig_profile_id: '1',
-                title: 'UI/UX Brand Guidelines & Design System Design',
-                description: 'Comprehensive brand identity package including color palette, typography hierarchy, component library, and Figma design system.',
-                price: 3500,
-                tags: ['UI/UX Design', 'Figma', 'Branding'],
-                createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
-              }
-            ]);
-          }
+          setServices(data || []);
         }
       } catch (err) {
         console.error('Failed to load services:', err);

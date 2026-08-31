@@ -7,7 +7,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignup }) => {
-  const { login, loading, authError } = useAuth();
+  const { login, loading } = useAuth();
   const [role, setRole] = useState<'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONAL' | 'SUPER_ADMIN' | ''>('CLIENT');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,16 +17,13 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (!role) {
-      setErrorMsg('Please select your role.');
+    if (!email.trim() || !password) {
+      setErrorMsg('Please enter your email and password.');
       return;
     }
-    // Manager accounts authenticate through a separate backend endpoint
-    // (/auth/manager/login); the role field otherwise just labels the form
-    // — the actual role always comes back from the server's JWT.
-    const success = await login(email, password, role);
+    const success = await login(email, password, role || undefined);
     if (!success) {
-      setErrorMsg(authError || 'Invalid login credentials or server error. Please try again.');
+      setErrorMsg('Invalid email or password. Please verify your credentials.');
     }
   };
 
@@ -198,20 +195,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                 type="email"
                 required
                 value={email}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setEmail(val);
-                  const clean = val.trim().toLowerCase();
-                  if (clean === 'dessie8@yahoo.com' || clean.includes('dessie') || clean.includes('gig')) {
-                    setRole('GIG_PROFESSIONAL');
-                  } else if (clean === 'curtis45@hotmail.com' || clean.includes('curtis') || clean.includes('manager')) {
-                    setRole('MANAGER');
-                  } else if (clean === 'jovan44@yahoo.com' || clean.includes('jovan') || clean.includes('admin') || clean.includes('chaitanya')) {
-                    setRole('SUPER_ADMIN');
-                  } else if (clean === 'julian_lynch7@gmail.com' || clean.includes('client') || clean.includes('julian')) {
-                    setRole('CLIENT');
-                  }
-                }}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="aditya@techstart.io"
                 style={{
                   width: '100%',

@@ -15,7 +15,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   const [payingPayment, setPayingPayment] = useState<EscrowPayment | null>(null);
 
   const clientPayments = payments.filter(
-    p => p.clientId === String(user?.userId) || p.clientName.toLowerCase().includes(user?.name?.toLowerCase() || 'aditya')
+    p => p.clientId === String(user?.userId) || (p.clientName && user?.name && p.clientName.toLowerCase().includes(user.name.toLowerCase()))
   );
 
   const formatCurrency = (val: number) => {
@@ -35,9 +35,9 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     .reduce((sum, p) => sum + p.totalAmount, 0);
 
   const filteredPayments = clientPayments.filter(p =>
-    p.taskTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.gigProName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.paymentId.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.taskTitle || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.gigProName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.paymentId || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handlePayNow = async (paymentId: string) => {

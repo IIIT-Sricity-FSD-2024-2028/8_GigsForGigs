@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
-import { marketplaceStore } from '../../../services/marketplaceStore';
 
 export interface SearchTalentProps {
   onNavigate: (viewId: string) => void;
@@ -12,23 +11,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
   const [rateFilter, setRateFilter] = useState('all');
   const [localRequested, setLocalRequested] = useState<Set<string>>(new Set());
 
-  // Merge live store services with context services
-  const allServices = useMemo(() => {
-    const storeList = marketplaceStore.getServices().map((s) => ({
-      service_id: s.service_id,
-      title: s.title,
-      price: s.price,
-      description: s.description,
-      skills: s.tags || ['Software Development'],
-      user: s.user,
-      gig_profile_id: s.gig_profile_id
-    }));
-
-    const map = new Map<string, any>();
-    storeList.forEach((s) => map.set(s.service_id, s));
-    services.forEach((s) => map.set(s.service_id, s));
-    return Array.from(map.values());
-  }, [services]);
+  const allServices = services;
 
   const handleHireClick = async (serviceId: string) => {
     try {

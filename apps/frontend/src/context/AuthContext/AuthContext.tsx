@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../../services/api/auth/authApi';
 import type { AuthUser } from '../../services/api/auth/authApi';
-import { ApiError, getToken, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
+import { ApiError, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
 import { decodeJwtPayload } from '../../utils/helpers/jwt';
 
 export type FrontendRole = 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
@@ -150,10 +150,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ actor: ActorRole }>).detail;
-      const currentToken = detail.actor ? getToken(detail.actor) : null;
-      if (currentToken === 'mock-dev-jwt-token') {
-        return; // Preserve mock development session
-      }
       setUser((prev) => (prev && roleToActor(prev.role) === detail.actor ? null : prev));
     };
     window.addEventListener(UNAUTHORIZED_EVENT, handler);
@@ -181,67 +177,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [],
   );
 
-  const login = useCallback(async (email: string, password: string, roleHint?: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, _roleHint?: string): Promise<boolean> => {
     setLoading(true);
     setAuthError(null);
-    const cleanEmail = email.trim().toLowerCase();
-
-    // Determine target role from email or roleHint
-    let targetRole: FrontendRole = 'CLIENT';
-    if (roleHint === 'SUPER_ADMIN' || cleanEmail.includes('admin') || cleanEmail.includes('auditor') || cleanEmail.includes('finance') || cleanEmail.includes('support') || cleanEmail.includes('jovan') || cleanEmail.includes('chaitanya')) {
-      targetRole = 'SUPER_ADMIN';
-    } else if (roleHint === 'MANAGER' || cleanEmail.includes('manager') || cleanEmail.includes('curtis') || cleanEmail.includes('alene') || cleanEmail.includes('woodrow')) {
-      targetRole = 'MANAGER';
-    } else if (roleHint === 'GIG_PROFESSIONAL' || cleanEmail.includes('colten') || cleanEmail.includes('dessie') || cleanEmail.includes('freelance') || cleanEmail.includes('pro')) {
-      targetRole = 'GIG_PROFESSIONAL';
-    } else if (roleHint === 'CLIENT' || cleanEmail.includes('client') || cleanEmail.includes('julian') || cleanEmail.includes('margarete') || cleanEmail.includes('techstart')) {
-      targetRole = 'CLIENT';
-    } else if (roleHint) {
-      targetRole = roleHint as FrontendRole;
-    }
 
     try {
-      const res =
-        targetRole === 'MANAGER' ? await authApi.managerLogin(email, password) : await authApi.login(email, password);
+      const res = await authApi.login(email.trim(), password);
       const session = sessionFromAuthResponse(res.user, res.token);
-      session.role = targetRole;
       setToken(roleToActor(session.role), res.token);
       setUser(session);
       return true;
-    } catch {
-      // Development & Mock login fallback
-      let displayName = 'Julian Lynch';
-      if (targetRole === 'GIG_PROFESSIONAL') {
-        displayName = 'Dessie Davis';
-      } else if (targetRole === 'MANAGER') {
-        displayName = 'Curtis Smith';
-      } else if (targetRole === 'SUPER_ADMIN') {
-        displayName = 'Jovan Miller';
-      } else if (targetRole === 'CLIENT') {
-        displayName = 'Julian Lynch';
-      } else if (cleanEmail.includes('aditya')) {
-        displayName = 'Aditya Deshmukh';
-      } else if (cleanEmail.includes('@')) {
-        const parts = cleanEmail.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim();
-        if (parts) {
-          displayName = parts.split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-        }
-      }
-
-      const mockSession: UserSession = {
-        userId: Math.floor(100 + Math.random() * 900),
-        role: targetRole,
-        name: displayName,
-        email: email,
-        appliedTaskIds: [],
-        clientId: targetRole === 'CLIENT' ? 1 : undefined,
-        managerId: targetRole === 'MANAGER' ? 1 : undefined,
-        gigProfileId: targetRole === 'GIG_PROFESSIONAL' ? 1 : undefined
-      };
-
-      setToken(roleToActor(mockSession.role), 'mock-dev-jwt-token');
-      setUser(mockSession);
-      return true;
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Authentication failed. Please verify your credentials.';
+      setAuthError(msg);
+      return false;
     } finally {
       setLoading(false);
     }

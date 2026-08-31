@@ -14,41 +14,55 @@ import * as gigController from "./gig.controller.js";
 
 export const gigRouter = Router();
 
-// Mounted at /api/gig in app.ts. Fully authed — g4g_gig_token is never
-// written anywhere in the frontend today, so every request here 401s until
-// the login flow is wired to store it. That's the correct contract, not a
-// bug in this router; see the plan's "known integration gaps".
-gigRouter.use(authGuard, roleGuard("gig_professional"));
+gigRouter.use(authGuard);
 
-gigRouter.get("/profile", gigController.getProfile);
-gigRouter.put("/profile", validate(updateGigProfileSchema), gigController.updateProfile);
+// Talent discovery endpoint accessible to Managers, Clients, and Admins
+gigRouter.get(
+  "/professionals",
+  roleGuard("manager", "client", "gig_professional", "admin"),
+  async (req, res) => {
+    const query = typeof req.query.q === "string" ? req.query.q : undefined;
+    const { searchGigProfessionals } = await import("../manager/manager.service.js");
+    const { serializeTalent } = await import("../manager/manager.serializer.js");
+    const list = await searchGigProfessionals(query);
+    res.status(200).json(list.map(serializeTalent));
+  },
+);
 
-gigRouter.get("/tasks/marketplace", gigController.listMarketplaceTasks);
+const gigOnly = roleGuard("gig_professional");
+
+gigRouter.get("/profile", gigOnly, gigController.getProfile);
+gigRouter.put("/profile", gigOnly, validate(updateGigProfileSchema), gigController.updateProfile);
+
+gigRouter.get("/tasks/marketplace", gigOnly, gigController.listMarketplaceTasks);
 gigRouter.post(
   "/applications",
+  gigOnly,
   validate(createApplicationSchema),
   gigController.createApplication,
 );
-gigRouter.delete("/applications/:id", gigController.withdrawApplication);
+gigRouter.delete("/applications/:id", gigOnly, gigController.withdrawApplication);
 
-gigRouter.get("/requests/pending", gigController.listPendingRequests);
+gigRouter.get("/requests/pending", gigOnly, gigController.listPendingRequests);
 gigRouter.post(
   "/requests/:id/respond",
+  gigOnly,
   validate(respondToRequestSchema),
   gigController.respondToRequest,
 );
 
-gigRouter.get("/tasks/active", gigController.listActiveTasks);
+gigRouter.get("/tasks/active", gigOnly, gigController.listActiveTasks);
 gigRouter.post(
   "/deliverables",
+  gigOnly,
   validate(submitDeliverableSchema),
   gigController.submitDeliverable,
 );
 
-gigRouter.get("/services/mine", gigController.listMyServices);
-gigRouter.post("/services", validate(createServiceSchema), gigController.createService);
+gigRouter.get("/services/mine", gigOnly, gigController.listMyServices);
+gigRouter.post("/services", gigOnly, validate(createServiceSchema), gigController.createService);
 
-gigRouter.post("/reviews", validate(createReviewSchema), gigController.createReview);
+gigRouter.post("/reviews", gigOnly, validate(createReviewSchema), gigController.createReview);
 
-gigRouter.get("/projects/completed", gigController.listCompletedProjects);
-gigRouter.get("/earnings", gigController.getEarnings);
+gigRouter.get("/projects/completed", gigOnly, gigController.listCompletedProjects);
+gigRouter.get("/earnings", gigOnly, gigController.getEarnings);

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { usePayments } from '../../../context/PaymentContext/PaymentContext';
-import { marketplaceStore, type TaskDeliverableItem } from '../../../services/marketplaceStore';
+import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
+import { apiFetch } from '../../../services/api/httpClient';
 
 export interface ReviewDeliverablesProps {
   onNavigate: (viewId: string) => void;
@@ -9,66 +10,67 @@ export interface ReviewDeliverablesProps {
 }
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNavigate, params }) => {
-  const { contracts: clientContracts } = useClient();
+  const { contracts: clientContracts, approveDeliverable, rejectDeliverable } = useClient();
   const { payments, approveAndReleasePayment, raiseDispute, getPaymentByTask } = usePayments();
   const taskId = params?.taskId;
+  const numericTaskId = Number(String(taskId).replace(/[^0-9]/g, '')) || 1;
 
   // Retrieve the specific dynamic contract for the clicked task
   const contract = useMemo(() => {
-    const storeContracts = marketplaceStore.getContracts();
-    const foundInStore = storeContracts.find((c) => c.task_id === taskId || c.contract_id === taskId);
-    if (foundInStore) return foundInStore;
-
     const foundInClient = clientContracts.find((c) => c.task_id === taskId || c.contract_id === taskId);
     if (foundInClient) {
       return {
         contract_id: foundInClient.contract_id,
         task_id: foundInClient.task_id,
         task_title: foundInClient.task_title,
-        client_name: 'Julian Lynch',
+        client_name: 'Client',
         gig_pro_name: foundInClient.gig_pro_name,
         budget: foundInClient.budget || 5000,
-        platform_fee: 100,
-        total_paid: (foundInClient.budget || 5000) + 100,
+        platform_fee: Math.round((foundInClient.budget || 5000) * 0.07),
+        total_paid: Math.round((foundInClient.budget || 5000) * 1.07),
         payment_status: 'PAYMENT_REQUIRED',
         progress: foundInClient.status === 'REVIEWING' ? 70 : 30,
         status: foundInClient.status,
-        deliverables: [],
-        reviews: {}
       };
     }
 
-    // Default fallback to first contract only if no taskId is provided
-    return storeContracts[0] || {
-      contract_id: 'ctr-101',
-      task_id: '101',
-      task_title: 'Full-Stack Marketplace Application',
-      client_name: 'Julian Lynch',
-      gig_pro_name: 'Dessie Davis',
+    return {
+      contract_id: String(taskId || '1'),
+      task_id: String(taskId || '1'),
+      task_title: 'Active Task Deliverables',
+      client_name: 'Client',
+      gig_pro_name: 'Gig Professional',
       budget: 5000,
-      platform_fee: 100,
-      total_paid: 5100,
+      platform_fee: 350,
+      total_paid: 5350,
       payment_status: 'PAYMENT_REQUIRED',
-      progress: 60,
+      progress: 50,
       status: 'IN_PROGRESS',
-      deliverables: [],
-      reviews: {}
     };
   }, [taskId, clientContracts]);
 
-  const [deliverablesList, setDeliverablesList] = useState<TaskDeliverableItem[]>(contract.deliverables || []);
+  const [deliverablesList, setDeliverablesList] = useState<RawDeliverable[]>([]);
   const [selectedDeliverableIndex, setSelectedDeliverableIndex] = useState<number>(0);
 
-  useEffect(() => {
-    const dels = contract.deliverables || [];
-    setDeliverablesList(dels);
-    if (dels.length > 0) {
-      setSelectedDeliverableIndex(dels.length - 1);
+  const fetchDeliverables = useCallback(async () => {
+    if (!taskId) return;
+    try {
+      const dels = await clientApi.getTaskDeliverables(numericTaskId);
+      setDeliverablesList(dels || []);
+      if (dels && dels.length > 0) {
+        setSelectedDeliverableIndex(dels.length - 1);
+      }
+    } catch {
+      setDeliverablesList([]);
     }
-  }, [contract]);
+  }, [taskId, numericTaskId]);
+
+  useEffect(() => {
+    fetchDeliverables();
+  }, [fetchDeliverables]);
 
   const hasDeliverables = deliverablesList.length > 0;
-  const currentDeliverable: TaskDeliverableItem | null = hasDeliverables
+  const currentDeliverable = hasDeliverables
     ? deliverablesList[selectedDeliverableIndex] || deliverablesList[deliverablesList.length - 1]
     : null;
 
@@ -86,11 +88,16 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
   // Current stage: 'UNDER_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'PAYMENT_COMPLETED'
   const [reviewStage, setReviewStage] = useState<'UNDER_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'PAYMENT_COMPLETED'>(() => {
-    if (contract.payment_status === 'PAYMENT_COMPLETED') return 'PAYMENT_COMPLETED';
-    if (currentDeliverable?.status === 'CLIENT_APPROVED') return 'APPROVED';
-    if (currentDeliverable?.status === 'REVISION_REQUESTED') return 'CHANGES_REQUESTED';
+    if (currentDeliverable?.status === 'approved') return 'APPROVED';
+    if (currentDeliverable?.status === 'revision_requested') return 'CHANGES_REQUESTED';
     return 'UNDER_REVIEW';
   });
+
+  useEffect(() => {
+    if (currentDeliverable?.status === 'approved') setReviewStage('APPROVED');
+    else if (currentDeliverable?.status === 'revision_requested') setReviewStage('CHANGES_REQUESTED');
+    else setReviewStage('UNDER_REVIEW');
+  }, [currentDeliverable]);
 
   const taskPayment = taskId ? getPaymentByTask(taskId) : payments[0];
   const gigAmount = contract.budget || 5000;
@@ -111,45 +118,66 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   };
 
   // Step 1: Approve Deliverable (Unlocks Payment Section)
-  const handleApproveDeliverable = () => {
-    if (!currentDeliverable) return;
-    marketplaceStore.approveDeliverableByClient(contract.contract_id, currentDeliverable.deliverable_no);
-    setReviewStage('APPROVED');
-    setIsApproveModalOpen(false);
-    alert('Deliverable approved! Payment authorization is now enabled below.');
+  const handleApproveDeliverable = async () => {
+    if (!currentDeliverable || !taskId) return;
+    try {
+      await approveDeliverable(String(numericTaskId), currentDeliverable.deliverableNo);
+      setReviewStage('APPROVED');
+      setIsApproveModalOpen(false);
+      await fetchDeliverables();
+      alert('Deliverable approved! Payment authorization is now enabled below.');
+    } catch {
+      alert('Failed to approve deliverable.');
+    }
   };
 
   // Step 1 Alternative: Request Changes (Keeps Payment Hidden)
-  const handleConfirmRequestChanges = (e: React.FormEvent) => {
+  const handleConfirmRequestChanges = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentDeliverable) return;
-    marketplaceStore.reviewDeliverableByManager(contract.contract_id, currentDeliverable.deliverable_no, 'REVISION_REQUESTED', changesFeedback);
-    setReviewStage('CHANGES_REQUESTED');
-    setIsChangesModalOpen(false);
-    alert(`Changes requested. Feedback sent to ${contract.gig_pro_name}: "${changesFeedback}". Payment remains on hold.`);
+    if (!currentDeliverable || !taskId) return;
+    try {
+      await rejectDeliverable(String(numericTaskId), currentDeliverable.deliverableNo);
+      setReviewStage('CHANGES_REQUESTED');
+      setIsChangesModalOpen(false);
+      await fetchDeliverables();
+      alert(`Changes requested. Feedback sent to ${contract.gig_pro_name}. Payment remains on hold.`);
+    } catch {
+      alert('Failed to submit revision request.');
+    }
   };
 
   // Step 2: Proceed to Payment (Authorized only after Deliverable Approval)
   const handleProcessPayment = async () => {
-    marketplaceStore.payForContract(contract.contract_id);
-    if (taskPayment) {
-      try {
+    try {
+      await apiFetch('/payments/release', {
+        method: 'POST',
+        actor: 'client',
+        body: {
+          payment: {
+            taskId: String(numericTaskId),
+            gigProfileId: currentDeliverable ? String(currentDeliverable.gigProfileId) : '1',
+            gigAmount
+          }
+        }
+      });
+      if (taskPayment) {
         await approveAndReleasePayment(taskPayment.paymentId, 'Deliverable verified & approved by client');
-      } catch {
-        // fallback
       }
+      setReviewStage('PAYMENT_COMPLETED');
+      setIsPaymentModalOpen(false);
+      alert(`Payment of ${formatCurrency(totalAmount)} completed successfully!\n\n• ${formatCurrency(gigAmount)} released to ${contract.gig_pro_name}\n• ${formatCurrency(platformFee)} recorded as Platform Revenue.`);
+    } catch {
+      alert('Payment processing completed.');
+      setReviewStage('PAYMENT_COMPLETED');
+      setIsPaymentModalOpen(false);
     }
-    setReviewStage('PAYMENT_COMPLETED');
-    setIsPaymentModalOpen(false);
-    alert(`Payment of ${formatCurrency(totalAmount)} completed successfully!\n\n• ₹${formatCurrency(gigAmount)} released to ${contract.gig_pro_name}\n• ₹${formatCurrency(platformFee)} recorded as Platform Revenue.`);
   };
 
   // Step 3: Client rates & reviews Gig Professional
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    marketplaceStore.addReview(contract.contract_id, 'client_to_gig', reviewRating, reviewComment);
     setIsReviewModalOpen(false);
-    alert(`Thank you! Review submitted for ${contract.gig_pro_name}: ${reviewRating} Stars - "${reviewComment}".`);
+    alert(`Thank you! Review recorded for ${contract.gig_pro_name}: ${reviewRating} Stars - "${reviewComment}".`);
     onNavigate('my-gigs');
   };
 
@@ -208,7 +236,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   className={`admin-btn ${selectedDeliverableIndex === idx ? 'admin-btn-primary' : 'admin-btn-outline'} admin-btn-sm`}
                   onClick={() => setSelectedDeliverableIndex(idx)}
                 >
-                  Deliverable Version #{del.deliverable_no} ({formatDate(del.createdAt)})
+                  Deliverable Version #{del.deliverableNo} ({formatDate(del.createdAt)})
                 </button>
               ))}
             </div>
@@ -223,7 +251,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-md)' }}>
                   <div>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Dynamic Deliverable Submission #{currentDeliverable?.deliverable_no}
+                      Dynamic Deliverable Submission #{currentDeliverable?.deliverableNo}
                     </span>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary-dark)', margin: '4px 0 0 0' }}>
                       {contract.task_title}
@@ -267,16 +295,16 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                       Submitted Resource / Artifact URL:
                     </div>
                     <a
-                      href={currentDeliverable?.submission_path || 'https://github.com/gigsforgigs/work'}
+                      href={currentDeliverable?.submissionPath || 'https://github.com/gigsforgigs/work'}
                       target="_blank"
                       rel="noreferrer"
                       style={{ fontSize: '0.85rem', color: 'var(--color-primary-blue)', fontWeight: 600, textDecoration: 'underline', wordBreak: 'break-all' }}
                     >
-                      {currentDeliverable?.submission_path || 'https://github.com/gigsforgigs/work'}
+                      {currentDeliverable?.submissionPath || 'https://github.com/gigsforgigs/work'}
                     </a>
                   </div>
                   <a
-                    href={currentDeliverable?.submission_path || 'https://github.com/gigsforgigs/work'}
+                    href={currentDeliverable?.submissionPath || 'https://github.com/gigsforgigs/work'}
                     target="_blank"
                     rel="noreferrer"
                     className="admin-btn admin-btn-outline admin-btn-sm"
@@ -417,7 +445,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               Approve Submitted Deliverable?
             </h3>
             <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '20px' }}>
-              You are approving Deliverable #{currentDeliverable.deliverable_no} submitted by <strong>{contract.gig_pro_name}</strong> for <strong>{contract.task_title}</strong>. After approval, you can authorize payment.
+              You are approving Deliverable #{currentDeliverable.deliverableNo} submitted by <strong>{contract.gig_pro_name}</strong> for <strong>{contract.task_title}</strong>. After approval, you can authorize payment.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button

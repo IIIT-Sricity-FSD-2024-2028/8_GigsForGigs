@@ -12,6 +12,7 @@ function required(name: string, fallback?: string): string {
 }
 
 export const env = {
+  databaseUrl: required("DATABASE_URL"),
   jwtSecret: required("JWT_SECRET", "gigsforgigs-jwt-dev-secret-super-secure-2026"),
   port: Number(process.env.PORT ?? 5000),
 };

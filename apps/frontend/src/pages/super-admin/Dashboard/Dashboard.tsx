@@ -82,18 +82,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   // 1. Dynamic Task Distribution for Donut Chart (Calculated from DB tasks)
   const taskDistribution = [
-    { label: 'In Progress', count: projects.filter((p) => p.status === 'IN_PROGRESS').length || 2, color: 'var(--color-primary-dark)' },
-    { label: 'Reviewing', count: projects.filter((p) => p.status === 'REVIEWING').length || 1, color: 'var(--color-secondary)' },
-    { label: 'Open Bidding', count: projects.filter((p) => p.status === 'OPEN').length || 1, color: 'var(--color-primary-blue)' },
-    { label: 'Completed', count: projects.filter((p) => p.status === 'COMPLETED').length || 1, color: 'var(--color-border-dark)' }
+    { label: 'In Progress', count: projects.filter((p) => p.status === 'IN_PROGRESS').length, color: 'var(--color-primary-dark)' },
+    { label: 'Open Bidding', count: projects.filter((p) => p.status === 'OPEN').length, color: 'var(--color-primary-blue)' },
+    { label: 'Completed', count: projects.filter((p) => p.status === 'COMPLETED').length, color: 'var(--color-border-dark)' }
   ];
 
   // 2. Dynamic Demographics for Bar Chart (Calculated from DB user rosters)
   const userDemographics = [
-    { label: 'Gig Professionals', count: gigPros.length || 4, color: 'var(--color-primary-dark)' },
-    { label: 'Client Organizations', count: clients.length || 4, color: 'var(--color-primary-blue)' },
-    { label: 'Project Managers', count: managers.length || 2, color: 'var(--color-secondary)' },
-    { label: 'Super Admins', count: adminStaff.length || 3, color: 'var(--color-danger-text)' }
+    { label: 'Gig Professionals', count: gigPros.length, color: 'var(--color-primary-dark)' },
+    { label: 'Client Organizations', count: clients.length, color: 'var(--color-primary-blue)' },
+    { label: 'Project Managers', count: managers.length, color: 'var(--color-secondary)' },
+    { label: 'Super Admins', count: adminStaff.length, color: 'var(--color-danger-text)' }
   ];
 
   // Table Columns
