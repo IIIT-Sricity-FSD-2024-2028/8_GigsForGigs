@@ -277,3 +277,40 @@ export async function acceptAdminInvitation(req: Request, res: Response): Promis
   const { token, email, password } = req.body || {};
   res.status(200).json(await adminService.acceptAdminInvitation(token, email, password));
 }
+
+// ---- Direct Admin Mutation Handlers ----------------------------------------
+
+export async function verifyClientKYC(req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.verifyClientKYC(req.params.clientId));
+}
+
+export async function updateGigProBadge(req: Request, res: Response): Promise<void> {
+  const badge = req.body?.badge || 'VERIFIED';
+  const proId = req.params.gigProId || req.params.gigProfileId;
+  res.status(200).json(await adminService.updateGigProBadge(proId, badge));
+}
+
+export async function updateUserStatus(req: Request, res: Response): Promise<void> {
+  const { status, reason } = req.body || {};
+  res.status(200).json(await adminService.updateUserStatus(req.params.userId, status || 'SUSPENDED', reason));
+}
+
+export async function revokeAdminSession(req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.revokeAdminSession(req.params.staffId));
+}
+
+export async function moderateReview(req: Request, res: Response): Promise<void> {
+  const { status, moderatorNotes } = req.body || {};
+  res.status(200).json(await adminService.moderateReview(req.params.reviewId, status || 'HIDDEN', moderatorNotes));
+}
+
+export async function updateProfilePassword(req: Request, res: Response): Promise<void> {
+  const { email, newPassword } = req.body || {};
+  res.status(200).json(await adminService.updateProfilePassword(email, newPassword));
+}
+
+export async function updateProfile2FA(req: Request, res: Response): Promise<void> {
+  const { email, isEnabled } = req.body || {};
+  res.status(200).json(await adminService.toggleProfile2FA(email, isEnabled));
+}
+

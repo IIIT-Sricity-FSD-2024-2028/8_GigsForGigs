@@ -72,7 +72,20 @@ type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profil
  * 👑 Super Admin Platform Portal (12 Views Suite)
  */
 function SuperAdminPortal() {
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentView, setCurrentView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gfg_admin_tab');
+      if (saved) return saved;
+    }
+    return 'dashboard';
+  });
+
+  const handleNavigate = (view: string) => {
+    setCurrentView(view);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gfg_admin_tab', view);
+    }
+  };
 
   const viewMetadata: Record<string, { title: string; subtitle: string }> = {
     dashboard: { title: 'Executive Overview', subtitle: 'Real-time platform health, KPIs, and operational activity' },
@@ -93,7 +106,7 @@ function SuperAdminPortal() {
 
   const renderActiveView = () => {
     switch (currentView) {
-      case 'dashboard': return <Dashboard onNavigate={setCurrentView} />;
+      case 'dashboard': return <Dashboard onNavigate={handleNavigate} />;
       case 'analytics': return <AdminAnalytics />;
       case 'clients': return <ClientManagement />;
       case 'gig-pros': return <GigProfessionalManagement />;
@@ -105,14 +118,14 @@ function SuperAdminPortal() {
       case 'admin-staff': return <AdminManagement />;
       case 'profile': return <AdminProfile />;
       case 'settings': return <PlatformSettings />;
-      default: return <Dashboard onNavigate={setCurrentView} />;
+      default: return <Dashboard onNavigate={handleNavigate} />;
     }
   };
 
   return (
     <AdminLayout
       currentView={currentView}
-      onNavigate={setCurrentView}
+      onNavigate={handleNavigate}
       pageTitle={activeMeta.title}
       pageSubtitle={activeMeta.subtitle}
     >
@@ -211,7 +224,7 @@ function ClientAppContent() {
  * Main application router deciding layout and portal shell based on user role.
  */
 function MainAppContent() {
-  const { user, isAuthenticated, loading: authLoading, login } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [unauthView, setUnauthView] = useState<UnauthView>('landing');
   const [isInviteFlowActive, setIsInviteFlowActive] = useState(() => {
     if (typeof window === 'undefined') return false;

@@ -148,10 +148,10 @@ export const PaymentsRevenue: React.FC = () => {
     e.preventDefault();
     if (!selectedPayment || !auditReason.trim()) return;
 
-    await adminApi.settleDispute(
+    await adminApi.overrideEscrow(
       selectedPayment.paymentId,
-      overrideAction === 'RELEASE' ? 'RELEASE_TO_GIG_PRO' : 'REFUND_TO_CLIENT',
-      overrideAction === 'RELEASE' ? 0 : 100
+      overrideAction,
+      auditReason
     );
 
     setPayments(prev => prev.map(p => 

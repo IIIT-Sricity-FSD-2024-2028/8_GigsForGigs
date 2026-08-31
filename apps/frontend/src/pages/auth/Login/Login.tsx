@@ -161,7 +161,14 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               </label>
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value as any)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'Super Admin' || val === 'SUPER_ADMIN') setRole('SUPER_ADMIN');
+                  else if (val === 'Manager' || val === 'MANAGER') setRole('MANAGER');
+                  else if (val === 'Client' || val === 'CLIENT') setRole('CLIENT');
+                  else if (val === 'Gig Professional' || val === 'GIG_PROFESSIONAL') setRole('GIG_PROFESSIONAL');
+                  else setRole(val as any);
+                }}
                 style={{
                   width: '100%',
                   padding: '12px 14px',

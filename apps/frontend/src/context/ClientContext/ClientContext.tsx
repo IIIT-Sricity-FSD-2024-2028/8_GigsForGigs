@@ -543,8 +543,9 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       title,
       description,
       budget,
+      category: category || 'General',
       client_id: user?.email || 'julian_lynch7@gmail.com',
-      tags: parsedSkills
+      client_name: user?.name || 'Julian Lynch'
     });
 
     try {

@@ -139,5 +139,23 @@ adminRouter.post("/payments/:paymentId/override", adminController.updatePayment)
 adminRouter.get("/audit-logs", adminController.listAuditLogs);
 adminRouter.get("/settings", adminController.getPlatformSettings);
 adminRouter.patch("/settings", adminController.updatePlatformSettings);
+adminRouter.put("/settings", adminController.updatePlatformSettings);
+adminRouter.post("/settings", adminController.updatePlatformSettings);
 adminRouter.get("/analytics", adminController.getAnalytics);
 adminRouter.post("/invitations", adminController.createAdminInvitation);
+
+// Specialized mutation route aliases
+adminRouter.patch("/clients/:clientId/kyc", adminController.verifyClientKYC);
+adminRouter.post("/clients/:clientId/kyc", adminController.verifyClientKYC);
+adminRouter.patch("/gig-pros/:gigProId/badge", adminController.updateGigProBadge);
+adminRouter.patch("/gig-profiles/:gigProfileId/badge", adminController.updateGigProBadge);
+adminRouter.patch("/users/:userId/status", adminController.updateUserStatus);
+adminRouter.post("/users/:userId/status", adminController.updateUserStatus);
+adminRouter.post("/sessions/:staffId/revoke", adminController.revokeAdminSession);
+adminRouter.delete("/sessions/:staffId", adminController.revokeAdminSession);
+adminRouter.patch("/reviews/:reviewId/moderate", adminController.moderateReview);
+adminRouter.post("/reviews/:reviewId/moderate", adminController.moderateReview);
+adminRouter.post("/profile/password", adminController.updateProfilePassword);
+adminRouter.patch("/profile/password", adminController.updateProfilePassword);
+adminRouter.post("/profile/2fa", adminController.updateProfile2FA);
+adminRouter.patch("/profile/2fa", adminController.updateProfile2FA);
