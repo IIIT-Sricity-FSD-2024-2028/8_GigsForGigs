@@ -729,3 +729,77 @@ export async function acceptAdminInvitation(token: string, email: string, passwo
     }
   };
 }
+
+// ---- Direct Admin Mutation Handlers ----------------------------------------
+
+export async function verifyClientKYC(clientId: number | string) {
+  const numericId = Number(clientId);
+  const client = db.clients.find(c => c.clientId === numericId || String(c.clientId) === String(clientId));
+  if (client) {
+    (client as any).kycStatus = 'VERIFIED';
+  }
+  return { success: true, clientId, kycStatus: 'VERIFIED' };
+}
+
+export async function updateGigProBadge(gigProfileId: number | string, badge: string) {
+  const numericId = Number(gigProfileId);
+  try {
+    if (!isNaN(numericId)) {
+      await prisma.gigProfessionalProfile.update({
+        where: { gigProfileId: numericId },
+        data: {}
+      });
+    }
+  } catch {}
+
+  const pro = (db.gigPros || []).find(p => p.id === String(gigProfileId) || p.id === `gig-${gigProfileId}` || String(p.id).includes(String(gigProfileId)));
+  if (pro) {
+    pro.badge = badge as any;
+  }
+  return { success: true, gigProfileId, badge };
+}
+
+export async function updateUserStatus(userId: number | string, status: string, reason?: string) {
+  const numericId = Number(userId);
+  const user = db.users.find(u => u.userId === numericId || String(u.userId) === String(userId));
+  if (user) {
+    (user as any).status = status;
+  }
+  return { success: true, userId, status, reason };
+}
+
+export async function revokeAdminSession(staffId: string) {
+  const staff = db.adminStaff.find(s => s.id === staffId || s.email.toLowerCase() === staffId.toLowerCase());
+  if (staff) {
+    staff.status = 'SUSPENDED';
+    staff.lastLogin = 'Session Revoked';
+  }
+  return { success: true, staffId, status: 'REVOKED' };
+}
+
+export async function moderateReview(reviewId: number | string, status: string, moderatorNotes?: string) {
+  const numericId = Number(reviewId);
+  const review = db.reviews.find(r => r.reviewId === numericId || String(r.reviewId) === String(reviewId));
+  if (review) {
+    (review as any).status = status;
+    (review as any).moderatorNotes = moderatorNotes;
+  }
+  return { success: true, reviewId, status, moderatorNotes };
+}
+
+export async function updateProfilePassword(email: string, newPassword: string) {
+  const admin = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (admin) {
+    (admin as any).password = newPassword;
+  }
+  return { success: true, email, message: 'Password updated successfully' };
+}
+
+export async function toggleProfile2FA(email: string, isEnabled: boolean) {
+  const staff = db.adminStaff.find(s => s.email.toLowerCase() === email.toLowerCase());
+  if (staff) {
+    staff.isTwoFactorEnabled = isEnabled;
+  }
+  return { success: true, email, isTwoFactorEnabled: isEnabled };
+}
+

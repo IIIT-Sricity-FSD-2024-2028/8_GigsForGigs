@@ -173,13 +173,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Determine target role from email or roleHint
     let targetRole: FrontendRole = 'CLIENT';
-    if (cleanEmail === 'dessie8@yahoo.com' || cleanEmail.includes('dessie') || cleanEmail.includes('gig') || roleHint === 'GIG_PROFESSIONAL') {
-      targetRole = 'GIG_PROFESSIONAL';
-    } else if (cleanEmail === 'curtis45@hotmail.com' || cleanEmail.includes('curtis') || cleanEmail.includes('manager') || roleHint === 'MANAGER') {
-      targetRole = 'MANAGER';
-    } else if (cleanEmail === 'jovan44@yahoo.com' || cleanEmail.includes('jovan') || cleanEmail.includes('admin') || cleanEmail.includes('chaitanya') || roleHint === 'SUPER_ADMIN') {
+    if (roleHint === 'SUPER_ADMIN' || cleanEmail.includes('admin') || cleanEmail.includes('auditor') || cleanEmail.includes('finance') || cleanEmail.includes('support') || cleanEmail.includes('jovan') || cleanEmail.includes('chaitanya')) {
       targetRole = 'SUPER_ADMIN';
-    } else if (roleHint === 'CLIENT' || cleanEmail === 'julian_lynch7@gmail.com') {
+    } else if (roleHint === 'MANAGER' || cleanEmail.includes('manager') || cleanEmail.includes('curtis') || cleanEmail.includes('alene') || cleanEmail.includes('woodrow')) {
+      targetRole = 'MANAGER';
+    } else if (roleHint === 'GIG_PROFESSIONAL' || cleanEmail.includes('colten') || cleanEmail.includes('dessie') || cleanEmail.includes('freelance') || cleanEmail.includes('pro')) {
+      targetRole = 'GIG_PROFESSIONAL';
+    } else if (roleHint === 'CLIENT' || cleanEmail.includes('client') || cleanEmail.includes('julian') || cleanEmail.includes('margarete') || cleanEmail.includes('techstart')) {
       targetRole = 'CLIENT';
     } else if (roleHint) {
       targetRole = roleHint as FrontendRole;

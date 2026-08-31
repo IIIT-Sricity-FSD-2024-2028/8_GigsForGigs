@@ -211,7 +211,7 @@ function ClientAppContent() {
  * Main application router deciding layout and portal shell based on user role.
  */
 function MainAppContent() {
-  const { user, isAuthenticated, loading: authLoading, login } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [unauthView, setUnauthView] = useState<UnauthView>('landing');
   const [isInviteFlowActive, setIsInviteFlowActive] = useState(() => {
     if (typeof window === 'undefined') return false;
