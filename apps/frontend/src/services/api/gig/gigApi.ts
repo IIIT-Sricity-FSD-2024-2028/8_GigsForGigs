@@ -240,6 +240,13 @@ export const gigApi = {
   },
 
   getServices: async (): Promise<GigService[]> => {
+    try {
+      const res = await apiFetch<GigService[]>('/gig/services/mine', { actor });
+      if (res && res.length > 0) return res;
+    } catch {
+      // fallback
+    }
+
     const services = marketplaceStore.getServices();
     return services.map((s) => ({
       service_id: s.service_id,
@@ -306,6 +313,15 @@ export const gigApi = {
   },
 
   createReview: async (taskId: string, rating: number, comment?: string): Promise<{ success: boolean }> => {
+    try {
+      await apiFetch<{ success: boolean }>('/gig/reviews', {
+        method: 'POST',
+        body: { taskId, rating, comment },
+        actor
+      });
+    } catch {
+      // fallback
+    }
     try {
       marketplaceStore.addReview(taskId, 'gig_to_client', rating, comment || '');
     } catch {

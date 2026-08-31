@@ -8,7 +8,7 @@
  * `err.status` instead of re-implementing fetch/try-catch per file.
  */
 
-export const API_BASE_URL = 'http://localhost:5000/api';
+export const API_BASE_URL = 'http://localhost:3000/api';
 
 /** One localStorage key per actor — a browser tab can hold a client, manager,
  * and gig session at once since each role logs in through a separate flow. */

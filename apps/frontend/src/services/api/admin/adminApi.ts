@@ -7,14 +7,14 @@
  */
 
 const API_BASE_URL = typeof window !== 'undefined'
-  ? `${window.location.protocol}//${window.location.hostname}:5000/api/admin`
-  : 'http://localhost:5000/api/admin';
+  ? `${window.location.protocol}//${window.location.hostname}:3000/api/admin`
+  : 'http://localhost:3000/api/admin';
 
 async function getFreshAdminToken(): Promise<string | null> {
   try {
     const authUrl = typeof window !== 'undefined'
-      ? `${window.location.protocol}//${window.location.hostname}:5000/api/auth/login`
-      : 'http://localhost:5000/api/auth/login';
+      ? `${window.location.protocol}//${window.location.hostname}:3000/api/auth/login`
+      : 'http://localhost:3000/api/auth/login';
 
     const loginRes = await fetch(authUrl, {
       method: 'POST',
