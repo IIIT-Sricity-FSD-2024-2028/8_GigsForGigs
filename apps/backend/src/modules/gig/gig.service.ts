@@ -167,6 +167,23 @@ export async function respondToRequest(
           });
         }
       }
+
+      // Create the escrow Payment row right when the contract starts, not
+      // when the client later reaches the deliverable-review screen — the
+      // frontend has no other path that ever creates one, and without this
+      // getPaymentByTask/getPaymentByTaskId always come back empty.
+      await tx.payment.upsert({
+        where: {
+          taskId_gigProfileId: { taskId: application.taskId, gigProfileId },
+        },
+        update: {},
+        create: {
+          taskId: application.taskId,
+          gigProfileId,
+          amount: application.task.budget,
+          status: "pending",
+        },
+      });
     }
 
     return updated;

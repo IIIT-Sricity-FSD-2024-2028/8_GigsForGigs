@@ -10,7 +10,7 @@ export interface ReviewDeliverablesProps {
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNavigate, params }) => {
   const { contracts: clientContracts, approveDeliverable, rejectDeliverable } = useClient();
-  const { payments, approveAndReleasePayment, raiseDispute, getPaymentByTask } = usePayments();
+  const { payments, approveAndReleasePayment, raiseDispute, getPaymentByTask, fetchPaymentForTask } = usePayments();
   const taskId = params?.taskId;
   const numericTaskId = Number(String(taskId).replace(/[^0-9]/g, '')) || 1;
 
@@ -67,6 +67,10 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   useEffect(() => {
     fetchDeliverables();
   }, [fetchDeliverables]);
+
+  useEffect(() => {
+    if (taskId) fetchPaymentForTask(taskId);
+  }, [taskId, fetchPaymentForTask]);
 
   const hasDeliverables = deliverablesList.length > 0;
   const currentDeliverable = hasDeliverables

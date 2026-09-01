@@ -21,9 +21,18 @@ const isSsl =
   connectionString.includes("render.com") ||
   connectionString.includes("aws");
 
-const cleanConnectionString = connectionString
-  .replace(/[?&]sslmode=[^&]+/g, "")
-  .replace(/[?&]ssl=[^&]+/g, "");
+// Strip sslmode/ssl via URL.searchParams rather than regex — a regex that
+// deletes "?sslmode=..." also eats the leading "?", which corrupts the URL
+// when another param follows (e.g. "...?sslmode=require&x=1" -> "...&x=1",
+// with no "?" left to start the query string at all).
+function stripSslParams(raw: string): string {
+  const url = new URL(raw);
+  url.searchParams.delete("sslmode");
+  url.searchParams.delete("ssl");
+  return url.toString();
+}
+
+const cleanConnectionString = stripSslParams(connectionString);
 
 const pool = new pg.Pool({
   connectionString: cleanConnectionString,
