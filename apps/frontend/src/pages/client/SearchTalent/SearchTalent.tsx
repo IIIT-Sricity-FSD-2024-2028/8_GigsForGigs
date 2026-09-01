@@ -15,17 +15,18 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
 
   const handleHireClick = async (serviceId: string) => {
     try {
-      setLocalRequested((prev) => new Set(prev).add(serviceId));
       await requestService(serviceId);
+      setLocalRequested((prev) => new Set(prev).add(serviceId));
       alert('Hiring request sent successfully! The Gig Professional will receive it in their Pending Requests.');
     } catch (err) {
       console.error('Request service failed:', err);
+      alert('Failed to send hiring request. Please try again.');
     }
   };
 
   // Filter logic
   const filteredServices = allServices.filter(service => {
-    // Mock category matching
+    // Keyword-based category matching (no dedicated category field on GigService)
     if (categoryFilter !== 'all') {
       const titleLower = service.title.toLowerCase();
       if (categoryFilter === 'design' && !titleLower.includes('design') && !titleLower.includes('configurator')) return false;

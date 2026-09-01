@@ -3,7 +3,7 @@
  * @description
  * High-performance API client for the Super Admin vertical.
  * Communicates directly with Express backend REST endpoints (/api/admin/*)
- * using the centralized apiFetch wrapper on port 5000.
+ * using the centralized apiFetch wrapper.
  */
 
 import { apiFetch } from '../httpClient';

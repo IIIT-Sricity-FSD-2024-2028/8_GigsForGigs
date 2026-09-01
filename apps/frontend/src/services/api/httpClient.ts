@@ -10,8 +10,8 @@
 
 export const API_BASE_URL =
   typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.hostname}:5000/api`
-    : 'http://localhost:5000/api';
+    ? `${window.location.protocol}//${window.location.hostname}:3000/api`
+    : 'http://localhost:3000/api';
 
 /** One localStorage key per actor — a browser tab can hold a client, manager,
  * and gig session at once since each role logs in through a separate flow. */

@@ -108,8 +108,9 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         actor: 'client',
         body: { taskId, gigProfileId, gigAmount }
       });
-    } catch {
-      // Backend handles upsert
+    } catch (err) {
+      setLoading(false);
+      throw err;
     }
 
     const newPayment: EscrowPayment = {
@@ -210,22 +211,25 @@ export const PaymentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const approveAndReleasePayment = async (paymentId: string, _clientNotes?: string): Promise<boolean> => {
     setLoading(true);
     const target = payments.find(p => p.paymentId === paymentId);
-    if (target) {
-      try {
-        await apiFetch('/payments/release', {
-          method: 'POST',
-          actor: 'client',
-          body: {
-            payment: {
-              taskId: target.taskId,
-              gigProfileId: target.gigProfileId,
-              gigAmount: target.gigAmount
-            }
+    if (!target) {
+      setLoading(false);
+      return false;
+    }
+    try {
+      await apiFetch('/payments/release', {
+        method: 'POST',
+        actor: 'client',
+        body: {
+          payment: {
+            taskId: target.taskId,
+            gigProfileId: target.gigProfileId,
+            gigAmount: target.gigAmount
           }
-        });
-      } catch (err) {
-        console.error('Failed to release payment:', err);
-      }
+        }
+      });
+    } catch (err) {
+      setLoading(false);
+      throw err;
     }
     const now = new Date().toISOString();
     setPayments(prev =>

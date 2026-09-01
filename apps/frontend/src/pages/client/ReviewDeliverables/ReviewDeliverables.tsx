@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { usePayments } from '../../../context/PaymentContext/PaymentContext';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
-import { apiFetch } from '../../../services/api/httpClient';
 
 export interface ReviewDeliverablesProps {
   onNavigate: (viewId: string) => void;
@@ -148,28 +147,17 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
   // Step 2: Proceed to Payment (Authorized only after Deliverable Approval)
   const handleProcessPayment = async () => {
+    if (!taskPayment) {
+      alert('No payment record found for this task.');
+      return;
+    }
     try {
-      await apiFetch('/payments/release', {
-        method: 'POST',
-        actor: 'client',
-        body: {
-          payment: {
-            taskId: String(numericTaskId),
-            gigProfileId: currentDeliverable ? String(currentDeliverable.gigProfileId) : '1',
-            gigAmount
-          }
-        }
-      });
-      if (taskPayment) {
-        await approveAndReleasePayment(taskPayment.paymentId, 'Deliverable verified & approved by client');
-      }
+      await approveAndReleasePayment(taskPayment.paymentId, 'Deliverable verified & approved by client');
       setReviewStage('PAYMENT_COMPLETED');
       setIsPaymentModalOpen(false);
       alert(`Payment of ${formatCurrency(totalAmount)} completed successfully!\n\n• ${formatCurrency(gigAmount)} released to ${contract.gig_pro_name}\n• ${formatCurrency(platformFee)} recorded as Platform Revenue.`);
     } catch {
-      alert('Payment processing completed.');
-      setReviewStage('PAYMENT_COMPLETED');
-      setIsPaymentModalOpen(false);
+      alert('Payment release failed. Please try again.');
     }
   };
 

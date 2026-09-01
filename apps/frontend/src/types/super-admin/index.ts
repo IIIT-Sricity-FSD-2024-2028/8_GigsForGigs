@@ -3,10 +3,10 @@
  * @description
  * Types mirroring the REAL shapes returned by `apps/backend/src/modules/admin/*`
  * (Prisma models serialized as JSON — camelCase fields, numeric ids, decimals
- * serialized as strings). These are intentionally distinct from the older,
- * richer fixtures in `mock/adminMockData.ts` (string ids like 'cli-01', and
- * fields such as isVerified/badge/status/escrow that have no backing column
- * anywhere in `db/prisma/schema.prisma`) — do not conflate the two.
+ * serialized as strings). Fields such as isVerified/badge/status/escrow have
+ * no backing column in `db/prisma/schema.prisma` — the admin endpoints that
+ * set them (KYC, badge, user status, session revoke, review moderation)
+ * record an audit log entry but don't persist the value anywhere.
  */
 
 export type BackendRole = 'client' | 'gig_professional' | 'manager' | 'admin';

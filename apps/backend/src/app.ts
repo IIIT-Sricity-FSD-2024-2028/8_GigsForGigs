@@ -8,11 +8,13 @@ import { adminRouter } from "./modules/admin/admin.route.js";
 import paymentRouter from "./modules/payment/payment.route.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
+import { globalLimiter, authLimiter, paymentLimiter } from "./middleware/rateLimit.middleware.js";
 
 export const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(globalLimiter);
 
 app.get("/", (_req, res) => {
   res.json({
@@ -47,9 +49,9 @@ app.get("/health", (_req, res) => {
 // adminRouter. Mounting clientRouter LAST ensures the more specific routers
 // get first chance to match/handle their own routes; only requests that
 // don't match any of them fall through to clientRouter's routes.
-app.use("/api/auth", authRouter);
+app.use("/api/auth", authLimiter, authRouter);
 app.use("/api/admin", adminRouter);
-app.use("/api/payments", paymentRouter);
+app.use("/api/payments", paymentLimiter, paymentRouter);
 app.use("/api/gig", gigRouter);
 app.use("/api", managerRouter);
 app.use("/api", clientRouter);
