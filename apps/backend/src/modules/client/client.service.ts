@@ -12,6 +12,7 @@ import type {
 
 // ---- Profile ----------------------------------------------------------
 
+// Fetch a client's profile, including their user account and manager roster.
 export function getProfile(clientId: number) {
   return prisma.client.findUniqueOrThrow({
     where: { clientId },
@@ -19,6 +20,7 @@ export function getProfile(clientId: number) {
   });
 }
 
+// Update a client's own display name/domain.
 export function updateProfile(clientId: number, dto: UpdateClientProfileDto) {
   return prisma.client.update({
     where: { clientId },
@@ -34,6 +36,7 @@ export function updateProfile(clientId: number, dto: UpdateClientProfileDto) {
 // the route level, not repeated here. Managers and gig professionals have
 // no route into task create/update/delete at all.
 
+// Post a new task owned by the client.
 export function createTask(clientId: number, dto: CreateTaskDto) {
   return prisma.task.create({
     data: {
@@ -49,6 +52,7 @@ export function createTask(clientId: number, dto: CreateTaskDto) {
   });
 }
 
+// List a client's own tasks with their applications and deliverables.
 export function listTasks(clientId: number) {
   return prisma.task.findMany({
     where: { clientId },
@@ -57,7 +61,7 @@ export function listTasks(clientId: number) {
   });
 }
 
-/** taskId ownership is pre-verified by clientOwnershipGuard. */
+/** Patch a task's fields. taskId ownership is pre-verified by clientOwnershipGuard. */
 export function updateTask(taskId: number, dto: UpdateTaskDto) {
   return prisma.task.update({
     where: { taskId },
@@ -74,12 +78,14 @@ export function updateTask(taskId: number, dto: UpdateTaskDto) {
   });
 }
 
+// Delete a task. taskId ownership is pre-verified by clientOwnershipGuard.
 export async function deleteTask(taskId: number): Promise<void> {
   await prisma.task.delete({ where: { taskId } });
 }
 
 // ---- Applications ---------------------------------------------------------
 
+// List applications received across all of the client's tasks.
 export function listApplications(clientId: number) {
   return prisma.application.findMany({
     where: { task: { clientId } },
@@ -88,6 +94,12 @@ export function listApplications(clientId: number) {
   });
 }
 
+/**
+ * Accept/decline an application. Accepting flips the task to "in_progress"
+ * and, if no GigManagerAssignment exists yet, assigns it to one of the
+ * client's managers (falling back to any manager if the client has none)
+ * so the task shows up in a manager's queue.
+ */
 export async function reviewApplication(
   applicationId: number,
   clientId: number,
@@ -144,6 +156,7 @@ export async function reviewApplication(
 
 // ---- Contracts (derived — no CONTRACT table) -------------------------------
 
+// Derive "contracts" (accepted applications) with computed deliverable progress — no dedicated CONTRACT table.
 export async function listContracts(clientId: number) {
   const applications = await prisma.application.findMany({
     where: { status: "accepted", task: { clientId } },
@@ -185,6 +198,7 @@ export async function listContracts(clientId: number) {
 
 // ---- Deliverables (client-side review) -------------------------------------
 
+// List deliverables submitted for one of the client's tasks.
 export function listTaskDeliverables(taskId: number) {
   return prisma.deliverable.findMany({
     where: { taskId },
@@ -193,6 +207,7 @@ export function listTaskDeliverables(taskId: number) {
   });
 }
 
+// Approve a deliverable or request revisions, as the owning client. rawDeliverableId is "<taskId>-<deliverableNo>".
 export async function reviewDeliverable(
   rawDeliverableId: string,
   clientId: number,
@@ -225,6 +240,7 @@ export async function reviewDeliverable(
 
 // ---- Services (browse + request) -------------------------------------------
 
+// Browse every active service listing offered by gig professionals.
 export function listServices() {
   return prisma.service.findMany({
     where: { status: "active" },
@@ -233,6 +249,11 @@ export function listServices() {
   });
 }
 
+/**
+ * Hire a service: creates a Task mirroring the service, a pending
+ * Application for the gig professional who owns it, and a ServiceRequest
+ * record (upserted so re-requesting the same service is a no-op there).
+ */
 export async function requestService(serviceId: number, clientId: number) {
   const service = await prisma.service.findUnique({
     where: { serviceId },
@@ -280,6 +301,7 @@ export async function requestService(serviceId: number, clientId: number) {
   });
 }
 
+// List the client's own service hire requests.
 export function listServiceRequests(clientId: number) {
   return prisma.serviceRequest.findMany({
     where: { clientId },
@@ -290,12 +312,14 @@ export function listServiceRequests(clientId: number) {
 
 // ---- Manager invites ---------------------------------------------------
 
+// Create a pending invite for a new manager to join the client's account.
 export function createManagerInvite(clientId: number, dto: CreateManagerInviteDto) {
   return prisma.managerInvite.create({
     data: { clientId, name: dto.name, email: dto.email },
   });
 }
 
+// List manager invites sent by the client.
 export function listManagerInvites(clientId: number) {
   return prisma.managerInvite.findMany({
     where: { clientId },

@@ -59,6 +59,7 @@ async function buildTokenPayload(user: User): Promise<TokenPayload> {
   }
 }
 
+// Register a new client or gig professional: creates the User row plus its role-specific side profile, and returns a signed session token.
 export async function signup(dto: SignupDto) {
   const cleanEmail = dto.email.trim();
   const existing = await prisma.user.findFirst({
@@ -130,10 +131,12 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
   return { success: true, token: signToken(payload), user: sanitizeUser(user) };
 }
 
+// Log in as any role.
 export function login(dto: LoginDto) {
   return authenticate(dto);
 }
 
+// Log in restricted to manager accounts (rejects any other role's credentials).
 export function managerLogin(dto: LoginDto) {
   return authenticate(dto, "manager");
 }

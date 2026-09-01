@@ -47,6 +47,11 @@ export class PaymentController {
     });
   }
 
+  /**
+   * Client endpoint: release an escrowed payment to the gig professional
+   * and mark the task completed. Trusts taskId/gigProfileId/gigAmount as
+   * given by the caller rather than re-deriving them server-side.
+   */
   public static async releasePayment(payment: PaymentRecord) {
     const numericTaskId = Number(String(payment.taskId).replace(/[^0-9]/g, '')) || 1;
     const numericGigId = Number(String(payment.gigProfileId).replace(/[^0-9]/g, '')) || 1;

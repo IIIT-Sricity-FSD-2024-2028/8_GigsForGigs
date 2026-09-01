@@ -20,10 +20,12 @@ const taskInclude = {
 // a client managing the managers under their own account, distinct from a
 // manager's own /me self-service below.
 
+// List the managers on a client's roster.
 export function listManagersForClient(clientId: number) {
   return prisma.manager.findMany({ where: { clientId }, include: { user: true, client: true } });
 }
 
+// Remove a manager from a client's roster and decrement the client's manager count.
 export async function deleteManager(managerId: number, clientId: number): Promise<void> {
   const manager = await prisma.manager.findUnique({ where: { managerId } });
   if (!manager || manager.clientId !== clientId) {
@@ -36,6 +38,7 @@ export async function deleteManager(managerId: number, clientId: number): Promis
   ]);
 }
 
+// Update a manager's underlying User record (name/email) on behalf of the owning client.
 export async function updateManager(managerId: number, clientId: number, dto: UpdateManagerDto) {
   const manager = await prisma.manager.findUnique({ where: { managerId } });
   if (!manager || manager.clientId !== clientId) {
@@ -53,6 +56,7 @@ export async function updateManager(managerId: number, clientId: number, dto: Up
 
 // ---- Manager self-service --------------------------------------------
 
+// Fetch a manager's own profile, including their linked user account and client.
 export function getOwnProfile(managerId: number) {
   return prisma.manager.findUniqueOrThrow({
     where: { managerId },
@@ -60,6 +64,7 @@ export function getOwnProfile(managerId: number) {
   });
 }
 
+// Update a manager's own name/email/password, then return the refreshed profile.
 export async function updateOwnProfile(managerId: number, dto: UpdateManagerProfileDto) {
   const manager = await prisma.manager.findUniqueOrThrow({ where: { managerId } });
   await prisma.user.update({
@@ -73,6 +78,7 @@ export async function updateOwnProfile(managerId: number, dto: UpdateManagerProf
   return getOwnProfile(managerId);
 }
 
+// List tasks assigned to this manager directly, plus every task owned by their client.
 export async function listAssignedTasks(managerId: number) {
   const manager = await prisma.manager.findUnique({ where: { managerId } });
   const clientId = manager?.clientId;
@@ -89,11 +95,12 @@ export async function listAssignedTasks(managerId: number) {
   });
 }
 
-/** taskId access already verified by taskAccessGuard. */
+/** Fetch a single task with its client/assignments/deliverables. taskId access already verified by taskAccessGuard. */
 export function getAssignedTask(taskId: number) {
   return prisma.task.findUniqueOrThrow({ where: { taskId }, include: taskInclude });
 }
 
+// List applications submitted for a task.
 export function listTaskApplications(taskId: number) {
   return prisma.application.findMany({
     where: { taskId },
@@ -102,7 +109,7 @@ export function listTaskApplications(taskId: number) {
   });
 }
 
-/** taskId access already verified by taskAccessGuard. */
+/** Mark an application "shortlisted", optionally recording a rating/hourly rate. taskId access already verified by taskAccessGuard. */
 export async function shortlistApplication(
   taskId: number,
   applicationId: number,
@@ -123,6 +130,7 @@ export async function shortlistApplication(
   });
 }
 
+// List deliverables submitted for a task, in submission order.
 export function listTaskDeliverables(taskId: number) {
   return prisma.deliverable.findMany({
     where: { taskId },
@@ -131,6 +139,7 @@ export function listTaskDeliverables(taskId: number) {
   });
 }
 
+// Record a new deliverable for a task, auto-incrementing its per-task sequence number.
 export async function createDeliverable(
   taskId: number,
   managerId: number,
@@ -161,6 +170,7 @@ export async function createDeliverable(
   });
 }
 
+// Fetch one deliverable by its (taskId, deliverableNo) composite key.
 export async function getDeliverable(taskId: number, deliverableNo: number) {
   const deliverable = await prisma.deliverable.findUnique({
     where: { taskId_deliverableNo: { taskId, deliverableNo } },
@@ -173,7 +183,8 @@ export async function getDeliverable(taskId: number, deliverableNo: number) {
 }
 
 /**
- * Unlike the frontend mock — which only recalculates progress on close —
+ * Marks a task "completed" once every deliverable on it is approved/closed.
+ * Unlike the frontend mock — which only recalculated progress on close —
  * the server recomputes on both /review and /close, so progress is never
  * stale between the two. Deliberate divergence from bug-compatibility.
  */
@@ -191,6 +202,7 @@ async function recomputeTaskProgress(taskId: number): Promise<void> {
   }
 }
 
+// Approve/request-revision on a deliverable, then recompute the parent task's progress.
 export async function reviewDeliverable(
   taskId: number,
   deliverableNo: number,
@@ -211,6 +223,7 @@ export async function reviewDeliverable(
   return updated;
 }
 
+// Mark a deliverable closed, then recompute the parent task's progress.
 export async function closeDeliverable(taskId: number, deliverableNo: number) {
   await getDeliverable(taskId, deliverableNo);
 
@@ -224,6 +237,7 @@ export async function closeDeliverable(taskId: number, deliverableNo: number) {
   return updated;
 }
 
+// Search gig professionals by name or skill (up to 50), for a manager assigning work.
 export function searchGigProfessionals(query?: string) {
   return prisma.gigProfessionalProfile.findMany({
     ...(query

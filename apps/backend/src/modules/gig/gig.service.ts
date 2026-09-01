@@ -11,6 +11,7 @@ import type {
 
 const profileInclude = { user: true, skills: true, tools: true, portfolio: true } as const;
 
+// Fetch a gig professional's profile with skills/tools/portfolio.
 export function getProfile(gigProfileId: number) {
   return prisma.gigProfessionalProfile.findUniqueOrThrow({
     where: { gigProfileId },
@@ -18,7 +19,7 @@ export function getProfile(gigProfileId: number) {
   });
 }
 
-/** PUT semantics: skills/tools/portfolio are each fully replaced when present in the body, not merged. */
+/** Update bio/skills/tools/portfolio. PUT semantics: skills/tools/portfolio are each fully replaced when present in the body, not merged. */
 export async function updateProfile(gigProfileId: number, dto: UpdateGigProfileDto) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see
   // errorHandler.ts: Prisma's generated types collapse to `any` here.
@@ -58,6 +59,7 @@ export async function updateProfile(gigProfileId: number, dto: UpdateGigProfileD
   return getProfile(gigProfileId);
 }
 
+// List open tasks the gig professional hasn't already applied to.
 export function listMarketplaceTasks(gigProfileId: number) {
   return prisma.task.findMany({
     where: { status: "open", applications: { none: { gigProfileId } } },
@@ -66,6 +68,7 @@ export function listMarketplaceTasks(gigProfileId: number) {
   });
 }
 
+// Apply for a task, rejecting a duplicate application.
 export async function createApplication(gigProfileId: number, dto: CreateApplicationDto) {
   const task = await prisma.task.findUnique({ where: { taskId: dto.taskId } });
   if (!task) {
@@ -82,6 +85,7 @@ export async function createApplication(gigProfileId: number, dto: CreateApplica
   return prisma.application.create({ data: { gigProfileId, taskId: dto.taskId } });
 }
 
+// Withdraw (delete) the gig professional's own application.
 export async function withdrawApplication(
   applicationId: number,
   gigProfileId: number,
@@ -108,6 +112,11 @@ export function listPendingRequests(gigProfileId: number) {
   });
 }
 
+/**
+ * Accept/decline a pending application. Accepting flips the task to
+ * "in_progress" and, if no assignment exists yet, assigns it to one of the
+ * client's managers (or any manager as a fallback) for deliverable tracking.
+ */
 export async function respondToRequest(
   applicationId: number,
   gigProfileId: number,
@@ -164,6 +173,7 @@ export async function respondToRequest(
   });
 }
 
+// List tasks the gig professional is currently assigned to or has an accepted application on.
 export function listActiveTasks(gigProfileId: number) {
   return prisma.task.findMany({
     where: {
@@ -179,6 +189,8 @@ export function listActiveTasks(gigProfileId: number) {
 }
 
 /**
+ * Submit a deliverable for a task, auto-creating a manager assignment first
+ * if one doesn't exist yet (so the deliverable has a manager to route to).
  * content -> DELIVERABLE.description (the substantive text), notes ->
  * submission_path (falls back to content so the required column is never
  * empty). See gig.serializer.ts for the read-side of this mapping.
@@ -230,6 +242,7 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
   });
 }
 
+// List services the gig professional has posted.
 export function listMyServices(gigProfileId: number) {
   return prisma.service.findMany({
     where: { gigProfileId },
@@ -238,6 +251,7 @@ export function listMyServices(gigProfileId: number) {
   });
 }
 
+// Post a new service listing.
 export function createService(gigProfileId: number, dto: CreateServiceDto) {
   return prisma.service.create({
     data: {
@@ -252,6 +266,7 @@ export function createService(gigProfileId: number, dto: CreateServiceDto) {
   });
 }
 
+// Leave a review from the gig professional (reviewer) for the task's client (reviewee).
 export async function createReview(gigProfileId: number, dto: CreateReviewDto) {
   const gigProfile = await prisma.gigProfessionalProfile.findUniqueOrThrow({
     where: { gigProfileId },
@@ -275,6 +290,7 @@ export async function createReview(gigProfileId: number, dto: CreateReviewDto) {
   });
 }
 
+// List the gig professional's completed tasks with reviews and payment info.
 export function listCompletedProjects(gigProfileId: number) {
   return prisma.task.findMany({
     where: { assignments: { some: { gigProfileId } }, status: "completed" },
@@ -287,6 +303,7 @@ export function listCompletedProjects(gigProfileId: number) {
   });
 }
 
+// Sum completed payments and count completed tasks for the earnings summary.
 export async function getEarnings(gigProfileId: number) {
   const payments = await prisma.payment.findMany({
     where: { gigProfileId },
