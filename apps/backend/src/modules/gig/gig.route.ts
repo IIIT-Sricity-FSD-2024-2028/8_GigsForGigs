@@ -23,9 +23,9 @@ gigRouter.get(
   async (req, res) => {
     const query = typeof req.query.q === "string" ? req.query.q : undefined;
     const { searchGigProfessionals } = await import("../manager/manager.service.js");
-    const { serializeTalent } = await import("../manager/manager.serializer.js");
+    const { toTalentResponse } = await import("../manager/manager.controller.js");
     const list = await searchGigProfessionals(query);
-    res.status(200).json(list.map(serializeTalent));
+    res.status(200).json(list.map(toTalentResponse));
   },
 );
 

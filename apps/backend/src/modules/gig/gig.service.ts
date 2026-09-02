@@ -210,7 +210,7 @@ export function listActiveTasks(gigProfileId: number) {
  * if one doesn't exist yet (so the deliverable has a manager to route to).
  * content -> DELIVERABLE.description (the substantive text), notes ->
  * submission_path (falls back to content so the required column is never
- * empty). See gig.serializer.ts for the read-side of this mapping.
+ * empty). See toDeliverableResponse in gig.controller.ts for the read side.
  */
 export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliverableDto) {
   let assignment = await prisma.gigManagerAssignment.findUnique({
@@ -324,6 +324,7 @@ export function listCompletedProjects(gigProfileId: number) {
 export async function getEarnings(gigProfileId: number) {
   const payments = await prisma.payment.findMany({
     where: { gigProfileId },
+    include: { task: { include: { client: true } } },
     orderBy: { createdAt: "desc" },
   });
   const totalEarnings = payments
