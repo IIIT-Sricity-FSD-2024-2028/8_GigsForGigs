@@ -1,6 +1,5 @@
 import cors from "cors";
 import express from "express";
-import morgan from "morgan";
 import { authRouter } from "./modules/auth/auth.route.js";
 import { clientRouter } from "./modules/client/client.route.js";
 import { managerRouter } from "./modules/manager/manager.route.js";
@@ -10,12 +9,11 @@ import paymentRouter from "./modules/payment/payment.route.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { globalLimiter, authLimiter, paymentLimiter } from "./middleware/rateLimit.middleware.js";
-
+import helmet from "helmet";
 export const app = express();
-
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(globalLimiter);
 
 app.get("/", (_req, res) => {

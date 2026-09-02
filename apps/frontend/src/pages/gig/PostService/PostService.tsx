@@ -128,7 +128,7 @@ export const PostService: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
-              Fixed Price (USD $) *
+              Fixed Price (INR ₹) *
             </label>
             <input
               type="number"

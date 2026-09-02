@@ -55,7 +55,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({
             </svg>
           </div>
           <div className="brand-text">
-            <span className="brand-name">GigFlow</span>
+            <span className="brand-name">GigsForGigs</span>
             <span className="brand-sub">Client Portal</span>
           </div>
         </a>
