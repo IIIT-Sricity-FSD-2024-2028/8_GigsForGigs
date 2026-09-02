@@ -93,7 +93,7 @@ export const Projects: React.FC = () => {
     { header: 'Category', cell: (row) => row.category || 'General' },
     {
       header: 'Budget',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${Number(row.budget || 0).toLocaleString()}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>₹{Number(row.budget || 0).toLocaleString('en-IN')}</span>
     },
     {
       header: 'Status',
@@ -168,7 +168,7 @@ export const Projects: React.FC = () => {
             <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
               <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOTAL BUDGET</span>
               <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                ${Number(selectedTask.budget).toLocaleString()}
+                ₹{Number(selectedTask.budget).toLocaleString('en-IN')}
               </h4>
             </div>
 

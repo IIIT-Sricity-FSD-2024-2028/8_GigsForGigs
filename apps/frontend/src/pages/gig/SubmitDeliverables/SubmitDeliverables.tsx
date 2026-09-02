@@ -29,7 +29,7 @@ export const SubmitDeliverables: React.FC = () => {
       try {
         const active = await gigApi.getActiveTasks();
         if (mounted) {
-          const found = active.find((t) => t.task_id === selectedTaskId) || active[0] || null;
+          const found = active.find((t) => String(t.taskId) === selectedTaskId) || active[0] || null;
           setTask(found);
           setLoading(false);
         }
@@ -60,7 +60,7 @@ export const SubmitDeliverables: React.FC = () => {
     setError(null);
     try {
       await gigApi.submitDeliverable({
-        taskId: task.task_id,
+        taskId: task.taskId,
         content: content.trim(),
         notes: notes.trim()
       });
@@ -74,7 +74,7 @@ export const SubmitDeliverables: React.FC = () => {
   };
 
   const formatCurrency = (amt: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amt);
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
     return (
@@ -125,7 +125,7 @@ export const SubmitDeliverables: React.FC = () => {
             {task.title}
           </h1>
           <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-            Client: <strong>{task.client_id}</strong> • Budget: <strong style={{ color: 'var(--color-secondary)' }}>{formatCurrency(task.budget)}</strong>
+            Client: <strong>{task.client?.clientName || 'Client'}</strong> • Budget: <strong style={{ color: 'var(--color-secondary)' }}>{formatCurrency(task.budget)}</strong>
           </p>
         </div>
         <button
@@ -145,7 +145,7 @@ export const SubmitDeliverables: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
             {task.deliverables.map((del) => (
               <div
-                key={del.deliverable_id || del.deliverable_no}
+                key={`${del.taskId}-${del.deliverableNo}`}
                 style={{
                   padding: 'var(--spacing-md)',
                   backgroundColor: 'var(--color-bg-light)',
@@ -154,12 +154,12 @@ export const SubmitDeliverables: React.FC = () => {
                 }}
               >
                 <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', color: 'var(--color-primary-dark)', marginBottom: '4px' }}>
-                  Deliverable #{del.deliverable_no}
+                  Deliverable #{del.deliverableNo}
                 </div>
-                <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)' }}>{del.content}</div>
-                {del.notes && (
+                <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)' }}>{del.description}</div>
+                {del.submissionPath && (
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                    Note: {del.notes}
+                    Note: {del.submissionPath}
                   </div>
                 )}
               </div>

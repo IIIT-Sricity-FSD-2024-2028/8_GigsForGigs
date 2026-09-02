@@ -42,23 +42,20 @@ export const gigApi = {
     return apiFetch<GigTask[]>('/gig/tasks/marketplace', { actor });
   },
 
-  applyForTask: async (taskId: string): Promise<{ success: boolean; taskId: string }> => {
-    const numericTaskId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
-    return apiFetch<{ success: boolean; taskId: string }>('/gig/applications', {
+  applyForTask: async (taskId: number): Promise<{ success: boolean; taskId: number }> => {
+    return apiFetch<{ success: boolean; taskId: number }>('/gig/applications', {
       method: 'POST',
-      body: { taskId: numericTaskId },
+      body: { taskId },
       actor
     });
   },
 
-  withdrawApplication: async (applicationId: string): Promise<void> => {
-    const numericId = Number(applicationId.replace(/[^0-9]/g, '')) || Number(applicationId);
-    return apiFetch<void>(`/gig/applications/${numericId}`, { method: 'DELETE', actor });
+  withdrawApplication: async (applicationId: number): Promise<void> => {
+    return apiFetch<void>(`/gig/applications/${applicationId}`, { method: 'DELETE', actor });
   },
 
-  respondToRequest: async (applicationId: string, action: 'accepted' | 'declined'): Promise<{ success: boolean }> => {
-    const numericId = Number(applicationId.replace(/[^0-9]/g, '')) || Number(applicationId);
-    return apiFetch<{ success: boolean }>(`/gig/requests/${numericId}/respond`, {
+  respondToRequest: async (applicationId: number, action: 'accepted' | 'declined'): Promise<{ success: boolean }> => {
+    return apiFetch<{ success: boolean }>(`/gig/requests/${applicationId}/respond`, {
       method: 'POST',
       body: { action },
       actor
@@ -82,19 +79,17 @@ export const gigApi = {
   },
 
   submitDeliverable: async (dto: SubmitDeliverableDto): Promise<GigDeliverable> => {
-    const numericTaskId = Number(String(dto.taskId).replace(/[^0-9]/g, '')) || Number(dto.taskId);
     return apiFetch<GigDeliverable>('/gig/deliverables', {
       method: 'POST',
-      body: { taskId: numericTaskId, content: dto.content, notes: dto.notes },
+      body: { taskId: dto.taskId, content: dto.content, notes: dto.notes },
       actor
     });
   },
 
-  createReview: async (taskId: string, rating: number, comment?: string): Promise<{ success: boolean }> => {
-    const numericTaskId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+  createReview: async (taskId: number, rating: number, comment?: string): Promise<{ success: boolean }> => {
     return apiFetch<{ success: boolean }>('/gig/reviews', {
       method: 'POST',
-      body: { taskId: numericTaskId, rating, comment },
+      body: { taskId, rating, comment },
       actor
     });
   }

@@ -42,7 +42,7 @@ export const CompletedProjects: React.FC = () => {
   }, []);
 
   const formatCurrency = (amt: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amt);
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
     return (
@@ -97,7 +97,7 @@ export const CompletedProjects: React.FC = () => {
 
             return (
               <div
-                key={proj.task_id}
+                key={proj.taskId}
                 className="admin-card"
                 style={{
                   padding: 'var(--spacing-xl)',
@@ -115,7 +115,7 @@ export const CompletedProjects: React.FC = () => {
                     <span className="admin-badge badge-success">Completed</span>
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)', fontWeight: 600 }}>
-                    Client: {proj.client_id}
+                    Client: {proj.client?.clientName || 'Client'}
                   </div>
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: 'var(--spacing-md)' }}>
                     {proj.description}

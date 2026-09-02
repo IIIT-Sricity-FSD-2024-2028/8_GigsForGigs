@@ -95,7 +95,7 @@ export const GigProfessionalManagement: React.FC = () => {
     { header: 'Category', accessorKey: 'category' },
     {
       header: 'Rate',
-      cell: (row) => <span style={{ fontWeight: 700 }}>${row.hourlyRate}/hr</span>
+      cell: (row) => <span style={{ fontWeight: 700 }}>₹{row.hourlyRate}/hr</span>
     },
     {
       header: 'Rating & Jobs',

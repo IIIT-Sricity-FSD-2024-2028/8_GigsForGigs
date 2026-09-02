@@ -2,20 +2,30 @@
  * @file index.ts
  * @description
  * TypeScript interfaces and type definitions for the Gig Professional portal module.
- * Provides explicit typings for tasks, deliverables, requests, earnings, services,
- * and user profile DTOs to enforce strict type safety across all components and API layers.
+ * These mirror the backend's native Prisma-shaped JSON responses (camelCase keys,
+ * numeric ids, lowercase enum values) exactly — the backend does no dialect
+ * translation, so these types are the wire contract as-is.
  */
+
+/**
+ * Client summary nested on a task response.
+ */
+export interface TaskClient {
+  clientId: number;
+  clientName: string;
+  domain?: string | null;
+}
 
 /**
  * Single deliverable submission belonging to a gig task.
  */
 export interface GigDeliverable {
-  deliverable_id?: string;
-  deliverable_no: number;
-  task_id: string;
-  gig_profile_id?: string;
-  content: string;
-  notes?: string;
+  taskId: number;
+  deliverableNo: number;
+  gigProfileId: number;
+  description: string;
+  submissionPath: string;
+  status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
   createdAt?: string;
 }
 
@@ -23,14 +33,15 @@ export interface GigDeliverable {
  * Task item structure as viewed by the Gig Professional.
  */
 export interface GigTask {
-  task_id: string;
+  taskId: number;
+  clientId: number;
   title: string;
   description: string;
-  client_id: string;
   budget: number;
-  status: 'OPEN' | 'IN_PROGRESS' | 'REVIEW_NEEDED' | 'COMPLETED' | 'CANCELLED';
+  status: 'open' | 'in_progress' | 'completed';
   createdAt?: string;
   updatedAt?: string;
+  client?: TaskClient;
   deliverables?: GigDeliverable[];
 }
 
@@ -38,30 +49,22 @@ export interface GigTask {
  * Client request or invitation sent to a Gig Professional.
  */
 export interface PendingRequest {
-  application_id: string;
-  task_id: string;
-  gig_profile_id: string;
-  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
-  budget?: number;
+  applicationId: number;
+  taskId: number;
+  gigProfileId: number;
+  status: 'pending' | 'accepted' | 'declined' | 'shortlisted';
   createdAt?: string;
-  task?: {
-    task_id: string;
-    title: string;
-    description: string;
-    client_id: string;
-    budget: number;
-    createdAt?: string;
-  };
+  task?: GigTask;
 }
 
 /**
  * Review entity attached to a completed task.
  */
 export interface GigReview {
-  review_id: string;
+  reviewId: number;
   rating: number;
   comment?: string;
-  client_name?: string;
+  clientName?: string;
   createdAt?: string;
 }
 
@@ -69,25 +72,31 @@ export interface GigReview {
  * Payout or transaction record for completed gig tasks.
  */
 export interface PaymentTransaction {
-  payment_id?: string;
-  task_id: string;
-  gig_profile_id: string;
+  paymentId: number;
+  taskId: number;
+  gigProfileId: number;
   amount: number;
-  paidAt: string;
+  status: 'pending' | 'completed' | 'failed';
   createdAt?: string;
+  task?: {
+    taskId: number;
+    title: string;
+    client?: { clientId: number; clientName: string };
+  };
 }
 
 /**
  * Completed project entity with associated client reviews and payment details.
  */
 export interface CompletedProject {
-  task_id: string;
+  taskId: number;
+  clientId: number;
   title: string;
   description: string;
-  client_id: string;
   budget: number;
-  status: 'COMPLETED';
+  status: 'completed';
   completedAt?: string;
+  client?: TaskClient;
   reviews?: GigReview[];
   payment?: PaymentTransaction;
 }
@@ -105,8 +114,8 @@ export interface EarningsSummary {
  * Service listing offered by the Gig Professional.
  */
 export interface GigService {
-  service_id: string;
-  gig_profile_id: string;
+  serviceId: number;
+  gigProfileId: number;
   title: string;
   description: string;
   price: number;
@@ -119,17 +128,14 @@ export interface GigService {
  * Comprehensive profile model for the Gig Professional.
  */
 export interface GigProfile {
-  gig_profile_id: string;
-  user_id: string;
+  gigProfileId: number;
+  userId: number;
   name: string;
   email: string;
   bio?: string;
   skills: string[];
   portfolio: string[];
   tools?: string[];
-  rating?: number;
-  jobSuccessRate?: number;
-  completedProjectsCount?: number;
 }
 
 /**
@@ -147,7 +153,7 @@ export interface CreateServiceDto {
  * Payload for submitting a new task deliverable.
  */
 export interface SubmitDeliverableDto {
-  taskId: string;
+  taskId: number;
   content: string;
   notes?: string;
 }

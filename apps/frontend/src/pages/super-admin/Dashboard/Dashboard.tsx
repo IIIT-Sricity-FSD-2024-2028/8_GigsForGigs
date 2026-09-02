@@ -137,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     },
     {
       header: 'Budget',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${Number(row.budget).toLocaleString()}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>₹{Number(row.budget).toLocaleString('en-IN')}</span>
     },
     {
       header: 'Status',
@@ -209,7 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Gross Merchandise Volume"
-          value={`$${kpis.grossMerchandiseVolume.toLocaleString()}`}
+          value={`₹${kpis.grossMerchandiseVolume.toLocaleString('en-IN')}`}
           deltaText="+18.4% vs last mo"
           isPositive={true}
           subtitle="Total platform contract flow"
@@ -218,7 +218,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         />
         <KPICard
           title="Platform Take Revenue"
-          value={`$${kpis.platformRevenue.toLocaleString()}`}
+          value={`₹${kpis.platformRevenue.toLocaleString('en-IN')}`}
           deltaText="+10.0% standard rake"
           isPositive={true}
           subtitle="Direct platform commission"

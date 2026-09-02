@@ -49,11 +49,11 @@ export const AdminAnalytics: React.FC = () => {
     },
     {
       header: 'Total Volume',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>${Number(row.totalVolume || 0).toLocaleString()}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>₹{Number(row.totalVolume || 0).toLocaleString('en-IN')}</span>
     },
     {
       header: 'Average Order Value',
-      cell: (row) => <span>${Number(row.avgBudget || 0).toLocaleString()}</span>
+      cell: (row) => <span>₹{Number(row.avgBudget || 0).toLocaleString('en-IN')}</span>
     },
     {
       header: 'Velocity YoY',
@@ -159,7 +159,7 @@ export const AdminAnalytics: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Gross Volume Velocity"
-          value="$428,900"
+          value="₹4,28,900"
           deltaText="+18.4% YoY"
           isPositive={true}
           subtitle={`Aggregated platform GMV (${timeRange})`}
@@ -175,8 +175,8 @@ export const AdminAnalytics: React.FC = () => {
         />
         <KPICard
           title="Avg Contract Budget"
-          value="$1,254"
-          deltaText="+$112 vs last qtr"
+          value="₹1,254"
+          deltaText="+₹112 vs last qtr"
           isPositive={true}
           subtitle="AOV across all closed tasks"
           accentColor="var(--color-secondary)"

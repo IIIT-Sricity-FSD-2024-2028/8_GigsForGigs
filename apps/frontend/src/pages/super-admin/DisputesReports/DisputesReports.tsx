@@ -91,7 +91,7 @@ export const DisputesReports: React.FC = () => {
     },
     {
       header: 'Disputed Escrow',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>${row.disputeAmount.toLocaleString()}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>₹{row.disputeAmount.toLocaleString('en-IN')}</span>
     },
     {
       header: 'Reason',
@@ -151,7 +151,7 @@ export const DisputesReports: React.FC = () => {
           <form onSubmit={handleExecuteSettlement} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
             <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
               <div><strong>Task:</strong> {selectedDispute.taskTitle}</div>
-              <div><strong>Disputed Escrow:</strong> ${selectedDispute.disputeAmount.toLocaleString()}</div>
+              <div><strong>Disputed Escrow:</strong> ₹{selectedDispute.disputeAmount.toLocaleString('en-IN')}</div>
               <div><strong>Filer:</strong> {selectedDispute.filedByName} ({selectedDispute.filedByRole})</div>
               <div><strong>Against:</strong> {selectedDispute.againstName}</div>
               <div style={{ marginTop: '8px' }}><strong>Filer Description:</strong> {selectedDispute.description}</div>

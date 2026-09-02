@@ -92,7 +92,7 @@ export const ActiveTasks: React.FC = () => {
 
             return (
               <div
-                key={task.task_id}
+                key={task.taskId}
                 className="admin-card"
                 style={{
                   padding: 'var(--spacing-xl)',
@@ -139,7 +139,7 @@ export const ActiveTasks: React.FC = () => {
                   </div>
 
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)' }}>
-                    Client: <strong>{task.client_id}</strong>
+                    Client: <strong>{task.client?.clientName || 'Client'}</strong>
                   </div>
 
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: 'var(--spacing-md)' }}>
@@ -173,14 +173,14 @@ export const ActiveTasks: React.FC = () => {
                   <button
                     className="admin-btn admin-btn-outline admin-btn-sm"
                     style={{ width: '100%' }}
-                    onClick={() => navigateToTaskDetail(task.task_id)}
+                    onClick={() => navigateToTaskDetail(String(task.taskId))}
                   >
                     View Details
                   </button>
                   <button
                     className="admin-btn admin-btn-primary admin-btn-sm"
                     style={{ width: '100%' }}
-                    onClick={() => navigateToSubmitDeliverable(task.task_id)}
+                    onClick={() => navigateToSubmitDeliverable(String(task.taskId))}
                   >
                     Submit Deliverable
                   </button>

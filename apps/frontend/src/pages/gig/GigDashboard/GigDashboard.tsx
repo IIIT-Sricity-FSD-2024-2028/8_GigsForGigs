@@ -62,7 +62,7 @@ export const GigDashboard: React.FC = () => {
     };
   }, [refreshTrigger]);
 
-  const handleRespondRequest = async (applicationId: string, action: 'accepted' | 'declined') => {
+  const handleRespondRequest = async (applicationId: number, action: 'accepted' | 'declined') => {
     try {
       await gigApi.respondToRequest(applicationId, action);
       triggerRefresh();
@@ -242,23 +242,23 @@ export const GigDashboard: React.FC = () => {
                 </thead>
                 <tbody>
                   {pendingRequests.slice(0, 5).map((req) => (
-                    <tr key={req.application_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '12px var(--spacing-sm)', fontWeight: 600 }}>{req.task?.client_id || 'Client'}</td>
+                    <tr key={req.applicationId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '12px var(--spacing-sm)', fontWeight: 600 }}>{req.task?.client?.clientName || 'Client'}</td>
                       <td style={{ padding: '12px var(--spacing-sm)' }}>{req.task?.title || 'Untitled Task'}</td>
                       <td style={{ padding: '12px var(--spacing-sm)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-                        {formatCurrency(req.task?.budget || req.budget || 0)}
+                        {formatCurrency(req.task?.budget || 0)}
                       </td>
                       <td style={{ padding: '12px var(--spacing-sm)' }}>
                         <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
                           <button
                             className="admin-btn admin-btn-primary admin-btn-sm"
-                            onClick={() => handleRespondRequest(req.application_id, 'accepted')}
+                            onClick={() => handleRespondRequest(req.applicationId, 'accepted')}
                           >
                             Accept
                           </button>
                           <button
                             className="admin-btn admin-btn-outline admin-btn-sm"
-                            onClick={() => handleRespondRequest(req.application_id, 'declined')}
+                            onClick={() => handleRespondRequest(req.applicationId, 'declined')}
                           >
                             Decline
                           </button>
@@ -340,8 +340,8 @@ export const GigDashboard: React.FC = () => {
             ) : (
               activeTasks.slice(0, 3).map((task) => (
                 <div
-                  key={task.task_id}
-                  onClick={() => navigateToTaskDetail(task.task_id)}
+                  key={task.taskId}
+                  onClick={() => navigateToTaskDetail(String(task.taskId))}
                   style={{
                     padding: 'var(--spacing-sm)',
                     border: '1px solid var(--color-border)',
@@ -356,7 +356,7 @@ export const GigDashboard: React.FC = () => {
                     {task.title}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                    <span>{task.client_id}</span>
+                    <span>{task.client?.clientName || 'Client'}</span>
                     <span style={{ fontWeight: 700, color: 'var(--color-secondary)' }}>{formatCurrency(task.budget)}</span>
                   </div>
                 </div>

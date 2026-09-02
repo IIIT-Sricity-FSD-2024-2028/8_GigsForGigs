@@ -180,7 +180,7 @@ export const ClientManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Lifetime Platform Spend</span>
                 <div style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)', color: 'var(--color-primary-dark)' }}>
-                  ${selectedClient.totalSpent.toLocaleString()}
+                  ₹{selectedClient.totalSpent.toLocaleString('en-IN')}
                 </div>
               </div>
               <div>

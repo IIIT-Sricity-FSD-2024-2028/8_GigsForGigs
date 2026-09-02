@@ -17,7 +17,7 @@ export const ExploreTasks: React.FC = () => {
   const [tasks, setTasks] = useState<GigTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [applyingId, setApplyingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,13 +48,14 @@ export const ExploreTasks: React.FC = () => {
 
   const appliedTaskIds = user?.appliedTaskIds || [];
 
-  const handleApply = async (taskId: string) => {
-    if (appliedTaskIds.includes(taskId)) return;
+  const handleApply = async (taskId: number) => {
+    const key = String(taskId);
+    if (appliedTaskIds.includes(key)) return;
     setApplyingId(taskId);
     setError(null);
     try {
       await gigApi.applyForTask(taskId);
-      const updated = Array.from(new Set([...appliedTaskIds, taskId]));
+      const updated = Array.from(new Set([...appliedTaskIds, key]));
       updateUserSession({ appliedTaskIds: updated });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to apply for task.');
@@ -66,11 +67,11 @@ export const ExploreTasks: React.FC = () => {
   const filteredTasks = tasks.filter((t) =>
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.client_id.toLowerCase().includes(searchQuery.toLowerCase())
+    (t.client?.clientName || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatCurrency = (amt: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amt);
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
     return (
@@ -136,12 +137,12 @@ export const ExploreTasks: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--spacing-xl)' }}>
           {filteredTasks.map((task) => {
-            const isApplied = appliedTaskIds.includes(task.task_id);
-            const isSubmitting = applyingId === task.task_id;
+            const isApplied = appliedTaskIds.includes(String(task.taskId));
+            const isSubmitting = applyingId === task.taskId;
 
             return (
               <div
-                key={task.task_id}
+                key={task.taskId}
                 className="admin-card"
                 style={{
                   padding: 'var(--spacing-xl)',
@@ -161,7 +162,7 @@ export const ExploreTasks: React.FC = () => {
                     </span>
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)', fontWeight: 600 }}>
-                    Client: {task.client_id}
+                    Client: {task.client?.clientName || 'Client'}
                   </div>
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
                     {task.description}
@@ -170,12 +171,12 @@ export const ExploreTasks: React.FC = () => {
 
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                    Status: <strong style={{ color: 'var(--color-primary-dark)' }}>{task.status}</strong>
+                    Status: <strong style={{ color: 'var(--color-primary-dark)' }}>{task.status.toUpperCase()}</strong>
                   </span>
                   <button
                     className={`admin-btn ${isApplied ? 'admin-btn-outline' : 'admin-btn-primary'}`}
                     disabled={isApplied || isSubmitting}
-                    onClick={() => handleApply(task.task_id)}
+                    onClick={() => handleApply(task.taskId)}
                   >
                     {isApplied ? 'Applied ✓' : isSubmitting ? 'Submitting...' : 'Apply Now'}
                   </button>

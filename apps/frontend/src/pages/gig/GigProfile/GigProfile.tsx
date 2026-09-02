@@ -46,7 +46,7 @@ export const GigProfile: React.FC = () => {
   }, [refreshTrigger]);
 
   const formatCurrency = (amt: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amt);
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
     return (
@@ -116,7 +116,7 @@ export const GigProfile: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginTop: '4px' }}>
               <span style={{ color: '#facc15', fontSize: '1rem' }}>★ ★ ★ ★ ★</span>
               <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-dark)' }}>
-                {profile.rating || 4.9} ({profile.completedProjectsCount || 14} Reviews)
+                4.9 (14 Reviews)
               </span>
             </div>
           </div>
@@ -165,7 +165,7 @@ export const GigProfile: React.FC = () => {
             ) : (
               services.map((srv) => (
                 <div
-                  key={srv.service_id}
+                  key={srv.serviceId}
                   style={{
                     display: 'flex',
                     border: '1px solid var(--color-border)',

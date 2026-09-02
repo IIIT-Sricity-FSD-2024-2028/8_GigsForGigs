@@ -401,7 +401,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                         ✓ Payment Completed
                       </div>
                       <div style={{ fontSize: '0.78rem', color: '#137333' }}>
-                        ₹{formatCurrency(gigAmount)} released to {contract.gig_pro_name}.
+                        {formatCurrency(gigAmount)} released to {contract.gig_pro_name}.
                       </div>
                     </div>
 
