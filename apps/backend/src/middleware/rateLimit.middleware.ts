@@ -32,7 +32,7 @@ export const globalLimiter = rateLimit({
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 100,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   statusCode: 429,

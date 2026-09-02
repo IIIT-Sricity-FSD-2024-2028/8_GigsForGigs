@@ -33,7 +33,7 @@ export type SubmitDeliverableDto = z.infer<typeof submitDeliverableSchema>;
 export const createServiceSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().optional(),
-  price: z.coerce.number().positive(),
+  price: z.coerce.number().positive().max(99999999.99),
   tags: z.array(z.string().min(1).max(100)).default([]),
   thumbnail: z.string().max(500).optional(),
 });
