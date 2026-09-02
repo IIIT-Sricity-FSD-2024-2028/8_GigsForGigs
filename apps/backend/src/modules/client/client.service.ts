@@ -128,7 +128,7 @@ export async function reviewApplication(
       });
 
       const clientManagers = application.task.client.managers;
-      const anyManager = clientManagers.length > 0 ? clientManagers[0] : await tx.manager.findFirst();
+      const anyManager = clientManagers.length > 0 ? clientManagers[0] : null;
       if (anyManager) {
         const existingAssignment = await tx.gigManagerAssignment.findUnique({
           where: {

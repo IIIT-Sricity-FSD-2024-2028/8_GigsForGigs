@@ -10,9 +10,30 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
   const { profile, tasks, deliverables, reviewDeliverable, closeDeliverable } = useManager();
 
   const managerName = profile?.user?.name || 'Manager';
+  const hiringClientName = profile?.client?.clientName || 'Assigned Client Organization';
   const pendingTasks = tasks.filter(t => t.status === 'open');
   const activeTasks = tasks.filter(t => t.status === 'in_progress');
   const pendingDeliverables = deliverables.filter(d => d.status === 'submitted');
+
+  // Collect unique gig professionals accepted by this client across tasks
+  const acceptedProfessionals = Array.from(
+    new Map(
+      tasks
+        .flatMap(t => (t.assignments || []).map(a => ({ ...a, taskTitle: t.title, taskStatus: t.status })))
+        .filter(a => a.gigProfile)
+        .map(a => [
+          a.gigProfile!.gigProfileId,
+          {
+            gigProfileId: a.gigProfile!.gigProfileId,
+            name: a.gigProfile!.user.name,
+            email: a.gigProfile!.user.email,
+            skills: a.gigProfile!.skills || [],
+            taskTitle: a.taskTitle,
+            taskStatus: a.taskStatus
+          }
+        ])
+    ).values()
+  );
 
   const formatBudget = (budget: number | string) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(budget));
@@ -30,7 +51,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
-      {/* Welcome hero banner — mirrors the Gig portal's gradient header */}
+      {/* Welcome hero banner — displays hiring client's name prominently */}
       <div
         className="admin-card"
         style={{
@@ -47,12 +68,55 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
         }}
       >
         <div>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--spacing-xs)' }}>
-            Welcome back, {managerName}!
-          </h1>
-          <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 'var(--font-size-sm)' }}>
-            Here's a summary of your hiring activity and assigned operational tasks.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--spacing-xs)', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+              Welcome back, {managerName}!
+            </h1>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                backgroundColor: 'rgba(255, 224, 130, 0.25)',
+                color: '#FFE082',
+                border: '1px solid rgba(255, 224, 130, 0.5)',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+            >
+              Manager
+            </span>
+          </div>
+
+          <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+            Supervising operational tasks and verified deliverables for your hiring organization.
           </p>
+
+          <div
+            style={{
+              marginTop: '12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.25)'
+            }}
+          >
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, color: '#FFE082' }}>
+              Hired by Client:
+            </span>
+            <strong style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff' }}>
+              {hiringClientName}
+            </strong>
+            {profile?.client?.domain && (
+              <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                • {profile.client.domain}
+              </span>
+            )}
+          </div>
         </div>
         <button
           className="admin-btn admin-btn-outline"
@@ -297,6 +361,93 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
                     Close
                   </button>
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Accepted Gig Professionals under this Client */}
+      <div className="activity-section">
+        <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 className="activity-title">
+            Accepted Professionals ({hiringClientName}'s Team){' '}
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: '6px' }}>
+              ({acceptedProfessionals.length})
+            </span>
+          </h2>
+          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+            Supervised under Client ID #{profile?.clientId || '—'}
+          </span>
+        </div>
+
+        {acceptedProfessionals.length === 0 ? (
+          <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-lg)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: 0 }}>
+              No gig professionals have been accepted by {hiringClientName} yet.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--spacing-md)' }}>
+            {acceptedProfessionals.map(pro => (
+              <div
+                key={pro.gigProfileId}
+                style={{
+                  padding: 'var(--spacing-md)',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-primary-dark)' }}>
+                    {pro.name}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      backgroundColor: '#E4F2EF',
+                      color: '#438F82'
+                    }}
+                  >
+                    Accepted
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                  {pro.email}
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--color-text-main)', marginTop: '4px' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Active on: </span>
+                  <strong>{pro.taskTitle}</strong>
+                </div>
+
+                {pro.skills && pro.skills.length > 0 && (
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    {pro.skills.slice(0, 3).map((skill, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          backgroundColor: 'var(--color-bg-light)',
+                          borderRadius: '4px',
+                          color: 'var(--color-text-muted)'
+                        }}
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

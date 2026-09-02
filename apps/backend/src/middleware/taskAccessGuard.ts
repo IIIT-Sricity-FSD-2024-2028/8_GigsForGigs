@@ -26,12 +26,16 @@ export async function taskAccessGuard(
     return;
   }
 
-  const assignment = await prisma.gigManagerAssignment.findFirst({
-    where: { taskId, managerId: req.user.managerId },
+  // Enforce strict multi-tenant boundary: a manager can ONLY access tasks belonging to their hiring client (req.user.clientId).
+  const task = await prisma.task.findFirst({
+    where: {
+      taskId,
+      clientId: req.user.clientId,
+    },
     select: { taskId: true },
   });
 
-  if (!assignment) {
+  if (!task) {
     next(notFound("Task not found"));
     return;
   }

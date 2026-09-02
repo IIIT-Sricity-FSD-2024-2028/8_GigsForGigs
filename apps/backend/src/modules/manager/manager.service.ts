@@ -78,17 +78,17 @@ export async function updateOwnProfile(managerId: number, dto: UpdateManagerProf
   return getOwnProfile(managerId);
 }
 
-// List tasks assigned to this manager directly, plus every task owned by their client.
+// List tasks owned by the manager's assigned client only.
 export async function listAssignedTasks(managerId: number) {
   const manager = await prisma.manager.findUnique({ where: { managerId } });
-  const clientId = manager?.clientId;
+  if (!manager || !manager.clientId) {
+    return [];
+  }
+  const clientId = manager.clientId;
 
   return prisma.task.findMany({
     where: {
-      OR: [
-        { assignments: { some: { managerId } } },
-        ...(clientId ? [{ clientId }] : []),
-      ],
+      clientId, // Strictly tasks belonging to the manager's hiring client
     },
     include: taskInclude,
     orderBy: { createdAt: "desc" },
@@ -237,19 +237,52 @@ export async function closeDeliverable(taskId: number, deliverableNo: number) {
   return updated;
 }
 
-// Search gig professionals by name or skill (up to 50), for a manager assigning work.
-export function searchGigProfessionals(query?: string) {
-  return prisma.gigProfessionalProfile.findMany({
-    ...(query
-      ? {
-          where: {
-            OR: [
-              { user: { name: { contains: query, mode: "insensitive" } } },
-              { skills: { some: { skill: { contains: query, mode: "insensitive" } } } },
-            ],
+// Search gig professionals by name or skill (up to 50).
+// When clientId is provided (for manager view), strictly restrict results to gig professionals
+// who have been accepted on tasks belonging to that client (or assigned to tasks for that client).
+export function searchGigProfessionals(query?: string, clientId?: number) {
+  const clientFilter = clientId
+    ? {
+        OR: [
+          {
+            applications: {
+              some: {
+                status: "accepted" as const,
+                task: { clientId },
+              },
+            },
           },
-        }
-      : {}),
+          {
+            assignments: {
+              some: {
+                task: { clientId },
+              },
+            },
+          },
+        ],
+      }
+    : {};
+
+  const queryFilter = query
+    ? {
+        OR: [
+          { user: { name: { contains: query, mode: "insensitive" as const } } },
+          { skills: { some: { skill: { contains: query, mode: "insensitive" as const } } } },
+        ],
+      }
+    : {};
+
+  const where =
+    clientId && query
+      ? { AND: [clientFilter, queryFilter] }
+      : clientId
+      ? clientFilter
+      : query
+      ? queryFilter
+      : {};
+
+  return prisma.gigProfessionalProfile.findMany({
+    where,
     include: { user: true, skills: true, tools: true, portfolio: true, services: { take: 1 } },
     take: 50,
   });

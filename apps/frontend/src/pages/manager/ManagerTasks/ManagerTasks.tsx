@@ -6,7 +6,7 @@ interface ManagerTasksProps {
 }
 
 export const ManagerTasks: React.FC<ManagerTasksProps> = ({ onSelectTask }) => {
-  const { tasks, loading } = useManager();
+  const { tasks, profile, loading } = useManager();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -74,7 +74,7 @@ export const ManagerTasks: React.FC<ManagerTasksProps> = ({ onSelectTask }) => {
                   <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
                     <div>
                       <span style={{ color: '#76594F' }}>Client: </span>
-                      <strong style={{ color: '#3A1F16' }}>{task.client?.clientName || 'TechCorp Solutions'}</strong>
+                      <strong style={{ color: '#3A1F16' }}>{task.client?.clientName || profile?.client?.clientName || 'Client Organization'}</strong>
                     </div>
                     <div>
                       <span style={{ color: '#76594F' }}>Assigned Gig Pro: </span>

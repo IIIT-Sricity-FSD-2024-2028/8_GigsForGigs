@@ -224,7 +224,7 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
     });
 
     const clientManagers = task?.client?.managers || [];
-    const chosenManager = clientManagers.length > 0 ? clientManagers[0] : await prisma.manager.findFirst();
+    const chosenManager = clientManagers.length > 0 ? clientManagers[0] : null;
 
     if (chosenManager) {
       assignment = await prisma.gigManagerAssignment.create({
@@ -235,7 +235,7 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
         },
       });
     } else {
-      throw notFound("No manager available to record deliverable assignment");
+      throw notFound("No manager assigned to supervise deliverables for this client organization");
     }
   }
 

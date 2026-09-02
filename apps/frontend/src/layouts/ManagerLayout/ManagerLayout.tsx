@@ -60,6 +60,21 @@ export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTa
             </div>
           </div>
 
+          {/* Client Organization Badge */}
+          <div style={{ margin: '0 20px 20px 20px', padding: '10px 14px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+            <div style={{ fontSize: '9px', color: '#FFE082', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+              Assigned Client
+            </div>
+            <div style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 700, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {profile?.client?.clientName || 'Client Organization'}
+            </div>
+            {profile?.client?.domain && (
+              <div style={{ fontSize: '10px', color: '#B8D0E0', marginTop: '2px' }}>
+                {profile.client.domain}
+              </div>
+            )}
+          </div>
+
           {/* Navigation Items */}
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <button
