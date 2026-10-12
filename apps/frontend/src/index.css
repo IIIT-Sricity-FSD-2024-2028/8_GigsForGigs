@@ -15,19 +15,19 @@ html, body, #root {
 
 :root {
   /* Core Color Tokens */
-  --color-primary-dark: #084b83;
+  --color-primary-dark: #0D568D;
   --color-primary-dark-hover: #063c6b;
   --color-primary-dark-active: #053661;
-  --color-primary-blue: #bf6900;
-  --color-primary-blue-hover: #a65a00;
+  --color-primary-blue: #D47700;
+  --color-primary-blue-hover: #B86300;
   --color-secondary: #519e8a;
   --color-secondary-hover: #438876;
-  --color-bg-light: #f0f6f6;
+  --color-bg-light: #EFF6F7;
   --color-bg-white: #ffffff;
-  --color-text-dark: #502419;
-  --color-text-muted: #805c54;
+  --color-text-dark: #3A1F16;
+  --color-text-muted: #76594F;
   --color-text-light: #ffffff;
-  --color-border: #dbdfdf;
+  --color-border: #D9E0E3;
   --color-border-dark: #c5cbcb;
 
   /* Semantic State Tokens */

@@ -11,6 +11,10 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { Loader } from '../../../components/common/Loader';
+import { ErrorState } from '../../../components/common/ErrorState';
 
 export const ActiveTasks: React.FC = () => {
   const { navigateToTaskDetail, navigateToSubmitDeliverable, refreshTrigger } = useGig();
@@ -45,50 +49,24 @@ export const ActiveTasks: React.FC = () => {
   }, [refreshTrigger]);
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Active Tasks...
-      </div>
-    );
+    return <Loader label="Loading active tasks..." />;
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
-      {error && (
-        <div
-          style={{
-            backgroundColor: '#FDE8E8',
-            color: '#9B1C1C',
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--font-size-sm)',
-            fontWeight: 600
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <ErrorState title="Could not load active tasks" message={error} />}
 
       {/* Header */}
-      <div className="admin-card" style={{ padding: 'var(--spacing-xl)' }}>
-        <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
-          Active Task Engagements
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginTop: '4px' }}>
-          Manage your ongoing client deliverables, inspect milestone requirements, and submit finished work.
-        </p>
-      </div>
+      <PageHeader title="Active Task Engagements" description="Manage your ongoing client deliverables, inspect milestone requirements, and submit finished work." />
 
       {activeTasks.length === 0 ? (
-        <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-          No active tasks currently assigned. Explore the marketplace to pick up new work!
-        </div>
+        <EmptyState title="No active tasks" description="Explore the marketplace to pick up new work." />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
           {activeTasks.map((task) => {
             const deliverables = task.deliverables || [];
             const hasSubmissions = deliverables.length > 0;
-            const progress = (task as any).progress || (hasSubmissions ? 60 : 20);
+            const progress = (task as GigTask & { progress?: number }).progress || (hasSubmissions ? 60 : 20);
 
             return (
               <div

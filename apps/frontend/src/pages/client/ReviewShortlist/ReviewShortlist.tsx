@@ -1,5 +1,7 @@
 import React from 'react';
 import { useClient } from '../../../context/ClientContext';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { Table } from '../../../components/common/Table';
 
 export interface ReviewShortlistProps {
   onNavigate: (viewId: string) => void;
@@ -37,10 +39,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
 
   return (
     <div>
-      <div className="page-header" style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <h1 className="page-title">Pending Hire Approvals</h1>
-        <p className="page-subtitle">Review candidates shortlisted by your manager before hiring.</p>
-      </div>
+      <PageHeader title="Pending Hire Approvals" description="Review candidates shortlisted by your manager before hiring." />
 
       <div className="activity-section">
         <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
@@ -57,7 +56,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
           </button>
         </div>
 
-        <table className="activity-table" id="shortlist-table">
+        <Table className="activity-table" id="shortlist-table">
           <thead>
             <tr>
               <th>Candidate</th>
@@ -121,7 +120,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
               ))
             )}
           </tbody>
-        </table>
+        </Table>
       </div>
     </div>
   );

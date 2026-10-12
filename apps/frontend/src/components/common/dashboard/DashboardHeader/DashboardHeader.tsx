@@ -1,12 +1,12 @@
 import React from 'react';
+import { PageHeader } from '../../PageHeader/PageHeader';
 
 export interface DashboardHeaderProps {
-  children?: React.ReactNode;
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
   className?: string;
 }
 
-export const DashboardHeader: React.FC<DashboardHeaderProps> = () => {
-  return null;
-};
-
+export const DashboardHeader: React.FC<DashboardHeaderProps> = (props) => <PageHeader {...props} className={`dashboard-page-header ${props.className || ''}`} />;
 export default DashboardHeader;

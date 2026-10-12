@@ -11,6 +11,8 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask, PendingRequest, CompletedProject, EarningsSummary } from '../../../types/gig';
+import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
+import { Button } from '../../../components/common/Button';
 
 export const GigDashboard: React.FC = () => {
   const { setActiveTab, navigateToTaskDetail, refreshTrigger, triggerRefresh } = useGig();
@@ -103,43 +105,11 @@ export const GigDashboard: React.FC = () => {
       )}
 
       {/* ── Page Header Banner ────────────────────────────────────────────── */}
-      <div
-        className="admin-card"
-        style={{
-          padding: 'var(--spacing-xl)',
-          background: 'linear-gradient(135deg, var(--color-primary-dark) 0%, #0c61a6 100%)',
-          color: '#ffffff',
-          borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-md)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--spacing-xs)' }}>
-            Welcome Back! 👋
-          </h1>
-          <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 'var(--font-size-sm)' }}>
-            Monitor active work streams, review incoming client requests, and manage task deliverables.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--spacing-md)' }}>
-          <button
-            className="admin-btn admin-btn-outline"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}
-            onClick={() => setActiveTab('my-services')}
-          >
-            My Services
-          </button>
-          <button
-            className="admin-btn admin-btn-primary"
-            onClick={() => setActiveTab('post-service')}
-          >
-            + Post New Service
-          </button>
-        </div>
-      </div>
+      <DashboardWelcome title="Welcome Back! 👋" description="Monitor active work streams, review incoming client requests, and manage task deliverables."
+        actions={<>
+          <Button variant="outline" onClick={() => setActiveTab('my-services')} style={{ background: 'rgba(255, 255, 255, 0.15)', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}>My Services</Button>
+          <Button onClick={() => setActiveTab('post-service')}>+ Post New Service</Button>
+        </>} />
 
       {/* ── KPI Cards Grid ────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--spacing-lg)' }}>

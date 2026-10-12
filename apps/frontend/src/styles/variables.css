@@ -1,4 +1,23 @@
 :root {
+  --color-action: #D47700;
+  --color-action-hover: #B86300;
+  --color-page: #EFF6F7;
+  --color-text: #3A1F16;
+  --color-text-subtle: #76594F;
+  --color-border: #D9E0E3;
+  --color-danger: #C94C4C;
+  --color-danger-soft: #F8E8E8;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 2px 8px rgba(25, 42, 52, 0.06);
+  --shadow-menu: 0 10px 32px rgba(25, 42, 52, 0.16);
   --color-primary: #0D568D;
   --color-primary-dark: #084875;
   --color-primary-light: #2F6F9F;

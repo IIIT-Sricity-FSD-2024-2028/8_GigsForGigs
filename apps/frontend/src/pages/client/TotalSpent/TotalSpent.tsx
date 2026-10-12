@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { Table } from '../../../components/common/Table';
 
 export interface TotalSpentProps {
   onNavigate: (viewId: string) => void;
@@ -48,10 +50,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
 
   return (
     <div>
-      <div className="page-header" style={{ marginBottom: 'var(--spacing-lg)' }}>
-        <h1 className="page-title">Client Payments & Escrow Ledger</h1>
-        <p className="page-subtitle">Track task payments, platform fees, and escrow statuses securely.</p>
-      </div>
+      <PageHeader title="Client Payments & Escrow Ledger" description="Track task payments, platform fees, and escrow statuses securely." />
 
       <section className="spent-layout" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)' }}>
         
@@ -110,7 +109,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
             />
           </div>
         </div>
-        <table className="activity-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <Table className="activity-table">
           <thead>
             <tr>
               <th style={{ textAlign: 'left', padding: '12px 16px' }}>Payment / Task</th>
@@ -177,7 +176,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
               ))
             )}
           </tbody>
-        </table>
+        </Table>
       </section>
 
       {/* Pay Modal */}

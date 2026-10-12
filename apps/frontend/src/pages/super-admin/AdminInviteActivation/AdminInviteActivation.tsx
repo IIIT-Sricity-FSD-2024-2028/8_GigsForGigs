@@ -64,7 +64,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
     try {
       const res = await adminApi.acceptAdminInvitation(token, email, newPassword || tempPassword);
       if (res && res.token) {
-        localStorage.setItem('g4g_admin_token', res.token);
+        sessionStorage.setItem('g4g_admin_token', res.token);
       }
       
       const permissionsMap: Record<string, string[]> = {
@@ -85,7 +85,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
         appliedTaskIds: []
       };
 
-      localStorage.setItem('gfg_active_user', JSON.stringify(userSession));
+      sessionStorage.setItem('gfg_active_user', JSON.stringify(userSession));
       updateUserSession(userSession);
 
       // Clean query params and pathname to root

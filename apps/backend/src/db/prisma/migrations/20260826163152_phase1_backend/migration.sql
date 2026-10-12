@@ -97,3 +97,6 @@ ALTER TABLE "SERVICE_REQUEST" ADD CONSTRAINT "SERVICE_REQUEST_client_id_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "MANAGER_INVITE" ADD CONSTRAINT "MANAGER_INVITE_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "CLIENT"("client_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+SELECT * FROM "CLIENT" as c , "Task" as t and "GigProfessionalProfile" as g where 

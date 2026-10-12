@@ -131,9 +131,10 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
   return { success: true, token: signToken(payload), user: sanitizeUser(user) };
 }
 
-// Log in as any role.
+// Log in only through the selected role portal. This prevents a valid account
+// from being accepted by a different portal after the frontend role picker.
 export function login(dto: LoginDto) {
-  return authenticate(dto);
+  return authenticate(dto, dto.role);
 }
 
 // Log in restricted to manager accounts (rejects any other role's credentials).

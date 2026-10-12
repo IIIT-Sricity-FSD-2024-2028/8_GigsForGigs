@@ -247,8 +247,7 @@ export async function closeDeliverable(req: Request, res: Response): Promise<voi
 }
 
 export async function searchGigProfessionals(req: Request, res: Response): Promise<void> {
-  const { clientId } = requireManager(req);
   const query = typeof req.query.q === "string" ? req.query.q : undefined;
-  const profiles = await managerService.searchGigProfessionals(query, clientId);
+  const profiles = await managerService.searchGigProfessionals(query);
   res.status(200).json(profiles.map(toTalentResponse));
 }

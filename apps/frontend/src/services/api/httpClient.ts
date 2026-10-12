@@ -8,13 +8,20 @@
  * `err.status` instead of re-implementing fetch/try-catch per file.
  */
 
-export const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.hostname}:3000/api`
-    : 'http://localhost:3000/api';
+// The Express server defaults to port 5000 (see apps/backend/src/server.ts).
+// Keep an explicit environment override for deployments, but do not point the
+// browser at the old pre-merge port 3000: that port has no API server and made
+// every login fail as a network error.
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
 
-/** One localStorage key per actor — a browser tab can hold a client, manager,
- * and gig session at once since each role logs in through a separate flow. */
+export const API_BASE_URL =
+  configuredApiUrl ??
+  (typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+    : 'http://localhost:5000/api');
+
+/** One sessionStorage key per actor — session-scoped so closing the tab or leaving
+ * the site clears the session and returns visitors directly to the Landing Page. */
 export type ActorRole = 'client' | 'manager' | 'gig_professional' | 'admin';
 
 const TOKEN_KEYS: Record<ActorRole, string> = {
@@ -24,16 +31,25 @@ const TOKEN_KEYS: Record<ActorRole, string> = {
   admin: 'g4g_admin_token',
 };
 
+// Purge legacy persistent localStorage tokens
+if (typeof window !== 'undefined') {
+  Object.values(TOKEN_KEYS).forEach((k) => localStorage.removeItem(k));
+  localStorage.removeItem('gfg_active_user');
+}
+
 export function getToken(actor: ActorRole): string | null {
-  return localStorage.getItem(TOKEN_KEYS[actor]);
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem(TOKEN_KEYS[actor]);
 }
 
 export function setToken(actor: ActorRole, token: string): void {
-  localStorage.setItem(TOKEN_KEYS[actor], token);
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(TOKEN_KEYS[actor], token);
 }
 
 export function clearToken(actor: ActorRole): void {
-  localStorage.removeItem(TOKEN_KEYS[actor]);
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem(TOKEN_KEYS[actor]);
 }
 
 export class ApiError extends Error {

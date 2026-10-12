@@ -1,6 +1,7 @@
 import React from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { useAuth } from '../../../context/AuthContext';
+import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
 
 export interface ClientDashboardProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -62,24 +63,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
         <p style={{ color: 'var(--color-text-muted)' }}>Loading your workspace…</p>
       )}
       {/* Welcome hero banner — mirrors the Gig/Manager portal headers */}
-      <div
-        className="admin-card"
-        style={{
-          padding: 'var(--spacing-xl)',
-          background: 'linear-gradient(135deg, var(--color-primary-dark) 0%, #0c61a6 100%)',
-          color: '#ffffff',
-          borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-md)',
-          marginBottom: 'var(--spacing-xl)',
-        }}
-      >
-        <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--spacing-xs)' }} id="client-greeting">
-          Welcome back, {user?.name || 'there'}!
-        </h1>
-        <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 'var(--font-size-sm)' }}>
-          Here's a summary of your workspace activities for today.
-        </p>
-      </div>
+      <DashboardWelcome titleId="client-greeting" title={`Welcome back, ${user?.name || 'there'}!`} description="Here's a summary of your workspace activities for today." className="client-dashboard-welcome" />
 
       {/* Metric cards row */}
       <div className="metrics-row">

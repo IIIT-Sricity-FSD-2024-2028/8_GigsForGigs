@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../../services/api/auth/authApi';
-import type { AuthUser } from '../../services/api/auth/authApi';
+import type { AuthUser, BackendRole } from '../../services/api/auth/authApi';
 import { ApiError, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
 import { decodeJwtPayload } from '../../utils/helpers/jwt';
 
@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Restore active user session from localStorage so page refreshes retain the logged-in session
   const [user, setUser] = useState<UserSession | null>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gfg_active_user');
+      const saved = sessionStorage.getItem('gfg_active_user');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -137,9 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (user) {
-        localStorage.setItem('gfg_active_user', JSON.stringify(user));
+        sessionStorage.setItem('gfg_active_user', JSON.stringify(user));
       } else {
-        localStorage.removeItem('gfg_active_user');
+        sessionStorage.removeItem('gfg_active_user');
       }
     }
   }, [user]);
@@ -177,12 +177,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [],
   );
 
-  const login = useCallback(async (email: string, password: string, _roleHint?: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, roleHint?: string): Promise<boolean> => {
     setLoading(true);
     setAuthError(null);
 
     try {
-      const res = await authApi.login(email.trim(), password);
+      const requestedRole: BackendRole | undefined =
+        roleHint === 'CLIENT'
+          ? 'client'
+          : roleHint === 'GIG_PROFESSIONAL'
+            ? 'gig_professional'
+            : roleHint === 'MANAGER'
+              ? 'manager'
+              : roleHint === 'SUPER_ADMIN'
+                ? 'admin'
+                : undefined;
+      if (!requestedRole) {
+        setAuthError('Please select the account type you want to use.');
+        return false;
+      }
+
+      const res = await authApi.login(email.trim(), password, requestedRole);
       const session = sessionFromAuthResponse(res.user, res.token);
       setToken(roleToActor(session.role), res.token);
       setUser(session);

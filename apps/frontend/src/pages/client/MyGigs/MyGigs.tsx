@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
+import { Table } from '../../../components/common/Table';
+import { PageHeader } from '../../../components/common/PageHeader';
 
 export interface MyGigsProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -33,10 +35,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
 
   return (
     <div>
-      <div className="page-header" style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <h1 className="page-title">Active Contracts</h1>
-        <p className="page-subtitle">Track ongoing tasks, view deliverables, and manage project payments.</p>
-      </div>
+      <PageHeader title="Active Contracts" description="Track ongoing tasks, view deliverables, and manage project payments." />
 
       <div className="activity-section">
         <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
@@ -53,7 +52,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
           </button>
         </div>
 
-        <table className="activity-table" id="active-contracts-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <Table className="activity-table" id="active-contracts-table">
           <thead>
             <tr>
               <th style={{ textAlign: 'left', padding: '12px 16px' }}>Project Name</th>
@@ -163,7 +162,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               })
             )}
           </tbody>
-        </table>
+        </Table>
       </div>
 
       {/* Task Details & Payment Modal */}

@@ -74,7 +74,7 @@ type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profil
 function SuperAdminPortal() {
   const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('gfg_admin_tab');
+      const saved = sessionStorage.getItem('gfg_admin_tab');
       if (saved) return saved;
     }
     return 'dashboard';
@@ -83,7 +83,7 @@ function SuperAdminPortal() {
   const handleNavigate = (view: string) => {
     setCurrentView(view);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('gfg_admin_tab', view);
+      sessionStorage.setItem('gfg_admin_tab', view);
     }
   };
 

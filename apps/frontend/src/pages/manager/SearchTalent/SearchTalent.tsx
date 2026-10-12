@@ -3,7 +3,7 @@ import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { apiFetch } from '../../../services/api/httpClient';
 
 export const SearchTalent: React.FC = () => {
-  const { talents, profile, searchTalent } = useManager();
+  const { talents, searchTalent } = useManager();
   const [skillFilter, setSkillFilter] = useState('');
   const [hiredMsg, setHiredMsg] = useState<string | null>(null);
 
@@ -31,10 +31,10 @@ export const SearchTalent: React.FC = () => {
       {/* Title Header */}
       <div>
         <h1 style={{ fontSize: '28px', color: '#0D568D', margin: 0, fontWeight: 700 }}>
-          Client Team & Accepted Talent
+          Find the Best Talent
         </h1>
         <p style={{ color: '#76594F', fontSize: '15px', marginTop: '6px', margin: 0 }}>
-          Browse through vetted professionals accepted by <strong>{profile?.client?.clientName || 'your client'}</strong> for task supervision.
+          Browse through our vetted professionals to get your project started.
         </p>
       </div>
 

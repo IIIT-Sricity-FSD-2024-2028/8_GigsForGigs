@@ -1,12 +1,6 @@
 import React from 'react';
 
-export interface FormActionsProps {
-  children?: React.ReactNode;
-  className?: string;
-}
-
-export const FormActions: React.FC<FormActionsProps> = () => {
-  return null;
-};
-
+export interface FormActionsProps extends React.HTMLAttributes<HTMLDivElement> { align?: 'start' | 'center' | 'end' | 'between'; }
+export const FormActions: React.FC<FormActionsProps> = ({ children, className = '', align = 'end', ...props }) =>
+  <div className={`ui-form-actions ui-form-actions--${align} ${className}`.trim()} {...props}>{children}</div>;
 export default FormActions;

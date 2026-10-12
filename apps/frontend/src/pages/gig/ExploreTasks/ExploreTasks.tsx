@@ -11,6 +11,11 @@ import { useAuth } from '../../../context/AuthContext/AuthContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
+import { SearchBar } from '../../../components/common/SearchBar';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { Loader } from '../../../components/common/Loader';
+import { ErrorState } from '../../../components/common/ErrorState';
 
 export const ExploreTasks: React.FC = () => {
   const { user, updateUserSession } = useAuth();
@@ -74,66 +79,20 @@ export const ExploreTasks: React.FC = () => {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Marketplace Tasks...
-      </div>
-    );
+    return <Loader label="Loading marketplace tasks..." />;
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
-      {error && (
-        <div
-          style={{
-            backgroundColor: '#FDE8E8',
-            color: '#9B1C1C',
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--font-size-sm)',
-            fontWeight: 600
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <ErrorState title="Marketplace update" message={error} />}
 
       {/* Search Header */}
-      <div
-        className="admin-card"
-        style={{
-          padding: 'var(--spacing-xl)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 'var(--spacing-lg)',
-          flexWrap: 'wrap'
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
-            Explore Marketplace Tasks
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginTop: '4px' }}>
-            Discover open client tasks, submit competitive proposals, and expand your engagement portfolio.
-          </p>
-        </div>
-        <div style={{ minWidth: '280px', flex: 1, maxWidth: '400px' }}>
-          <input
-            type="text"
-            className="admin-input"
-            placeholder="Search by keyword, client, or topic..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <PageHeader title="Explore Marketplace Tasks" description="Discover open client tasks, submit competitive proposals, and expand your engagement portfolio."
+        actions={<div style={{ width: 'min(400px, 100%)' }}><SearchBar aria-label="Search marketplace tasks" placeholder="Search by keyword, client, or topic..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></div>} />
 
       {/* Task Grid */}
       {filteredTasks.length === 0 ? (
-        <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-          No tasks matched your search query. Try broadening your keywords.
-        </div>
+        <EmptyState title="No marketplace tasks found" description="Try broadening your keywords." />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--spacing-xl)' }}>
           {filteredTasks.map((task) => {
