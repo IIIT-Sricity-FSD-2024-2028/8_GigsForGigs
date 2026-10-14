@@ -61,7 +61,7 @@ export const SearchTalent: React.FC = () => {
         <span style={{ fontSize: '14px', fontWeight: 600, color: '#76594F' }}>Filters:</span>
 
         {/* Skill Search Input */}
-        <input
+        <input maxLength={100}
           type="text"
           placeholder="Search by Skill or Title..."
           value={skillFilter}

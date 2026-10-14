@@ -113,12 +113,17 @@ export const adminApi = {
     });
   },
 
-  async acceptAdminInvitation(token: string, email: string, password?: string) {
+  async acceptAdminInvitation(token: string, email: string, password: string, newPassword?: string) {
     return apiFetch<any>('/admin/invitations/accept', {
       method: 'POST',
-      body: { token, email, password },
+      body: { token, email, password, ...(newPassword ? { newPassword } : {}) },
       actor,
     });
+  },
+
+  /** Removes an admin account entirely; their token stops working on the next request. */
+  async removeAdmin(staffId: string) {
+    return apiFetch(`/admin/users/${staffId.replace(/\D/g, '')}`, { method: 'DELETE', actor });
   },
 
   async revokeAdminSession(staffId: string) {
@@ -160,10 +165,10 @@ export const adminApi = {
     });
   },
 
-  async updateAdminPassword(email: string, newPassword: string) {
+  async updateAdminPassword(currentPassword: string, newPassword: string) {
     return apiFetch('/admin/profile/password', {
       method: 'POST',
-      body: { email, newPassword },
+      body: { currentPassword, newPassword },
       actor,
     });
   },

@@ -4,6 +4,7 @@ import { roleGuard } from "../../middleware/roleGuard.js";
 import { clientOwnershipGuard } from "../../middleware/clientOwnershipGuard.js";
 import { validate } from "../../middleware/validate.js";
 import {
+  createClientReviewSchema,
   createManagerInviteSchema,
   createTaskSchema,
   createTaskDeliverableDefinitionSchema,
@@ -107,3 +108,8 @@ clientRouter.post(
 );
 // List pending/past manager invites sent by the client.
 clientRouter.get("/manager-invites", clientController.listManagerInvites);
+// Revoke a pending manager invite (its link stops working).
+clientRouter.delete("/manager-invites/:inviteId", clientController.revokeManagerInvite);
+
+// Rate the professional who delivered a completed task.
+clientRouter.post("/reviews", validate(createClientReviewSchema), clientController.createReview);

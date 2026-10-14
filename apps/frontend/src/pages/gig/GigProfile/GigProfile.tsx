@@ -10,6 +10,7 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigProfile as IGigProfile, GigService } from '../../../types/gig';
+import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 
 export const GigProfile: React.FC = () => {
   const { setActiveTab, refreshTrigger } = useGig();
@@ -251,9 +252,13 @@ export const GigProfile: React.FC = () => {
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
                 {profile.portfolio.map((link, idx) => (
                   <li key={idx} style={{ fontSize: 'var(--font-size-xs)' }}>
-                    <a href={link} target="_blank" rel="noreferrer" style={{ color: 'var(--color-info-text)', fontWeight: 600, textDecoration: 'none' }}>
-                      🔗 {link}
-                    </a>
+                    {safeHttpUrl(link) ? (
+                      <a href={safeHttpUrl(link)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-info-text)', fontWeight: 600, textDecoration: 'none' }}>
+                        🔗 {link}
+                      </a>
+                    ) : (
+                      <span>{link}</span>
+                    )}
                   </li>
                 ))}
               </ul>

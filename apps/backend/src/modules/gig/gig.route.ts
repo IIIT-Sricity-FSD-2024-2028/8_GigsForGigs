@@ -21,7 +21,7 @@ gigRouter.get(
   "/professionals",
   roleGuard("manager", "client", "gig_professional", "admin"),
   async (req, res) => {
-    const query = typeof req.query.q === "string" ? req.query.q : undefined;
+    const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) || undefined : undefined;
     const { searchGigProfessionals } = await import("../manager/manager.service.js");
     const { toTalentResponse } = await import("../manager/manager.controller.js");
     const list = await searchGigProfessionals(query);

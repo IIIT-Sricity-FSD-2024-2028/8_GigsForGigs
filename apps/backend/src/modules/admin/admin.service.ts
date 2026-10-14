@@ -1,7 +1,10 @@
+import { randomBytes } from "node:crypto";
+import { z } from "zod";
 import { prisma } from "db";
-import { hashPassword } from "../../lib/password.js";
-import { signToken } from "../../lib/jwt.js";
-import { unauthorized } from "../../lib/httpError.js";
+import { comparePassword, hashPassword } from "../../lib/password.js";
+import { signInviteToken, signToken, verifyInviteToken } from "../../lib/jwt.js";
+import { env } from "../../lib/env.js";
+import { HttpError, badRequest, conflict, unauthorized } from "../../lib/httpError.js";
 import type {
   CreateApplicationDto,
   CreateAssignmentDto,
@@ -18,6 +21,7 @@ import type {
   UpdateDeliverableDto,
   UpdateGigProfileDto,
   UpdatePaymentDto,
+  UpdatePlatformSettingsDto,
   UpdateReviewDto,
   UpdateTaskDto,
   UpdateUserDto,
@@ -39,7 +43,6 @@ export const platformConfig = {
   maintenanceMode: false
 };
 
-export const activeInvitations: any[] = [];
 export const auditLogs: any[] = [];
 
 function recordAuditLog(action: string, actor: string, details: string) {
@@ -134,7 +137,12 @@ export async function updateUser(userId: number, dto: UpdateUserDto) {
 }
 
 // Delete a user and audit-log it.
-export async function deleteUser(userId: number): Promise<void> {
+export async function deleteUser(userId: number, actorUserId: number): Promise<void> {
+  if (userId === actorUserId) throw conflict("You cannot remove your own account");
+  const target = await prisma.user.findUniqueOrThrow({ where: { userId } });
+  if (target.role === "admin" && (await prisma.user.count({ where: { role: "admin" } })) <= 1) {
+    throw conflict("The last admin account cannot be removed");
+  }
   await prisma.user.delete({ where: { userId } });
   recordAuditLog("DELETE_USER", "Super Admin", "Deleted user #" + userId);
 }
@@ -868,113 +876,86 @@ export async function getAnalytics(_timeRange: string = "30d") {
 
 // ---- Admin Staff & Invitations -------------------------------------------
 
-// List real admin users plus any still-pending in-memory invitations (activeInvitations, not persisted — reset on server restart).
+// List admin users. Invited admins are provisioned as real rows at invite time, so they appear here too.
 export async function listAdminStaff() {
   const admins = await prisma.user.findMany({ where: { role: "admin" }, orderBy: { userId: "asc" } });
-  const staff = admins.map((a, idx) => ({
+  return admins.map((a, idx) => ({
     id: "adm-" + a.userId,
     name: a.name,
     email: a.email,
     role: idx === 0 ? "OWNER" : "SUPER_ADMIN",
     permissions: ["*"],
-    isTwoFactorEnabled: true,
-    lastLogin: "Active Now",
+    isTwoFactorEnabled: false,
+    lastLogin: "—",
     status: "ACTIVE"
   }));
-
-  for (const inv of activeInvitations) {
-    if (!staff.some(x => x.email.toLowerCase() === inv.email.toLowerCase())) {
-      staff.push({
-        id: "inv-" + inv.token.slice(0, 8),
-        name: inv.email.split("@")[0],
-        email: inv.email,
-        role: inv.role,
-        permissions: inv.permissions,
-        isTwoFactorEnabled: false,
-        lastLogin: "Pending Acceptance",
-        status: "INVITED"
-      });
-    }
-  }
-
-  return staff;
 }
 
-// Generate an admin invite token + a randomly-assigned activation password, held in-memory (activeInvitations) until accepted.
-export async function createAdminInvitation(email: string, role: string, permissions: string[]) {
-  const token = "inv_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  const assignedPassword = "AdminPass#" + Math.floor(100000 + Math.random() * 900000);
+const ADMIN_INVITE_TTL = "48h";
+const adminInviteEmail = z.string().trim().toLowerCase().email().max(100);
+
+/**
+ * Provision an admin seat. The User row is created immediately with a random
+ * one-time password (so the invite survives restarts and lives in the DB),
+ * and a signed 48h link is returned for the admin to share out-of-band.
+ * Nothing is emailed — there are no external services in this phase.
+ */
+export async function createAdminInvitation(rawEmail: unknown, role: string) {
+  const parsed = adminInviteEmail.safeParse(rawEmail);
+  if (!parsed.success) throw badRequest("A valid email is required");
+  const email = parsed.data;
+
+  const existing = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
+  if (existing) throw conflict("An account with this email already exists");
+
+  const assignedPassword = randomBytes(9).toString("base64url");
+  const user = await prisma.user.create({
+    data: {
+      name: (email.split("@")[0] || "Admin").replace(/[^a-zA-Z]/g, " ").trim() || "Admin",
+      email,
+      hashPassword: await hashPassword(assignedPassword),
+      role: "admin",
+    },
+  });
+
+  const token = signInviteToken("admin_invite", { ref: user.userId, email }, ADMIN_INVITE_TTL);
   const expiresAt = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
-  const inviteLink = "http://localhost:5173/admin/invite?token=" + token + "&email=" + encodeURIComponent(email);
-
-  const record = {
-    id: "inv-" + Date.now(),
-    email,
-    role,
-    permissions,
-    assignedPassword,
-    token,
-    inviteLink,
-    expiresAt,
-    status: "PENDING"
-  };
-
-  activeInvitations.push(record);
-  recordAuditLog("INVITE_ADMIN", "Super Admin", "Created invite for " + email + " with role " + role);
+  const inviteLink = `${env.appUrl}/?admin_invite=1&token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
+  recordAuditLog("INVITE_ADMIN", "Super Admin", "Provisioned admin seat for " + email + " with role " + role);
 
   return { email, role, assignedPassword, inviteLink, token, expiresAt };
 }
 
 /**
- * Exchange an invite token (or matching email) for a real admin User row and
- * a signed session token, creating the User if one doesn't exist yet.
- * SECURITY: accepts the literal string "password123" as a universal bypass
- * for the activation password check, in addition to the actual assigned
- * one — the same backdoor as auth.service.ts's login. Should be removed.
+ * Activate an invited admin seat: requires the signed invite token AND the
+ * one-time assigned password, and optionally sets a new personal password.
+ * Never creates accounts — seats only come from createAdminInvitation.
  */
-export async function acceptAdminInvitation(token: string, email: string, password?: string) {
-  const inv = activeInvitations.find(i => i.token === token || i.email.toLowerCase() === email.toLowerCase());
+export async function acceptAdminInvitation(token: unknown, email: unknown, password: unknown, newPassword: unknown) {
+  const claims = typeof token === "string" && token ? verifyInviteToken("admin_invite", token) : null;
+  if (!claims || typeof email !== "string" || claims.email.toLowerCase() !== email.trim().toLowerCase()) {
+    throw unauthorized("This invitation link is invalid or has expired.");
+  }
+  if (typeof password !== "string" || !password) {
+    throw unauthorized("Invalid activation password.");
+  }
 
-  if (inv && inv.assignedPassword && password) {
-    const cleanEntered = password.trim();
-    const cleanAssigned = inv.assignedPassword.trim();
-    if (cleanEntered !== cleanAssigned && cleanEntered !== "password123") {
-      throw unauthorized("Invalid master activation password.");
+  const user = await prisma.user.findUnique({ where: { userId: claims.ref }, omit: { hashPassword: false } });
+  if (!user || user.role !== "admin" || !(await comparePassword(password, user.hashPassword))) {
+    throw unauthorized("Invalid activation password.");
+  }
+
+  if (typeof newPassword === "string" && newPassword) {
+    if (newPassword.length < 8 || newPassword.length > 72) {
+      throw badRequest("New password must be 8-72 characters");
     }
+    await prisma.user.update({ where: { userId: user.userId }, data: { hashPassword: await hashPassword(newPassword) } });
   }
-
-  let user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: "insensitive" } } });
-  if (!user) {
-    const hashedPassword = await hashPassword(password || "password123");
-    user = await prisma.user.create({
-      data: {
-        name: (email.split("@")[0] || "Admin Staff").replace(/[^a-zA-Z]/g, " "),
-        email: email.trim(),
-        hashPassword: hashedPassword,
-        role: "admin"
-      }
-    });
-  }
-
-  const role = inv?.role || "SUPER_ADMIN";
-  const permissions = inv?.permissions || ["*"];
-
-  const authToken = signToken({
-    userId: user.userId,
-    role: "admin"
-  });
 
   return {
     success: true,
-    token: authToken,
-    user: {
-      userId: user.userId,
-      email: user.email,
-      name: user.name,
-      role: "admin",
-      adminTier: role,
-      permissions
-    }
+    token: signToken({ userId: user.userId, role: "admin" }),
+    user: { userId: user.userId, email: user.email, name: user.name, role: "admin", adminTier: "SUPER_ADMIN", permissions: ["*"] },
   };
 }
 
@@ -1043,58 +1024,60 @@ export async function getPlatformSettings() {
 }
 
 // Merge a partial patch into the in-memory platform config and audit-log it.
-export async function updatePlatformSettings(patch: Partial<typeof platformConfig>) {
-  Object.assign(platformConfig, patch);
+export async function updatePlatformSettings(patch: UpdatePlatformSettingsDto) {
+  // patch is schema-validated (known keys only), so this can't add junk or touch the prototype.
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== undefined) Object.assign(platformConfig, { [key]: value });
+  }
   recordAuditLog("UPDATE_SETTINGS", "Super Admin", "Updated platform commission rake and security limits");
   return platformConfig;
 }
 
 // ---- Direct Admin Mutation Handlers ----------------------------------------
-// Every function below is a BACKEND NO-OP: each just writes an audit-log
-// line and echoes {success: true, ...} back. None of them persist anywhere —
-// schema.prisma has no kycStatus column on Client, no badge column on
-// GigProfessionalProfile, no status column on User, no session table, and
-// no moderation-status column on Review. Calling these does not actually
-// verify KYC, assign a badge, suspend a user, revoke a session, or moderate
-// a review — it only looks like it did from the audit log and the response
-// shape. See the CLAUDE.md "Current implementation state" note.
+// The schema has no kycStatus column on Client, no badge column on
+// GigProfessionalProfile, no status column on User, no session table, no
+// moderation column on Review and no 2FA columns. These used to return
+// {success: true} without persisting anything; they now fail honestly with
+// 501 until the schema supports them (see the production readiness notes).
 
-// No-op: does not set any kycStatus (no such column exists).
-export async function verifyClientKYC(clientId: number | string) {
-  recordAuditLog("VERIFY_KYC", "Super Admin", "Verified KYC for client #" + clientId);
-  return { success: true, clientId, kycStatus: "VERIFIED" };
+function notSupported(feature: string): never {
+  throw new HttpError(501, `${feature} is not available yet: the database schema has no field to store it.`);
 }
 
-// No-op: does not set any badge (no such column exists).
-export async function updateGigProBadge(gigProfileId: number | string, badge: string) {
-  recordAuditLog("UPDATE_BADGE", "Super Admin", "Assigned " + badge + " badge to gig profile #" + gigProfileId);
-  return { success: true, gigProfileId, badge };
+export async function verifyClientKYC(_clientId: number | string) {
+  notSupported("Client KYC verification");
 }
 
-// No-op: does not actually suspend/reinstate the user (no status column exists) — the user can still log in and use the app normally.
-export async function updateUserStatus(userId: number | string, status: string, reason?: string) {
-  recordAuditLog("UPDATE_USER_STATUS", "Super Admin", "Set user #" + userId + " status to " + status);
-  return { success: true, userId, status, reason };
+export async function updateGigProBadge(_gigProfileId: number | string, _badge: string) {
+  notSupported("Professional badges");
 }
 
-// No-op: JWTs are stateless, so there is no session to actually revoke — the staff member's existing token keeps working until it naturally expires.
-export async function revokeAdminSession(staffId: string) {
-  recordAuditLog("REVOKE_SESSION", "Super Admin", "Revoked active administrative session for " + staffId);
-  return { success: true, staffId, status: "REVOKED" };
+export async function updateUserStatus(_userId: number | string, _status: string, _reason?: string) {
+  notSupported("Suspending users (delete the account instead)");
 }
 
-// No-op: does not hide/flag the review anywhere a normal user would see it (no moderation-status column exists).
-export async function moderateReview(reviewId: number | string, status: string, moderatorNotes?: string) {
-  recordAuditLog("MODERATE_REVIEW", "Super Admin", "Moderated review #" + reviewId + " to " + status);
-  return { success: true, reviewId, status, moderatorNotes };
+export async function revokeAdminSession(_staffId: string) {
+  notSupported("Session revocation");
 }
 
-// No-op: does not touch the admin's actual hashPassword — logging in with the old password still works.
-export async function updateProfilePassword(_email: string, _newPassword: string) {
+export async function moderateReview(_reviewId: number | string, _status: string, _moderatorNotes?: string) {
+  notSupported("Review moderation (delete the review instead)");
+}
+
+/** Change the signed-in admin's own password after verifying the current one. */
+export async function updateProfilePassword(userId: number, currentPassword: unknown, newPassword: unknown) {
+  if (typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 72) {
+    throw badRequest("New password must be 8-72 characters");
+  }
+  const user = await prisma.user.findUnique({ where: { userId }, omit: { hashPassword: false } });
+  if (!user || typeof currentPassword !== "string" || !(await comparePassword(currentPassword, user.hashPassword))) {
+    throw badRequest("Current password is incorrect");
+  }
+  await prisma.user.update({ where: { userId }, data: { hashPassword: await hashPassword(newPassword) } });
+  recordAuditLog("UPDATE_PASSWORD", user.name, "Changed own admin password");
   return { success: true, message: "Password updated successfully" };
 }
 
-// No-op: there is no 2FA column/mechanism on User — this just echoes the requested state back.
-export async function toggleProfile2FA(_email: string, isEnabled: boolean) {
-  return { success: true, isTwoFactorEnabled: isEnabled };
+export async function toggleProfile2FA(_email: string, _isEnabled: boolean) {
+  notSupported("Two-factor authentication");
 }

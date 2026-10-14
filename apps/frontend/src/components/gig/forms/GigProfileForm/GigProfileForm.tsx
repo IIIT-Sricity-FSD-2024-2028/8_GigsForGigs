@@ -11,10 +11,10 @@ export interface GigProfileFormProps { initialValues: GigProfileValues; onSubmit
 export const GigProfileForm: React.FC<GigProfileFormProps> = ({ initialValues, onSubmit, submitting = false }) => {
   const [values, setValues] = useState(initialValues);
   return <FormContainer title="Professional profile" onSubmit={event => { event.preventDefault(); void onSubmit(values); }}>
-    <Input label="Name" required value={values.name} onChange={event => setValues({ ...values, name: event.target.value })} />
-    <Input label="Email" type="email" required value={values.email} onChange={event => setValues({ ...values, email: event.target.value })} />
-    <TextArea label="Professional bio" value={values.bio || ''} onChange={event => setValues({ ...values, bio: event.target.value })} />
-    <Input label="Skills" helperText="Separate skills with commas" value={values.skills.join(', ')} onChange={event => setValues({ ...values, skills: event.target.value.split(',').map(skill => skill.trim()).filter(Boolean) })} />
+    <Input maxLength={100} label="Name" required value={values.name} onChange={event => setValues({ ...values, name: event.target.value })} />
+    <Input maxLength={100} label="Email" type="email" required value={values.email} onChange={event => setValues({ ...values, email: event.target.value })} />
+    <TextArea maxLength={5000} label="Professional bio" value={values.bio || ''} onChange={event => setValues({ ...values, bio: event.target.value })} />
+    <Input maxLength={1000} label="Skills" helperText="Separate skills with commas" value={values.skills.join(', ')} onChange={event => setValues({ ...values, skills: event.target.value.split(',').map(skill => skill.trim()).filter(Boolean) })} />
     <FormActions><Button type="submit" loading={submitting}>Save profile</Button></FormActions>
   </FormContainer>;
 };

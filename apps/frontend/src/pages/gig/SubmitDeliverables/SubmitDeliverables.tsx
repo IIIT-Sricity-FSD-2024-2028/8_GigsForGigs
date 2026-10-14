@@ -224,7 +224,7 @@ export const SubmitDeliverables: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Submission Details / Pull Request Link *
           </label>
-          <textarea
+          <textarea maxLength={500}
             className="admin-textarea"
             rows={5}
             placeholder="Describe your completed work, paste GitHub Pull Request links, or add Figma prototype URLs..."
@@ -238,7 +238,7 @@ export const SubmitDeliverables: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Additional Notes for Client (Optional)
           </label>
-          <input
+          <input maxLength={500}
             type="text"
             className="admin-input"
             placeholder="e.g. Requires environment variable setup in staging..."

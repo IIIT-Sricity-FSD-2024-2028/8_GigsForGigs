@@ -4,6 +4,7 @@ import { badRequest, forbidden } from "../../lib/httpError.js";
 import type { ClientTokenPayload } from "../../lib/jwt.js";
 import * as clientService from "./client.service.js";
 import type {
+  CreateClientReviewDto,
   CreateManagerInviteDto,
   CreateTaskDto,
   CreateTaskDeliverableDefinitionDto,
@@ -69,6 +70,7 @@ export async function listApplications(req: Request, res: Response): Promise<voi
 export async function reviewApplication(req: Request, res: Response): Promise<void> {
   const clientId = requireClientId(req);
   const applicationId = Number(req.params.applicationId);
+  if (!Number.isInteger(applicationId) || applicationId <= 0) throw badRequest("Invalid application id");
   const dto = getValidated<UpdateApplicationDto>(res, "body");
   const application = await clientService.reviewApplication(applicationId, clientId, dto);
   res.status(200).json(application);
@@ -150,4 +152,18 @@ export async function createManagerInvite(req: Request, res: Response): Promise<
 export async function listManagerInvites(req: Request, res: Response): Promise<void> {
   const invites = await clientService.listManagerInvites(requireClientId(req));
   res.status(200).json(invites);
+}
+
+export async function revokeManagerInvite(req: Request, res: Response): Promise<void> {
+  const inviteId = Number(req.params.inviteId);
+  if (!Number.isInteger(inviteId) || inviteId <= 0) throw badRequest("Invalid invite id");
+  await clientService.revokeManagerInvite(requireClientId(req), inviteId);
+  res.status(204).send();
+}
+
+export async function createReview(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<CreateClientReviewDto>(res, "body");
+  const user = req.user as ClientTokenPayload;
+  const review = await clientService.createReview(user.clientId, user.userId, dto);
+  res.status(201).json(review);
 }

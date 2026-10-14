@@ -11,8 +11,9 @@ import type {
   ManagerTask,
   Deliverable,
   TalentProfile,
-  CreateDeliverableDto,
+  ManagerApplication,
   ReviewDeliverableDto,
+  ShortlistApplicationDto,
   UpdateManagerProfileDto
 } from '../../../types/manager';
 
@@ -48,10 +49,15 @@ export const managerApi = {
     return apiFetch<Deliverable[]>(`/managers/me/tasks/${taskId}/deliverables`, { actor });
   },
 
-  // POST /api/managers/me/tasks/{taskId}/deliverables
-  createDeliverable: async (taskId: number, dto: CreateDeliverableDto): Promise<Deliverable> => {
-    return apiFetch<Deliverable>(`/managers/me/tasks/${taskId}/deliverables`, {
-      method: 'POST',
+  // GET /api/managers/me/tasks/{taskId}/applications
+  getTaskApplications: async (taskId: number): Promise<ManagerApplication[]> => {
+    return apiFetch<ManagerApplication[]>(`/managers/me/tasks/${taskId}/applications`, { actor });
+  },
+
+  // PATCH /api/managers/me/tasks/{taskId}/applications/{applicationId}/shortlist
+  shortlistApplication: async (taskId: number, applicationId: number, dto: ShortlistApplicationDto): Promise<ManagerApplication> => {
+    return apiFetch<ManagerApplication>(`/managers/me/tasks/${taskId}/applications/${applicationId}/shortlist`, {
+      method: 'PATCH',
       body: dto,
       actor
     });

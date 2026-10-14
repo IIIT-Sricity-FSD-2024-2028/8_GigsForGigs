@@ -4,7 +4,7 @@ import { PageHeader } from '../../../components/common/PageHeader';
 import { Table } from '../../../components/common/Table';
 
 export interface ReviewShortlistProps {
-  onNavigate: (viewId: string) => void;
+  onNavigate: (viewId: string, params?: Record<string, string>) => void;
   params?: Record<string, string>;
 }
 
@@ -12,9 +12,14 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
   const { applications, hireCandidate, rejectCandidate } = useClient();
   const taskId = params?.taskId;
 
-  const currentApplications = taskId
-    ? applications.filter(a => a.task_id === taskId && a.status === 'SHORTLISTED')
-    : applications.filter(a => a.status === 'SHORTLISTED');
+  // Undecided marketplace applicants; manager-shortlisted ones first.
+  const currentApplications = applications
+    .filter(a => (a.status === 'PENDING' || a.status === 'SHORTLISTED') && !a.is_service_request)
+    .filter(a => !taskId || a.task_id === taskId)
+    .sort((a, b) => Number(b.status === 'SHORTLISTED') - Number(a.status === 'SHORTLISTED'));
+
+  const errorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
 
   const handleApprove = async (appId: string) => {
     try {
@@ -23,7 +28,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
       onNavigate('my-gigs');
     } catch (err) {
       console.error('Approve hire failed:', err);
-      alert('Failed to approve this candidate. Please try again.');
+      alert(errorMessage(err, 'Failed to approve this candidate. Please try again.'));
     }
   };
 
@@ -33,27 +38,26 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
       alert('Candidate application discarded.');
     } catch (err) {
       console.error('Reject hire failed:', err);
-      alert('Failed to reject this candidate. Please try again.');
+      alert(errorMessage(err, 'Failed to reject this candidate. Please try again.'));
     }
   };
 
   return (
     <div>
-      <PageHeader title="Pending Hire Approvals" description="Review candidates shortlisted by your manager before hiring." />
+      <PageHeader title="Pending Hire Approvals" description="Review applicants and candidates shortlisted by your manager before hiring." />
 
       <div className="activity-section">
         <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
-          <h2 className="activity-title">Shortlisted Candidates</h2>
-          <button
-            className="btn btn-outline"
-            style={{ fontSize: '0.875rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'transparent', cursor: 'pointer' }}
-            onClick={() => alert('Filter applied')}
-          >
-            <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-            </svg>
-            Filter
-          </button>
+          <h2 className="activity-title">Candidates</h2>
+          {taskId && (
+            <button
+              className="btn btn-outline"
+              style={{ fontSize: '0.875rem', padding: '6px 12px', background: 'transparent', cursor: 'pointer' }}
+              onClick={() => onNavigate('review-shortlist', {})}
+            >
+              Show all tasks
+            </button>
+          )}
         </div>
 
         <Table className="activity-table" id="shortlist-table">
@@ -84,7 +88,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                       </div>
                       <div>
                         <div className="task-name-cell">{a.candidate_name}</div>
-                        <div className="task-category">{a.candidate_role}</div>
+                        <div className="task-category">{a.status === 'SHORTLISTED' ? 'Shortlisted by manager · ' : ''}{a.candidate_role}</div>
                       </div>
                     </div>
                   </td>

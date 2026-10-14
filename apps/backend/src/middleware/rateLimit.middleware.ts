@@ -4,11 +4,11 @@ import type { Request, Response } from "express";
 /**
  * Global general API rate limiter.
  * Window: 15 minutes
- * Max: 100 requests per IP
+ * Max: 1000 requests per IP (a single dashboard load fans out to ~6 calls)
  */
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 1000,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: {
@@ -28,11 +28,13 @@ export const globalLimiter = rateLimit({
  * Strict authentication rate limiter to protect against brute-force,
  * credential stuffing, and password guessing attacks.
  * Window: 15 minutes
- * Max: 10 attempts per IP
+ * Max: 20 attempts per IP
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 20,
+  // Only failed attempts count, so legitimate sign-ins never lock anyone out.
+  skipSuccessfulRequests: true,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   statusCode: 429,
@@ -47,11 +49,11 @@ export const authLimiter = rateLimit({
 /**
  * Dedicated rate limiter for sensitive financial and payment operations.
  * Window: 15 minutes
- * Max: 10 requests per IP
+ * Max: 60 requests per IP
  */
 export const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 60,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   statusCode: 429,

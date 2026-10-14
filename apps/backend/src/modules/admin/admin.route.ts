@@ -3,6 +3,7 @@ import { authGuard } from "../../middleware/authGuard.js";
 import { roleGuard } from "../../middleware/roleGuard.js";
 import { validate } from "../../middleware/validate.js";
 import {
+  createAdminInvitationSchema,
   createApplicationSchema,
   createAssignmentSchema,
   createClientSchema,
@@ -18,6 +19,7 @@ import {
   updateDeliverableSchema,
   updateGigProfileSchema,
   updatePaymentSchema,
+  updatePlatformSettingsSchema,
   updateReviewSchema,
   updateTaskSchema,
   updateUserSchema,
@@ -148,19 +150,19 @@ adminRouter.get("/disputes", adminController.listDisputes);
 adminRouter.patch("/disputes/:disputeId/resolve", adminController.resolveDispute);
 adminRouter.post("/disputes/:disputeId/settle", adminController.resolveDispute);
 // Escrow override — reuses the generic updatePayment controller under a payments-specific alias.
-adminRouter.patch("/payments/:paymentId/override", adminController.updatePayment);
-adminRouter.post("/payments/:paymentId/override", adminController.updatePayment);
+adminRouter.patch("/payments/:paymentId/override", validate(updatePaymentSchema), adminController.updatePayment);
+adminRouter.post("/payments/:paymentId/override", validate(updatePaymentSchema), adminController.updatePayment);
 // Audit log trail (written to by recordAuditLog in admin.service.ts on every mutating admin action).
 adminRouter.get("/audit-logs", adminController.listAuditLogs);
 // Platform-wide settings: read/update (three verb aliases for the same update).
 adminRouter.get("/settings", adminController.getPlatformSettings);
-adminRouter.patch("/settings", adminController.updatePlatformSettings);
-adminRouter.put("/settings", adminController.updatePlatformSettings);
-adminRouter.post("/settings", adminController.updatePlatformSettings);
+adminRouter.patch("/settings", validate(updatePlatformSettingsSchema), adminController.updatePlatformSettings);
+adminRouter.put("/settings", validate(updatePlatformSettingsSchema), adminController.updatePlatformSettings);
+adminRouter.post("/settings", validate(updatePlatformSettingsSchema), adminController.updatePlatformSettings);
 // Platform analytics (time-range trends, separate from the dashboard KPI snapshot above).
 adminRouter.get("/analytics", adminController.getAnalytics);
 // Invite a new admin staff member.
-adminRouter.post("/invitations", adminController.createAdminInvitation);
+adminRouter.post("/invitations", validate(createAdminInvitationSchema), adminController.createAdminInvitation);
 
 // Specialized mutation route aliases.
 // NOTE: verifyClientKYC/updateGigProBadge/updateUserStatus/revokeAdminSession/

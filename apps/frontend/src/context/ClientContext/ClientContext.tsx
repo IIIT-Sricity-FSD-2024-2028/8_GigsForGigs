@@ -43,6 +43,8 @@ export interface ManagerInvite {
   email: string;
   status: 'PENDING' | 'ACCEPTED';
   createdAt: string;
+  /** One-time activation link for a pending invite (shared by the client; nothing is emailed). */
+  invite_link?: string;
   /**
    * 'invite' = a MANAGER_INVITE row (from GET /manager-invites) that has not
    * (and, given the current backend, never will) become a real MANAGER row.
@@ -95,6 +97,8 @@ export interface Application {
   hourlyRate?: number;
   rate: number;
   createdAt: string;
+  /** Service-hire request sent to a professional; they accept/decline it, not the client. */
+  is_service_request: boolean;
 }
 
 interface ClientContextType {
@@ -109,12 +113,13 @@ interface ClientContextType {
   addTask: (title: string, description: string, budget: number, category?: string, duration?: string, skills?: string) => Promise<void>;
   updateTask: (taskId: string, title: string, description: string, budget: number, category?: string, duration?: string, skills?: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
-  inviteManager: (name: string, email: string) => Promise<void>;
+  inviteManager: (name: string, email: string) => Promise<string | undefined>;
+  revokeManagerInvite: (inviteId: string) => Promise<void>;
   updateManager: (inviteId: string, name: string, email: string) => Promise<void>;
   deleteManager: (inviteId: string) => Promise<void>;
   fetchTaskDeliverables: (taskId: string) => Promise<void>;
   approveDeliverable: (taskId: string, deliverableNo: number) => Promise<void>;
-  rejectDeliverable: (taskId: string, deliverableNo: number) => Promise<void>;
+  rejectDeliverable: (taskId: string, deliverableNo: number, feedback?: string) => Promise<void>;
   hireCandidate: (applicationId: string) => Promise<void>;
   rejectCandidate: (applicationId: string) => Promise<void>;
   requestService: (serviceId: string) => Promise<void>;
@@ -223,6 +228,7 @@ interface RawManagerInvite {
   status: 'pending' | 'accepted' | 'revoked';
   acceptedUserId: number | null;
   createdAt: string;
+  inviteLink?: string;
 }
 
 interface RawManager {
@@ -338,6 +344,7 @@ function mapApplication(raw: RawApplication): Application {
     hourlyRate: raw.hourlyRate ? Number(raw.hourlyRate) : undefined,
     rate: raw.task?.budget ? Number(raw.task.budget) : 0,
     createdAt: raw.createdAt,
+    is_service_request: raw.task?.skills?.includes('Service Hire') ?? false,
   };
 }
 
@@ -361,6 +368,7 @@ function mapInviteToManagerInvite(raw: RawManagerInvite): ManagerInvite {
     email: raw.email,
     status: raw.status === 'accepted' ? 'ACCEPTED' : 'PENDING',
     createdAt: raw.createdAt,
+    invite_link: raw.inviteLink,
     kind: 'invite',
   };
 }
@@ -467,7 +475,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ]);
       setManagers([
         ...(realManagers || []).map(mapManagerToManagerInvite),
-        ...(invites || []).filter((i) => i.status !== 'accepted').map(mapInviteToManagerInvite),
+        ...(invites || []).filter((i) => i.status === 'pending').map(mapInviteToManagerInvite),
       ]);
     } catch (err) {
       console.error('Error fetching managers:', err);
@@ -569,14 +577,26 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const inviteManager = async (name: string, email: string) => {
+  /** Creates (or re-sends) an invite and returns its one-time activation link. */
+  const inviteManager = async (name: string, email: string): Promise<string | undefined> => {
     setError(null);
     try {
-      await apiFetch('/manager-invites', {
+      const invite = await apiFetch<RawManagerInvite>('/manager-invites', {
         method: 'POST',
         actor: 'client',
         body: { name, email },
       });
+      await refreshManagers();
+      return invite.inviteLink;
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const revokeManagerInvite = async (inviteId: string) => {
+    setError(null);
+    try {
+      await apiFetch(`/manager-invites/${Number(inviteId)}`, { method: 'DELETE', actor: 'client' });
       await refreshManagers();
     } catch (err) {
       handleError(err);
@@ -641,12 +661,13 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     taskId: string,
     deliverableNo: number,
     status: 'approved' | 'revision_requested',
+    feedback?: string,
   ) => {
     const numericTaskId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
     await apiFetch(`/deliverables/${numericTaskId}-${deliverableNo}`, {
       method: 'PATCH',
       actor: 'client',
-      body: { status },
+      body: { status, ...(feedback?.trim() ? { feedback: feedback.trim().slice(0, 500) } : {}) },
     });
     await Promise.all([fetchTaskDeliverables(taskId), refreshTasks(), refreshContracts()]);
   };
@@ -660,10 +681,10 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const rejectDeliverable = async (taskId: string, deliverableNo: number) => {
+  const rejectDeliverable = async (taskId: string, deliverableNo: number, feedback?: string) => {
     setError(null);
     try {
-      await reviewDeliverable(taskId, deliverableNo, 'revision_requested');
+      await reviewDeliverable(taskId, deliverableNo, 'revision_requested', feedback);
     } catch (err) {
       handleError(err);
     }
@@ -729,6 +750,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       updateTask,
       deleteTask,
       inviteManager,
+      revokeManagerInvite,
       updateManager,
       deleteManager,
       fetchTaskDeliverables,

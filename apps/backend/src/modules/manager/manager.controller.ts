@@ -3,7 +3,6 @@ import { getValidated } from "../../middleware/validate.js";
 import type { ClientTokenPayload, ManagerTokenPayload } from "../../lib/jwt.js";
 import * as managerService from "./manager.service.js";
 import type {
-  CreateDeliverableDto,
   ReviewDeliverableDto,
   ShortlistApplicationDto,
   UpdateManagerDto,
@@ -232,14 +231,6 @@ export async function listTaskDeliverables(req: Request, res: Response): Promise
   res.status(200).json(deliverables.map(toDeliverableResponse));
 }
 
-export async function createDeliverable(req: Request, res: Response): Promise<void> {
-  const { managerId } = requireManager(req);
-  const taskId = Number(req.params.taskId);
-  const dto = getValidated<CreateDeliverableDto>(res, "body");
-  const deliverable = await managerService.createDeliverable(taskId, managerId, dto);
-  res.status(201).json(toDeliverableResponse(deliverable));
-}
-
 export async function getDeliverable(req: Request, res: Response): Promise<void> {
   const taskId = Number(req.params.taskId);
   const deliverableNo = Number(req.params.deliverableNo);
@@ -263,7 +254,7 @@ export async function closeDeliverable(req: Request, res: Response): Promise<voi
 }
 
 export async function searchGigProfessionals(req: Request, res: Response): Promise<void> {
-  const query = typeof req.query.q === "string" ? req.query.q : undefined;
+  const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) || undefined : undefined;
   const profiles = await managerService.searchGigProfessionals(query);
   res.status(200).json(profiles.map(toTalentResponse));
 }

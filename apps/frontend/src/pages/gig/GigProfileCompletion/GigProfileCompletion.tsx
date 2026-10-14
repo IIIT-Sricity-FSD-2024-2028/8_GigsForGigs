@@ -108,7 +108,7 @@ export const GigProfileCompletion: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Bio Summary *
           </label>
-          <textarea
+          <textarea maxLength={5000}
             className="admin-textarea"
             rows={5}
             placeholder="Write a concise overview of your background, experience level, and tech stack specialty..."
@@ -122,7 +122,7 @@ export const GigProfileCompletion: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Skills & Frameworks (Comma separated)
           </label>
-          <input
+          <input maxLength={1000}
             type="text"
             className="admin-input"
             placeholder="React, TypeScript, Node.js, PostgreSQL, GraphQL"
@@ -135,7 +135,7 @@ export const GigProfileCompletion: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Portfolio URLs (Comma separated)
           </label>
-          <input
+          <input maxLength={2000}
             type="text"
             className="admin-input"
             placeholder="https://github.com/my-repo, https://dribbble.com/my-design"

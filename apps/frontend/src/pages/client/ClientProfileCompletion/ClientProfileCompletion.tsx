@@ -56,7 +56,7 @@ export const ClientProfileCompletion: React.FC<ClientProfileCompletionProps> = (
                 <label className="form-label" htmlFor="company-name" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
                   Company Name *
                 </label>
-                <input
+                <input maxLength={100}
                   type="text"
                   id="company-name"
                   className="form-input"
@@ -90,7 +90,7 @@ export const ClientProfileCompletion: React.FC<ClientProfileCompletionProps> = (
               <label className="form-label" htmlFor="website" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
                 Company Website
               </label>
-              <input
+              <input maxLength={500}
                 type="url"
                 id="website"
                 className="form-input"
@@ -145,7 +145,7 @@ export const ClientProfileCompletion: React.FC<ClientProfileCompletionProps> = (
               <label className="form-label" htmlFor="desc" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
                 Company Description
               </label>
-              <textarea
+              <textarea maxLength={5000}
                 id="desc"
                 className="form-input"
                 rows={5}

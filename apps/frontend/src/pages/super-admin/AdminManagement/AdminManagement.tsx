@@ -113,12 +113,14 @@ export const AdminManagement: React.FC = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
-    const res = await adminApi.inviteAdmin(inviteEmail, inviteRole, selectedPermissions);
-
-    const token = res?.token || ('inv_' + Math.random().toString(36).substring(2, 12) + Math.random().toString(36).substring(2, 12));
-    const assignedPassword = res?.assignedPassword || ('AdminPass#' + Math.floor(100000 + Math.random() * 900000));
-    const inviteLink = res?.inviteLink || `http://localhost:5173/admin/invite?token=${token}&email=${encodeURIComponent(inviteEmail)}`;
-    const expiresAt = res?.expiresAt || new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+    let res: any;
+    try {
+      res = await adminApi.inviteAdmin(inviteEmail, inviteRole, selectedPermissions);
+    } catch (err: any) {
+      toast.error('Invite Failed', err?.message || 'Could not create the invitation.');
+      return;
+    }
+    const { token, assignedPassword, inviteLink, expiresAt } = res;
 
     const inviteObj: GeneratedInvite = {
       email: inviteEmail,
@@ -157,9 +159,14 @@ export const AdminManagement: React.FC = () => {
 
   const handleRevokeConfirm = async () => {
     if (!targetStaff) return;
-    await adminApi.revokeAdminSession(targetStaff.id);
+    try {
+      await adminApi.removeAdmin(targetStaff.id);
+    } catch (err: any) {
+      toast.error('Revoke Failed', err?.message || 'Could not remove this admin.');
+      return;
+    }
     setStaffList(staffList.filter((s) => s.id !== targetStaff.id));
-    toast.warning('Admin Access Revoked', `All active JWT sessions for ${targetStaff.name} were invalidated.`);
+    toast.warning('Admin Access Revoked', `${targetStaff.name} was removed and their sessions no longer work.`);
     setIsRevokeDialogOpen(false);
     setTargetStaff(null);
   };
@@ -230,21 +237,9 @@ export const AdminManagement: React.FC = () => {
         }
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {row.status === 'INVITED' && (
+            {row.status === 'INVITED' && generatedInvite?.email === row.email && (
               <button
-                onClick={() => {
-                  const token = 'inv_' + row.id.replace(/\D/g, '') + 'hash';
-                  const assignedPassword = 'AdminPass#' + (Math.abs(row.id.split('').reduce((a, b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 100000)) % 900000);
-                  setGeneratedInvite({
-                    email: row.email,
-                    role: row.role,
-                    assignedPassword,
-                    inviteLink: `http://localhost:5173/admin/invite?token=${token}&email=${encodeURIComponent(row.email)}`,
-                    token,
-                    expiresAt: '48 Hours'
-                  });
-                  setIsLinkModalOpen(true);
-                }}
+                onClick={() => setIsLinkModalOpen(true)}
                 className="admin-btn admin-btn-secondary"
                 style={{ padding: '4px 8px', fontSize: '11px' }}
               >

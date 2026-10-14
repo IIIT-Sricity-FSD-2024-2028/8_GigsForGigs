@@ -20,7 +20,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
       alert('Hiring request sent successfully! The Gig Professional will receive it in their Pending Requests.');
     } catch (err) {
       console.error('Request service failed:', err);
-      alert('Failed to send hiring request. Please try again.');
+      alert(err instanceof Error && err.message ? err.message : 'Failed to send hiring request. Please try again.');
     }
   };
 

@@ -42,6 +42,7 @@ import { SearchTalent as ManagerSearchTalent } from './pages/manager/SearchTalen
 import { ManagerTasks } from './pages/manager/ManagerTasks/ManagerTasks';
 import { ReviewDeliverables as ManagerReviewDeliverables } from './pages/manager/ReviewDeliverables/ReviewDeliverables';
 import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
+import { ManagerInviteSetup } from './pages/manager/ManagerInviteSetup/ManagerInviteSetup';
 
 // ⚡ Gig Professional Pages & Layout
 import { GigLayout } from './layouts/GigLayout/GigLayout';
@@ -215,7 +216,7 @@ function ClientAppContent() {
       {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
       {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
       {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} params={clientParams} />}
-      {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} />}
+      {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} params={clientParams} />}
     </ClientLayout>
   );
 }
@@ -228,8 +229,26 @@ function MainAppContent() {
   const [unauthView, setUnauthView] = useState<UnauthView>('landing');
   const [isInviteFlowActive, setIsInviteFlowActive] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return window.location.pathname.startsWith('/admin/invite') || window.location.search.includes('token=inv_');
+    return window.location.pathname.startsWith('/admin/invite') || new URLSearchParams(window.location.search).has('admin_invite');
   });
+
+  // Manager invite links look like /?manager_invite=<signed token>.
+  const [managerInviteToken, setManagerInviteToken] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('manager_invite'),
+  );
+
+  if (managerInviteToken && !user) {
+    return (
+      <ManagerInviteSetup
+        token={managerInviteToken}
+        onDone={() => {
+          setManagerInviteToken(null);
+          setUnauthView('login');
+          window.history.replaceState({}, document.title, '/');
+        }}
+      />
+    );
+  }
 
   if (authLoading) {
     return (

@@ -66,9 +66,18 @@ export const AdminProfile: React.FC = () => {
       setMessage({ text: 'New passwords do not match.', type: 'error' });
       return;
     }
-    await adminApi.updateAdminPassword(adminEmail, newPassword);
-    setMessage({ text: 'Password successfully updated across all clusters.', type: 'success' });
-    toast.success('Password Updated', 'Your administrative master password was changed in database.');
+    if (newPassword.length < 8) {
+      setMessage({ text: 'New password must be at least 8 characters.', type: 'error' });
+      return;
+    }
+    try {
+      await adminApi.updateAdminPassword(currentPassword, newPassword);
+    } catch (err: any) {
+      setMessage({ text: err?.message || 'Could not update password.', type: 'error' });
+      return;
+    }
+    setMessage({ text: 'Password updated.', type: 'success' });
+    toast.success('Password Updated', 'Your admin password was changed.');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
@@ -76,13 +85,22 @@ export const AdminProfile: React.FC = () => {
 
   const handleToggle2FA = async () => {
     const nextState = !is2FAEnabled;
+    try {
+      await adminApi.toggleAdmin2FA(adminEmail, nextState);
+    } catch (err: any) {
+      toast.error('Not Available', err?.message || 'Two-factor authentication is not available yet.');
+      return;
+    }
     setIs2FAEnabled(nextState);
-    await adminApi.toggleAdmin2FA(adminEmail, nextState);
-    toast.info('2FA State Toggled', `Two-factor authentication is now ${nextState ? 'Enabled' : 'Disabled'} in database.`);
   };
 
   const handleRevokeSessions = async (sessionId?: string) => {
-    await adminApi.revokeAdminSession('adm-01');
+    try {
+      await adminApi.revokeAdminSession('adm-01');
+    } catch (err: any) {
+      toast.error('Not Available', err?.message || 'Session revocation is not available yet.');
+      return;
+    }
     if (sessionId) {
       setActiveSessions(prev => prev.filter(s => s.id !== sessionId));
       toast.warning('Session Terminated', `Device session ${sessionId} has been invalidated.`);
@@ -92,8 +110,8 @@ export const AdminProfile: React.FC = () => {
     }
   };
 
-  const adminName = user?.name || 'Chaitanya Anand';
-  const adminEmail = user?.email || 'chaitanya.admin@gigsforgigs.internal';
+  const adminName = user?.name || 'Admin';
+  const adminEmail = user?.email || '';
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--spacing-xl)' }}>

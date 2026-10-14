@@ -10,8 +10,8 @@ export interface DeliverableSubmissionFormProps { taskId: number; onSubmit: (val
 export const DeliverableSubmissionForm: React.FC<DeliverableSubmissionFormProps> = ({ taskId, onSubmit, submitting = false }) => {
   const [content, setContent] = useState(''); const [notes, setNotes] = useState('');
   return <FormContainer title="Submit deliverable" onSubmit={event => { event.preventDefault(); void onSubmit({ taskId, content, notes: notes || undefined }); }}>
-    <TextArea label="Work completed" required value={content} onChange={event => setContent(event.target.value)} />
-    <Input label="Reference link or attachment URL" value={notes} onChange={event => setNotes(event.target.value)} />
+    <TextArea maxLength={500} label="Work completed" required value={content} onChange={event => setContent(event.target.value)} />
+    <Input maxLength={500} label="Reference link or attachment URL" value={notes} onChange={event => setNotes(event.target.value)} />
     <FormActions><Button type="submit" loading={submitting}>Submit for review</Button></FormActions>
   </FormContainer>;
 };

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
 import * as adminService from "./admin.service.js";
 import type {
+  CreateAdminInvitationDto,
   CreateApplicationDto,
   CreateAssignmentDto,
   CreateClientDto,
@@ -17,6 +18,7 @@ import type {
   UpdateDeliverableDto,
   UpdateGigProfileDto,
   UpdatePaymentDto,
+  UpdatePlatformSettingsDto,
   UpdateReviewDto,
   UpdateTaskDto,
   UpdateUserDto,
@@ -39,7 +41,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
   res.status(200).json(await adminService.updateUser(Number(req.params.userId), dto));
 }
 export async function deleteUser(req: Request, res: Response): Promise<void> {
-  await adminService.deleteUser(Number(req.params.userId));
+  await adminService.deleteUser(Number(req.params.userId), req.user!.userId);
   res.status(204).send();
 }
 
@@ -238,7 +240,7 @@ export async function listDisputes(_req: Request, res: Response): Promise<void> 
 
 export async function resolveDispute(req: Request, res: Response): Promise<void> {
   const { resolution, refundRatio, settlementType, resolutionNotes, splitClientPercent } = req.body || {};
-  const finalResolution = resolution || settlementType || 'FULL_REFUND';
+  const finalResolution = String(resolution || settlementType || 'FULL_REFUND').slice(0, 100);
   const finalRatio = refundRatio !== undefined ? refundRatio : (splitClientPercent !== undefined ? splitClientPercent / 100 : 1.0);
   res.status(200).json(await adminService.resolveDispute(String(req.params.disputeId), finalResolution, finalRatio));
 }
@@ -256,26 +258,26 @@ export async function getPlatformSettings(_req: Request, res: Response): Promise
 }
 
 export async function updatePlatformSettings(req: Request, res: Response): Promise<void> {
-  res.status(200).json(await adminService.updatePlatformSettings(req.body));
+  res.status(200).json(await adminService.updatePlatformSettings(getValidated<UpdatePlatformSettingsDto>(res, "body")));
 }
 
 // ---- Analytics ------------------------------------------------------------
 
 export async function getAnalytics(req: Request, res: Response): Promise<void> {
-  const timeRange = (req.query.timeRange as string) || "30d";
+  const timeRange = typeof req.query.timeRange === "string" ? req.query.timeRange.slice(0, 10) : "30d";
   res.status(200).json(await adminService.getAnalytics(timeRange));
 }
 
 // ---- Admin Invitations ---------------------------------------------------
 
 export async function createAdminInvitation(req: Request, res: Response): Promise<void> {
-  const { email, role, permissions } = req.body || {};
-  res.status(201).json(await adminService.createAdminInvitation(email, role, permissions || []));
+  const { email, role } = getValidated<CreateAdminInvitationDto>(res, "body");
+  res.status(201).json(await adminService.createAdminInvitation(email, role));
 }
 
 export async function acceptAdminInvitation(req: Request, res: Response): Promise<void> {
-  const { token, email, password } = req.body || {};
-  res.status(200).json(await adminService.acceptAdminInvitation(token, email, password));
+  const { token, email, password, newPassword } = req.body || {};
+  res.status(200).json(await adminService.acceptAdminInvitation(token, email, password, newPassword));
 }
 
 // ---- Direct Admin Mutation Handlers ----------------------------------------
@@ -305,8 +307,8 @@ export async function moderateReview(req: Request, res: Response): Promise<void>
 }
 
 export async function updateProfilePassword(req: Request, res: Response): Promise<void> {
-  const { email, newPassword } = req.body || {};
-  res.status(200).json(await adminService.updateProfilePassword(String(email || ''), String(newPassword || '')));
+  const { currentPassword, newPassword } = req.body || {};
+  res.status(200).json(await adminService.updateProfilePassword(req.user!.userId, currentPassword, newPassword));
 }
 
 export async function updateProfile2FA(req: Request, res: Response): Promise<void> {

@@ -163,6 +163,8 @@ export interface RawManagerInvite {
   email: string;
   status: 'pending' | 'accepted' | 'revoked';
   createdAt: string;
+  /** Present on pending invites: the one-time link to share with the manager. */
+  inviteLink?: string;
 }
 
 export const clientApi = {
@@ -190,7 +192,7 @@ export const clientApi = {
     });
   },
 
-  updateTask: async (taskId: number, dto: Partial<TaskDto> & { status?: string }): Promise<RawTask> => {
+  updateTask: async (taskId: number, dto: Partial<TaskDto>): Promise<RawTask> => {
     return apiFetch<RawTask>(`/tasks/${taskId}`, {
       method: 'PATCH',
       body: dto,
@@ -294,6 +296,13 @@ export const clientApi = {
       actor,
     });
   },
+
+  revokeManagerInvite: async (inviteId: number): Promise<void> =>
+    apiFetch<void>(`/manager-invites/${inviteId}`, { method: 'DELETE', actor }),
+
+  /** Rate the professional who delivered a completed task. */
+  createReview: async (taskId: number, rating: number, comment?: string): Promise<unknown> =>
+    apiFetch<unknown>('/reviews', { method: 'POST', body: { taskId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) }, actor }),
 };
 
 export default clientApi;

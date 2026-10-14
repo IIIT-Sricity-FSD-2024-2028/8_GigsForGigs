@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
+import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
 
 export interface AddManagerProps {
   onNavigate: (viewId: string) => void;
@@ -18,12 +19,12 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
     }
 
     try {
-      await inviteManager(name, email);
-      alert('Manager invited successfully!');
+      const link = await inviteManager(name, email);
+      shareInviteLink(link);
       onNavigate('profile-selection');
     } catch (err) {
-      console.error('Add manager failed:', err);
-      alert('Failed to send the manager invite. Please try again.');
+      console.error('Invite manager failed:', err);
+      alert(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
     }
   };
 
@@ -53,7 +54,7 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
             <label className="form-label" htmlFor="manager-name" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
               Manager Name
             </label>
-            <input
+            <input maxLength={100}
               type="text"
               id="manager-name"
               className="form-input"
@@ -68,7 +69,7 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
             <label className="form-label" htmlFor="manager-email" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
               Manager Email Address
             </label>
-            <input
+            <input maxLength={100}
               type="email"
               id="manager-email"
               className="form-input"

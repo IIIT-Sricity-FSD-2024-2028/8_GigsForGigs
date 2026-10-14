@@ -3,6 +3,7 @@ import { useClient } from '../../../context/ClientContext';
 import { usePayments } from '../../../context/PaymentContext/PaymentContext';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
 import { Badge } from '../../../components/common/Badge';
+import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 
 export interface ReviewDeliverablesProps {
   onNavigate: (viewId: string) => void;
@@ -130,8 +131,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       setIsApproveModalOpen(false);
       await fetchDeliverables();
       alert('Deliverable approved! Payment authorization is now enabled below.');
-    } catch {
-      alert('Failed to approve deliverable.');
+    } catch (err) {
+      alert(err instanceof Error && err.message ? err.message : 'Failed to approve deliverable.');
     }
   };
 
@@ -140,13 +141,13 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     e.preventDefault();
     if (!currentDeliverable || !taskId) return;
     try {
-      await rejectDeliverable(String(numericTaskId), currentDeliverable.deliverableNo);
+      await rejectDeliverable(String(numericTaskId), currentDeliverable.deliverableNo, changesFeedback);
       setReviewStage('CHANGES_REQUESTED');
       setIsChangesModalOpen(false);
       await fetchDeliverables();
       alert(`Changes requested. Feedback sent to ${contract.gig_pro_name}. Payment remains on hold.`);
-    } catch {
-      alert('Failed to submit revision request.');
+    } catch (err) {
+      alert(err instanceof Error && err.message ? err.message : 'Failed to submit revision request.');
     }
   };
 
@@ -161,17 +162,22 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       setReviewStage('PAYMENT_COMPLETED');
       setIsPaymentModalOpen(false);
       alert(`Payment of ${formatCurrency(totalAmount)} completed successfully!\n\n• ${formatCurrency(gigAmount)} released to ${contract.gig_pro_name}\n• ${formatCurrency(platformFee)} recorded as Platform Revenue.`);
-    } catch {
-      alert('Payment release failed. Please try again.');
+    } catch (err) {
+      alert(err instanceof Error && err.message ? err.message : 'Payment release failed. Please try again.');
     }
   };
 
   // Step 3: Client rates & reviews Gig Professional
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsReviewModalOpen(false);
-    alert(`Thank you! Review recorded for ${contract.gig_pro_name}: ${reviewRating} Stars - "${reviewComment}".`);
-    onNavigate('my-gigs');
+    try {
+      await clientApi.createReview(numericTaskId, reviewRating, reviewComment);
+      setIsReviewModalOpen(false);
+      alert(`Thank you! Review recorded for ${contract.gig_pro_name}: ${reviewRating} Stars.`);
+      onNavigate('my-gigs');
+    } catch (err) {
+      alert(err instanceof Error && err.message ? err.message : 'Failed to save your review.');
+    }
   };
 
   const handleConfirmDispute = async (e: React.FormEvent) => {
@@ -292,24 +298,28 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary-dark)', textTransform: 'uppercase' }}>
                       Submitted Resource / Artifact URL:
                     </div>
-                    <a
-                      href={currentDeliverable?.submissionPath || 'https://github.com/gigsforgigs/work'}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ fontSize: '0.85rem', color: 'var(--color-primary-blue)', fontWeight: 600, textDecoration: 'underline', wordBreak: 'break-all' }}
-                    >
-                      {currentDeliverable?.submissionPath || 'https://github.com/gigsforgigs/work'}
-                    </a>
+                    {safeHttpUrl(currentDeliverable?.submissionPath) ? (
+                      <a
+                        href={safeHttpUrl(currentDeliverable?.submissionPath)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '0.85rem', color: 'var(--color-primary-blue)', fontWeight: 600, textDecoration: 'underline', wordBreak: 'break-all' }}
+                      >
+                        {currentDeliverable?.submissionPath}
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{currentDeliverable?.submissionPath || 'No link provided'}</span>
+                    )}
                   </div>
-                  <a
-                    href={currentDeliverable?.submissionPath || 'https://github.com/gigsforgigs/work'}
+                  {safeHttpUrl(currentDeliverable?.submissionPath) && <a
+                    href={safeHttpUrl(currentDeliverable?.submissionPath)}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="admin-btn admin-btn-outline admin-btn-sm"
                     style={{ backgroundColor: '#FFFFFF' }}
                   >
                     🔗 Open Deliverable Artifact
-                  </a>
+                  </a>}
                 </div>
               </div>
             </div>
@@ -475,7 +485,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             <p style={{ fontSize: '13px', color: '#76594F', marginBottom: '16px' }}>
               Provide specific revision feedback for <strong>{contract.gig_pro_name}</strong>. Payment remains on hold.
             </p>
-            <textarea
+            <textarea maxLength={500}
               required
               rows={4}
               placeholder="e.g. Please update the navigation responsiveness and add unit test coverage..."
@@ -576,7 +586,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Review Comment:
               </label>
-              <textarea
+              <textarea maxLength={1000}
                 required
                 rows={3}
                 value={reviewComment}
@@ -613,7 +623,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             <p style={{ fontSize: '13px', color: '#502419', lineHeight: 1.5, marginBottom: '16px' }}>
               Flags this deliverable for administrative review.
             </p>
-            <textarea
+            <textarea maxLength={1000}
               required
               rows={3}
               placeholder="Explain the issue with this deliverable..."

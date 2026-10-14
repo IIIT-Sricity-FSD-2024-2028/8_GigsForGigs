@@ -4,7 +4,6 @@ import { roleGuard } from "../../middleware/roleGuard.js";
 import { taskAccessGuard } from "../../middleware/taskAccessGuard.js";
 import { validate } from "../../middleware/validate.js";
 import {
-  createDeliverableSchema,
   reviewDeliverableSchema,
   shortlistApplicationSchema,
   updateManagerProfileSchema,
@@ -76,14 +75,6 @@ managerRouter.get(
   taskAccessGuard,
   managerController.listTaskDeliverables,
 );
-// Record a new deliverable submission for the task.
-managerRouter.post(
-  "/managers/me/tasks/:taskId/deliverables",
-  managerOnly,
-  taskAccessGuard,
-  validate(createDeliverableSchema),
-  managerController.createDeliverable,
-);
 // Fetch one deliverable by its per-task sequence number.
 managerRouter.get(
   "/managers/me/tasks/:taskId/deliverables/:deliverableNo",
@@ -99,7 +90,7 @@ managerRouter.patch(
   validate(reviewDeliverableSchema),
   managerController.reviewDeliverable,
 );
-// Mark a deliverable closed once work on it is finished.
+// Mark an approved deliverable closed (finalised).
 managerRouter.patch(
   "/managers/me/tasks/:taskId/deliverables/:deliverableNo/close",
   managerOnly,

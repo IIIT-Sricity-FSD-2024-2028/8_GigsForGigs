@@ -19,6 +19,12 @@ import {
   InviteStatus,
 } from "../index.js";
 
+// This script DELETES every row before inserting fake data. Never let it touch a production database.
+if (process.env.NODE_ENV === "production" || process.env.ALLOW_DESTRUCTIVE_SEED !== "true") {
+  console.error("Refusing to seed: this wipes every table. Re-run with ALLOW_DESTRUCTIVE_SEED=true against a dev database (never with NODE_ENV=production).");
+  process.exit(1);
+}
+
 // Every seeded user shares this password so you can log in as anyone below.
 const SEED_PASSWORD = "password123";
 

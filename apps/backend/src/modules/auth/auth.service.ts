@@ -1,9 +1,9 @@
 import { prisma } from "db";
 import type { User } from "db";
 import { comparePassword, hashPassword } from "../../lib/password.js";
-import { signToken } from "../../lib/jwt.js";
+import { signInviteToken, signToken, verifyInviteToken } from "../../lib/jwt.js";
 import type { TokenPayload } from "../../lib/jwt.js";
-import { conflict, notFound, unauthorized } from "../../lib/httpError.js";
+import { badRequest, conflict, notFound, unauthorized } from "../../lib/httpError.js";
 import type { AcceptManagerInviteDto, LoginDto, SignupDto } from "./auth.dto.js";
 
 function sanitizeUser(user: User) {
@@ -23,16 +23,11 @@ async function buildTokenPayload(user: User): Promise<TokenPayload> {
       return { role: "client", userId: user.userId, clientId: client.clientId };
     }
     case "manager": {
-      let manager = await prisma.manager.findUnique({ where: { userId: user.userId } });
+      // A manager only exists through a client's invite. No MANAGER row means
+      // the client removed them — never attach them to some other client.
+      const manager = await prisma.manager.findUnique({ where: { userId: user.userId } });
       if (!manager) {
-        const client = await prisma.client.findFirst();
-        if (client) {
-          manager = await prisma.manager.create({
-            data: { userId: user.userId, clientId: client.clientId },
-          });
-        } else {
-          throw unauthorized("Manager profile not found for this account");
-        }
+        throw unauthorized("This manager account is no longer linked to a client");
       }
       return {
         role: "manager",
@@ -103,6 +98,9 @@ export async function signup(dto: SignupDto) {
   return { success: true, token: signToken(payload), user: sanitizeUser(user) };
 }
 
+// bcrypt hash of a random string; only used to equalise timing for unknown emails.
+const DUMMY_HASH = "$2b$10$yLJKZoOzAgbvCwyBkusvPeYCPWFep4dQRhf4Q8zxz.AZ4fN7Ant0W";
+
 /** Shared by /login and /manager/login. requiredRole narrows manager login to manager accounts only. */
 async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) {
   const cleanEmail = dto.email.trim();
@@ -111,20 +109,15 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
     omit: { hashPassword: false },
   });
 
-  if (!user) {
+  // Always run one bcrypt compare so response time doesn't reveal whether the email exists.
+  const validPassword = await comparePassword(dto.password, user?.hashPassword ?? DUMMY_HASH).catch(() => false);
+
+  if (!user || !validPassword) {
     throw unauthorized("Invalid email or password");
   }
 
   if (requiredRole && user.role !== requiredRole) {
     throw unauthorized("Invalid email or password for this role portal");
-  }
-
-  const validPassword =
-    dto.password === "password123" ||
-    (await comparePassword(dto.password, user.hashPassword).catch(() => false));
-
-  if (!validPassword) {
-    throw unauthorized("Invalid email or password");
   }
 
   const payload = await buildTokenPayload(user);
@@ -142,25 +135,58 @@ export function managerLogin(dto: LoginDto) {
   return authenticate(dto, "manager");
 }
 
-/** Turns a pending ManagerInvite into a real User+Manager. The invite's own
- * email is authoritative — the caller can't pick a different one. */
-export async function acceptManagerInvite(dto: AcceptManagerInviteDto) {
-  const invite = await prisma.managerInvite.findFirst({
-    where: { email: dto.email, status: "pending" },
-  });
-  if (!invite) {
-    throw notFound("No pending invite for this email");
-  }
+const MANAGER_INVITE_TTL = "14d";
 
-  const existingUser = await prisma.user.findUnique({ where: { email: dto.email } });
+/** Signed, single-purpose link token for a ManagerInvite row. */
+export function managerInviteToken(invite: { inviteId: number; email: string }): string {
+  return signInviteToken("manager_invite", { ref: invite.inviteId, email: invite.email }, MANAGER_INVITE_TTL);
+}
+
+/** Resolves a token to its still-pending invite, or throws. */
+async function requirePendingInvite(token: string) {
+  const claims = token ? verifyInviteToken("manager_invite", token) : null;
+  if (!claims) throw badRequest("This invite link is invalid or has expired");
+  const invite = await prisma.managerInvite.findUnique({
+    where: { inviteId: claims.ref },
+    include: { client: { select: { clientName: true } } },
+  });
+  if (!invite || invite.email.toLowerCase() !== claims.email.toLowerCase()) {
+    throw notFound("Invite not found");
+  }
+  if (invite.status !== "pending") {
+    throw conflict(invite.status === "accepted" ? "This invite has already been accepted. Please sign in." : "This invite has been revoked");
+  }
+  return invite;
+}
+
+export async function getManagerInvite(token: string) {
+  const invite = await requirePendingInvite(token);
+  return { name: invite.name, email: invite.email, clientName: invite.client.clientName };
+}
+
+/** Turns a pending ManagerInvite into a real User+Manager. The invite's own
+ * email is authoritative, and only the holder of the signed link can claim it. */
+export async function acceptManagerInvite(dto: AcceptManagerInviteDto) {
+  const invite = await requirePendingInvite(dto.token);
+
+  const existingUser = await prisma.user.findFirst({
+    where: { email: { equals: invite.email, mode: "insensitive" } },
+  });
   if (existingUser) {
-    throw conflict("Email already in use");
+    throw conflict("An account with this email already exists");
   }
 
   const hashedPassword = await hashPassword(dto.password);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see buildTokenPayload comment above
   const { user, manager } = await prisma.$transaction(async (tx: any) => {
+    // Conditional update makes acceptance single-use even under concurrent requests.
+    const claimed = await tx.managerInvite.updateMany({
+      where: { inviteId: invite.inviteId, status: "pending" },
+      data: { status: "accepted" },
+    });
+    if (claimed.count !== 1) throw conflict("This invite has already been used");
+
     const created = await tx.user.create({
       data: { name: invite.name, email: invite.email, hashPassword: hashedPassword, role: "manager" },
     });
@@ -173,7 +199,7 @@ export async function acceptManagerInvite(dto: AcceptManagerInviteDto) {
     });
     await tx.managerInvite.update({
       where: { inviteId: invite.inviteId },
-      data: { status: "accepted", acceptedUserId: created.userId },
+      data: { acceptedUserId: created.userId },
     });
     return { user: created, manager: createdManager };
   });

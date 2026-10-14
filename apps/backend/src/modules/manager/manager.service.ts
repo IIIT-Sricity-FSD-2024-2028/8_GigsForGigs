@@ -1,8 +1,8 @@
 import { prisma } from "db";
 import { hashPassword } from "../../lib/password.js";
-import { notFound } from "../../lib/httpError.js";
+import { conflict, notFound } from "../../lib/httpError.js";
+import { isServiceHireTask } from "../../lib/taskRules.js";
 import type {
-  CreateDeliverableDto,
   ReviewDeliverableDto,
   ShortlistApplicationDto,
   UpdateManagerDto,
@@ -28,17 +28,35 @@ export function listManagersForClient(clientId: number) {
   return prisma.manager.findMany({ where: { clientId }, include: { user: true, client: true } });
 }
 
-// Remove a manager from a client's roster and decrement the client's manager count.
+/**
+ * Remove a manager from a client's roster. Tasks they supervise are handed to
+ * another of the client's managers (GIG_MANAGER_ASSIGNMENT.manager_id is
+ * required); the last manager can't be removed while they supervise work.
+ * Their User row stays (reviews/history reference it) but authGuard rejects
+ * them from then on because the MANAGER link is gone.
+ */
 export async function deleteManager(managerId: number, clientId: number): Promise<void> {
   const manager = await prisma.manager.findUnique({ where: { managerId } });
   if (!manager || manager.clientId !== clientId) {
     throw notFound("Manager not found");
   }
 
-  await prisma.$transaction([
-    prisma.manager.delete({ where: { clientId_managerId: { clientId, managerId } } }),
-    prisma.client.update({ where: { clientId }, data: { numberOfManager: { decrement: 1 } } }),
-  ]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await prisma.$transaction(async (tx: any) => {
+    const supervised = await tx.gigManagerAssignment.count({ where: { managerId } });
+    if (supervised > 0) {
+      const replacement = await tx.manager.findFirst({
+        where: { clientId, managerId: { not: managerId } },
+        orderBy: { managerId: "asc" },
+      });
+      if (!replacement) {
+        throw conflict("This manager supervises active work. Add another manager before removing them.");
+      }
+      await tx.gigManagerAssignment.updateMany({ where: { managerId }, data: { managerId: replacement.managerId } });
+    }
+    await tx.manager.delete({ where: { clientId_managerId: { clientId, managerId } } });
+    await tx.client.update({ where: { clientId }, data: { numberOfManager: { decrement: 1 } } });
+  });
 }
 
 // Update a manager's underlying User record (name/email) on behalf of the owning client.
@@ -112,15 +130,25 @@ export function listTaskApplications(taskId: number) {
   });
 }
 
-/** Mark an application "shortlisted", optionally recording a rating/hourly rate. taskId access already verified by taskAccessGuard. */
+/**
+ * Mark a pending marketplace application "shortlisted" for the client to
+ * decide on, optionally recording a rating/hourly rate. Managers never hire —
+ * accepting is client-only. taskId access already verified by taskAccessGuard.
+ */
 export async function shortlistApplication(
   taskId: number,
   applicationId: number,
   dto: ShortlistApplicationDto,
 ) {
-  const application = await prisma.application.findUnique({ where: { applicationId } });
-  if (!application || application.taskId !== taskId) {
+  const application = await prisma.application.findUnique({ where: { applicationId }, include: { task: true } });
+  if (!application || application.taskId !== taskId || isServiceHireTask(application.task)) {
     throw notFound("Application not found");
+  }
+  if (application.task.status !== "open") {
+    throw conflict("This task is no longer open");
+  }
+  if (application.status !== "pending" && application.status !== "shortlisted") {
+    throw conflict(`This application has already been ${application.status}`);
   }
 
   return prisma.application.update({
@@ -142,37 +170,6 @@ export function listTaskDeliverables(taskId: number) {
   });
 }
 
-// Record a new deliverable for a task, auto-incrementing its per-task sequence number.
-export async function createDeliverable(
-  taskId: number,
-  managerId: number,
-  dto: CreateDeliverableDto,
-) {
-  const assignment = await prisma.gigManagerAssignment.findFirst({
-    where: { taskId, gigProfileId: dto.gigProfileId, managerId },
-  });
-  if (!assignment) {
-    throw notFound("No matching assignment for that gig professional on this task");
-  }
-
-  const last = await prisma.deliverable.findFirst({
-    where: { taskId },
-    orderBy: { deliverableNo: "desc" },
-  });
-  const deliverableNo = (last?.deliverableNo ?? 0) + 1;
-
-  return prisma.deliverable.create({
-    data: {
-      taskId,
-      deliverableNo,
-      gigProfileId: dto.gigProfileId,
-      description: dto.description,
-      submissionPath: dto.submissionPath,
-    },
-    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
-  });
-}
-
 // Fetch one deliverable by its (taskId, deliverableNo) composite key.
 export async function getDeliverable(taskId: number, deliverableNo: number) {
   const deliverable = await prisma.deliverable.findUnique({
@@ -185,72 +182,52 @@ export async function getDeliverable(taskId: number, deliverableNo: number) {
   return deliverable;
 }
 
+const deliverableInclude = { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } } as const;
+
 /**
- * Marks a task "completed" once every deliverable on it is approved/closed.
- * Unlike the frontend mock — which only recalculated progress on close —
- * the server recomputes on both /review and /close, so progress is never
- * stale between the two. Deliberate divergence from bug-compatibility.
+ * Conditionally moves one submission from `from` to the new status while the
+ * task is active. Approval never completes the task: completion happens only
+ * when the client's payment release succeeds (see payment.route.ts).
  */
-async function recomputeTaskProgress(taskId: number): Promise<void> {
-  const deliverables = await prisma.deliverable.findMany({ where: { taskId } });
-  if (deliverables.length === 0) return;
-
-  const definitions = await prisma.taskDeliverableDefinition.findMany({
-    where: { taskId },
-    include: { submissions: { include: { submission: { select: { status: true } } }, orderBy: { deliverableNo: "desc" } } },
-  });
-  if (definitions.length > 0) {
-    const allDefinitionsApproved = definitions.every(definition => {
-      const latestStatus = definition.submissions[0]?.submission.status;
-      return latestStatus === "approved" || latestStatus === "closed";
-    });
-    if (allDefinitionsApproved) await prisma.task.update({ where: { taskId }, data: { status: "completed" } });
-    return;
-  }
-
-  const doneCount = deliverables.filter(
-    (d: { status: string }) => d.status === "approved" || d.status === "closed",
-  ).length;
-  const progress = Math.round((doneCount / deliverables.length) * 100);
-
-  if (progress === 100) {
-    await prisma.task.update({ where: { taskId }, data: { status: "completed" } });
-  }
-}
-
-// Approve/request-revision on a deliverable, then recompute the parent task's progress.
-export async function reviewDeliverable(
+async function transitionDeliverable(
   taskId: number,
   deliverableNo: number,
-  dto: ReviewDeliverableDto,
+  from: "submitted" | "approved",
+  data: { status: "approved" | "revision_requested" | "closed"; feedback?: string },
 ) {
-  await getDeliverable(taskId, deliverableNo);
-
-  const updated = await prisma.deliverable.update({
-    where: { taskId_deliverableNo: { taskId, deliverableNo } },
-    data: {
-      status: dto.status,
-      ...(dto.feedback !== undefined ? { feedback: dto.feedback } : {}),
-    },
-    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
+  const deliverable = await getDeliverable(taskId, deliverableNo);
+  const task = await prisma.task.findUniqueOrThrow({ where: { taskId }, select: { status: true } });
+  if (task.status !== "in_progress") {
+    throw conflict("Deliverables can only be reviewed while the task is active");
+  }
+  const updated = await prisma.deliverable.updateMany({
+    where: { taskId, deliverableNo, status: from },
+    data,
   });
-
-  await recomputeTaskProgress(taskId);
-  return updated;
+  if (updated.count !== 1) {
+    throw conflict(
+      from === "submitted"
+        ? `This submission has already been ${deliverable.status.replace("_", " ")}`
+        : "Only approved deliverables can be closed",
+    );
+  }
+  return prisma.deliverable.findUniqueOrThrow({
+    where: { taskId_deliverableNo: { taskId, deliverableNo } },
+    include: deliverableInclude,
+  });
 }
 
-// Mark a deliverable closed, then recompute the parent task's progress.
-export async function closeDeliverable(taskId: number, deliverableNo: number) {
-  await getDeliverable(taskId, deliverableNo);
-
-  const updated = await prisma.deliverable.update({
-    where: { taskId_deliverableNo: { taskId, deliverableNo } },
-    data: { status: "closed" },
-    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
+// Approve/request-revision on a submission that is awaiting review.
+export function reviewDeliverable(taskId: number, deliverableNo: number, dto: ReviewDeliverableDto) {
+  return transitionDeliverable(taskId, deliverableNo, "submitted", {
+    status: dto.status,
+    ...(dto.feedback !== undefined ? { feedback: dto.feedback } : {}),
   });
+}
 
-  await recomputeTaskProgress(taskId);
-  return updated;
+// Mark an approved deliverable closed (finalised).
+export function closeDeliverable(taskId: number, deliverableNo: number) {
+  return transitionDeliverable(taskId, deliverableNo, "approved", { status: "closed" });
 }
 
 // Search gig professionals by name or skill (up to 50), for a manager assigning work.

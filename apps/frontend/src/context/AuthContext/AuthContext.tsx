@@ -104,6 +104,7 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL') => Promise<boolean>;
   login: (email: string, password: string, roleHint?: string) => Promise<boolean>;
   loginManager: (email: string, password: string) => Promise<boolean>;
+  acceptManagerInvite: (token: string, password: string) => Promise<boolean>;
   logout: () => void;
   logoutManager: () => Promise<void>;
   updateUserSession: (patch: Partial<UserSession>) => void;
@@ -216,6 +217,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [login],
   );
 
+  const acceptManagerInvite = useCallback(async (token: string, password: string): Promise<boolean> => {
+    setLoading(true);
+    setAuthError(null);
+    try {
+      const res = await authApi.acceptManagerInvite(token, password);
+      const session = sessionFromAuthResponse(res.user, res.token);
+      setToken('manager', res.token);
+      setUser({ ...session, isNewAccount: true });
+      return true;
+    } catch (err) {
+      setAuthError(err instanceof ApiError ? err.message : 'Could not activate your manager account.');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setUser((prev) => {
       if (prev) clearToken(roleToActor(prev.role));
@@ -266,6 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         login,
         loginManager,
+        acceptManagerInvite,
         logout,
         logoutManager,
         updateUserSession,

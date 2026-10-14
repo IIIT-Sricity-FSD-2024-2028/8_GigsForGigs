@@ -21,7 +21,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
         alert('Project contract deleted successfully!');
       } catch (err) {
         console.error('Delete task failed:', err);
-        alert('Failed to delete this task. Please try again.');
+        alert(err instanceof Error && err.message ? err.message : 'Failed to delete this task. Please try again.');
       }
     }
   };
