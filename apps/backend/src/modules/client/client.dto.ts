@@ -29,6 +29,20 @@ export const updateTaskSchema = z.object({
 });
 export type UpdateTaskDto = z.infer<typeof updateTaskSchema>;
 
+const taskDeliverableDefinitionFields = {
+  title: z.string().trim().min(1, "Title is required").max(255),
+  description: z.string().trim().max(2000).optional().transform(value => value || undefined),
+};
+
+export const createTaskDeliverableDefinitionSchema = z.object(taskDeliverableDefinitionFields);
+export type CreateTaskDeliverableDefinitionDto = z.infer<typeof createTaskDeliverableDefinitionSchema>;
+
+export const updateTaskDeliverableDefinitionSchema = z.object({
+  title: taskDeliverableDefinitionFields.title.optional(),
+  description: z.string().trim().max(2000).optional(),
+}).refine(value => Object.keys(value).length > 0, "Provide a title or description to update");
+export type UpdateTaskDeliverableDefinitionDto = z.infer<typeof updateTaskDeliverableDefinitionSchema>;
+
 export const updateApplicationSchema = z.object({
   status: z.enum(["accepted", "declined"]),
 });

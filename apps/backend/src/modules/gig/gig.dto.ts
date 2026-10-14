@@ -27,6 +27,10 @@ export const submitDeliverableSchema = z.object({
   taskId: z.coerce.number().int().positive(),
   content: z.string().min(1),
   notes: z.string().optional().nullable().or(z.literal("")),
+  definitionIds: z.array(z.coerce.number().int().positive()).optional().default([]),
+}).refine(dto => new Set(dto.definitionIds).size === dto.definitionIds.length, {
+  message: "Each task deliverable can only be selected once",
+  path: ["definitionIds"],
 });
 export type SubmitDeliverableDto = z.infer<typeof submitDeliverableSchema>;
 

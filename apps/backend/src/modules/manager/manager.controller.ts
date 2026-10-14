@@ -23,6 +23,15 @@ function computeProgress(deliverables: { status: string }[]): number {
   return Math.round((doneCount / deliverables.length) * 100);
 }
 
+function computeDefinitionProgress(definitions: Row[]): number {
+  if (definitions.length === 0) return 0;
+  const doneCount = definitions.filter(definition => {
+    const status = definition.submissions?.[0]?.submission?.status;
+    return status === "approved" || status === "closed";
+  }).length;
+  return Math.round((doneCount / definitions.length) * 100);
+}
+
 function toDeliverableResponse(deliverable: Row) {
   return {
     taskId: deliverable.taskId,
@@ -32,6 +41,11 @@ function toDeliverableResponse(deliverable: Row) {
     submissionPath: deliverable.submissionPath,
     status: deliverable.status,
     createdAt: deliverable.createdAt.toISOString(),
+    claimedDefinitions: (deliverable.claimedDefinitions ?? []).map((item: Row) => ({
+      definitionId: item.definition.definitionId,
+      title: item.definition.title,
+      description: item.definition.description,
+    })),
     ...(deliverable.gigProfile
       ? { gigProfile: { user: { name: deliverable.gigProfile.user.name } } }
       : {}),
@@ -63,7 +77,9 @@ function toTaskResponse(task: Row) {
     budget: Number(task.budget),
     dueDate: task.dueDate ? task.dueDate.toISOString().slice(0, 10) : null,
     status: task.status,
-    progress: computeProgress(deliverables),
+    progress: (task.deliverableDefinitions ?? []).length > 0
+      ? computeDefinitionProgress(task.deliverableDefinitions)
+      : computeProgress(deliverables),
     ...(task.client
       ? {
           client: {

@@ -1,15 +1,17 @@
 import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
-import { forbidden } from "../../lib/httpError.js";
+import { badRequest, forbidden } from "../../lib/httpError.js";
 import type { ClientTokenPayload } from "../../lib/jwt.js";
 import * as clientService from "./client.service.js";
 import type {
   CreateManagerInviteDto,
   CreateTaskDto,
+  CreateTaskDeliverableDefinitionDto,
   ReviewDeliverableAsClientDto,
   UpdateApplicationDto,
   UpdateClientProfileDto,
   UpdateTaskDto,
+  UpdateTaskDeliverableDefinitionDto,
 } from "./client.dto.js";
 
 /** Safe past roleGuard('client'), which every route in this module sits behind. */
@@ -82,6 +84,32 @@ export async function listTaskDeliverables(req: Request, res: Response): Promise
   const taskId = Number(req.params.taskId);
   const deliverables = await clientService.listTaskDeliverables(taskId);
   res.status(200).json(deliverables);
+}
+
+export async function listTaskDeliverableDefinitions(req: Request, res: Response): Promise<void> {
+  const definitions = await clientService.listTaskDeliverableDefinitions(Number(req.params.taskId), requireClientId(req));
+  res.status(200).json(definitions);
+}
+
+export async function createTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<CreateTaskDeliverableDefinitionDto>(res, "body");
+  const definition = await clientService.createTaskDeliverableDefinition(Number(req.params.taskId), requireClientId(req), dto);
+  res.status(201).json(definition);
+}
+
+export async function updateTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const definitionId = Number(req.params.definitionId);
+  if (!Number.isInteger(definitionId) || definitionId <= 0) throw badRequest("Invalid task deliverable id");
+  const dto = getValidated<UpdateTaskDeliverableDefinitionDto>(res, "body");
+  const definition = await clientService.updateTaskDeliverableDefinition(Number(req.params.taskId), definitionId, requireClientId(req), dto);
+  res.status(200).json(definition);
+}
+
+export async function deleteTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const definitionId = Number(req.params.definitionId);
+  if (!Number.isInteger(definitionId) || definitionId <= 0) throw badRequest("Invalid task deliverable id");
+  await clientService.deleteTaskDeliverableDefinition(Number(req.params.taskId), definitionId, requireClientId(req));
+  res.status(204).send();
 }
 
 export async function reviewDeliverable(req: Request, res: Response): Promise<void> {

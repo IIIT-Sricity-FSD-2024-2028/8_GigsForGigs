@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { usePayments } from '../../../context/PaymentContext/PaymentContext';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
+import { Badge } from '../../../components/common/Badge';
 
 export interface ReviewDeliverablesProps {
   onNavigate: (viewId: string) => void;
@@ -194,7 +195,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
           className="back-link"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none', color: 'var(--color-secondary)', fontSize: '0.875rem', marginBottom: 'var(--spacing-sm)' }}
         >
-          ← Back to Active Contracts
+          ← Back to Active Task/Contracts
         </a>
         <h1 className="page-title">Review Submitted Deliverables</h1>
         <p className="page-subtitle">
@@ -213,7 +214,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             <strong>{contract.gig_pro_name}</strong> is currently working on <strong>{contract.task_title}</strong>. Once they submit their deliverable files or pull request links, they will appear here for your review and approval.
           </p>
           <button className="admin-btn admin-btn-primary" onClick={() => onNavigate('my-gigs')}>
-            Return to Active Contracts
+            Return to Active Task/Contracts
           </button>
         </div>
       ) : (
@@ -279,6 +280,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     {currentDeliverable?.description}
                   </div>
                 </div>
+
+                {currentDeliverable?.claimedDefinitions && currentDeliverable.claimedDefinitions.length > 0 && <div className="submission-definition__claims">
+                  <strong>This submission claims:</strong>
+                  <div className="submission-definition__claim-list">{currentDeliverable.claimedDefinitions.map(item => <Badge key={item.definitionId} variant="info">{item.title}</Badge>)}</div>
+                </div>}
 
                 {/* Submission Path / URL Artifact */}
                 <div style={{ backgroundColor: '#F0F6F6', padding: '16px', borderRadius: '8px', border: '1px solid #D5DDE0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
@@ -417,7 +423,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                       className="admin-btn admin-btn-primary admin-btn-sm"
                       onClick={() => onNavigate('my-gigs')}
                     >
-                      Return to Active Contracts
+                      Return to Active Task/Contracts
                     </button>
                   </div>
                 )}

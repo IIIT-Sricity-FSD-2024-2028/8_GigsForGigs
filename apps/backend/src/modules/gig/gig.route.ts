@@ -60,6 +60,8 @@ gigRouter.post(
 
 // List tasks the gig professional is currently working on.
 gigRouter.get("/tasks/active", gigOnly, gigController.listActiveTasks);
+// Client-authored task scope plus real submission/review state.
+gigRouter.get("/tasks/:taskId/deliverable-definitions", gigOnly, gigController.listTaskDeliverableDefinitions);
 // Submit a deliverable against an active task.
 gigRouter.post(
   "/deliverables",

@@ -39,6 +39,7 @@ export interface Deliverable {
   submissionPath: string;
   status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
   createdAt?: string;
+  claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
   gigProfile?: {
     user: {
       name: string;

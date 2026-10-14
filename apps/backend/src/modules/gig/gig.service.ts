@@ -1,5 +1,5 @@
 import { prisma } from "db";
-import { conflict, forbidden, notFound } from "../../lib/httpError.js";
+import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
 import type {
   CreateApplicationDto,
   CreateReviewDto,
@@ -200,63 +200,130 @@ export function listActiveTasks(gigProfileId: number) {
       ],
       status: { in: ["open", "in_progress"] },
     },
-    include: { client: true },
+    include: {
+      client: true,
+      deliverables: {
+        where: { gigProfileId },
+        include: { claimedDefinitions: { include: { definition: true } } },
+        orderBy: { deliverableNo: "asc" },
+      },
+      deliverableDefinitions: {
+        include: {
+          submissions: {
+            where: { submission: { gigProfileId } },
+            include: { submission: { select: { deliverableNo: true, status: true } } },
+            orderBy: { deliverableNo: "desc" },
+          },
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 }
 
+export async function listTaskDeliverableDefinitions(gigProfileId: number, taskId: number) {
+  const assignment = await prisma.gigManagerAssignment.findUnique({
+    where: { gigProfileId_taskId: { gigProfileId, taskId } },
+    select: { taskId: true },
+  });
+  if (!assignment) throw notFound("Task assignment not found");
+
+  const definitions = await prisma.taskDeliverableDefinition.findMany({
+    where: { taskId },
+    include: {
+      submissions: {
+        where: { submission: { gigProfileId } },
+        include: { submission: { select: { deliverableNo: true, description: true, submissionPath: true, status: true, createdAt: true, feedback: true } } },
+        orderBy: { deliverableNo: "desc" },
+      },
+    },
+    orderBy: { definitionId: "asc" },
+  });
+
+  return definitions.map(definition => ({
+    definitionId: definition.definitionId,
+    taskId: definition.taskId,
+    title: definition.title,
+    description: definition.description,
+    createdAt: definition.createdAt.toISOString(),
+    submissions: definition.submissions.map(({ submission }) => ({
+      deliverableNo: submission.deliverableNo,
+      description: submission.description,
+      submissionPath: submission.submissionPath,
+      status: submission.status,
+      createdAt: submission.createdAt.toISOString(),
+      feedback: submission.feedback,
+    })),
+  }));
+}
+
 /**
- * Submit a deliverable for a task, auto-creating a manager assignment first
- * if one doesn't exist yet (so the deliverable has a manager to route to).
+ * Submit work only for a task assigned to this professional. Definition links
+ * and the submission are committed together so no checkbox claim is synthetic.
  * content -> DELIVERABLE.description (the substantive text), notes ->
  * submission_path (falls back to content so the required column is never
  * empty). See toDeliverableResponse in gig.controller.ts for the read side.
  */
 export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliverableDto) {
-  let assignment = await prisma.gigManagerAssignment.findUnique({
+  const assignment = await prisma.gigManagerAssignment.findUnique({
     where: { gigProfileId_taskId: { gigProfileId, taskId: dto.taskId } },
   });
-
   if (!assignment) {
-    const task = await prisma.task.findUnique({
-      where: { taskId: dto.taskId },
-      include: { client: { include: { managers: true } } },
-    });
-
-    const clientManagers = task?.client?.managers || [];
-    const chosenManager = clientManagers.length > 0 ? clientManagers[0] : null;
-
-    if (chosenManager) {
-      assignment = await prisma.gigManagerAssignment.create({
-        data: {
-          gigProfileId,
-          taskId: dto.taskId,
-          managerId: chosenManager.managerId,
-        },
-      });
-    } else {
-      throw notFound("No manager assigned to supervise deliverables for this client organization");
-    }
+    throw forbidden("You are not assigned to this task");
   }
-
-  const last = await prisma.deliverable.findFirst({
-    where: { taskId: dto.taskId },
-    orderBy: { deliverableNo: "desc" },
-  });
-  const deliverableNo = (last?.deliverableNo ?? 0) + 1;
 
   const contentText = (dto.content || "").trim().slice(0, 500);
   const notesText = (dto.notes && dto.notes.trim() ? dto.notes.trim() : contentText).slice(0, 500);
+  if (!contentText) throw badRequest("Submission details are required");
 
-  return prisma.deliverable.create({
-    data: {
-      taskId: dto.taskId,
-      deliverableNo,
-      gigProfileId,
-      description: contentText || "Deliverable submitted",
-      submissionPath: notesText || "Deliverable files / notes",
-    },
-  });
+  const definitionIds = dto.definitionIds ?? [];
+  if (new Set(definitionIds).size !== definitionIds.length) throw badRequest("A deliverable can only be selected once");
+
+  return prisma.$transaction(async tx => {
+    const task = await tx.task.findUnique({ where: { taskId: dto.taskId }, select: { status: true } });
+    if (!task) throw notFound("Task not found");
+    if (task.status !== "in_progress") throw forbidden("Work can only be submitted for an active task");
+
+    const definitions = await tx.taskDeliverableDefinition.findMany({
+      where: { taskId: dto.taskId },
+      include: { submissions: { include: { submission: { select: { deliverableNo: true, status: true } } }, orderBy: { deliverableNo: "desc" } } },
+    });
+    if (definitions.length > 0 && definitionIds.length === 0) {
+      throw badRequest("Select at least one task deliverable completed by this submission");
+    }
+    const selected = definitions.filter(definition => definitionIds.includes(definition.definitionId));
+    if (selected.length !== definitionIds.length) throw badRequest("One or more selected deliverables do not belong to this task");
+
+    for (const definition of selected) {
+      const latestStatus = definition.submissions[0]?.submission.status;
+      if (latestStatus && latestStatus !== "revision_requested") {
+        throw conflict(`“${definition.title}” already has a submission under review or has been approved`);
+      }
+    }
+
+    const last = await tx.deliverable.findFirst({ where: { taskId: dto.taskId }, orderBy: { deliverableNo: "desc" } });
+    const deliverableNo = (last?.deliverableNo ?? 0) + 1;
+    const submission = await tx.deliverable.create({
+      data: {
+        taskId: dto.taskId,
+        deliverableNo,
+        gigProfileId,
+        description: contentText,
+        submissionPath: notesText || contentText,
+      },
+    });
+
+    if (selected.length > 0) {
+      await tx.deliverableSubmissionItem.createMany({
+        data: selected.map(definition => ({ taskId: dto.taskId, deliverableNo, definitionId: definition.definitionId })),
+      });
+    }
+
+    return tx.deliverable.findUniqueOrThrow({
+      where: { taskId_deliverableNo: { taskId: dto.taskId, deliverableNo } },
+      include: { claimedDefinitions: { include: { definition: true } } },
+    });
+  }, { isolationLevel: "Serializable" });
 }
 
 // List services the gig professional has posted.

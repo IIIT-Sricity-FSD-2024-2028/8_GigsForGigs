@@ -3,6 +3,7 @@ import { useClient } from '../../../context/ClientContext';
 import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
 import { Table } from '../../../components/common/Table';
 import { PageHeader } from '../../../components/common/PageHeader';
+import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
 
 export interface MyGigsProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -35,11 +36,11 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
 
   return (
     <div>
-      <PageHeader title="Active Contracts" description="Track ongoing tasks, view deliverables, and manage project payments." />
+      <PageHeader title="Active Task/Contracts" description="Track ongoing work, view deliverables, and manage project payments." />
 
       <div className="activity-section">
         <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
-          <h2 className="activity-title">All Active Contracts</h2>
+          <h2 className="activity-title">All Active Task/Contracts</h2>
           <button
             className="btn btn-outline"
             style={{ fontSize: '0.875rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'transparent', cursor: 'pointer' }}
@@ -168,7 +169,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
       {/* Task Details & Payment Modal */}
       {selectedTaskPayment && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '760px', width: 'min(92vw, 760px)', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 8px 0' }}>
               {selectedTaskPayment.taskTitle}
             </h3>
@@ -208,6 +209,8 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
             <p style={{ fontSize: '12px', color: '#805C54', marginBottom: '20px', lineHeight: 1.4 }}>
               "Deliverables must be reviewed and approved before payment authorization is enabled."
             </p>
+
+            <TaskDeliverablesManager key={selectedTaskPayment.taskId} taskId={Number(selectedTaskPayment.taskId)} readOnly={contracts.find(contract => contract.task_id === selectedTaskPayment.taskId)?.status !== 'IN_PROGRESS'} />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button

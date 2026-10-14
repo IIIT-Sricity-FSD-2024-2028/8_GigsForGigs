@@ -6,10 +6,12 @@ import { validate } from "../../middleware/validate.js";
 import {
   createManagerInviteSchema,
   createTaskSchema,
+  createTaskDeliverableDefinitionSchema,
   reviewDeliverableAsClientSchema,
   updateApplicationSchema,
   updateClientProfileSchema,
   updateTaskSchema,
+  updateTaskDeliverableDefinitionSchema,
 } from "./client.dto.js";
 import * as clientController from "./client.controller.js";
 
@@ -57,6 +59,13 @@ clientRouter.patch(
 );
 // Delete a task (ownership checked by clientOwnershipGuard).
 clientRouter.delete("/tasks/:taskId", clientOwnershipGuard, clientController.deleteTask);
+
+// Client-authored scope for an active task. The owner is checked in middleware
+// and again in the service using the verified client identity.
+clientRouter.get("/tasks/:taskId/deliverable-definitions", clientOwnershipGuard, clientController.listTaskDeliverableDefinitions);
+clientRouter.post("/tasks/:taskId/deliverable-definitions", clientOwnershipGuard, validate(createTaskDeliverableDefinitionSchema), clientController.createTaskDeliverableDefinition);
+clientRouter.patch("/tasks/:taskId/deliverable-definitions/:definitionId", clientOwnershipGuard, validate(updateTaskDeliverableDefinitionSchema), clientController.updateTaskDeliverableDefinition);
+clientRouter.delete("/tasks/:taskId/deliverable-definitions/:definitionId", clientOwnershipGuard, clientController.deleteTaskDeliverableDefinition);
 
 // List applications received against the client's tasks.
 clientRouter.get("/applications", clientController.listApplications);

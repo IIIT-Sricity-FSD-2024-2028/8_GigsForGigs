@@ -13,6 +13,9 @@ const taskInclude = {
   client: true,
   assignments: { include: { gigProfile: { include: { user: true, skills: true } } } },
   deliverables: true,
+  deliverableDefinitions: {
+    include: { submissions: { include: { submission: { select: { deliverableNo: true, status: true } } }, orderBy: { deliverableNo: "desc" } } },
+  },
 } as const;
 
 // ---- Client-facing manager roster ------------------------------------
@@ -134,7 +137,7 @@ export async function shortlistApplication(
 export function listTaskDeliverables(taskId: number) {
   return prisma.deliverable.findMany({
     where: { taskId },
-    include: { gigProfile: { include: { user: true } } },
+    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
     orderBy: { deliverableNo: "asc" },
   });
 }
@@ -166,7 +169,7 @@ export async function createDeliverable(
       description: dto.description,
       submissionPath: dto.submissionPath,
     },
-    include: { gigProfile: { include: { user: true } } },
+    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
   });
 }
 
@@ -174,7 +177,7 @@ export async function createDeliverable(
 export async function getDeliverable(taskId: number, deliverableNo: number) {
   const deliverable = await prisma.deliverable.findUnique({
     where: { taskId_deliverableNo: { taskId, deliverableNo } },
-    include: { gigProfile: { include: { user: true } } },
+    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
   });
   if (!deliverable) {
     throw notFound("Deliverable not found");
@@ -191,6 +194,19 @@ export async function getDeliverable(taskId: number, deliverableNo: number) {
 async function recomputeTaskProgress(taskId: number): Promise<void> {
   const deliverables = await prisma.deliverable.findMany({ where: { taskId } });
   if (deliverables.length === 0) return;
+
+  const definitions = await prisma.taskDeliverableDefinition.findMany({
+    where: { taskId },
+    include: { submissions: { include: { submission: { select: { status: true } } }, orderBy: { deliverableNo: "desc" } } },
+  });
+  if (definitions.length > 0) {
+    const allDefinitionsApproved = definitions.every(definition => {
+      const latestStatus = definition.submissions[0]?.submission.status;
+      return latestStatus === "approved" || latestStatus === "closed";
+    });
+    if (allDefinitionsApproved) await prisma.task.update({ where: { taskId }, data: { status: "completed" } });
+    return;
+  }
 
   const doneCount = deliverables.filter(
     (d: { status: string }) => d.status === "approved" || d.status === "closed",
@@ -216,7 +232,7 @@ export async function reviewDeliverable(
       status: dto.status,
       ...(dto.feedback !== undefined ? { feedback: dto.feedback } : {}),
     },
-    include: { gigProfile: { include: { user: true } } },
+    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
   });
 
   await recomputeTaskProgress(taskId);
@@ -230,7 +246,7 @@ export async function closeDeliverable(taskId: number, deliverableNo: number) {
   const updated = await prisma.deliverable.update({
     where: { taskId_deliverableNo: { taskId, deliverableNo } },
     data: { status: "closed" },
-    include: { gigProfile: { include: { user: true } } },
+    include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
   });
 
   await recomputeTaskProgress(taskId);

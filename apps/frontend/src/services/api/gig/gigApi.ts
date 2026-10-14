@@ -16,7 +16,8 @@ import type {
   GigService,
   CreateServiceDto,
   SubmitDeliverableDto,
-  GigDeliverable
+  GigDeliverable,
+  TaskDeliverableDefinition
 } from '../../../types/gig';
 
 const actor = 'gig_professional' as const;
@@ -25,6 +26,9 @@ export const gigApi = {
   getActiveTasks: async (): Promise<GigTask[]> => {
     return apiFetch<GigTask[]>('/gig/tasks/active', { actor });
   },
+
+  getTaskDeliverableDefinitions: async (taskId: number): Promise<TaskDeliverableDefinition[]> =>
+    apiFetch<TaskDeliverableDefinition[]>(`/gig/tasks/${taskId}/deliverable-definitions`, { actor }),
 
   getPendingRequests: async (): Promise<PendingRequest[]> => {
     return apiFetch<PendingRequest[]>('/gig/requests/pending', { actor });
@@ -81,7 +85,7 @@ export const gigApi = {
   submitDeliverable: async (dto: SubmitDeliverableDto): Promise<GigDeliverable> => {
     return apiFetch<GigDeliverable>('/gig/deliverables', {
       method: 'POST',
-      body: { taskId: dto.taskId, content: dto.content, notes: dto.notes },
+      body: { taskId: dto.taskId, content: dto.content, notes: dto.notes, definitionIds: dto.definitionIds ?? [] },
       actor
     });
   },

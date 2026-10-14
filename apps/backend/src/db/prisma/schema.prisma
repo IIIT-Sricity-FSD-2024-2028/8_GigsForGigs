@@ -110,6 +110,7 @@ model Task {
   skills       String[]               @default([])
   applications Application[]
   deliverables Deliverable[]
+  deliverableDefinitions TaskDeliverableDefinition[]
   assignments  GigManagerAssignment[]
   payments     Payment[]
   reviews      Review[]
@@ -159,9 +160,38 @@ model Deliverable {
   gigProfile     GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
   assignment     GigManagerAssignment   @relation(fields: [gigProfileId, taskId], references: [gigProfileId, taskId])
   task           Task                   @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+  claimedDefinitions DeliverableSubmissionItem[]
 
   @@id([taskId, deliverableNo])
   @@map("DELIVERABLE")
+}
+
+/// Client-authored scope items for a task. Distinct from Deliverable, which is a submitted work record.
+model TaskDeliverableDefinition {
+  definitionId Int                         @id @default(autoincrement()) @map("definition_id")
+  taskId       Int                         @map("task_id")
+  title        String                      @db.VarChar(255)
+  description  String?
+  createdAt    DateTime                    @default(now()) @map("created_at")
+  task         Task                        @relation(fields: [taskId], references: [taskId], onDelete: Cascade)
+  submissions  DeliverableSubmissionItem[]
+
+  @@unique([taskId, definitionId])
+  @@index([taskId])
+  @@map("TASK_DELIVERABLE_DEFINITION")
+}
+
+/// Associates one submission with one or more client-defined task deliverables.
+model DeliverableSubmissionItem {
+  taskId        Int                      @map("task_id")
+  deliverableNo Int                      @map("deliverable_no")
+  definitionId  Int                      @map("definition_id")
+  submission    Deliverable              @relation(fields: [taskId, deliverableNo], references: [taskId, deliverableNo], onDelete: Cascade)
+  definition    TaskDeliverableDefinition @relation(fields: [taskId, definitionId], references: [taskId, definitionId], onDelete: Cascade)
+
+  @@id([taskId, deliverableNo, definitionId])
+  @@index([taskId, definitionId])
+  @@map("DELIVERABLE_SUBMISSION_ITEM")
 }
 
 model Payment {

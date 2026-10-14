@@ -296,6 +296,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                   {del.description}
                 </div>
 
+                {del.claimedDefinitions && del.claimedDefinitions.length > 0 && <div className="submission-definition__claims">
+                  <strong>Client-defined deliverables:</strong>
+                  <ul>{del.claimedDefinitions.map(item => <li key={item.definitionId}>{item.title}</li>)}</ul>
+                </div>}
+
                 <div style={{ fontSize: '13px', color: '#76594F', marginTop: '4px' }}>
                   Submission Path:{' '}
                   <a href={del.submissionPath} target="_blank" rel="noreferrer" style={{ color: '#0D568D', fontWeight: 600 }}>

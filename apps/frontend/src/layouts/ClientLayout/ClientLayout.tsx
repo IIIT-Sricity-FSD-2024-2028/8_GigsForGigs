@@ -13,7 +13,7 @@ export interface ClientLayoutProps {
 const navItems: DashboardNavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
   { id: 'search-talent', label: 'Search Talent', icon: <SearchIcon size={18} /> },
-  { id: 'my-gigs', label: 'Active Contracts', icon: <ProjectIcon size={18} />, aliases: ['review-deliverables', 'review-shortlist'] },
+  { id: 'my-gigs', label: 'Active Task/Contracts', icon: <ProjectIcon size={18} />, aliases: ['review-deliverables', 'review-shortlist'] },
   { id: 'profile-selection', label: 'Supervise Manager', icon: <ManagerIcon size={18} /> }
 ];
 

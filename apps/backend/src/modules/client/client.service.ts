@@ -1,13 +1,15 @@
 import { prisma } from "db";
-import { badRequest, conflict, notFound } from "../../lib/httpError.js";
+import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
 import { parseDeliverableKey } from "./client.dto.js";
 import type {
   CreateManagerInviteDto,
   CreateTaskDto,
+  CreateTaskDeliverableDefinitionDto,
   ReviewDeliverableAsClientDto,
   UpdateApplicationDto,
   UpdateClientProfileDto,
   UpdateTaskDto,
+  UpdateTaskDeliverableDefinitionDto,
 } from "./client.dto.js";
 
 // ---- Profile ----------------------------------------------------------
@@ -178,7 +180,13 @@ export async function listContracts(clientId: number) {
   const applications = await prisma.application.findMany({
     where: { status: "accepted", task: { clientId } },
     include: {
-      task: true,
+      task: {
+        include: {
+          deliverableDefinitions: {
+            include: { submissions: { include: { submission: { select: { status: true } } }, orderBy: { deliverableNo: "desc" } } },
+          },
+        },
+      },
       gigProfile: {
         include: {
           user: true,
@@ -194,11 +202,15 @@ export async function listContracts(clientId: number) {
       (a: any) => a.taskId === application.taskId,
     );
     const deliverables = assignment?.deliverables ?? [];
-    const doneCount = deliverables.filter(
-      (d: any) => d.status === "approved" || d.status === "closed",
-    ).length;
-    const progress =
-      deliverables.length > 0 ? Math.round((doneCount / deliverables.length) * 100) : 0;
+    const definitions = application.task.deliverableDefinitions;
+    const progress = definitions.length > 0
+      ? Math.round((definitions.filter((definition: { submissions: Array<{ submission: { status: string } }> }) => {
+          const status = definition.submissions[0]?.submission.status;
+          return status === "approved" || status === "closed";
+        }).length / definitions.length) * 100)
+      : deliverables.length > 0
+        ? Math.round((deliverables.filter((d: any) => d.status === "approved" || d.status === "closed").length / deliverables.length) * 100)
+        : 0;
 
     return {
       taskId: application.taskId,
@@ -215,11 +227,104 @@ export async function listContracts(clientId: number) {
 
 // ---- Deliverables (client-side review) -------------------------------------
 
+async function requireOwnedTask(taskId: number, clientId: number) {
+  const task = await prisma.task.findFirst({ where: { taskId, clientId } });
+  if (!task) throw notFound("Task not found");
+  return task;
+}
+
+async function requireOwnedActiveTask(taskId: number, clientId: number) {
+  const task = await requireOwnedTask(taskId, clientId);
+  if (task.status !== "in_progress") throw forbidden("Deliverables can only be managed for active tasks");
+  return task;
+}
+
+function flattenTaskDeliverableDefinition(definition: Awaited<ReturnType<typeof prisma.taskDeliverableDefinition.findMany>>[number] & {
+  submissions: Array<{ submission: { deliverableNo: number; status: string; createdAt: Date; feedback: string | null } }>;
+}) {
+  return {
+    definitionId: definition.definitionId,
+    taskId: definition.taskId,
+    title: definition.title,
+    description: definition.description,
+    createdAt: definition.createdAt.toISOString(),
+    submissions: definition.submissions.map(({ submission }) => ({
+      deliverableNo: submission.deliverableNo,
+      status: submission.status,
+      createdAt: submission.createdAt.toISOString(),
+      feedback: submission.feedback,
+    })),
+  };
+}
+
+export async function listTaskDeliverableDefinitions(taskId: number, clientId: number) {
+  await requireOwnedTask(taskId, clientId);
+  const definitions = await prisma.taskDeliverableDefinition.findMany({
+    where: { taskId },
+    include: { submissions: { include: { submission: true }, orderBy: { deliverableNo: "desc" } } },
+    orderBy: { definitionId: "asc" },
+  });
+  return definitions.map(flattenTaskDeliverableDefinition);
+}
+
+export async function createTaskDeliverableDefinition(
+  taskId: number,
+  clientId: number,
+  dto: CreateTaskDeliverableDefinitionDto,
+) {
+  await requireOwnedActiveTask(taskId, clientId);
+  const definition = await prisma.taskDeliverableDefinition.create({
+    data: { taskId, title: dto.title, ...(dto.description !== undefined ? { description: dto.description } : {}) },
+  });
+  return { ...definition, createdAt: definition.createdAt.toISOString(), submissions: [] };
+}
+
+export async function updateTaskDeliverableDefinition(
+  taskId: number,
+  definitionId: number,
+  clientId: number,
+  dto: UpdateTaskDeliverableDefinitionDto,
+) {
+  await requireOwnedActiveTask(taskId, clientId);
+  return prisma.$transaction(async tx => {
+    const definition = await tx.taskDeliverableDefinition.findFirst({
+      where: { taskId, definitionId, task: { clientId } },
+      include: { _count: { select: { submissions: true } } },
+    });
+    if (!definition) throw notFound("Task deliverable not found");
+    if (definition._count.submissions > 0) throw conflict("A submitted deliverable cannot be edited; its submission history is preserved");
+    const updated = await tx.taskDeliverableDefinition.update({
+      where: { definitionId },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.description !== undefined ? { description: dto.description || null } : {}),
+      },
+    });
+    return { ...updated, createdAt: updated.createdAt.toISOString(), submissions: [] };
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function deleteTaskDeliverableDefinition(taskId: number, definitionId: number, clientId: number): Promise<void> {
+  await requireOwnedActiveTask(taskId, clientId);
+  await prisma.$transaction(async tx => {
+    const definition = await tx.taskDeliverableDefinition.findFirst({
+      where: { taskId, definitionId, task: { clientId } },
+      include: { _count: { select: { submissions: true } } },
+    });
+    if (!definition) throw notFound("Task deliverable not found");
+    if (definition._count.submissions > 0) throw conflict("A submitted deliverable cannot be deleted; its submission history is preserved");
+    await tx.taskDeliverableDefinition.delete({ where: { definitionId } });
+  }, { isolationLevel: "Serializable" });
+}
+
 // List deliverables submitted for one of the client's tasks.
 export function listTaskDeliverables(taskId: number) {
   return prisma.deliverable.findMany({
     where: { taskId },
-    include: { gigProfile: { include: { user: true } } },
+    include: {
+      gigProfile: { include: { user: true } },
+      claimedDefinitions: { include: { definition: true } },
+    },
     orderBy: { deliverableNo: "asc" },
   });
 }

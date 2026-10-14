@@ -11,7 +11,7 @@ export interface GigLayoutProps { children: React.ReactNode; }
 
 const formatBreadcrumb = (tab: GigViewTab) => ({
   dashboard: 'Gig Dashboard', explore: 'Marketplace Tasks', 'my-services': 'My Posted Services',
-  'active-tasks': 'Active Engagements', 'pending-requests': 'Pending Client Requests',
+  'active-tasks': 'Active Task/Contracts', 'pending-requests': 'Pending Client Requests',
   'completed-projects': 'Completed Projects Portfolio', earnings: 'Financial Overview & Payouts',
   'submit-deliverables': 'Submit Task Deliverable', 'submission-success': 'Deliverable Submitted',
   'post-service': 'Publish Service Offering', 'service-published': 'Service Published',
@@ -35,7 +35,7 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
     { id: 'explore', label: 'Explore Tasks', icon: <SearchIcon size={18} /> },
     { id: 'my-services', label: 'My Services', icon: <ProjectIcon size={18} /> },
     { id: 'pending-requests', label: 'Pending Requests', icon: <BellIcon size={18} />, badgeCount: pendingCount },
-    { id: 'active-tasks', label: 'Active Tasks', icon: <ProjectIcon size={18} /> },
+    { id: 'active-tasks', label: 'Active Task/Contracts', icon: <ProjectIcon size={18} /> },
     { id: 'completed-projects', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },
     { id: 'earnings', label: 'Total Earnings', icon: <PaymentIcon size={18} /> },
     { id: 'profile', label: 'My Gig Profile', icon: <UsersIcon size={18} /> }

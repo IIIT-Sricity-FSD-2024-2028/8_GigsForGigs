@@ -100,6 +100,21 @@ export interface RawDeliverable {
       name: string;
     };
   };
+  claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
+}
+
+export interface TaskDeliverableDefinition {
+  definitionId: number;
+  taskId: number;
+  title: string;
+  description: string | null;
+  createdAt: string;
+  submissions: Array<{
+    deliverableNo: number;
+    status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
+    createdAt: string;
+    feedback: string | null;
+  }>;
 }
 
 export interface RawService {
@@ -209,6 +224,18 @@ export const clientApi = {
   getTaskDeliverables: async (taskId: number): Promise<RawDeliverable[]> => {
     return apiFetch<RawDeliverable[]>(`/tasks/${taskId}/deliverables`, { actor });
   },
+
+  getTaskDeliverableDefinitions: async (taskId: number): Promise<TaskDeliverableDefinition[]> =>
+    apiFetch<TaskDeliverableDefinition[]>(`/tasks/${taskId}/deliverable-definitions`, { actor }),
+
+  createTaskDeliverableDefinition: async (taskId: number, values: { title: string; description?: string }): Promise<TaskDeliverableDefinition> =>
+    apiFetch<TaskDeliverableDefinition>(`/tasks/${taskId}/deliverable-definitions`, { method: 'POST', body: values, actor }),
+
+  updateTaskDeliverableDefinition: async (taskId: number, definitionId: number, values: { title?: string; description?: string }): Promise<TaskDeliverableDefinition> =>
+    apiFetch<TaskDeliverableDefinition>(`/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'PATCH', body: values, actor }),
+
+  deleteTaskDeliverableDefinition: async (taskId: number, definitionId: number): Promise<void> =>
+    apiFetch<void>(`/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'DELETE', actor }),
 
   reviewDeliverable: async (
     deliverableId: string,

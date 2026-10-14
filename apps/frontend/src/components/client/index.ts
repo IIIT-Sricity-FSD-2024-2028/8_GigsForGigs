@@ -7,3 +7,4 @@ export * from './forms/PostGigForm';
 export * from './sections/ActiveGigs';
 export * from './sections/DashboardSummary';
 export * from './sections/SpendingSummary';
+export * from './sections/TaskDeliverablesManager';
