@@ -235,7 +235,21 @@ export async function reviewApplication(
 
 // ---- Contracts (derived — no CONTRACT table) -------------------------------
 
-// Derive "contracts" (accepted applications) with computed deliverable progress — no dedicated CONTRACT table.
+export function toContractReviewResponse(review: any) {
+  return {
+    reviewId: review.reviewId,
+    taskId: review.taskId,
+    reviewerId: review.reviewerId,
+    revieweeId: review.revieweeId,
+    reviewerName: review.reviewer?.name,
+    revieweeName: review.reviewee?.name,
+    rating: review.rating,
+    comment: review.comment ?? undefined,
+    createdAt: typeof review.createdAt?.toISOString === "function" ? review.createdAt.toISOString() : String(review.createdAt),
+  };
+}
+
+// Derive "contracts" (accepted applications) with computed deliverable progress and task reviews — no dedicated CONTRACT table.
 export async function listContracts(clientId: number) {
   const applications = await prisma.application.findMany({
     where: { status: "accepted", task: { clientId } },
@@ -244,6 +258,10 @@ export async function listContracts(clientId: number) {
         include: {
           deliverableDefinitions: { include: latestSubmissionInclude },
           deliverables: { select: { gigProfileId: true, status: true } },
+          reviews: {
+            include: { reviewer: true, reviewee: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
       },
       gigProfile: { include: { user: true } },
@@ -264,6 +282,7 @@ export async function listContracts(clientId: number) {
     ),
     budget: application.task.budget,
     createdAt: application.createdAt,
+    reviews: (application.task.reviews ?? []).map(toContractReviewResponse),
   }));
 }
 
@@ -549,6 +568,13 @@ export async function createReview(clientId: number, userId: number, dto: Create
   if (task.status !== "completed") throw conflict("You can review the professional once the task is completed");
   const hired = task.applications[0];
   if (!hired) throw conflict("Nobody was hired for this task");
+
+  const existingReview = await prisma.review.findFirst({
+    where: { taskId: dto.taskId, reviewerId: userId, revieweeId: hired.gigProfile.userId },
+  });
+  if (existingReview) {
+    throw conflict("You have already reviewed this gig professional for this task");
+  }
 
   return prisma.review.create({
     data: {

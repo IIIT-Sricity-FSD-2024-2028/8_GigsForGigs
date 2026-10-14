@@ -342,6 +342,13 @@ export async function createReview(gigProfileId: number, dto: CreateReviewDto) {
     throw conflict("You can review the client once the task is completed");
   }
 
+  const existingReview = await prisma.review.findFirst({
+    where: { taskId: dto.taskId, reviewerId: gigProfile.userId, revieweeId: task.client.userId },
+  });
+  if (existingReview) {
+    throw conflict("You have already reviewed this client for this task");
+  }
+
   return prisma.review.create({
     data: {
       taskId: dto.taskId,
@@ -359,7 +366,7 @@ export function listCompletedProjects(gigProfileId: number) {
     where: { assignments: { some: { gigProfileId } }, status: "completed" },
     include: {
       client: true,
-      reviews: { include: { reviewer: true } },
+      reviews: { include: { reviewer: true, reviewee: true }, orderBy: { createdAt: "asc" } },
       payments: { where: { gigProfileId } },
     },
     orderBy: { updatedAt: "desc" },
