@@ -2,47 +2,56 @@
  * @file CompletedProjects.tsx
  * @description
  * Completed projects portfolio view for Gig Professionals.
- * Displays completed tasks, client feedback star ratings, payout amounts, and completion dates.
+ * Displays completed tasks, two-sided review feedback (Client's review & Professional's review),
+ * payout amounts, and completion dates with modal-based review submission.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { CompletedProject } from '../../../types/gig';
+import { GigReviewModal } from '../../../components/gig/modals/GigReviewModal';
 
 export const CompletedProjects: React.FC = () => {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<CompletedProject[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [selectedProjectForReview, setSelectedProjectForReview] = useState<CompletedProject | null>(null);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      const res = await gigApi.getCompletedProjects();
+      setProjects(res);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load completed projects.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (mounted) setError(null);
-      try {
-        const res = await gigApi.getCompletedProjects();
-        if (mounted) {
-          setProjects(res);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load completed projects.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    loadProjects();
+  }, [loadProjects]);
 
   const formatCurrency = (amt: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   if (loading) {
     return (
@@ -62,10 +71,43 @@ export const CompletedProjects: React.FC = () => {
             padding: '12px 16px',
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--font-size-sm)',
-            fontWeight: 600
+            fontWeight: 600,
           }}
         >
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div
+          style={{
+            backgroundColor: '#DEF7EC',
+            color: '#03543F',
+            border: '1px solid #BCF0DA',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span>✓ {successMessage}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#03543F',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '14px',
+            }}
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -90,9 +132,24 @@ export const CompletedProjects: React.FC = () => {
           No completed projects found in your portfolio yet.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--spacing-xl)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 'var(--spacing-xl)' }}>
           {projects.map((proj) => {
-            const review = proj.reviews?.[0];
+            const reviews = proj.reviews || [];
+
+            // Reliable direction disambiguation using reviewerId and revieweeId:
+            // Gig Professional's review of the Client: reviewerId matches authenticated user's userId
+            const myReview = reviews.find((r) =>
+              user?.userId ? r.reviewerId === user.userId : (proj.client?.clientName ? r.revieweeName === proj.client.clientName : false)
+            );
+
+            // Client's review of the Gig Professional: reviewerId does not match user's userId and revieweeId matches user's userId
+            const clientReview = reviews.find((r) =>
+              user?.userId
+                ? r.reviewerId !== user.userId && (r.revieweeId === user.userId || !r.revieweeId)
+                : (proj.client?.clientName ? r.reviewerName === proj.client.clientName : true)
+            );
+
+            const hasReviewedClient = Boolean(myReview);
             const payment = proj.payment;
 
             return (
@@ -104,7 +161,7 @@ export const CompletedProjects: React.FC = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: 'var(--spacing-md)'
+                  gap: 'var(--spacing-md)',
                 }}
               >
                 <div>
@@ -121,28 +178,85 @@ export const CompletedProjects: React.FC = () => {
                     {proj.description}
                   </p>
 
-                  {/* Client Review Section */}
-                  {review ? (
-                    <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)', marginBottom: '4px' }}>
-                        <span style={{ color: '#facc15', fontSize: '1.1rem' }}>
-                          {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                  {/* Two-Sided Reviews Section */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: 'var(--spacing-md)' }}>
+                    {/* 1. Client's Review of Gig Professional */}
+                    <div
+                      style={{
+                        padding: '12px',
+                        backgroundColor: clientReview ? '#F0FDF4' : 'var(--color-bg-light)',
+                        borderRadius: 'var(--radius-md)',
+                        border: clientReview ? '1px solid #BBF7D0' : '1px solid var(--color-border)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: clientReview ? '#15803D' : 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Client Review ({clientReview?.reviewerName || proj.client?.clientName || 'Client'})
                         </span>
-                        <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-dark)' }}>
-                          ({review.rating}.0 Rating)
-                        </span>
+                        {clientReview && (
+                          <span style={{ color: '#D47700', fontSize: '0.85rem', fontWeight: 700 }}>
+                            {'★'.repeat(clientReview.rating)}{'☆'.repeat(5 - clientReview.rating)} ({clientReview.rating}.0)
+                          </span>
+                        )}
                       </div>
-                      <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)', fontStyle: 'italic' }}>
-                        "{review.comment}"
-                      </p>
+                      {clientReview ? (
+                        <>
+                          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)', fontStyle: 'italic', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+                            "{clientReview.comment || 'No written comment provided.'}"
+                          </p>
+                          {clientReview.createdAt && (
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '4px', textAlign: 'right' }}>
+                              {formatDate(clientReview.createdAt)}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                          No review left by client yet.
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                      No rating left by client yet.
+
+                    {/* 2. Gig Professional's Review of Client */}
+                    <div
+                      style={{
+                        padding: '12px',
+                        backgroundColor: myReview ? '#F0F9FF' : 'var(--color-bg-light)',
+                        borderRadius: 'var(--radius-md)',
+                        border: myReview ? '1px solid #BAE6FD' : '1px solid var(--color-border)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: myReview ? '#0369A1' : 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Your Review of Client
+                        </span>
+                        {myReview && (
+                          <span style={{ color: '#D47700', fontSize: '0.85rem', fontWeight: 700 }}>
+                            {'★'.repeat(myReview.rating)}{'☆'.repeat(5 - myReview.rating)} ({myReview.rating}.0)
+                          </span>
+                        )}
+                      </div>
+                      {myReview ? (
+                        <>
+                          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)', fontStyle: 'italic', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+                            "{myReview.comment || 'No written comment provided.'}"
+                          </p>
+                          {myReview.createdAt && (
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '4px', textAlign: 'right' }}>
+                              {formatDate(myReview.createdAt)}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                          You haven't reviewed this client yet.
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
 
+                {/* Card Footer with Financial Info and Review Action */}
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'block' }}>Contract Value</span>
@@ -161,20 +275,37 @@ export const CompletedProjects: React.FC = () => {
                       </span>
                     )}
 
-                    {/* Gig -> Client Review Eligibility (Only allowed after payment completion) */}
-                    {payment ? (
+                    {/* Review Action */}
+                    {hasReviewedClient ? (
                       <button
-                        className="admin-btn admin-btn-outline admin-btn-sm"
-                        style={{ fontSize: '11px', padding: '4px 10px' }}
-                        onClick={() => {
-                          const rating = prompt('Rate Client Communication & Requirement Clarity (1 to 5 stars):', '5');
-                          if (rating) {
-                            const comment = prompt('Leave feedback for the Client:', 'Clear requirements and excellent communication throughout the project.');
-                            if (comment) {
-                              alert(`Review submitted for Client: ${rating} Stars - "${comment}"`);
-                            }
-                          }
+                        type="button"
+                        className="admin-btn admin-btn-sm"
+                        style={{
+                          fontSize: '11px',
+                          padding: '4px 10px',
+                          backgroundColor: '#F3F4F6',
+                          color: '#6B7280',
+                          border: '1px solid #D1D5DB',
+                          cursor: 'not-allowed',
+                          fontWeight: 600,
                         }}
+                        disabled
+                        title="You have already reviewed this client for this task"
+                      >
+                        ✓ Review Submitted
+                      </button>
+                    ) : payment ? (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-outline admin-btn-sm"
+                        style={{
+                          fontSize: '11px',
+                          padding: '4px 10px',
+                          fontWeight: 700,
+                          borderColor: 'var(--color-secondary)',
+                          color: 'var(--color-secondary)',
+                        }}
+                        onClick={() => setSelectedProjectForReview(proj)}
                       >
                         ★ Review Client
                       </button>
@@ -189,6 +320,23 @@ export const CompletedProjects: React.FC = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Review Modal */}
+      {selectedProjectForReview && (
+        <GigReviewModal
+          isOpen={Boolean(selectedProjectForReview)}
+          onClose={() => setSelectedProjectForReview(null)}
+          taskId={selectedProjectForReview.taskId}
+          taskTitle={selectedProjectForReview.title}
+          clientName={selectedProjectForReview.client?.clientName || 'Client'}
+          onSuccess={async () => {
+            const clientName = selectedProjectForReview.client?.clientName || 'Client';
+            await loadProjects();
+            setSuccessMessage(`Review for ${clientName} submitted successfully!`);
+            setSelectedProjectForReview(null);
+          }}
+        />
       )}
     </div>
   );
