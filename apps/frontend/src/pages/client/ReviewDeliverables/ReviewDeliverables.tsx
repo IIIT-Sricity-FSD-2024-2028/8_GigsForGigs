@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useClient } from '../../../context/ClientContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useClient, type Contract, type ContractReview } from '../../../context/ClientContext';
 import { usePayments } from '../../../context/PaymentContext/PaymentContext';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
 import { Badge } from '../../../components/common/Badge';
 import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { ClientReviewModal, TaskReviewsModal } from '../../../components/client';
 
 export interface ReviewDeliverablesProps {
   onNavigate: (viewId: string) => void;
@@ -11,7 +13,8 @@ export interface ReviewDeliverablesProps {
 }
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNavigate, params }) => {
-  const { contracts: clientContracts, approveDeliverable, rejectDeliverable } = useClient();
+  const { user } = useAuth();
+  const { contracts: clientContracts, approveDeliverable, rejectDeliverable, refreshContracts } = useClient();
   const { payments, approveAndReleasePayment, raiseDispute, getPaymentByTask, fetchPaymentForTask } = usePayments();
   const taskId = params?.taskId;
   const numericTaskId = Number(String(taskId).replace(/[^0-9]/g, '')) || 1;
@@ -32,6 +35,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         payment_status: 'PAYMENT_REQUIRED',
         progress: foundInClient.status === 'REVIEWING' ? 70 : 30,
         status: foundInClient.status,
+        reviews: foundInClient.reviews || ([] as ContractReview[]),
       };
     }
 
@@ -47,6 +51,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       payment_status: 'PAYMENT_REQUIRED',
       progress: 50,
       status: 'IN_PROGRESS',
+      reviews: [] as ContractReview[],
     };
   }, [taskId, clientContracts]);
 
@@ -84,25 +89,38 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const [isChangesModalOpen, setIsChangesModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isReviewsViewModalOpen, setIsReviewsViewModalOpen] = useState(false);
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
   const [changesFeedback, setChangesFeedback] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('Outstanding deliverable! Completed according to specifications on time.');
 
   // Current stage: 'UNDER_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'PAYMENT_COMPLETED'
   const [reviewStage, setReviewStage] = useState<'UNDER_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'PAYMENT_COMPLETED'>(() => {
+    if (contract.status === 'COMPLETED') return 'PAYMENT_COMPLETED';
     if (currentDeliverable?.status === 'approved') return 'APPROVED';
     if (currentDeliverable?.status === 'revision_requested') return 'CHANGES_REQUESTED';
     return 'UNDER_REVIEW';
   });
 
   useEffect(() => {
-    if (currentDeliverable?.status === 'approved') setReviewStage('APPROVED');
+    if (contract.status === 'COMPLETED') setReviewStage('PAYMENT_COMPLETED');
+    else if (currentDeliverable?.status === 'approved') setReviewStage('APPROVED');
     else if (currentDeliverable?.status === 'revision_requested') setReviewStage('CHANGES_REQUESTED');
     else setReviewStage('UNDER_REVIEW');
-  }, [currentDeliverable]);
+  }, [currentDeliverable, contract.status]);
+
+  const effectiveTaskId = Number(contract.task_id) || numericTaskId;
+
+  const clientReview = useMemo(() => {
+    if (!contract.reviews || !user) return undefined;
+    return contract.reviews.find((r) => r.reviewerId === user.userId);
+  }, [contract.reviews, user]);
+
+  const gigReview = useMemo(() => {
+    if (!contract.reviews || !user) return undefined;
+    return contract.reviews.find((r) => r.reviewerId !== user.userId && r.revieweeId === user.userId);
+  }, [contract.reviews, user]);
 
   const taskPayment = taskId ? getPaymentByTask(taskId) : payments[0];
   const gigAmount = contract.budget || 5000;
@@ -161,22 +179,10 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       await approveAndReleasePayment(taskPayment.paymentId, 'Deliverable verified & approved by client');
       setReviewStage('PAYMENT_COMPLETED');
       setIsPaymentModalOpen(false);
+      await refreshContracts();
       alert(`Payment of ${formatCurrency(totalAmount)} completed successfully!\n\n• ${formatCurrency(gigAmount)} released to ${contract.gig_pro_name}\n• ${formatCurrency(platformFee)} recorded as Platform Revenue.`);
     } catch (err) {
       alert(err instanceof Error && err.message ? err.message : 'Payment release failed. Please try again.');
-    }
-  };
-
-  // Step 3: Client rates & reviews Gig Professional
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await clientApi.createReview(numericTaskId, reviewRating, reviewComment);
-      setIsReviewModalOpen(false);
-      alert(`Thank you! Review recorded for ${contract.gig_pro_name}: ${reviewRating} Stars.`);
-      onNavigate('my-gigs');
-    } catch (err) {
-      alert(err instanceof Error && err.message ? err.message : 'Failed to save your review.');
     }
   };
 
@@ -421,13 +427,72 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                       </div>
                     </div>
 
-                    <button
-                      className="admin-btn admin-btn-outline"
-                      style={{ padding: '10px', fontSize: '0.85rem', fontWeight: 700, borderColor: '#0D568D', color: '#0D568D' }}
-                      onClick={() => setIsReviewModalOpen(true)}
-                    >
-                      ★ Rate &amp; Review Gig Professional
-                    </button>
+                    {/* Client Review Section */}
+                    {clientReview ? (
+                      <div style={{ backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            ✓ Your Review Submitted
+                          </span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#eab308' }}>
+                            {'★'.repeat(clientReview.rating)}{'☆'.repeat(5 - clientReview.rating)} ({clientReview.rating}.0)
+                          </span>
+                        </div>
+                        {clientReview.comment && (
+                          <p style={{ fontSize: '0.82rem', color: '#1f2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
+                            "{clientReview.comment}"
+                          </p>
+                        )}
+                        {clientReview.createdAt && (
+                          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '6px', textAlign: 'right' }}>
+                            {new Date(clientReview.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        className="admin-btn admin-btn-outline"
+                        style={{ padding: '10px', fontSize: '0.85rem', fontWeight: 700, borderColor: '#0D568D', color: '#0D568D' }}
+                        onClick={() => setIsReviewModalOpen(true)}
+                      >
+                        ★ Rate &amp; Review Gig Professional
+                      </button>
+                    )}
+
+                    {/* Gig Professional Review Section */}
+                    {gigReview && (
+                      <div style={{ backgroundColor: '#fdf4ff', padding: '12px', borderRadius: '8px', border: '1px solid #f5d0fe' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#86198f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {contract.gig_pro_name}'s Review of You
+                          </span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#eab308' }}>
+                            {'★'.repeat(gigReview.rating)}{'☆'.repeat(5 - gigReview.rating)} ({gigReview.rating}.0)
+                          </span>
+                        </div>
+                        {gigReview.comment && (
+                          <p style={{ fontSize: '0.82rem', color: '#1f2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
+                            "{gigReview.comment}"
+                          </p>
+                        )}
+                        {gigReview.createdAt && (
+                          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '6px', textAlign: 'right' }}>
+                            {new Date(gigReview.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {contract.reviews && contract.reviews.length > 0 && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-outline admin-btn-sm"
+                        style={{ fontSize: '0.8rem' }}
+                        onClick={() => setIsReviewsViewModalOpen(true)}
+                      >
+                        View Two-Sided Project Reviews ({contract.reviews.length})
+                      </button>
+                    )}
 
                     <button
                       className="admin-btn admin-btn-primary admin-btn-sm"
@@ -556,62 +621,41 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         </div>
       )}
 
-      {/* Modal 4: Client -> Gig Review Modal */}
-      {isReviewModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleSubmitReview} style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 12px 0' }}>
-              Rate &amp; Review {contract.gig_pro_name}
-            </h3>
-            <p style={{ fontSize: '13px', color: '#76594F', marginBottom: '16px' }}>
-              Leave feedback on work quality, communication, and delivery.
-            </p>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
-                Rating:
-              </label>
-              <select
-                value={reviewRating}
-                onChange={(e) => setReviewRating(Number(e.target.value))}
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5DDE0', fontSize: '14px' }}
-              >
-                <option value={5}>★★★★★ - Excellent (5 Stars)</option>
-                <option value={4}>★★★★☆ - Very Good (4 Stars)</option>
-                <option value={3}>★★★☆☆ - Satisfactory (3 Stars)</option>
-                <option value={2}>★★☆☆☆ - Needs Improvement (2 Stars)</option>
-                <option value={1}>★☆☆☆☆ - Unsatisfactory (1 Star)</option>
-              </select>
-            </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
-                Review Comment:
-              </label>
-              <textarea maxLength={1000}
-                required
-                rows={3}
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5DDE0', fontSize: '13px', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsReviewModalOpen(false)}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Skip
-              </button>
-              <button
-                type="submit"
-                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0D568D', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Submit Review
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Modal 4: Client Review Modal */}
+      <ClientReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        taskId={effectiveTaskId}
+        taskTitle={contract.task_title}
+        gigProName={contract.gig_pro_name}
+        onSuccess={() => {
+          setIsReviewModalOpen(false);
+        }}
+      />
+
+      {/* Modal 5: Task Reviews View Modal */}
+      <TaskReviewsModal
+        isOpen={isReviewsViewModalOpen}
+        onClose={() => setIsReviewsViewModalOpen(false)}
+        contract={
+          clientContracts.find((c) => c.task_id === taskId || c.contract_id === taskId) || {
+            contract_id: contract.contract_id,
+            task_id: contract.task_id,
+            task_title: contract.task_title,
+            gig_pro_name: contract.gig_pro_name,
+            budget: contract.budget,
+            progress: contract.progress,
+            status: contract.status as Contract['status'],
+            createdAt: '',
+            reviews: contract.reviews,
+          }
+        }
+        currentUserId={user?.userId}
+        onOpenRateReview={() => {
+          setIsReviewsViewModalOpen(false);
+          setIsReviewModalOpen(true);
+        }}
+      />
 
       {/* Modal 5: Raise Dispute */}
       {isDisputeModalOpen && (

@@ -65,6 +65,18 @@ export interface Service {
   gig_profile_id: string;
 }
 
+export interface ContractReview {
+  reviewId: number;
+  taskId: number;
+  reviewerId: number;
+  revieweeId: number;
+  reviewerName?: string;
+  revieweeName?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
 export interface Contract {
   contract_id: string;
   task_id: string;
@@ -74,6 +86,7 @@ export interface Contract {
   progress: number;
   budget: number;
   createdAt: string;
+  reviews?: ContractReview[];
 }
 
 export interface Deliverable {
@@ -124,6 +137,8 @@ interface ClientContextType {
   rejectCandidate: (applicationId: string) => Promise<void>;
   requestService: (serviceId: string) => Promise<void>;
   requestedServices: Set<string>;
+  refreshContracts: () => Promise<void>;
+  submitReview: (taskId: number, rating: number, comment?: string) => Promise<void>;
 }
 
 const ClientContextInstance = createContext<ClientContextType | undefined>(undefined);
@@ -179,8 +194,9 @@ interface RawContract {
   gigProfessionalName: string;
   status: RawTaskStatus;
   progress: number;
-  budget: string;
+  budget: string | number;
   createdAt: string;
+  reviews?: ContractReview[];
 }
 
 interface RawDeliverable {
@@ -289,6 +305,7 @@ function mapContract(raw: RawContract): Contract {
     progress: raw.progress,
     budget: Number(raw.budget),
     createdAt: raw.createdAt,
+    reviews: raw.reviews ?? [],
   };
 }
 
@@ -736,6 +753,20 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const submitReview = async (taskId: number, rating: number, comment?: string) => {
+    setError(null);
+    try {
+      await apiFetch('/reviews', {
+        method: 'POST',
+        actor: 'client',
+        body: { taskId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) },
+      });
+      await refreshContracts();
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
   return (
     <ClientContextInstance.Provider value={{
       tasks,
@@ -760,6 +791,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       rejectCandidate,
       requestService,
       requestedServices,
+      refreshContracts,
+      submitReview,
     }}>
       {children}
     </ClientContextInstance.Provider>

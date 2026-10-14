@@ -8,3 +8,5 @@ export * from './sections/ActiveGigs';
 export * from './sections/DashboardSummary';
 export * from './sections/SpendingSummary';
 export * from './sections/TaskDeliverablesManager';
+export * from './modals/ClientReviewModal';
+export * from './modals/TaskReviewsModal';
