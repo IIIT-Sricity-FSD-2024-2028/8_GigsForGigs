@@ -138,16 +138,14 @@ export const CompletedProjects: React.FC = () => {
 
             // Reliable direction disambiguation using reviewerId and revieweeId:
             // Gig Professional's review of the Client: reviewerId matches authenticated user's userId
-            const myReview = reviews.find((r) =>
-              user?.userId ? r.reviewerId === user.userId : (proj.client?.clientName ? r.revieweeName === proj.client.clientName : false)
-            );
+            const myReview = user?.userId
+              ? reviews.find((r) => r.reviewerId === user.userId)
+              : undefined;
 
-            // Client's review of the Gig Professional: reviewerId does not match user's userId and revieweeId matches user's userId
-            const clientReview = reviews.find((r) =>
-              user?.userId
-                ? r.reviewerId !== user.userId && (r.revieweeId === user.userId || !r.revieweeId)
-                : (proj.client?.clientName ? r.reviewerName === proj.client.clientName : true)
-            );
+            // Client's review of the Gig Professional: revieweeId matches authenticated user's userId and reviewerId differs
+            const clientReview = user?.userId
+              ? reviews.find((r) => r.reviewerId !== user.userId && r.revieweeId === user.userId)
+              : undefined;
 
             const hasReviewedClient = Boolean(myReview);
             const payment = proj.payment;

@@ -22,18 +22,15 @@ export const TaskReviewsModal: React.FC<TaskReviewsModalProps> = ({
   const reviews: ContractReview[] = contract.reviews || [];
 
   // Reliable direction identification:
-  // Client's review is where reviewerId matches the current authenticated Client userId,
-  // or fallback to reviewerName not matching gig_pro_name.
-  const clientReview = reviews.find((r) =>
-    currentUserId ? r.reviewerId === currentUserId : r.revieweeName === contract.gig_pro_name
-  );
+  // Client's review is where reviewerId matches the current authenticated Client userId
+  const clientReview = currentUserId
+    ? reviews.find((r) => r.reviewerId === currentUserId)
+    : undefined;
 
-  // Gig professional's review is where reviewerId differs from Client userId (or reviewerName matches gig_pro_name).
-  const gigReview = reviews.find((r) =>
-    currentUserId
-      ? r.reviewerId !== currentUserId && (r.revieweeId === currentUserId || r.reviewerName === contract.gig_pro_name)
-      : r.reviewerName === contract.gig_pro_name
-  );
+  // Gig professional's review is where revieweeId matches Client userId and reviewerId differs from Client userId
+  const gigReview = currentUserId
+    ? reviews.find((r) => r.reviewerId !== currentUserId && r.revieweeId === currentUserId)
+    : undefined;
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'Recently';

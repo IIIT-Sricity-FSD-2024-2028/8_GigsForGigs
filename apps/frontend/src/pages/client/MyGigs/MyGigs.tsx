@@ -100,14 +100,12 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 } as EscrowPayment;
 
                 const reviews = c.reviews || [];
-                const clientReview = reviews.find(r =>
-                  user?.userId ? r.reviewerId === user.userId : r.revieweeName === c.gig_pro_name
-                );
-                const gigReview = reviews.find(r =>
-                  user?.userId
-                    ? r.reviewerId !== user.userId && (r.revieweeId === user.userId || r.reviewerName === c.gig_pro_name)
-                    : r.reviewerName === c.gig_pro_name
-                );
+                const clientReview = user?.userId
+                  ? reviews.find(r => r.reviewerId === user.userId)
+                  : undefined;
+                const gigReview = user?.userId
+                  ? reviews.find(r => r.reviewerId !== user.userId && r.revieweeId === user.userId)
+                  : undefined;
                 const isCompleted = c.status === 'COMPLETED' || p.status === 'COMPLETED' || p.status === 'RELEASED';
 
                 return (
