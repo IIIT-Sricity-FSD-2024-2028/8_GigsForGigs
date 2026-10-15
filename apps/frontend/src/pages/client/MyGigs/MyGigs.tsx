@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { useClient } from '../../../context/ClientContext';
+import { useClient, type Contract } from '../../../context/ClientContext';
+import { useAuth } from '../../../context/AuthContext';
 import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
 import { Table } from '../../../components/common/Table';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
+import { ClientReviewModal } from '../../../components/client/modals/ClientReviewModal';
+import { TaskReviewsModal } from '../../../components/client/modals/TaskReviewsModal';
 
 export interface MyGigsProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -11,8 +14,11 @@ export interface MyGigsProps {
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const { contracts, deleteTask } = useClient();
+  const { user } = useAuth();
   const { payments } = usePayments();
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<EscrowPayment | null>(null);
+  const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
+  const [viewReviewsContract, setViewReviewsContract] = useState<Contract | null>(null);
 
   const handleDeleteTask = async (taskId: string) => {
     if (confirm('Are you sure you want to delete / cancel this contract task?')) {
@@ -93,6 +99,15 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                   updatedAt: new Date().toISOString()
                 } as EscrowPayment;
 
+                const reviews = c.reviews || [];
+                const clientReview = user?.userId
+                  ? reviews.find(r => r.reviewerId === user.userId)
+                  : undefined;
+                const gigReview = user?.userId
+                  ? reviews.find(r => r.reviewerId !== user.userId && r.revieweeId === user.userId)
+                  : undefined;
+                const isCompleted = c.status === 'COMPLETED' || p.status === 'COMPLETED' || p.status === 'RELEASED';
+
                 return (
                   <tr key={c.contract_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                     <td style={{ padding: '12px 16px' }}>
@@ -113,6 +128,64 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                       }`}>
                         {c.status.replace('_', ' ')}
                       </span>
+                      {isCompleted && (
+                        <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                          {clientReview ? (
+                            <span
+                              title={clientReview.comment ? `"${clientReview.comment}"` : 'Review submitted'}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                backgroundColor: '#FEF7E0',
+                                color: '#B06000',
+                                border: '1px solid #FEEFC3',
+                              }}
+                            >
+                              ★ {clientReview.rating}.0 Reviewed
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                backgroundColor: '#E8F0FE',
+                                color: '#1A73E8',
+                                border: '1px solid #D2E3FC',
+                              }}
+                            >
+                              ● Review Pending
+                            </span>
+                          )}
+                          {gigReview && (
+                            <span
+                              title={gigReview.comment ? `"${gigReview.comment}"` : 'Professional submitted feedback'}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '2px 6px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                backgroundColor: '#E6F4EA',
+                                color: '#137333',
+                              }}
+                            >
+                              ✓ Pro Reviewed ({gigReview.rating}★)
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <span style={{
@@ -130,7 +203,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                       {formatCurrency(p.totalAmount)}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <button
                           className="btn-review-proposal"
                           style={{ padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--color-primary-blue)', borderRadius: 'var(--radius-sm)', color: 'var(--color-primary-blue)', backgroundColor: 'transparent', cursor: 'pointer' }}
@@ -145,17 +218,60 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                         >
                           Deliverables
                         </button>
-                        <button
-                          className="btn-icon-action"
-                          title="Delete task"
-                          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                          onClick={() => handleDeleteTask(c.task_id)}
-                        >
-                          <svg className="manager-delete-icon" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          </svg>
-                        </button>
+                        {isCompleted && !clientReview && (
+                          <button
+                            className="btn-review-proposal"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              border: 'none',
+                              borderRadius: 'var(--radius-sm)',
+                              color: '#FFFFFF',
+                              backgroundColor: '#D47700',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                            onClick={() => setReviewingContract(c)}
+                            title={`Rate & review ${c.gig_pro_name}`}
+                          >
+                            ★ Rate &amp; Review
+                          </button>
+                        )}
+                        {isCompleted && reviews.length > 0 && (
+                          <button
+                            className="btn-review-proposal"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              border: '1px solid #0D568D',
+                              borderRadius: 'var(--radius-sm)',
+                              color: '#0D568D',
+                              backgroundColor: '#EFF6F7',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => setViewReviewsContract(c)}
+                            title="View two-sided reviews for this contract"
+                          >
+                            Reviews ({reviews.length})
+                          </button>
+                        )}
+                        {!isCompleted && (
+                          <button
+                            className="btn-icon-action"
+                            title="Delete task"
+                            style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+                            onClick={() => handleDeleteTask(c.task_id)}
+                          >
+                            <svg className="manager-delete-icon" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -229,14 +345,40 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 }}
                 style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0D568D', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
               >
-                Review Deliverables &amp; Approve
+                Review Deliverables &amp; Details
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Rate & Review Modal */}
+      {reviewingContract && (
+        <ClientReviewModal
+          isOpen={Boolean(reviewingContract)}
+          onClose={() => setReviewingContract(null)}
+          taskId={Number(reviewingContract.task_id)}
+          taskTitle={reviewingContract.task_title}
+          gigProName={reviewingContract.gig_pro_name}
+        />
+      )}
+
+      {/* Task Two-Sided Reviews Modal */}
+      {viewReviewsContract && (
+        <TaskReviewsModal
+          isOpen={Boolean(viewReviewsContract)}
+          onClose={() => setViewReviewsContract(null)}
+          contract={contracts.find(c => c.task_id === viewReviewsContract.task_id) || viewReviewsContract}
+          currentUserId={user?.userId}
+          onOpenRateReview={() => {
+            const current = contracts.find(c => c.task_id === viewReviewsContract.task_id) || viewReviewsContract;
+            setReviewingContract(current);
+          }}
+        />
       )}
     </div>
   );
 };
 
 export default MyGigs;
+

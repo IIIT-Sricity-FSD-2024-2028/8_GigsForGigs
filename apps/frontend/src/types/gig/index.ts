@@ -80,9 +80,14 @@ export interface PendingRequest {
  */
 export interface GigReview {
   reviewId: number;
+  taskId?: number;
+  reviewerId: number;
+  revieweeId: number;
+  reviewerName?: string;
+  revieweeName?: string;
+  clientName?: string;
   rating: number;
   comment?: string;
-  clientName?: string;
   createdAt?: string;
 }
 

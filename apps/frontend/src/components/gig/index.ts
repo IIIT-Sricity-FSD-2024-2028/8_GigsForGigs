@@ -8,3 +8,4 @@ export * from './sections/ActiveTasks';
 export * from './sections/DashboardSummary';
 export * from './sections/EarningsSummary';
 export * from './sections/ExploreTasks';
+export * from './modals/GigReviewModal';

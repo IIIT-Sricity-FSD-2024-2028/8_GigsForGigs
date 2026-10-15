@@ -75,6 +75,18 @@ export interface RawApplication {
   };
 }
 
+export interface RawContractReview {
+  reviewId: number;
+  taskId: number;
+  reviewerId: number;
+  revieweeId: number;
+  reviewerName?: string;
+  revieweeName?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
 export interface RawContract {
   taskId: number;
   taskTitle: string;
@@ -84,6 +96,7 @@ export interface RawContract {
   progress: number;
   budget: number | string;
   createdAt: string;
+  reviews?: RawContractReview[];
 }
 
 export interface RawDeliverable {

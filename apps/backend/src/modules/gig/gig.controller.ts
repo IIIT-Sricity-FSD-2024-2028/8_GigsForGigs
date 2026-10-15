@@ -128,13 +128,18 @@ function toPaymentResponse(payment: Row) {
   };
 }
 
-function toReviewResponse(review: Row) {
+export function toReviewResponse(review: Row) {
   return {
     reviewId: review.reviewId,
+    taskId: review.taskId,
+    reviewerId: review.reviewerId,
+    revieweeId: review.revieweeId,
+    reviewerName: review.reviewer?.name,
+    revieweeName: review.reviewee?.name,
+    clientName: review.reviewer?.name,
     rating: review.rating,
     comment: review.comment ?? undefined,
-    clientName: review.reviewer?.name,
-    createdAt: review.createdAt.toISOString(),
+    createdAt: typeof review.createdAt?.toISOString === "function" ? review.createdAt.toISOString() : String(review.createdAt),
   };
 }
 
