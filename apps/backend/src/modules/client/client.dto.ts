@@ -40,10 +40,22 @@ export const updateApplicationSchema = z.object({
 });
 export type UpdateApplicationDto = z.infer<typeof updateApplicationSchema>;
 
-export const reviewDeliverableAsClientSchema = z.object({
-  status: z.enum(["approved", "revision_requested"]),
-  feedback: text(500).optional(),
-});
+export const reviewDeliverableAsClientSchema = z
+  .object({
+    status: z.enum(["approved", "revision_requested"]),
+    feedback: text(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "revision_requested") {
+      if (!data.feedback || !data.feedback.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Feedback is required when requesting revisions",
+          path: ["feedback"],
+        });
+      }
+    }
+  });
 export type ReviewDeliverableAsClientDto = z.infer<typeof reviewDeliverableAsClientSchema>;
 
 export const createClientReviewSchema = z.object({

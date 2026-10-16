@@ -5,8 +5,8 @@ import { app } from "../app.js";
 import { signToken } from "./jwt.js";
 import { prisma } from "db";
 import { toContractReviewResponse } from "../modules/client/client.service.js";
-import { toReviewResponse } from "../modules/gig/gig.controller.js";
-import { createClientReviewSchema } from "../modules/client/client.dto.js";
+import { toReviewResponse, toDeliverableResponse } from "../modules/gig/gig.controller.js";
+import { createClientReviewSchema, reviewDeliverableAsClientSchema } from "../modules/client/client.dto.js";
 import { createReviewSchema as createGigReviewSchema } from "../modules/gig/gig.dto.js";
 
 let server: Server;
@@ -402,4 +402,98 @@ test("Scenario 5: Both sides display the correct review direction using reviewer
   assert.equal(gigOwnReview?.comment, "Gig pro feedback for client");
   assert.equal(gigReceivedReview?.reviewId, 1);
   assert.equal(gigReceivedReview?.comment, "Client feedback for gig pro");
+});
+
+// Scenario 13: Deliverable revision feedback validation
+test("Scenario 13: Deliverable revision feedback validation enforces non-empty feedback", () => {
+  // Revision requested with empty or whitespace feedback is rejected
+  assert.equal(reviewDeliverableAsClientSchema.safeParse({ status: "revision_requested", feedback: "" }).success, false);
+  assert.equal(reviewDeliverableAsClientSchema.safeParse({ status: "revision_requested", feedback: "   " }).success, false);
+  assert.equal(reviewDeliverableAsClientSchema.safeParse({ status: "revision_requested" }).success, false);
+
+  // Revision requested with overlong feedback is rejected
+  assert.equal(reviewDeliverableAsClientSchema.safeParse({ status: "revision_requested", feedback: "A".repeat(501) }).success, false);
+
+  // Revision requested with valid feedback is accepted
+  const validRevision = reviewDeliverableAsClientSchema.safeParse({ status: "revision_requested", feedback: "Please fix responsive mobile alignment" });
+  assert.equal(validRevision.success, true);
+
+  // Approval without feedback is accepted
+  const validApproval = reviewDeliverableAsClientSchema.safeParse({ status: "approved" });
+  assert.equal(validApproval.success, true);
+});
+
+// Scenario 14: Client deliverable review API security and state validation
+test("Scenario 14: Client deliverable review rejects unauthorized clients, malformed keys, and empty feedback", async () => {
+  const task = await prisma.task.findUniqueOrThrow({
+    where: { taskId: TEST_TASK_ID },
+    include: { client: true },
+  });
+  const clientToken = signToken({
+    role: "client",
+    userId: task.client.userId,
+    clientId: task.client.clientId,
+  });
+
+  // 1. Malformed deliverable ID format (not <taskId>-<deliverableNo>) -> 400 Bad Request
+  const malformedRes = await fetch(`${baseUrl}/api/deliverables/invalid-id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${clientToken}` },
+    body: JSON.stringify({ status: "approved" }),
+  });
+  assert.equal(malformedRes.status, 400);
+
+  // 2. Deliverable belonging to non-existent / other client task -> 404 Not Found
+  const otherTaskRes = await fetch(`${baseUrl}/api/deliverables/99999-1`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${clientToken}` },
+    body: JSON.stringify({ status: "approved" }),
+  });
+  assert.equal(otherTaskRes.status, 404);
+
+  // 3. Revision requested with empty feedback via API -> 400 Bad Request
+  const emptyFeedbackRes = await fetch(`${baseUrl}/api/deliverables/${TEST_TASK_ID}-1`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${clientToken}` },
+    body: JSON.stringify({ status: "revision_requested", feedback: "   " }),
+  });
+  assert.equal(emptyFeedbackRes.status, 400);
+
+  // 4. Gig Professional attempting client deliverable review endpoint -> 403 Forbidden
+  const realGig = await prisma.user.findFirst({
+    where: { role: "gig_professional", gigProfile: { isNot: null } },
+    include: { gigProfile: true },
+  });
+  assert.ok(realGig?.gigProfile, "Real gig pro should exist in DB");
+
+  const gigToken = signToken({
+    role: "gig_professional",
+    userId: realGig.userId,
+    gigProfileId: realGig.gigProfile.gigProfileId,
+  });
+  const gigAttemptRes = await fetch(`${baseUrl}/api/deliverables/${TEST_TASK_ID}-1`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${gigToken}` },
+    body: JSON.stringify({ status: "approved" }),
+  });
+  assert.equal(gigAttemptRes.status, 403);
+});
+
+// Scenario 15: Deliverable response shaping exposes feedback for gig professional
+test("Scenario 15: toDeliverableResponse exposes feedback so gig professionals see revision feedback", () => {
+  const deliverableRow = {
+    taskId: 101,
+    deliverableNo: 1,
+    gigProfileId: 20,
+    description: "Initial website mockup",
+    submissionPath: "https://figma.com/file/mockup",
+    status: "revision_requested",
+    feedback: "Please adjust primary brand color to match the style guide.",
+    createdAt: new Date("2026-03-01T12:00:00Z"),
+    claimedDefinitions: [],
+  };
+
+  const shaped = toDeliverableResponse(deliverableRow);
+  assert.equal(shaped.status, "revision_requested");
+  assert.equal(shaped.feedback, "Please adjust primary brand color to match the style guide.");
 });

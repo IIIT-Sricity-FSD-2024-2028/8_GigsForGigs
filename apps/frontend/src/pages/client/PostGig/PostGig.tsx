@@ -1,28 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useClient } from '../../../context/ClientContext';
 
-// Props received from the parent component.
-// onNavigate is a callback function supplied by the parent for navigation.
-// params contains optional parameters such as editId when editing an existing task.
 export interface PostGigProps {
   onNavigate: (viewId: string) => void;
   params?: Record<string, string>;
 }
-// Destructure the props passed by the parent component.
-// onNavigate -> callback from parent
-// params -> optional data from parent
+
+interface AttachedFile {
+  id: string;
+  name: string;
+  size: number;
+}
+
 export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
-// Access shared task data and task operations from ClientContext.
-// tasks -> shared task data
-// addTask -> creates a new task
-// updateTask -> updates an existing task
   const { addTask, updateTask, tasks } = useClient();
-  // params is a prop received from the parent.
-// editId is extracted to determine whether this page is being
-// used to create a new task or edit an existing task.
   const editId = params?.editId;
-// Local state stores the values entered in the form.
-// These values belong to the PostGig component.
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState<number | ''>('');
@@ -30,20 +23,81 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
   const [duration, setDuration] = useState('1-3-months');
   const [pricing, setPricing] = useState('fixed');
   const [skills, setSkills] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editId) {
-      const task = tasks.find(t => t.task_id === editId);
+      const task = tasks.find(t => String(t.task_id) === String(editId));
       if (task) {
-        setTitle(task.title);
-        setDescription(task.description);
-        setBudget(task.budget);
+        setTitle(task.title || '');
+        setDescription(task.description || '');
+        setBudget(task.budget ? Number(task.budget) : '');
         setCategory(task.category || 'dev');
         setDuration(task.duration || '1-3-months');
         setSkills(task.skills ? task.skills.join(', ') : '');
       }
     }
   }, [editId, tasks]);
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+
+    const maxSizeBytes = 25 * 1024 * 1024; // 25 MB
+    const newFiles: AttachedFile[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > maxSizeBytes) {
+        setUploadError(`"${file.name}" exceeds the maximum allowed size of 25MB.`);
+        return;
+      }
+      newFiles.push({
+        id: `${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        size: file.size,
+      });
+    }
+
+    setAttachedFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFiles(e.target.files);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const removeFile = (id: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +114,6 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
         await addTask(title, description, Number(budget), category, duration, skills);
         alert('Task published successfully!');
       }
-// Callback received from the parent.
-// Calling onNavigate() sends an event/message from this child component
-// back to the parent, asking it to navigate to the dashboard.
       onNavigate('dashboard');
     } catch (err) {
       console.error('Save task failed:', err);
@@ -80,18 +131,19 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
         {editId ? 'Edit Task' : 'Post a Task'}
       </h1>
       <p className="form-page-description" style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-lg)' }}>
-        Describe your project requirements so relevant professionals can discover and apply to your task.
+        {editId
+          ? 'Update the details and scope for your existing task.'
+          : 'Describe your project requirements so relevant professionals can discover and apply to your task.'}
       </p>
 
       <form onSubmit={handleSubmit} id="post-gig-form">
-        
         <div className="form-group">
           <label className="form-label" htmlFor="gig-title">Gig Title</label>
-          <input maxLength={255}
+          <input
+            maxLength={255}
             type="text"
             id="gig-title"
             className="form-input"
-              // Updates the local title state whenever the user types.
             placeholder="e.g. Need a Senior React Developer for 3 months"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -135,7 +187,8 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
 
         <div className="form-group">
           <label className="form-label" htmlFor="description">Detailed Description</label>
-          <textarea maxLength={5000}
+          <textarea
+            maxLength={5000}
             id="description"
             className="form-input"
             rows={6}
@@ -175,7 +228,8 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="budget">Budget (₹)</label>
-            <input max="99999999.99"
+            <input
+              max="99999999.99"
               type="number"
               id="budget"
               className="form-input"
@@ -191,7 +245,8 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
 
         <div className="form-group">
           <label className="form-label">Required Skills (Comma separated)</label>
-          <input maxLength={1000}
+          <input
+            maxLength={1000}
             type="text"
             id="skills"
             className="form-input"
@@ -201,26 +256,102 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
           />
         </div>
 
+        {/* Attachments Upload Feature */}
         <div className="form-group">
           <label className="form-label">Attachments (Optional)</label>
-          <div className="file-upload-area" onClick={() => alert('Mock file upload triggered.')}>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.zip,.png,.jpg,.jpeg"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+
+          <div
+            className="file-upload-area"
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            style={{
+              borderColor: isDragging ? 'var(--color-primary-blue)' : undefined,
+              backgroundColor: isDragging ? 'rgba(191, 105, 0, 0.08)' : undefined,
+            }}
+          >
             <div className="file-upload-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
               </svg>
             </div>
-            <p>Upload project briefs or brand guidelines</p>
-            <span className="file-upload-hint" style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>PDF, DOCX, ZIP (Max 25MB)</span>
+            <p style={{ margin: '4px 0', fontWeight: 600 }}>Click to browse or drag &amp; drop files</p>
+            <span className="file-upload-hint" style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+              PDF, DOCX, ZIP, PNG, JPG (Max 25MB per file)
+            </span>
           </div>
+
+          {uploadError && (
+            <div style={{ color: '#d32f2f', fontSize: '0.8rem', marginTop: '6px' }}>
+              ⚠️ {uploadError}
+            </div>
+          )}
+
+          {/* Attached Files List */}
+          {attachedFiles.length > 0 && (
+            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-dark)' }}>
+                Attached Files ({attachedFiles.length}):
+              </div>
+              {attachedFiles.map(file => (
+                <div
+                  key={file.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: '#F5F9FA',
+                    border: '1px solid var(--color-border)',
+                    fontSize: '0.82rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    <span style={{ fontSize: '1rem' }}>📎</span>
+                    <span style={{ fontWeight: 600, color: 'var(--color-text-dark)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {file.name}
+                    </span>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
+                      ({formatFileSize(file.size)})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removeFile(file.id); }}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      color: '#d32f2f',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                      fontSize: '14px'
+                    }}
+                    title="Remove file"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="form-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-xl)' }}>
           <button
             type="button"
             className="btn btn-outline"
-// Child-to-parent communication using the callback prop.
-  // The child does not perform navigation directly;
-  // it calls the parent's navigation function.
             onClick={() => onNavigate('dashboard')}
           >
             Cancel
@@ -229,7 +360,6 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
             {editId ? 'Save Changes' : 'Publish Gig'}
           </button>
         </div>
-
       </form>
     </div>
   );

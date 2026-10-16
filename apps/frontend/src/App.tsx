@@ -33,6 +33,8 @@ import { AddManagerFlow } from './pages/client/AddManagerFlow/AddManagerFlow';
 import { PostGig } from './pages/client/PostGig/PostGig';
 import { ReviewDeliverables as ClientReviewDeliverables } from './pages/client/ReviewDeliverables/ReviewDeliverables';
 import { ReviewShortlist } from './pages/client/ReviewShortlist/ReviewShortlist';
+import { ClientCompletedProjects } from './pages/client/CompletedProjects/ClientCompletedProjects';
+import { ClientProfile } from './pages/client/ClientProfile/ClientProfile';
 
 // 👔 Manager Pages & Layout
 import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
@@ -201,7 +203,8 @@ function ClientAppContent() {
 
   const handleClientNavigate = (viewId: string, params?: Record<string, string>) => {
     if (params) setClientParams(params);
-    setClientView(viewId);
+    const resolvedView = viewId === 'active-contracts' || viewId === 'active-tasks' ? 'my-gigs' : viewId;
+    setClientView(resolvedView);
   };
 
   return (
@@ -209,11 +212,13 @@ function ClientAppContent() {
       {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
       {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
       {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
+      {clientView === 'completed-projects' && <ClientCompletedProjects onNavigate={handleClientNavigate} />}
       {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
+      {clientView === 'client-profile' && <ClientProfile onNavigate={handleClientNavigate} />}
       {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
-      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
+      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} params={clientParams} />}
       {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} params={clientParams} />}
       {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} params={clientParams} />}
     </ClientLayout>

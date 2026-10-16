@@ -85,6 +85,28 @@ export const ProjectDetail: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)', maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+      {/* Return Path to Active Task/Contracts */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('active-tasks')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--color-primary-blue)',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          ← Back to Active Task/Contracts
+        </button>
+      </div>
+
       {error && <div role="alert" className="deliverable-feedback deliverable-feedback--error">{error}</div>}
 
       {/* Header Context Card */}
@@ -147,7 +169,7 @@ export const ProjectDetail: React.FC = () => {
       <div className="admin-card" style={{ padding: 'var(--spacing-xl)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
         <div>
           <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-sm)' }}>
-            Project Requirements & Scope
+            Project Requirements &amp; Scope
           </h2>
           <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-dark)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
             {task.description}
@@ -157,7 +179,7 @@ export const ProjectDetail: React.FC = () => {
         {/* Deliverables History */}
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-lg)' }}>
           <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>
-            Submissions & Deliverable History ({deliverables.length})
+            Submissions &amp; Deliverable History ({deliverables.length})
           </h3>
 
           {deliverables.length === 0 ? (
@@ -166,41 +188,102 @@ export const ProjectDetail: React.FC = () => {
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-              {deliverables.map((del) => (
-                <div
-                  key={`${del.taskId}-${del.deliverableNo}`}
-                  style={{
-                    padding: 'var(--spacing-lg)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'var(--color-bg-white)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 'var(--spacing-xs)'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                      Deliverable #{del.deliverableNo}
-                    </h4>
-                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                      Submitted: {del.createdAt ? new Date(del.createdAt).toLocaleDateString() : 'Recent'}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)', margin: '4px 0' }}>
-                    {del.description}
-                  </p>
-                  {del.submissionPath && (
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                      <strong>Notes:</strong> {del.submissionPath}
+              {deliverables.map((del) => {
+                const statusBadge =
+                  del.status === 'approved'
+                    ? { label: 'Approved', bg: '#e6f4ea', color: '#137333' }
+                    : del.status === 'revision_requested'
+                    ? { label: 'Revision Requested', bg: '#fff0f0', color: '#c5221f' }
+                    : del.status === 'closed'
+                    ? { label: 'Closed', bg: '#f1f3f4', color: '#5f6368' }
+                    : { label: 'Awaiting Review', bg: '#e8f0fe', color: '#1a73e8' };
+
+                return (
+                  <div
+                    key={`${del.taskId}-${del.deliverableNo}`}
+                    style={{
+                      padding: 'var(--spacing-lg)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--color-bg-white)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 'var(--spacing-xs)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+                          Deliverable #{del.deliverableNo}
+                        </h4>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            backgroundColor: statusBadge.bg,
+                            color: statusBadge.color,
+                          }}
+                        >
+                          ● {statusBadge.label}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        Submitted: {del.createdAt ? new Date(del.createdAt).toLocaleDateString() : 'Recent'}
+                      </span>
                     </div>
-                  )}
-                  {del.claimedDefinitions && del.claimedDefinitions.length > 0 && <div className="submission-definition__claims">
-                    <strong>Included task deliverables:</strong>
-                    <ul>{del.claimedDefinitions.map(item => <li key={item.definitionId}>{item.title}</li>)}</ul>
-                  </div>}
-                </div>
-              ))}
+
+                    <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)', margin: '4px 0' }}>
+                      {del.description}
+                    </p>
+
+                    {del.submissionPath && (
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        <strong>Notes / Link:</strong> {del.submissionPath}
+                      </div>
+                    )}
+
+                    {del.claimedDefinitions && del.claimedDefinitions.length > 0 && (
+                      <div className="submission-definition__claims">
+                        <strong>Included task deliverables:</strong>
+                        <ul>{del.claimedDefinitions.map(item => <li key={item.definitionId}>{item.title}</li>)}</ul>
+                      </div>
+                    )}
+
+                    {del.feedback && (
+                      <div
+                        style={{
+                          marginTop: '6px',
+                          padding: '10px 14px',
+                          backgroundColor: del.status === 'revision_requested' ? '#FFF5F5' : '#F0F9FF',
+                          borderRadius: '6px',
+                          border: del.status === 'revision_requested' ? '1px solid #FED7D7' : '1px solid #BAE6FD',
+                          fontSize: '12px',
+                        }}
+                      >
+                        <strong style={{ color: del.status === 'revision_requested' ? '#C53030' : '#0369A1' }}>
+                          Client Feedback:
+                        </strong>{' '}
+                        <span style={{ color: 'var(--color-text-dark)' }}>{del.feedback}</span>
+                      </div>
+                    )}
+
+                    {del.status === 'revision_requested' && (
+                      <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-primary admin-btn-sm"
+                          style={{ fontSize: '12px', padding: '6px 12px' }}
+                          onClick={() => navigateToSubmitDeliverable(String(task.taskId))}
+                        >
+                          Submit Updated Work
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

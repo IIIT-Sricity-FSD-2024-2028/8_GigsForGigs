@@ -19,3 +19,4 @@ export async function release(req: Request, res: Response): Promise<void> {
   await paymentService.releaseForTask(clientId, taskId);
   res.json({ success: true });
 }
+

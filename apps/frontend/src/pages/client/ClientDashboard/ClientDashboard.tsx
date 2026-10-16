@@ -1,5 +1,5 @@
-import React from 'react';
-import { useClient } from '../../../context/ClientContext';
+import React, { useState } from 'react';
+import { useClient, type Task } from '../../../context/ClientContext';
 import { useAuth } from '../../../context/AuthContext';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
 
@@ -9,7 +9,8 @@ export interface ClientDashboardProps {
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { tasks, contracts, loading, error } = useClient();
+  const { tasks, applications, loading, error } = useClient();
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
   // Metrics
   const activeTasks = tasks.filter(t => t.status === 'IN_PROGRESS');
@@ -19,8 +20,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   const activeCount = activeTasks.length;                                                 
   const pendingCount = openTasks.length;
 
-  // Total spent = what the client paid (gig amount + platform fee) on released contracts.
-  const totalSpent = contracts.filter(c => c.payment_status === 'completed').reduce((sum, c) => sum + c.total_amount, 0);
+  const totalSpent = completedTasks.reduce((sum, t) => sum + t.budget, 0);
   const totalSpentFormatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -41,14 +41,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
     }
   };
 
-  // Real progress comes from the matching contract (derived server-side from
-  // deliverable completion); fall back to 0/100 for tasks with no contract yet.
-  const getProgressPercent = (taskId: string, status: string) => {
-    const contract = contracts.find(c => c.task_id === taskId);
-    if (contract) return contract.progress;
-    return status === 'COMPLETED' ? 100 : 0;
-  };
-
   return (
     <div>
       {error && (
@@ -59,12 +51,17 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
       {loading && tasks.length === 0 && (
         <p style={{ color: 'var(--color-text-muted)' }}>Loading your workspace…</p>
       )}
-      {/* Welcome hero banner — mirrors the Gig/Manager portal headers */}
-      <DashboardWelcome titleId="client-greeting" title={`Welcome back, ${user?.name || 'there'}!`} description="Here's a summary of your workspace activities for today." className="client-dashboard-welcome" />
+
+      {/* Welcome hero banner */}
+      <DashboardWelcome
+        titleId="client-greeting"
+        title={`Welcome back, ${user?.name || 'there'}!`}
+        description="Here's a summary of your workspace activities for today."
+        className="client-dashboard-welcome"
+      />
 
       {/* Metric cards row */}
       <div className="metrics-row">
-        
         <div className="metric-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('my-gigs')}>
           <div className="metric-card-head">
             <div className="metric-icon metric-icon-seagrass">
@@ -97,8 +94,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
           </div>
           <div className="metric-description">Waiting for your approval</div>
         </div>
-
-
 
         <div className="metric-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('total-spent')}>
           <div className="metric-card-head">
@@ -165,9 +160,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                     <div className="actions-cell">
                       <button
                         className="btn-icon-action"
-                        title="View Applications"
-                        onClick={() => onNavigate('review-shortlist', { taskId: t.task_id })}
+                        title="View Task Details"
+                        onClick={() => setViewingTask(t)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                        aria-label={`View details of ${t.title}`}
                       >
                         <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -176,9 +172,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                       </button>
                       <button
                         className="btn-icon-action"
-                        title="Edit"
+                        title="Edit Task"
                         onClick={() => onNavigate('post-gig', { editId: t.task_id })}
                         style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                        aria-label={`Edit ${t.title}`}
                       >
                         <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -194,7 +191,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
         </table>
       </div>
 
-      {/* Task Activity */}
+      {/* Task Activity (Active Projects without progress bar column) */}
       <div className="activity-section">
         <div className="activity-header">
           <h2 className="activity-title">Task Activity</h2>
@@ -212,7 +209,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             <tr>
               <th>Task Name</th>
               <th>Status</th>
-              <th>Progress</th>
               <th>Budget</th>
               <th>Actions</th>
             </tr>
@@ -220,18 +216,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
           <tbody>
             {nonOpenTasks.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xl)' }}>
+                <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xl)' }}>
                   No active projects yet.
                 </td>
               </tr>
             ) : (
               nonOpenTasks.map(t => {
-                const pct = getProgressPercent(t.task_id, t.status);
-                const progressFillClass = t.status === 'COMPLETED'
-                  ? 'progress-bar-fill-seagrass'
-                  : t.status === 'REVIEWING'
-                    ? 'progress-bar-fill-copper'
-                    : 'progress-bar-fill-blue';
                 return (
                   <tr key={t.task_id}>
                     <td>
@@ -242,12 +232,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                       <span className={`status-badge ${getStatusClass(t.status)}`}>
                         {t.status.replace('_', ' ')}
                       </span>
-                    </td>
-                    <td className="progress-cell">
-                      <div className="progress-bar-track">
-                        <div className={`progress-bar-fill ${progressFillClass}`} style={{ width: `${pct}%` }}></div>
-                      </div>
-                      <div className="progress-label">{pct}%</div>
                     </td>
                     <td className="budget-cell">
                       {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(t.budget)}
@@ -283,6 +267,220 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
         </a>
       </div>
 
+      {/* Task Details Modal */}
+      {viewingTask && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px'
+          }}
+          onClick={() => setViewingTask(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '540px',
+              width: '100%',
+              padding: '28px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    backgroundColor: '#EBF4F6',
+                    color: '#084B83',
+                    padding: '3px 8px',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {viewingTask.category === 'design' ? 'Design Systems' : viewingTask.category === 'dev' ? 'Software Development' : 'General'}
+                </span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#084B83', margin: '8px 0 0 0' }}>
+                  {viewingTask.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingTask(null)}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  color: 'var(--color-text-muted)'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Key Metrics */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '12px',
+                backgroundColor: '#F8FAFB',
+                padding: '12px',
+                borderRadius: '8px',
+                marginBottom: '16px'
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>Budget</span>
+                <strong style={{ fontSize: '15px', color: '#084B83' }}>
+                  {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(viewingTask.budget)}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>Status</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#D47700' }}>
+                  ● Open for Hire
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>Posted Date</span>
+                <span style={{ fontSize: '13px', fontWeight: 500 }}>{formatDate(viewingTask.createdAt)}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '6px' }}>
+                Task Description
+              </div>
+              <p style={{ fontSize: '14px', color: 'var(--color-text-dark)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' }}>
+                {viewingTask.description || 'No description provided.'}
+              </p>
+            </div>
+
+            {/* Skills */}
+            {viewingTask.skills && viewingTask.skills.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '6px' }}>
+                  Required Skills
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {viewingTask.skills.map((skill, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: '#EFF6F7',
+                        color: '#084B83',
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Applications Status */}
+            {(() => {
+              const taskApps = applications.filter(a => String(a.task_id) === String(viewingTask.task_id));
+              return (
+                <div
+                  style={{
+                    backgroundColor: taskApps.length > 0 ? '#EFF6F7' : '#FFF9F2',
+                    border: `1px solid ${taskApps.length > 0 ? '#D5E5E9' : '#FFE8D1'}`,
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-dark)' }}>
+                      {taskApps.length > 0
+                        ? `📌 ${taskApps.length} Candidate(s) Applied`
+                        : '📌 0 Candidates Applied So Far'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                      {taskApps.length > 0
+                        ? 'Review candidates and approve hire to start contract.'
+                        : 'Task is currently visible to talent on the marketplace.'}
+                    </div>
+                  </div>
+                  {taskApps.length > 0 ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ fontSize: '12px', padding: '6px 14px' }}
+                      onClick={() => {
+                        const tId = viewingTask.task_id;
+                        setViewingTask(null);
+                        onNavigate('review-shortlist', { taskId: tId });
+                      }}
+                    >
+                      Review Candidates ({taskApps.length})
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ fontSize: '12px', padding: '6px 14px', backgroundColor: '#FFFFFF' }}
+                      onClick={() => {
+                        setViewingTask(null);
+                        onNavigate('search-talent');
+                      }}
+                    >
+                      Browse Talent &amp; Invite
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ padding: '8px 16px', fontSize: '13px' }}
+                onClick={() => setViewingTask(null)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ padding: '8px 18px', fontSize: '13px' }}
+                onClick={() => {
+                  const editId = viewingTask.task_id;
+                  setViewingTask(null);
+                  onNavigate('post-gig', { editId });
+                }}
+              >
+                Edit Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
