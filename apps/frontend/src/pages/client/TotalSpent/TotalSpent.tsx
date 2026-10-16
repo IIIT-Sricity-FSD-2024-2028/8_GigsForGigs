@@ -1,24 +1,19 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
-import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
-import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { PAYMENT_STATUS_UI } from '../../../utils/helpers/paymentStatus';
+import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Table } from '../../../components/common/Table';
 
 export interface TotalSpentProps {
-  onNavigate: (viewId: string) => void;
+  onNavigate: (viewId: string, params?: Record<string, string>) => void;
 }
 
 export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
-  const { user } = useAuth();
   const { contracts } = useClient();
-  const { payments, confirmEscrowPayment } = usePayments();
   const [searchTerm, setSearchTerm] = useState('');
-  const [payingPayment, setPayingPayment] = useState<EscrowPayment | null>(null);
 
-  const clientPayments = payments.filter(
-    p => p.clientId === String(user?.userId) || (p.clientName && user?.name && p.clientName.toLowerCase().includes(user.name.toLowerCase()))
-  );
+  const clientPayments = contracts.filter(c => c.payment_status);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -29,24 +24,17 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   };
 
   const totalSpent = clientPayments
-    .filter(p => p.status === 'COMPLETED' || p.status === 'RELEASED')
-    .reduce((sum, p) => sum + p.totalAmount, 0);
+    .filter(c => c.payment_status === 'completed')
+    .reduce((sum, c) => sum + c.total_amount, 0);
 
   const escrowLockedTotal = clientPayments
-    .filter(p => p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED' || p.status === 'AWAITING_APPROVAL')
-    .reduce((sum, p) => sum + p.totalAmount, 0);
+    .filter(c => c.payment_status === 'held')
+    .reduce((sum, c) => sum + c.total_amount, 0);
 
-  const filteredPayments = clientPayments.filter(p =>
-    (p.taskTitle || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.gigProName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.paymentId || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPayments = clientPayments.filter(c =>
+    c.task_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.gig_pro_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handlePayNow = async (paymentId: string) => {
-    await confirmEscrowPayment(paymentId);
-    setPayingPayment(null);
-    alert('Payment successful! ₹5,100 has been securely locked in escrow until work approval.');
-  };
 
   return (
     <div>
@@ -89,11 +77,15 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
           <div style={{ backgroundColor: '#F0F6F6', borderRadius: '8px', padding: '12px', fontSize: '0.82rem' }}>
             <div style={{ fontWeight: 600, color: '#0D568D', marginBottom: '4px' }}>Payment Calculation Rule:</div>
             <div style={{ color: '#502419' }}>
-              Total Payable = Gig Agreed Amount + ₹100 Platform Fee
+              Total Payable = Gig Agreed Amount + 10% Platform Fee
             </div>
           </div>
         </article>
       </section>
+
+      {clientPayments.filter(c => c.payment_status === 'pending').map(c => (
+        <FundTaskCard key={c.task_id} contract={c} />
+      ))}
 
       {/* Escrow Payments Table */}
       <section className="spent-table-wrap" style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', backgroundColor: 'var(--color-white)' }}>
@@ -129,102 +121,46 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                 </td>
               </tr>
             ) : (
-              filteredPayments.map(p => (
-                <tr key={p.paymentId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+              filteredPayments.map(c => {
+                const ps = PAYMENT_STATUS_UI[c.payment_status!];
+                return (
+                <tr key={c.task_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '12px 16px' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{p.taskTitle}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{p.paymentId}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{c.task_title}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>PAY-{c.payment_id}</div>
                   </td>
-                  <td style={{ padding: '12px 16px' }}>{p.gigProName}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(p.gigAmount)}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--color-text-muted)' }}>+{formatCurrency(p.platformFee)}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#0D568D' }}>{formatCurrency(p.totalAmount)}</td>
+                  <td style={{ padding: '12px 16px' }}>{c.gig_pro_name}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(c.budget)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--color-text-muted)' }}>+{formatCurrency(c.platform_fee)}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#0D568D' }}>{formatCurrency(c.total_amount)}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '4px 10px',
-                      borderRadius: '999px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      backgroundColor: p.status === 'COMPLETED' || p.status === 'RELEASED' ? '#e6f4ea' : p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED' ? '#e8f0fe' : p.status === 'DISPUTED' ? '#fef7e0' : '#f1f3f4',
-                      color: p.status === 'COMPLETED' || p.status === 'RELEASED' ? '#137333' : p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED' ? '#1a73e8' : p.status === 'DISPUTED' ? '#b06000' : '#5f6368'
-                    }}>
-                      {p.status === 'ESCROWED' ? 'Funds Secured' : p.status.replace('_', ' ')}
+                    <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, backgroundColor: ps.bg, color: ps.fg }}>
+                      {ps.label}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    {p.status === 'PENDING' ? (
+                    {c.payment_status === 'held' ? (
                       <button
                         type="button"
-                        onClick={() => setPayingPayment(p)}
-                        style={{ padding: '6px 14px', borderRadius: '6px', border: 'none', backgroundColor: '#D47700', color: '#FFFFFF', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
-                      >
-                        Pay {formatCurrency(p.totalAmount)}
-                      </button>
-                    ) : p.status === 'WORK_SUBMITTED' || p.status === 'AWAITING_APPROVAL' ? (
-                      <button
-                        type="button"
-                        onClick={() => onNavigate('review-deliverables')}
+                        onClick={() => onNavigate('review-deliverables', { taskId: c.task_id })}
                         style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid #0D568D', backgroundColor: '#FFFFFF', color: '#0D568D', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
                       >
                         Review &amp; Release
                       </button>
+                    ) : c.payment_status === 'pending' ? (
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Pay above to start</span>
                     ) : (
-                      <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>✓ Protected</span>
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>—</span>
                     )}
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </Table>
       </section>
 
-      {/* Pay Modal */}
-      {payingPayment && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 12px 0' }}>
-              Confirm Payment to Escrow
-            </h3>
-            <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '16px' }}>
-              You are funding the task <strong>{payingPayment.taskTitle}</strong> assigned to <strong>{payingPayment.gigProName}</strong>.
-            </p>
-            <div style={{ backgroundColor: '#F0F6F6', borderRadius: '8px', padding: '16px', marginBottom: '16px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Work Agreed Amount:</span>
-                <strong>{formatCurrency(payingPayment.gigAmount)}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Service Fee:</span>
-                <strong>{formatCurrency(payingPayment.platformFee)}</strong>
-              </div>
-              <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
-                <span>Total Payable Now:</span>
-                <span style={{ color: '#0D568D' }}>{formatCurrency(payingPayment.totalAmount)}</span>
-              </div>
-            </div>
-            <p style={{ fontSize: '12px', color: '#805C54', marginBottom: '20px', fontStyle: 'italic' }}>
-              🛡️ Your payment will be securely held by the platform until the work is completed and approved.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setPayingPayment(null)}
-                style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePayNow(payingPayment.paymentId)}
-                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#D47700', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Pay {formatCurrency(payingPayment.totalAmount)}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

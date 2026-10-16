@@ -17,6 +17,7 @@ import type {
   UpdateClientDto,
   UpdateDeliverableDto,
   UpdateGigProfileDto,
+  OverridePaymentDto,
   UpdatePaymentDto,
   UpdatePlatformSettingsDto,
   UpdateReviewDto,
@@ -196,6 +197,11 @@ export async function createPayment(_req: Request, res: Response): Promise<void>
 export async function updatePayment(req: Request, res: Response): Promise<void> {
   const dto = getValidated<UpdatePaymentDto>(res, "body");
   res.status(200).json(await adminService.updatePayment(Number(req.params.paymentId), dto));
+}
+export async function overridePayment(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<OverridePaymentDto>(res, "body");
+  // Ids may arrive as "PAY-12" / "pay-12"; the DB key is the number.
+  res.status(200).json(await adminService.overridePayment(Number(String(req.params.paymentId).replace(/\D/g, "")), dto));
 }
 export async function deletePayment(req: Request, res: Response): Promise<void> {
   await adminService.deletePayment(Number(req.params.paymentId));

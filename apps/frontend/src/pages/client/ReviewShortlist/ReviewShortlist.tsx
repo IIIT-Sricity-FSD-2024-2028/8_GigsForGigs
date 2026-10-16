@@ -24,7 +24,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
   const handleApprove = async (appId: string) => {
     try {
       await hireCandidate(appId);
-      alert('Candidate approved and contract created successfully!');
+      alert('Candidate hired! Pay the escrow amount (task budget + 10% platform fee) so they can start work.');
       onNavigate('my-gigs');
     } catch (err) {
       console.error('Approve hire failed:', err);

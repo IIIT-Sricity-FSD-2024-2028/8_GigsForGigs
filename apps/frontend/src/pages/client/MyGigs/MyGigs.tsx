@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useClient, type Contract } from '../../../context/ClientContext';
 import { useAuth } from '../../../context/AuthContext';
-import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
+import { PAYMENT_STATUS_UI } from '../../../utils/helpers/paymentStatus';
+import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { Table } from '../../../components/common/Table';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
@@ -15,8 +16,7 @@ export interface MyGigsProps {
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const { contracts, deleteTask } = useClient();
   const { user } = useAuth();
-  const { payments } = usePayments();
-  const [selectedTaskPayment, setSelectedTaskPayment] = useState<EscrowPayment | null>(null);
+  const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
   const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
   const [viewReviewsContract, setViewReviewsContract] = useState<Contract | null>(null);
 
@@ -43,6 +43,10 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   return (
     <div>
       <PageHeader title="Active Task/Contracts" description="Track ongoing work, view deliverables, and manage project payments." />
+
+      {contracts.filter(c => c.payment_status === 'pending').map(c => (
+        <FundTaskCard key={c.task_id} contract={c} />
+      ))}
 
       <div className="activity-section">
         <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
@@ -79,25 +83,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               </tr>
             ) : (
               contracts.map(c => {
-                const gigAmt = c.budget || 5000;
-                const platformFee = Math.round(gigAmt * 0.07);
-                const totalAmt = gigAmt + platformFee;
-                const p = payments.find(pay => pay.taskId === c.task_id) || {
-                  paymentId: 'PAY-' + c.task_id,
-                  taskId: c.task_id,
-                  taskTitle: c.task_title,
-                  clientId: '',
-                  clientName: '',
-                  gigProfileId: '',
-                  gigProName: c.gig_pro_name,
-                  gigAmount: gigAmt,
-                  platformFee,
-                  totalAmount: totalAmt,
-                  status: c.status === 'COMPLETED' ? 'COMPLETED' : 'ESCROWED',
-                  paymentProvider: 'PLATFORM_PAYMENT',
-                  createdAt: c.createdAt || new Date().toISOString(),
-                  updatedAt: new Date().toISOString()
-                } as EscrowPayment;
+                const ps = c.payment_status ? PAYMENT_STATUS_UI[c.payment_status] : null;
 
                 const reviews = c.reviews || [];
                 const clientReview = user?.userId
@@ -106,7 +92,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 const gigReview = user?.userId
                   ? reviews.find(r => r.reviewerId !== user.userId && r.revieweeId === user.userId)
                   : undefined;
-                const isCompleted = c.status === 'COMPLETED' || p.status === 'COMPLETED' || p.status === 'RELEASED';
+                const isCompleted = c.status === 'COMPLETED' || c.payment_status === 'completed';
 
                 return (
                   <tr key={c.contract_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -188,26 +174,21 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                       )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span style={{
-                        padding: '4px 10px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor: p.status === 'COMPLETED' || p.status === 'RELEASED' ? '#e6f4ea' : p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED' ? '#e8f0fe' : '#fff0f0',
-                        color: p.status === 'COMPLETED' || p.status === 'RELEASED' ? '#137333' : p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED' ? '#1a73e8' : '#c5221f'
-                      }}>
-                        {p.status === 'PENDING' ? 'Payment Required' : p.status === 'ESCROWED' ? 'Payment Secured' : p.status === 'WORK_SUBMITTED' ? 'Awaiting Your Approval' : p.status === 'COMPLETED' || p.status === 'RELEASED' ? 'Payment Completed' : p.status.replace('_', ' ')}
-                      </span>
+                      {ps && (
+                        <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, backgroundColor: ps.bg, color: ps.fg }}>
+                          {ps.label}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#0D568D' }}>
-                      {formatCurrency(p.totalAmount)}
+                      {formatCurrency(c.total_amount)}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <button
                           className="btn-review-proposal"
                           style={{ padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--color-primary-blue)', borderRadius: 'var(--radius-sm)', color: 'var(--color-primary-blue)', backgroundColor: 'transparent', cursor: 'pointer' }}
-                          onClick={() => setSelectedTaskPayment(p)}
+                          onClick={() => setSelectedTaskPayment(c)}
                         >
                           View Task
                         </button>
@@ -287,46 +268,41 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '760px', width: 'min(92vw, 760px)', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 8px 0' }}>
-              {selectedTaskPayment.taskTitle}
+              {selectedTaskPayment.task_title}
             </h3>
             <p style={{ fontSize: '13px', color: '#502419', marginBottom: '16px' }}>
-              Gig Professional: <strong>{selectedTaskPayment.gigProName}</strong>
+              Gig Professional: <strong>{selectedTaskPayment.gig_pro_name}</strong>
             </p>
 
             <div style={{ backgroundColor: '#F0F6F6', borderRadius: '8px', padding: '16px', marginBottom: '16px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span>Agreed Project Amount:</span>
-                <strong>{formatCurrency(selectedTaskPayment.gigAmount)}</strong>
+                <strong>{formatCurrency(selectedTaskPayment.budget)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Fee (7%):</span>
-                <strong>{formatCurrency(selectedTaskPayment.platformFee)}</strong>
+                <span>Platform Fee (10%):</span>
+                <strong>{formatCurrency(selectedTaskPayment.platform_fee)}</strong>
               </div>
               <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
                 <span>Total Payment:</span>
-                <span style={{ color: '#0D568D' }}>{formatCurrency(selectedTaskPayment.totalAmount)}</span>
+                <span style={{ color: '#0D568D' }}>{formatCurrency(selectedTaskPayment.total_amount)}</span>
               </div>
             </div>
 
             <div style={{ marginBottom: '20px', fontSize: '13px', color: '#502419' }}>
               <div style={{ fontWeight: 600, marginBottom: '4px' }}>Payment Status:</div>
-              <span style={{
-                padding: '4px 10px',
-                borderRadius: '999px',
-                fontSize: '12px',
-                fontWeight: 700,
-                backgroundColor: selectedTaskPayment.status === 'COMPLETED' || selectedTaskPayment.status === 'RELEASED' ? '#e6f4ea' : '#e8f0fe',
-                color: selectedTaskPayment.status === 'COMPLETED' || selectedTaskPayment.status === 'RELEASED' ? '#137333' : '#1a73e8'
-              }}>
-                {selectedTaskPayment.status === 'PENDING' ? 'Payment Required' : selectedTaskPayment.status === 'ESCROWED' ? 'Payment Secured' : selectedTaskPayment.status === 'WORK_SUBMITTED' ? 'Awaiting Your Approval' : selectedTaskPayment.status === 'COMPLETED' || selectedTaskPayment.status === 'RELEASED' ? 'Payment Completed' : selectedTaskPayment.status.replace('_', ' ')}
-              </span>
+              {selectedTaskPayment.payment_status && (
+                <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, backgroundColor: PAYMENT_STATUS_UI[selectedTaskPayment.payment_status].bg, color: PAYMENT_STATUS_UI[selectedTaskPayment.payment_status].fg }}>
+                  {PAYMENT_STATUS_UI[selectedTaskPayment.payment_status].label}
+                </span>
+              )}
             </div>
 
             <p style={{ fontSize: '12px', color: '#805C54', marginBottom: '20px', lineHeight: 1.4 }}>
               "Deliverables must be reviewed and approved before payment authorization is enabled."
             </p>
 
-            <TaskDeliverablesManager key={selectedTaskPayment.taskId} taskId={Number(selectedTaskPayment.taskId)} readOnly={contracts.find(contract => contract.task_id === selectedTaskPayment.taskId)?.status !== 'IN_PROGRESS'} />
+            <TaskDeliverablesManager key={selectedTaskPayment.task_id} taskId={Number(selectedTaskPayment.task_id)} readOnly={selectedTaskPayment.status !== 'IN_PROGRESS'} />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
@@ -339,7 +315,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               <button
                 type="button"
                 onClick={() => {
-                  const tid = selectedTaskPayment.taskId;
+                  const tid = selectedTaskPayment.task_id;
                   setSelectedTaskPayment(null);
                   onNavigate('review-deliverables', { taskId: tid });
                 }}

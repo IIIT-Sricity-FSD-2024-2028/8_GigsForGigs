@@ -14,16 +14,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   // Metrics
   const activeTasks = tasks.filter(t => t.status === 'IN_PROGRESS');
   const openTasks = tasks.filter(t => t.status === 'OPEN');
-  const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
   const nonOpenTasks = tasks.filter(t => t.status !== 'OPEN');
 
   const activeCount = activeTasks.length;                                                 
   const pendingCount = openTasks.length;
 
-  // Total spent = sum of completed tasks' budgets. There is no payment
-  // ledger exposed to clients on the backend, so this is the closest real
-  // approximation (no fabricated "base" amount added).
-  const totalSpent = completedTasks.reduce((sum, t) => sum + t.budget, 0);
+  // Total spent = what the client paid (gig amount + platform fee) on released contracts.
+  const totalSpent = contracts.filter(c => c.payment_status === 'completed').reduce((sum, c) => sum + c.total_amount, 0);
   const totalSpentFormatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',

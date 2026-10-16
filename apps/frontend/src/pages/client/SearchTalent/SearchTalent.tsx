@@ -17,7 +17,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
     try {
       await requestService(serviceId);
       setLocalRequested((prev) => new Set(prev).add(serviceId));
-      alert('Hiring request sent successfully! The Gig Professional will receive it in their Pending Requests.');
+      alert('Hiring request sent! Once the Gig Professional accepts, you will be asked to pay the escrow amount (service price + 10% platform fee) to start work.');
     } catch (err) {
       console.error('Request service failed:', err);
       alert(err instanceof Error && err.message ? err.message : 'Failed to send hiring request. Please try again.');

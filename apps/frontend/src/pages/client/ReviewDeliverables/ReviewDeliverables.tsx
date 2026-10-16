@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useClient, type Contract, type ContractReview } from '../../../context/ClientContext';
-import { usePayments } from '../../../context/PaymentContext/PaymentContext';
+import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
 import { Badge } from '../../../components/common/Badge';
 import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
@@ -14,43 +14,29 @@ export interface ReviewDeliverablesProps {
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNavigate, params }) => {
   const { user } = useAuth();
-  const { contracts: clientContracts, approveDeliverable, rejectDeliverable, refreshContracts } = useClient();
-  const { payments, approveAndReleasePayment, raiseDispute, getPaymentByTask, fetchPaymentForTask } = usePayments();
+  const { contracts: clientContracts, approveDeliverable, rejectDeliverable, releasePayment, refreshContracts } = useClient();
   const taskId = params?.taskId;
   const numericTaskId = Number(String(taskId).replace(/[^0-9]/g, '')) || 1;
 
   // Retrieve the specific dynamic contract for the clicked task
   const contract = useMemo(() => {
     const foundInClient = clientContracts.find((c) => c.task_id === taskId || c.contract_id === taskId);
-    if (foundInClient) {
-      return {
-        contract_id: foundInClient.contract_id,
-        task_id: foundInClient.task_id,
-        task_title: foundInClient.task_title,
-        client_name: 'Client',
-        gig_pro_name: foundInClient.gig_pro_name,
-        budget: foundInClient.budget || 5000,
-        platform_fee: Math.round((foundInClient.budget || 5000) * 0.07),
-        total_paid: Math.round((foundInClient.budget || 5000) * 1.07),
-        payment_status: 'PAYMENT_REQUIRED',
-        progress: foundInClient.status === 'REVIEWING' ? 70 : 30,
-        status: foundInClient.status,
-        reviews: foundInClient.reviews || ([] as ContractReview[]),
-      };
-    }
+    if (foundInClient) return { ...foundInClient, reviews: foundInClient.reviews || ([] as ContractReview[]) };
 
+    // Contracts are still loading (or the id is wrong): render an empty shell, never invented amounts.
     return {
-      contract_id: String(taskId || '1'),
-      task_id: String(taskId || '1'),
-      task_title: 'Active Task Deliverables',
-      client_name: 'Client',
-      gig_pro_name: 'Gig Professional',
-      budget: 5000,
-      platform_fee: 350,
-      total_paid: 5350,
-      payment_status: 'PAYMENT_REQUIRED',
-      progress: 50,
-      status: 'IN_PROGRESS',
+      contract_id: String(taskId || ''),
+      task_id: String(taskId || ''),
+      task_title: 'Loading…',
+      gig_pro_name: '',
+      budget: 0,
+      platform_fee: 0,
+      total_amount: 0,
+      payment_id: null,
+      payment_status: null,
+      progress: 0,
+      status: 'IN_PROGRESS' as Contract['status'],
+      createdAt: '',
       reviews: [] as ContractReview[],
     };
   }, [taskId, clientContracts]);
@@ -75,10 +61,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     fetchDeliverables();
   }, [fetchDeliverables]);
 
-  useEffect(() => {
-    if (taskId) fetchPaymentForTask(taskId);
-  }, [taskId, fetchPaymentForTask]);
-
   const hasDeliverables = deliverablesList.length > 0;
   const currentDeliverable = hasDeliverables
     ? deliverablesList[selectedDeliverableIndex] || deliverablesList[deliverablesList.length - 1]
@@ -90,10 +72,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isReviewsViewModalOpen, setIsReviewsViewModalOpen] = useState(false);
-  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
   const [changesFeedback, setChangesFeedback] = useState('');
-  const [disputeReason, setDisputeReason] = useState('');
 
   // Current stage: 'UNDER_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'PAYMENT_COMPLETED'
   const [reviewStage, setReviewStage] = useState<'UNDER_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'PAYMENT_COMPLETED'>(() => {
@@ -122,10 +102,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     return contract.reviews.find((r) => r.reviewerId !== user.userId && r.revieweeId === user.userId);
   }, [contract.reviews, user]);
 
-  const taskPayment = taskId ? getPaymentByTask(taskId) : payments[0];
-  const gigAmount = contract.budget || 5000;
-  const platformFee = Math.round(gigAmount * 0.07);
-  const totalAmount = gigAmount + platformFee;
+  const gigAmount = contract.budget;
+  const platformFee = contract.platform_fee;
+  const totalAmount = contract.total_amount;
+  // Release unlocks only once the client has funded the task and every deliverable is approved.
+  const canRelease = contract.payment_status === 'held' && contract.progress === 100;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -171,30 +152,15 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
   // Step 2: Proceed to Payment (Authorized only after Deliverable Approval)
   const handleProcessPayment = async () => {
-    if (!taskPayment) {
-      alert('No payment record found for this task.');
-      return;
-    }
     try {
-      await approveAndReleasePayment(taskPayment.paymentId, 'Deliverable verified & approved by client');
+      await releasePayment(contract.task_id);
       setReviewStage('PAYMENT_COMPLETED');
       setIsPaymentModalOpen(false);
       await refreshContracts();
-      alert(`Payment of ${formatCurrency(totalAmount)} completed successfully!\n\n• ${formatCurrency(gigAmount)} released to ${contract.gig_pro_name}\n• ${formatCurrency(platformFee)} recorded as Platform Revenue.`);
+      alert(`Payment released!\n\n• ${formatCurrency(gigAmount)} sent to ${contract.gig_pro_name}\n• ${formatCurrency(platformFee)} kept as platform fee.`);
     } catch (err) {
       alert(err instanceof Error && err.message ? err.message : 'Payment release failed. Please try again.');
     }
-  };
-
-  const handleConfirmDispute = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!disputeReason.trim()) return;
-    if (taskPayment) {
-      await raiseDispute(taskPayment.paymentId, disputeReason);
-    }
-    setIsDisputeModalOpen(false);
-    alert('Issue flagged for Super Admin moderation.');
-    onNavigate('my-gigs');
   };
 
   return (
@@ -214,6 +180,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
           Inspect dynamic work deliverables submitted by <strong>{contract.gig_pro_name}</strong> for task <strong>{contract.task_title}</strong>.
         </p>
       </div>
+
+      {contract.payment_status === 'pending' && <FundTaskCard contract={contract} />}
 
       {!hasDeliverables ? (
         /* Empty State when Gig Pro has not yet submitted deliverables for this specific task */
@@ -278,8 +246,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   >
                     {reviewStage === 'UNDER_REVIEW' && '● SUBMITTED – UNDER REVIEW'}
                     {reviewStage === 'CHANGES_REQUESTED' && '● CHANGES REQUESTED'}
-                    {reviewStage === 'APPROVED' && '✓ APPROVED – READY FOR PAYMENT'}
-                    {reviewStage === 'PAYMENT_COMPLETED' && '✓ PAYMENT COMPLETED'}
+                    {reviewStage === 'APPROVED' && (canRelease ? '✓ APPROVED – READY TO RELEASE' : '✓ APPROVED')}
+                    {reviewStage === 'PAYMENT_COMPLETED' && '✓ PAYMENT RELEASED'}
                   </span>
                 </div>
 
@@ -354,7 +322,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <span style={{ fontWeight: 600 }}>{formatCurrency(gigAmount)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee (7%):</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee (10%):</span>
                     <span style={{ fontWeight: 600 }}>{formatCurrency(platformFee)}</span>
                   </div>
                   <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
@@ -384,12 +352,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     >
                       Request Changes
                     </button>
-                    <button
-                      style={{ padding: '6px', fontSize: '0.75rem', border: 'none', background: 'none', color: '#c5221f', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
-                      onClick={() => setIsDisputeModalOpen(true)}
-                    >
-                      Raise Dispute / Issue
-                    </button>
                   </div>
                 )}
 
@@ -401,16 +363,19 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                         ✓ Deliverable Approved
                       </div>
                       <div style={{ fontSize: '0.78rem', color: '#3A1F16' }}>
-                        The submitted deliverable meets requirements. Authorize payment to complete this task.
+                        {canRelease
+                          ? 'All deliverables are approved. Release the payment to complete this task.'
+                          : `Payment can be released once every deliverable is approved (${contract.progress}% done).`}
                       </div>
                     </div>
 
                     <button
                       className="admin-btn admin-btn-primary"
-                      style={{ padding: '14px', fontSize: '1rem', fontWeight: 800, backgroundColor: '#D47700' }}
+                      style={{ padding: '14px', fontSize: '1rem', fontWeight: 800, backgroundColor: '#D47700', opacity: canRelease ? 1 : 0.5 }}
+                      disabled={!canRelease}
                       onClick={() => setIsPaymentModalOpen(true)}
                     >
-                      Proceed to Payment: {formatCurrency(totalAmount)}
+                      Release {formatCurrency(gigAmount)} to {contract.gig_pro_name}
                     </button>
                   </div>
                 )}
@@ -518,7 +483,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               Approve Submitted Deliverable?
             </h3>
             <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '20px' }}>
-              You are approving Deliverable #{currentDeliverable.deliverableNo} submitted by <strong>{contract.gig_pro_name}</strong> for <strong>{contract.task_title}</strong>. After approval, you can authorize payment.
+              You are approving Deliverable #{currentDeliverable.deliverableNo} submitted by <strong>{contract.gig_pro_name}</strong> for <strong>{contract.task_title}</strong>. Once every deliverable is approved you can release the payment.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button
@@ -582,7 +547,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 12px 0' }}>
-              Authorize Payment Release
+              Release Payment
             </h3>
             <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '20px' }}>
               Releasing payment for <strong>{contract.task_title}</strong>:
@@ -593,11 +558,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 <strong>{formatCurrency(gigAmount)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Fee (7%):</span>
+                <span>Platform Fee (10%):</span>
                 <strong>{formatCurrency(platformFee)}</strong>
               </div>
               <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
-                <span>Total Payment:</span>
+                <span>Total you paid:</span>
                 <span style={{ color: '#0D568D' }}>{formatCurrency(totalAmount)}</span>
               </div>
             </div>
@@ -614,7 +579,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 onClick={handleProcessPayment}
                 style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#D47700', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
               >
-                Pay {formatCurrency(totalAmount)}
+                Release {formatCurrency(gigAmount)}
               </button>
             </div>
           </div>
@@ -637,19 +602,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       <TaskReviewsModal
         isOpen={isReviewsViewModalOpen}
         onClose={() => setIsReviewsViewModalOpen(false)}
-        contract={
-          clientContracts.find((c) => c.task_id === taskId || c.contract_id === taskId) || {
-            contract_id: contract.contract_id,
-            task_id: contract.task_id,
-            task_title: contract.task_title,
-            gig_pro_name: contract.gig_pro_name,
-            budget: contract.budget,
-            progress: contract.progress,
-            status: contract.status as Contract['status'],
-            createdAt: '',
-            reviews: contract.reviews,
-          }
-        }
+        contract={contract}
         currentUserId={user?.userId}
         onOpenRateReview={() => {
           setIsReviewsViewModalOpen(false);
@@ -657,43 +610,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         }}
       />
 
-      {/* Modal 5: Raise Dispute */}
-      {isDisputeModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleConfirmDispute} style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#c5221f', margin: '0 0 12px 0' }}>
-              Raise Payment Issue / Dispute
-            </h3>
-            <p style={{ fontSize: '13px', color: '#502419', lineHeight: 1.5, marginBottom: '16px' }}>
-              Flags this deliverable for administrative review.
-            </p>
-            <textarea maxLength={1000}
-              required
-              rows={3}
-              placeholder="Explain the issue with this deliverable..."
-              value={disputeReason}
-              onChange={(e) => setDisputeReason(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #DBDFDF', fontSize: '13px', boxSizing: 'border-box', marginBottom: '20px' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsDisputeModalOpen(false)}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#c5221f', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Submit Dispute
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
+      {/* (client-raised disputes are handled by admin refund for now) */}
     </div>
   );
 };

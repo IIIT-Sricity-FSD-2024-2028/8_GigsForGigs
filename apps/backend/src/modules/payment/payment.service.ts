@@ -1,128 +1,75 @@
+/**
+ * Simulated escrow. Client pays gig amount + PLATFORM_FEE_RATE at hire time
+ * (pending -> held); on release the gig amount goes to the pro and the fee
+ * stays with the platform (held -> completed). No gateway is involved.
+ */
 import { prisma } from 'db';
-import type { PaymentRecord, FinancialCalculationResult, SuperAdminRevenueMetrics } from './payment.types.js';
-import { PaymentStatus } from './payment.types.js';
+import { conflict, notFound } from '../../lib/httpError.js';
+import { isTaskWorkComplete } from '../../lib/taskRules.js';
 
-export class PaymentService {
-  private static DEFAULT_PLATFORM_FEE_RATE = 0.07; // Dynamic 7% platform fee
+export const PLATFORM_FEE_RATE = 0.1;
 
-  /**
-   * Calculate financial totals on the server with dynamic 7% platform fee.
-   */
-  public static calculateFinancials(gigAmount: number, overrideFee?: number): FinancialCalculationResult & { gigPayout: number; platformRevenue: number } {
-    const platformFee = typeof overrideFee === 'number' ? overrideFee : Math.round(gigAmount * this.DEFAULT_PLATFORM_FEE_RATE);
-    const totalAmount = gigAmount + platformFee;
-    return {
-      gigAmount,
-      platformFee,
-      totalAmount,
-      gigPayout: gigAmount,
-      platformRevenue: platformFee
-    };
+/** Fee in rupees, rounded to paise so it matches the DECIMAL(10,2) column. */
+export function platformFeeFor(amount: number): number {
+  return Math.round(amount * PLATFORM_FEE_RATE * 100) / 100;
+}
+
+/** The client's own task plus its hired professional's payment row. */
+async function requireOwnedContract(clientId: number, taskId: number) {
+  const task = await prisma.task.findFirst({
+    where: { taskId, clientId },
+    include: { applications: { where: { status: 'accepted' }, take: 1 }, payments: true },
+  });
+  if (!task) throw notFound('Task not found');
+  const hired = task.applications[0];
+  const payment = hired ? task.payments.find((p) => p.gigProfileId === hired.gigProfileId) : undefined;
+  if (!hired || !payment) throw conflict('Nobody has been hired for this task yet');
+  return { task, hired, payment };
+}
+
+/** Client funds the task: pending -> held. Conditional update so a double click can't pay twice. */
+export async function payForTask(clientId: number, taskId: number): Promise<void> {
+  const { hired } = await requireOwnedContract(clientId, taskId);
+  const moved = await prisma.payment.updateMany({
+    where: { taskId, gigProfileId: hired.gigProfileId, status: 'pending' },
+    data: { status: 'held' },
+  });
+  if (moved.count !== 1) throw conflict('This task has already been funded');
+}
+
+/** Client releases escrow to the pro: held -> completed, and the task completes with it. */
+export async function releaseForTask(clientId: number, taskId: number): Promise<void> {
+  const { task, hired, payment } = await requireOwnedContract(clientId, taskId);
+  if (payment.status === 'pending') throw conflict('Fund the task before releasing payment');
+  if (task.status !== 'in_progress' || payment.status !== 'held') {
+    throw conflict('Payment for this task has already been released');
   }
-
-  /**
-   * Validate payment status transitions to prevent illegal state jumps.
-   */
-  public static validateStatusTransition(currentStatus: PaymentStatus, targetStatus: PaymentStatus): boolean {
-    const validTransitions: Record<PaymentStatus, PaymentStatus[]> = {
-      [PaymentStatus.PENDING]: [PaymentStatus.PAYMENT_PROCESSING, PaymentStatus.CANCELLED, PaymentStatus.ESCROWED],
-      [PaymentStatus.PAYMENT_PROCESSING]: [PaymentStatus.ESCROWED, PaymentStatus.FAILED, PaymentStatus.CANCELLED],
-      [PaymentStatus.ESCROWED]: [PaymentStatus.WORK_SUBMITTED, PaymentStatus.AWAITING_APPROVAL, PaymentStatus.DISPUTED, PaymentStatus.CANCELLED],
-      [PaymentStatus.WORK_SUBMITTED]: [PaymentStatus.AWAITING_APPROVAL, PaymentStatus.RELEASE_APPROVED, PaymentStatus.DISPUTED],
-      [PaymentStatus.AWAITING_APPROVAL]: [PaymentStatus.RELEASE_APPROVED, PaymentStatus.RELEASED, PaymentStatus.COMPLETED, PaymentStatus.DISPUTED],
-      [PaymentStatus.RELEASE_APPROVED]: [PaymentStatus.RELEASED, PaymentStatus.COMPLETED],
-      [PaymentStatus.RELEASED]: [PaymentStatus.COMPLETED],
-      [PaymentStatus.COMPLETED]: [],
-      [PaymentStatus.CANCELLED]: [],
-      [PaymentStatus.REFUNDED]: [],
-      [PaymentStatus.DISPUTED]: [PaymentStatus.RELEASED, PaymentStatus.REFUNDED, PaymentStatus.COMPLETED],
-      [PaymentStatus.FAILED]: [PaymentStatus.PENDING]
-    };
-
-    const allowed = validTransitions[currentStatus] || [];
-    return allowed.includes(targetStatus);
+  if (!(await isTaskWorkComplete(taskId))) {
+    throw conflict('All required deliverables must be approved before payment can be released');
   }
+  await releasePayment(taskId, hired.gigProfileId);
+}
 
-  /**
-   * Save or update payment in PostgreSQL database via Prisma.
-   */
-  public static async persistPayment(taskId: number, gigProfileId: number, gigAmount: number, status: 'pending' | 'completed' = 'pending') {
-    return await prisma.payment.upsert({
-      where: { taskId_gigProfileId: { taskId, gigProfileId } },
-      update: { amount: gigAmount, status },
-      create: { taskId, gigProfileId, amount: gigAmount, status },
-      include: { task: true, gigProfile: { include: { user: true } } }
+/** Release to the pro: held -> completed and the task is completed with it. */
+export async function releasePayment(taskId: number, gigProfileId: number): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const moved = await tx.payment.updateMany({
+      where: { taskId, gigProfileId, status: 'held' },
+      data: { status: 'completed' },
     });
-  }
+    if (moved.count !== 1) throw conflict('Payment is not in escrow');
+    await tx.task.update({ where: { taskId }, data: { status: 'completed' } });
+  });
+}
 
-  /**
-   * Get payment by taskId from PostgreSQL.
-   */
-  public static async getPaymentByTaskId(taskId: number) {
-    return await prisma.payment.findFirst({
-      where: { taskId },
-      include: { task: true, gigProfile: { include: { user: true } } },
-      orderBy: { createdAt: 'desc' }
+/** Admin refund: held -> refunded. The task is closed as completed; TASKS has no cancelled status. */
+export async function refundPayment(taskId: number, gigProfileId: number): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const moved = await tx.payment.updateMany({
+      where: { taskId, gigProfileId, status: 'held' },
+      data: { status: 'refunded' },
     });
-  }
-
-  /**
-   * Release payment and mark Task as completed in PostgreSQL.
-   */
-  public static async releasePaymentInDb(taskId: number, gigProfileId: number, gigAmount?: number) {
-    const amount = gigAmount && gigAmount > 0 ? gigAmount : 5000;
-    return await prisma.$transaction([
-      prisma.payment.upsert({
-        where: { taskId_gigProfileId: { taskId, gigProfileId } },
-        update: { status: 'completed', ...(gigAmount ? { amount: gigAmount } : {}) },
-        create: { taskId, gigProfileId, amount, status: 'completed' }
-      }),
-      prisma.task.update({
-        where: { taskId },
-        data: { status: 'completed' }
-      })
-    ]);
-  }
-
-  /**
-   * Compute platform-wide revenue and escrow metrics for Super Admin.
-   */
-  public static computeMetrics(records: PaymentRecord[]): SuperAdminRevenueMetrics {
-    let totalPlatformRevenue = 0;
-    let platformFeesCollected = 0;
-    let platformFeesPendingRelease = 0;
-    let totalEscrowFunds = 0;
-    let totalGigPayouts = 0;
-    let completedTransactionsCount = 0;
-    let disputedPaymentsCount = 0;
-    let refundedPaymentsCount = 0;
-
-    for (const record of records) {
-      if (record.status === PaymentStatus.COMPLETED || record.status === PaymentStatus.RELEASED) {
-        totalPlatformRevenue += record.platformFee;
-        platformFeesCollected += record.platformFee;
-        totalGigPayouts += record.gigAmount;
-        completedTransactionsCount += 1;
-      } else if (record.status === PaymentStatus.ESCROWED || record.status === PaymentStatus.WORK_SUBMITTED || record.status === PaymentStatus.AWAITING_APPROVAL) {
-        totalEscrowFunds += record.gigAmount;
-        platformFeesPendingRelease += record.platformFee;
-      } else if (record.status === PaymentStatus.DISPUTED) {
-        totalEscrowFunds += record.gigAmount;
-        disputedPaymentsCount += 1;
-      } else if (record.status === PaymentStatus.REFUNDED) {
-        refundedPaymentsCount += 1;
-      }
-    }
-
-    return {
-      totalPlatformRevenue,
-      platformFeesCollected,
-      platformFeesPendingRelease,
-      totalEscrowFunds,
-      totalGigPayouts,
-      completedTransactionsCount,
-      disputedPaymentsCount,
-      refundedPaymentsCount
-    };
-  }
+    if (moved.count !== 1) throw conflict('Payment is not in escrow');
+    await tx.task.update({ where: { taskId }, data: { status: 'completed' } });
+  });
 }

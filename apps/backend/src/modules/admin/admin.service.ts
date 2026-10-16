@@ -1,10 +1,11 @@
+import { PLATFORM_FEE_RATE, platformFeeFor, refundPayment, releasePayment } from "../payment/payment.service.js";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "db";
 import { comparePassword, hashPassword } from "../../lib/password.js";
 import { signInviteToken, signToken, verifyInviteToken } from "../../lib/jwt.js";
 import { env } from "../../lib/env.js";
-import { HttpError, badRequest, conflict, unauthorized } from "../../lib/httpError.js";
+import { HttpError, badRequest, conflict, notFound, unauthorized } from "../../lib/httpError.js";
 import type {
   CreateApplicationDto,
   CreateAssignmentDto,
@@ -22,13 +23,22 @@ import type {
   UpdateGigProfileDto,
   UpdatePaymentDto,
   UpdatePlatformSettingsDto,
+  OverridePaymentDto,
   UpdateReviewDto,
   UpdateTaskDto,
   UpdateUserDto,
 } from "./admin.dto.js";
 
+const PAYMENT_STATUS_LABEL = {
+  pending: "AWAITING_FUNDING",
+  held: "HELD_IN_ESCROW",
+  completed: "RELEASED",
+  refunded: "REFUNDED",
+  failed: "FAILED",
+} as const;
+
 export const platformConfig = {
-  commissionRakePercent: 7,
+  commissionRakePercent: PLATFORM_FEE_RATE * 100, // display only; payments store their own platform_fee
   minimumTaskBudget: 50,
   escrowHoldPeriodDays: 14,
   autoDisputeThresholdDays: 7,
@@ -373,7 +383,7 @@ export const listTasks = async (statusFilter?: string) => {
     const assignedGig = t.assignments?.[0]?.gigProfile;
     const assignedMgr = t.assignments?.[0]?.manager || t.client?.managers?.[0];
     const budget = Number(t.budget);
-    const platformFee = Math.round(budget * (platformConfig.commissionRakePercent / 100));
+    const platformFee = platformFeeFor(budget);
 
     return {
       id: "tsk-" + t.taskId,
@@ -607,7 +617,7 @@ export const listPayments = async () => {
 
   return payments.map(p => {
     const amount = Number(p.amount);
-    const platformFee = Math.round(amount * (platformConfig.commissionRakePercent / 100));
+    const platformFee = Number(p.platformFee);
     const totalAmount = amount + platformFee;
 
     return {
@@ -625,8 +635,8 @@ export const listPayments = async () => {
       platformRake: platformFee,
       totalAmount,
       netPayout: amount,
-      status: p.status === "completed" ? "RELEASED" : "HELD_IN_ESCROW",
-      escrowStatus: p.status === "completed" ? "RELEASED" : "HELD_IN_ESCROW",
+      status: PAYMENT_STATUS_LABEL[p.status],
+      escrowStatus: PAYMENT_STATUS_LABEL[p.status],
       createdAt: p.createdAt.toISOString().split("T")[0]
     };
   });
@@ -639,6 +649,7 @@ export const createPayment = (dto: CreatePaymentDto) =>
       taskId: dto.taskId,
       gigProfileId: dto.gigProfileId,
       amount: dto.amount,
+      platformFee: platformFeeFor(Number(dto.amount)),
       ...(dto.status !== undefined ? { status: dto.status } : {}),
     },
   });
@@ -648,10 +659,20 @@ export const updatePayment = (paymentId: number, dto: UpdatePaymentDto) =>
   prisma.payment.update({
     where: { paymentId },
     data: {
-      ...(dto.amount !== undefined ? { amount: dto.amount } : {}),
+      ...(dto.amount !== undefined ? { amount: dto.amount, platformFee: platformFeeFor(Number(dto.amount)) } : {}),
       ...(dto.status !== undefined ? { status: dto.status } : {}),
     },
   });
+
+/** Settle a payment held in escrow: release it to the gig pro or refund the client. */
+export async function overridePayment(paymentId: number, dto: OverridePaymentDto) {
+  const payment = await prisma.payment.findUnique({ where: { paymentId } });
+  if (!payment) throw notFound("Payment not found");
+  if (dto.action === "RELEASE") await releasePayment(payment.taskId, payment.gigProfileId);
+  else await refundPayment(payment.taskId, payment.gigProfileId);
+  recordAuditLog(`PAYMENT_${dto.action}`, "Super Admin", `Payment ${paymentId}: ${dto.auditReason}`);
+  return prisma.payment.findUniqueOrThrow({ where: { paymentId } });
+}
 
 // Delete a payment.
 export async function deletePayment(paymentId: number): Promise<void> {
@@ -757,15 +778,16 @@ export async function getDashboardStats() {
 
   for (const p of payments) {
     const amount = Number(p.amount);
-    const rake = Math.round(amount * (platformConfig.commissionRakePercent / 100));
+    const rake = Number(p.platformFee);
     const total = amount + rake;
-    totalVolume += total;
 
     if (p.status === "completed") {
+      totalVolume += total;
       completedTransactions += 1;
       totalGigPayouts += amount;
       platformRevenue += rake;
-    } else {
+    } else if (p.status === "held") {
+      totalVolume += total;
       pendingTransactions += 1;
       escrowHeld += total;
     }
@@ -825,7 +847,7 @@ export async function getAnalytics(_timeRange: string = "30d") {
   for (const p of payments) {
     const dateStr = p.createdAt.toISOString().split("T")[0] || "2026-08-01";
     const amount = Number(p.amount);
-    const rake = Math.round(amount * (platformConfig.commissionRakePercent / 100));
+    const rake = Number(p.platformFee);
     if (!velocityMap[dateStr]) velocityMap[dateStr] = { gmv: 0, rake: 0 };
     velocityMap[dateStr].gmv += amount + rake;
     velocityMap[dateStr].rake += rake;

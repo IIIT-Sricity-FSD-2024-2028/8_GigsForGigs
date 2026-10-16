@@ -258,6 +258,8 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
     const task = await tx.task.findUnique({ where: { taskId: dto.taskId }, select: { status: true } });
     if (!task) throw notFound("Task not found");
     if (task.status !== "in_progress") throw forbidden("Work can only be submitted for an active task");
+    const payment = await tx.payment.findUnique({ where: { taskId_gigProfileId: { taskId: dto.taskId, gigProfileId } }, select: { status: true } });
+    if (payment?.status !== "held") throw forbidden("The client hasn't funded this task yet");
 
     const definitions = await tx.taskDeliverableDefinition.findMany({
       where: { taskId: dto.taskId },

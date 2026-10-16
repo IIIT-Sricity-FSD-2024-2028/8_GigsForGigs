@@ -1,0 +1,4 @@
+ALTER TYPE "PaymentStatus" ADD VALUE 'held';
+ALTER TYPE "PaymentStatus" ADD VALUE 'refunded';
+
+ALTER TABLE "PAYMENT" ADD COLUMN "platform_fee" DECIMAL(10,2) NOT NULL DEFAULT 0;

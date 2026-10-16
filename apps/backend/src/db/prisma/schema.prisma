@@ -199,6 +199,7 @@ model Payment {
   taskId       Int                    @map("task_id")
   gigProfileId Int                    @map("gig_profile_id")
   amount       Decimal                @db.Decimal(10, 2)
+  platformFee  Decimal                @default(0) @map("platform_fee") @db.Decimal(10, 2)
   status       PaymentStatus          @default(pending)
   createdAt    DateTime               @default(now()) @map("created_at")
   gigProfile   GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
@@ -312,7 +313,9 @@ enum DeliverableStatus {
 
 enum PaymentStatus {
   pending
+  held
   completed
+  refunded
   failed
 }
 

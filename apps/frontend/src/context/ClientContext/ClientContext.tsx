@@ -85,9 +85,16 @@ export interface Contract {
   status: 'IN_PROGRESS' | 'COMPLETED' | 'SCHEDULED' | 'REVIEWING';
   progress: number;
   budget: number;
+  payment_id: number | null;
+  platform_fee: number;
+  total_amount: number;
+  payment_status: PaymentStatus | null;
   createdAt: string;
   reviews?: ContractReview[];
 }
+
+/** Mirrors the PAYMENT.status enum: pending = awaiting client funding, held = in escrow. */
+export type PaymentStatus = 'pending' | 'held' | 'completed' | 'refunded' | 'failed';
 
 export interface Deliverable {
   task_id: string;
@@ -134,6 +141,8 @@ interface ClientContextType {
   approveDeliverable: (taskId: string, deliverableNo: number) => Promise<void>;
   rejectDeliverable: (taskId: string, deliverableNo: number, feedback?: string) => Promise<void>;
   hireCandidate: (applicationId: string) => Promise<void>;
+  payTask: (taskId: string) => Promise<void>;
+  releasePayment: (taskId: string) => Promise<void>;
   rejectCandidate: (applicationId: string) => Promise<void>;
   requestService: (serviceId: string) => Promise<void>;
   requestedServices: Set<string>;
@@ -195,6 +204,10 @@ interface RawContract {
   status: RawTaskStatus;
   progress: number;
   budget: string | number;
+  paymentId: number | null;
+  platformFee: number;
+  totalAmount: number;
+  paymentStatus: PaymentStatus | null;
   createdAt: string;
   reviews?: ContractReview[];
 }
@@ -304,6 +317,10 @@ function mapContract(raw: RawContract): Contract {
     status: mapContractStatus(raw.status),
     progress: raw.progress,
     budget: Number(raw.budget),
+    payment_id: raw.paymentId,
+    platform_fee: Number(raw.platformFee),
+    total_amount: Number(raw.totalAmount),
+    payment_status: raw.paymentStatus,
     createdAt: raw.createdAt,
     reviews: raw.reviews ?? [],
   };
@@ -722,6 +739,27 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  // Simulated escrow: the client pays gig amount + platform fee, or releases it once all work is approved.
+  const payTask = async (taskId: string) => {
+    setError(null);
+    try {
+      await apiFetch('/payments/pay', { method: 'POST', actor: 'client', body: { taskId } });
+      await refreshContracts();
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const releasePayment = async (taskId: string) => {
+    setError(null);
+    try {
+      await apiFetch('/payments/release', { method: 'POST', actor: 'client', body: { taskId } });
+      await Promise.all([refreshContracts(), refreshTasks()]);
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
   const rejectCandidate = async (applicationId: string) => {
     setError(null);
     try {
@@ -788,6 +826,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       approveDeliverable,
       rejectDeliverable,
       hireCandidate,
+      payTask,
+      releasePayment,
       rejectCandidate,
       requestService,
       requestedServices,

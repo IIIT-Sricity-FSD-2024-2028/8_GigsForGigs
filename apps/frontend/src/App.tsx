@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
 import { GigProvider, useGig } from './context/GigContext/GigContext';
-import { PaymentProvider } from './context/PaymentContext/PaymentContext';
 import { ToastProvider } from './components/super-admin/Toast';
 
 // 👑 Super Admin Layout & 12 Views
@@ -349,11 +348,9 @@ function MainAppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <PaymentProvider>
-        <ToastProvider>
-          <MainAppContent />
-        </ToastProvider>
-      </PaymentProvider>
+      <ToastProvider>
+        <MainAppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }
