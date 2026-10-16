@@ -7,7 +7,7 @@ import { Table } from '../../../components/common/Table';
 import { Loader } from '../../../components/common/Loader';
 
 export interface TotalSpentProps {
-  onNavigate: (viewId: string) => void;
+  onNavigate: (viewId: string, params?: Record<string, string>) => void;
 }
 
 type StatusFilterType = 'ALL' | 'COMPLETED' | 'ESCROWED' | 'AWAITING_APPROVAL' | 'PENDING';
@@ -381,6 +381,10 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
           </div>
         </article>
       </section>
+
+      {clientPayments.filter(c => c.payment_status === 'pending').map(c => (
+        <FundTaskCard key={c.task_id} contract={c} />
+      ))}
 
       {/* Escrow Payments Table */}
       {loading ? (

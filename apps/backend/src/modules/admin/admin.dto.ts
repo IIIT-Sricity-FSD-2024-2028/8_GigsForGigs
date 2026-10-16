@@ -96,15 +96,21 @@ export const createPaymentSchema = z.object({
   taskId: id(),
   gigProfileId: id(),
   amount: money(MONEY_10_2),
-  status: z.enum(["pending", "completed", "failed"]).optional(),
+  status: z.enum(["pending", "held", "completed", "refunded", "failed"]).optional(),
 });
 export type CreatePaymentDto = z.infer<typeof createPaymentSchema>;
 
 export const updatePaymentSchema = z.object({
   amount: money(MONEY_10_2).optional(),
-  status: z.enum(["pending", "completed", "failed"]).optional(),
+  status: z.enum(["pending", "held", "completed", "refunded", "failed"]).optional(),
 });
 export type UpdatePaymentDto = z.infer<typeof updatePaymentSchema>;
+
+export const overridePaymentSchema = z.object({
+  action: z.enum(["RELEASE", "REFUND"]),
+  auditReason: text(500),
+});
+export type OverridePaymentDto = z.infer<typeof overridePaymentSchema>;
 
 export const createReviewSchema = z.object({
   reviewerId: id(),

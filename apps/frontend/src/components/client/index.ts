@@ -1,3 +1,4 @@
+export * from './cards/FundTaskCard';
 export * from './cards/GigCard';
 export * from './cards/ManagerCard';
 export * from './cards/TalentCard';

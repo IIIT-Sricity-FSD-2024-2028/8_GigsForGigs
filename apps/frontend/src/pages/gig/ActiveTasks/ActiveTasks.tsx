@@ -66,7 +66,7 @@ export const ActiveTasks: React.FC = () => {
           {activeTasks.map((task) => {
             const deliverables = task.deliverables || [];
             const hasSubmissions = deliverables.length > 0;
-            const progress = (task as GigTask & { progress?: number }).progress || (hasSubmissions ? 60 : 20);
+            const progress = task.progress ?? 0;
 
             return (
               <div

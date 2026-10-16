@@ -15,7 +15,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   // Metrics
   const activeTasks = tasks.filter(t => t.status === 'IN_PROGRESS');
   const openTasks = tasks.filter(t => t.status === 'OPEN');
-  const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
   const nonOpenTasks = tasks.filter(t => t.status !== 'OPEN');
 
   const activeCount = activeTasks.length;                                                 

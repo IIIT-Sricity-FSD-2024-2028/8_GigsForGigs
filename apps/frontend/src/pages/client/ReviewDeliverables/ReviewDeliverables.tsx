@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useClient, type Contract, type ContractReview } from '../../../context/ClientContext';
-import { usePayments } from '../../../context/PaymentContext/PaymentContext';
+import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
 import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
@@ -98,10 +98,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   useEffect(() => {
     fetchDeliverables();
   }, [fetchDeliverables]);
-
-  useEffect(() => {
-    if (taskId) fetchPaymentForTask(taskId);
-  }, [taskId, fetchPaymentForTask]);
 
   const hasDeliverables = deliverablesList.length > 0;
   const currentDeliverable = hasDeliverables
@@ -651,7 +647,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <span style={{ fontWeight: 600 }}>{formatCurrency(gigAmount)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee (7%):</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee (10%):</span>
                     <span style={{ fontWeight: 600 }}>{formatCurrency(platformFee)}</span>
                   </div>
                   <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
@@ -731,10 +727,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <button
                       type="button"
                       className="admin-btn admin-btn-primary"
-                      style={{ padding: '14px', fontSize: '1rem', fontWeight: 800, backgroundColor: '#D47700' }}
+                      style={{ padding: '14px', fontSize: '1rem', fontWeight: 800, backgroundColor: '#D47700', opacity: canRelease ? 1 : 0.5 }}
+                      disabled={!canRelease}
                       onClick={() => setIsPaymentModalOpen(true)}
                     >
-                      Proceed to Payment: {formatCurrency(totalAmount)}
+                      Release {formatCurrency(gigAmount)} to {contract.gig_pro_name}
                     </button>
                   </div>
                 )}
@@ -995,7 +992,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 12px 0' }}>
-              Authorize Payment Release
+              Release Payment
             </h3>
             <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '20px' }}>
               Releasing payment for <strong>{contract.task_title}</strong>:
@@ -1006,11 +1003,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 <strong>{formatCurrency(gigAmount)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Fee (7%):</span>
+                <span>Platform Fee (10%):</span>
                 <strong>{formatCurrency(platformFee)}</strong>
               </div>
               <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
-                <span>Total Payment:</span>
+                <span>Total you paid:</span>
                 <span style={{ color: '#0D568D' }}>{formatCurrency(totalAmount)}</span>
               </div>
             </div>
@@ -1027,7 +1024,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 onClick={handleProcessPayment}
                 style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#D47700', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
               >
-                Pay {formatCurrency(totalAmount)}
+                Release {formatCurrency(gigAmount)}
               </button>
             </div>
           </div>
@@ -1052,19 +1049,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       <TaskReviewsModal
         isOpen={isReviewsViewModalOpen}
         onClose={() => setIsReviewsViewModalOpen(false)}
-        contract={
-          clientContracts.find((c) => c.task_id === taskId || c.contract_id === taskId) || {
-            contract_id: contract.contract_id,
-            task_id: contract.task_id,
-            task_title: contract.task_title,
-            gig_pro_name: contract.gig_pro_name,
-            budget: contract.budget,
-            progress: contract.progress,
-            status: contract.status as Contract['status'],
-            createdAt: '',
-            reviews: contract.reviews,
-          }
-        }
+        contract={contract}
         currentUserId={user?.userId}
         onOpenRateReview={() => {
           setIsReviewsViewModalOpen(false);

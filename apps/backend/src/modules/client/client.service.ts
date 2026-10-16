@@ -9,6 +9,7 @@ import {
   stripReservedSkills,
 } from "../../lib/taskRules.js";
 import { managerInviteToken } from "../auth/auth.service.js";
+import { platformFeeFor } from "../payment/payment.service.js";
 import { parseDeliverableKey } from "./client.dto.js";
 import type {
   CreateClientReviewDto,
@@ -186,11 +187,17 @@ export async function startContract(tx: any, application: { applicationId: numbe
     create: { gigProfileId: application.gigProfileId, taskId: application.taskId, managerId: manager.managerId },
   });
 
-  // Payment row is created when the contract starts; release is handled by the payment module.
+  // Payment row is created when the contract starts (pending until the client funds it); see payment.service.
   await tx.payment.upsert({
     where: { taskId_gigProfileId: { taskId: application.taskId, gigProfileId: application.gigProfileId } },
     update: {},
-    create: { taskId: application.taskId, gigProfileId: application.gigProfileId, amount: task.budget, status: "pending" },
+    create: {
+      taskId: application.taskId,
+      gigProfileId: application.gigProfileId,
+      amount: task.budget,
+      platformFee: platformFeeFor(Number(task.budget)),
+      status: "pending",
+    },
   });
 }
 
@@ -258,6 +265,7 @@ export async function listContracts(clientId: number) {
         include: {
           deliverableDefinitions: { include: latestSubmissionInclude },
           deliverables: { select: { gigProfileId: true, status: true } },
+          payments: true,
           reviews: {
             include: { reviewer: true, reviewee: true },
             orderBy: { createdAt: "asc" },
@@ -270,20 +278,28 @@ export async function listContracts(clientId: number) {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return applications.map((application: any) => ({
-    taskId: application.taskId,
-    taskTitle: application.task.title,
-    gigProfileId: application.gigProfileId,
-    gigProfessionalName: application.gigProfile.user.name,
-    status: application.task.status,
-    progress: computeProgress(
-      application.task.deliverableDefinitions,
-      application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId),
-    ),
-    budget: application.task.budget,
-    createdAt: application.createdAt,
-    reviews: (application.task.reviews ?? []).map(toContractReviewResponse),
-  }));
+  return applications.map((application: any) => {
+    const payment = application.task.payments.find((p: { gigProfileId: number }) => p.gigProfileId === application.gigProfileId);
+    const platformFee = Number(payment?.platformFee ?? 0);
+    return {
+      paymentId: payment?.paymentId ?? null,
+      paymentStatus: payment?.status ?? null,
+      platformFee,
+      totalAmount: Number(application.task.budget) + platformFee,
+      taskId: application.taskId,
+      taskTitle: application.task.title,
+      gigProfileId: application.gigProfileId,
+      gigProfessionalName: application.gigProfile.user.name,
+      status: application.task.status,
+      progress: computeProgress(
+        application.task.deliverableDefinitions,
+        application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId),
+      ),
+      budget: application.task.budget,
+      createdAt: application.createdAt,
+      reviews: (application.task.reviews ?? []).map(toContractReviewResponse),
+    };
+  });
 }
 
 // ---- Deliverables (client-side review) -------------------------------------

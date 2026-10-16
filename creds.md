@@ -2,19 +2,22 @@
 
 All seeded users share the same password: `password123`
 
+Verified against the current database (bcrypt check of `password123`).
+
 | Role | Email | Name | Notes |
 |---|---|---|---|
 | **Super Admin** | `chaitanya.admin@gigsforgigs.internal` | Chaitanya Anand | Master Admin (`*` full access) |
-| **Super Admin** | `jovan44@yahoo.com` | Jovan Miller | Master Admin |
-| **Client** | `aditya@techstart.io` | Aditya Deshmukh | Seeded Client |
-| **Client** | `julian_lynch7@gmail.com` | Julian Lynch | Seeded Client |
-| **Manager** | `curtis45@hotmail.com` | Curtis Smith | Seeded Manager |
+| **Super Admin** | `rod.rice37@hotmail.com` | Sherry Wisozk | Seeded Admin |
+| **Client** | `jenna_roberts@yahoo.com` | Brandt West | Seeded Client |
+| **Client** | `percival.kuhlman@hotmail.com` | Olen Huels | Seeded Client |
 | **Manager** | `lempi65@yahoo.com` | Mitchell Robel | Seeded Manager |
-| **Gig Professional** | `elena@gigpro.io` | Elena Rodriguez | Seeded Gig Pro |
-| **Gig Professional** | `dessie8@yahoo.com` | Dessie Davis | Seeded Gig Pro |
+| **Manager** | `marco.flatley@hotmail.com` | Eleonore Kerluke | Seeded Manager |
+| **Gig Professional** | `jettie_grimes64@gmail.com` | Brooks Abernathy | Seeded Gig Pro |
+| **Gig Professional** | `kristian.botsford-muller@hotmail.com` | Corene Ruecker | Seeded Gig Pro |
 
 ### How to Log In:
-1. Open the frontend at [http://localhost:5173](http://localhost:5173) and click **Sign in**
-2. Enter your email and password (`password123`) — no role selector needed!
-3. The system verifies your credentials with PostgreSQL and automatically routes you to the authoritative role dashboard (**Client**, **Manager**, **Gig Professional**, or **Super Admin**).
+1. Open the frontend at [http://localhost:5173](http://localhost:5173)
+2. Select your role in "Log in as" (**Client**, **Manager**, **Gig Professional**, or **Super Admin**)
+3. Enter the email above and password `password123`
 
+The backend runs on port 3000. If the UI can't reach it, set `VITE_API_BASE_URL=http://localhost:3000/api` in `apps/frontend/.env.local` and restart Vite.
