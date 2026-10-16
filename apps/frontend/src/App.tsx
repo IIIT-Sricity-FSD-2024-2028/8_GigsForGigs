@@ -219,7 +219,7 @@ function ClientAppContent() {
       {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
       {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
-      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} />}
+      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} params={clientParams} />}
       {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} params={clientParams} />}
       {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} params={clientParams} />}
     </ClientLayout>

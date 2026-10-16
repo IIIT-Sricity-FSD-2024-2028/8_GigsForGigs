@@ -9,7 +9,6 @@
     "target": "ES2023",
     "strict": true,
     "esModuleInterop": true,
-    "ignoreDeprecations": "6.0",
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
     "types": ["node"],
@@ -47,7 +46,7 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
+    "skipLibCheck": true
   },
   "include": ["index.ts"]
 }

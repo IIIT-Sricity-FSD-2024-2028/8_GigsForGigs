@@ -314,6 +314,8 @@ enum PaymentStatus {
   pending
   completed
   failed
+  held
+  refunded
 }
 
 enum ServiceStatus {
