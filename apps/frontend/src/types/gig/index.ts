@@ -26,6 +26,7 @@ export interface GigDeliverable {
   description: string;
   submissionPath: string;
   status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
+  feedback?: string | null;
   createdAt?: string;
   claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
 }

@@ -277,6 +277,14 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
     }
 
     const last = await tx.deliverable.findFirst({ where: { taskId: dto.taskId }, orderBy: { deliverableNo: "desc" } });
+    if (definitions.length === 0 && last) {
+      if (last.status === "submitted") {
+        throw conflict("A deliverable submission is already under review for this task");
+      }
+      if (last.status === "approved" || last.status === "closed") {
+        throw conflict("The deliverable for this task has already been approved");
+      }
+    }
     const deliverableNo = (last?.deliverableNo ?? 0) + 1;
     const submission = await tx.deliverable.create({
       data: {

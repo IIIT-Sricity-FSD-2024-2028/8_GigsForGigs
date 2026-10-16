@@ -97,10 +97,30 @@ export const GigDashboard: React.FC = () => {
             padding: '12px 16px',
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--font-size-sm)',
-            fontWeight: 600
+            fontWeight: 600,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
           }}
         >
-          {error}
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={triggerRefresh}
+            style={{
+              padding: '6px 14px',
+              backgroundColor: '#9B1C1C',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
         </div>
       )}
 

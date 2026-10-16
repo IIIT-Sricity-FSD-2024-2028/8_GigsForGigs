@@ -406,7 +406,13 @@ export async function reviewDeliverable(
 
   const deliverable = await prisma.deliverable.findUnique({
     where: { taskId_deliverableNo: key },
-    include: { task: true },
+    include: {
+      task: {
+        include: {
+          assignments: true,
+        },
+      },
+    },
   });
 
   if (!deliverable || deliverable.task.clientId !== clientId) {
@@ -414,6 +420,13 @@ export async function reviewDeliverable(
   }
   if (deliverable.task.status !== "in_progress") {
     throw forbidden("Deliverables can only be reviewed while the task is active");
+  }
+
+  const isAssigned = deliverable.task.assignments.some(
+    (a: { gigProfileId: number }) => a.gigProfileId === deliverable.gigProfileId,
+  );
+  if (!isAssigned) {
+    throw forbidden("Submission belongs to a professional not assigned to this task");
   }
 
   // Conditional update: only a submission still awaiting review can be decided.
@@ -425,7 +438,13 @@ export async function reviewDeliverable(
     },
   });
   if (updated.count !== 1) throw conflict("This submission has already been reviewed");
-  return prisma.deliverable.findUniqueOrThrow({ where: { taskId_deliverableNo: key } });
+  return prisma.deliverable.findUniqueOrThrow({
+    where: { taskId_deliverableNo: key },
+    include: {
+      gigProfile: { include: { user: true } },
+      claimedDefinitions: { include: { definition: true } },
+    },
+  });
 }
 
 // ---- Services (browse + request) -------------------------------------------

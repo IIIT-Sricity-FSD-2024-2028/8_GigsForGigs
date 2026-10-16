@@ -185,10 +185,20 @@ export const clientApi = {
     return apiFetch<ClientProfileData>('/clients/me', { actor });
   },
 
-  updateProfile: async (clientId: number, dto: { clientName?: string; domain?: string }): Promise<ClientProfileData> => {
-    return apiFetch<ClientProfileData>(`/clients/${clientId}/profile`, {
-      method: 'POST',
-      body: dto,
+  updateProfile: async (
+    dtoOrClientId: { clientName?: string; domain?: string } | number,
+    maybeDto?: { clientName?: string; domain?: string }
+  ): Promise<ClientProfileData> => {
+    if (typeof dtoOrClientId === 'number') {
+      return apiFetch<ClientProfileData>(`/clients/${dtoOrClientId}/profile`, {
+        method: 'POST',
+        body: maybeDto || {},
+        actor,
+      });
+    }
+    return apiFetch<ClientProfileData>('/clients/me/profile', {
+      method: 'PATCH',
+      body: dtoOrClientId,
       actor,
     });
   },
@@ -316,6 +326,15 @@ export const clientApi = {
   /** Rate the professional who delivered a completed task. */
   createReview: async (taskId: number, rating: number, comment?: string): Promise<unknown> =>
     apiFetch<unknown>('/reviews', { method: 'POST', body: { taskId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) }, actor }),
+
+  /** Fetch all payments/ledger items for the authenticated client. */
+  getPayments: async (): Promise<any[]> => {
+    const res = await apiFetch<any>('/payments', { actor });
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res?.data)) return res.data;
+    if (Array.isArray(res?.payments)) return res.payments;
+    return [];
+  },
 };
 
 export default clientApi;

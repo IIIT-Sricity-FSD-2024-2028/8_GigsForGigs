@@ -15,10 +15,22 @@ export const updateManagerSchema = z.object({
 });
 export type UpdateManagerDto = z.infer<typeof updateManagerSchema>;
 
-export const reviewDeliverableSchema = z.object({
-  status: z.enum(["approved", "revision_requested"]),
-  feedback: text(500).optional(),
-});
+export const reviewDeliverableSchema = z
+  .object({
+    status: z.enum(["approved", "revision_requested"]),
+    feedback: text(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "revision_requested") {
+      if (!data.feedback || !data.feedback.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Feedback is required when requesting revisions",
+          path: ["feedback"],
+        });
+      }
+    }
+  });
 export type ReviewDeliverableDto = z.infer<typeof reviewDeliverableSchema>;
 
 export const shortlistApplicationSchema = z.object({

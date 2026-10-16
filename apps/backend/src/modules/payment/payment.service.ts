@@ -67,6 +67,109 @@ export class PaymentService {
   }
 
   /**
+   * Get all payments for tasks owned by a client from PostgreSQL.
+   */
+  /**
+   * Get all payments for tasks owned by a client from PostgreSQL.
+   * Uses raw SQL with status::text to prevent Prisma P2023 enum mismatches on 'held' escrow status.
+   */
+  public static async getClientPayments(clientId: number) {
+    const rawPayments: any[] = await prisma.$queryRawUnsafe(`
+      SELECT 
+        p.payment_id as "paymentId",
+        p.task_id as "taskId",
+        p.gig_profile_id as "gigProfileId",
+        p.amount,
+        p.status::text as "status",
+        p.created_at as "createdAt",
+        t.title as "taskTitle",
+        t.status as "taskStatus",
+        t.budget as "taskBudget",
+        u.name as "gigProName"
+      FROM "PAYMENT" p
+      JOIN "TASKS" t ON p.task_id = t.task_id
+      LEFT JOIN "GIG_PROFESSIONAL_PROFILE" gp ON p.gig_profile_id = gp.gig_profile_id
+      LEFT JOIN "USERS" u ON gp.user_id = u.user_id
+      WHERE t.client_id = $1
+      ORDER BY p.created_at DESC
+    `, clientId);
+
+    const existingTaskKeys = new Set(rawPayments.map(p => `${p.taskId}_${p.gigProfileId}`));
+    const existingTaskIds = new Set(rawPayments.map(p => String(p.taskId)));
+
+    // Include accepted applications for client tasks that do not yet have a payment row
+    const acceptedApps: any[] = await prisma.$queryRawUnsafe(`
+      SELECT 
+        a.task_id as "taskId",
+        a.gig_profile_id as "gigProfileId",
+        a.created_at as "createdAt",
+        t.title as "taskTitle",
+        t.status as "taskStatus",
+        t.budget as "taskBudget",
+        u.name as "gigProName"
+      FROM "APPLICATION" a
+      JOIN "TASKS" t ON a.task_id = t.task_id
+      LEFT JOIN "GIG_PROFESSIONAL_PROFILE" gp ON a.gig_profile_id = gp.gig_profile_id
+      LEFT JOIN "USERS" u ON gp.user_id = u.user_id
+      WHERE a.status = 'accepted' AND t.client_id = $1
+      ORDER BY a.created_at DESC
+    `, clientId);
+
+    for (const app of acceptedApps) {
+      const key = `${app.taskId}_${app.gigProfileId}`;
+      if (!existingTaskKeys.has(key)) {
+        rawPayments.push({
+          paymentId: `T${app.taskId}`,
+          taskId: app.taskId,
+          gigProfileId: app.gigProfileId,
+          amount: app.taskBudget,
+          status: app.taskStatus === 'completed' ? 'completed' : 'pending',
+          createdAt: app.createdAt,
+          taskTitle: app.taskTitle,
+          taskStatus: app.taskStatus,
+          taskBudget: app.taskBudget,
+          gigProName: app.gigProName || 'Gig Professional',
+        });
+        existingTaskKeys.add(key);
+        existingTaskIds.add(String(app.taskId));
+      }
+    }
+
+    // Also ensure completed tasks owned by client appear in the ledger
+    const completedTasks: any[] = await prisma.$queryRawUnsafe(`
+      SELECT 
+        t.task_id as "taskId",
+        t.title as "taskTitle",
+        t.status as "taskStatus",
+        t.budget as "taskBudget",
+        t.created_at as "createdAt"
+      FROM "TASKS" t
+      WHERE t.status = 'completed' AND t.client_id = $1
+      ORDER BY t.created_at DESC
+    `, clientId);
+
+    for (const ct of completedTasks) {
+      if (!existingTaskIds.has(String(ct.taskId))) {
+        rawPayments.push({
+          paymentId: `T${ct.taskId}`,
+          taskId: ct.taskId,
+          gigProfileId: null,
+          amount: ct.taskBudget,
+          status: 'completed',
+          createdAt: ct.createdAt,
+          taskTitle: ct.taskTitle,
+          taskStatus: ct.taskStatus,
+          taskBudget: ct.taskBudget,
+          gigProName: 'Gig Professional',
+        });
+        existingTaskIds.add(String(ct.taskId));
+      }
+    }
+
+    return rawPayments;
+  }
+
+  /**
    * Release payment and mark Task as completed in PostgreSQL.
    */
   public static async releasePaymentInDb(taskId: number, gigProfileId: number, gigAmount?: number) {

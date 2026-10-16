@@ -57,7 +57,7 @@ export const ActiveTasks: React.FC = () => {
       {error && <ErrorState title="Could not load active tasks" message={error} />}
 
       {/* Header */}
-      <PageHeader title="Active Task Engagements" description="Manage your ongoing client deliverables, inspect milestone requirements, and submit finished work." />
+      <PageHeader title="Active Task/Contracts" description="Manage your ongoing client deliverables, inspect milestone requirements, and submit finished work." />
 
       {activeTasks.length === 0 ? (
         <EmptyState title="No active tasks" description="Explore the marketplace to pick up new work." />

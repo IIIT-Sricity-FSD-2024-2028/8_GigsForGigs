@@ -46,6 +46,13 @@ async function requireOwnedContract(req: Request, rawTaskId: unknown) {
   return { task, hired, payment };
 }
 
+// Client fetches all payments for their owned tasks
+router.get('/', async (req: Request, res: Response) => {
+  const { clientId } = req.user as ClientTokenPayload;
+  const result = await PaymentController.getClientPayments(clientId);
+  return res.json(result);
+});
+
 // Client initiates payment
 router.post('/initiate', async (req: Request, res: Response) => {
   const { task, hired } = await requireOwnedContract(req, req.body?.taskId);

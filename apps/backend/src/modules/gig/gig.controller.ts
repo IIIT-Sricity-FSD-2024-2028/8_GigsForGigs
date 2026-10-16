@@ -63,7 +63,7 @@ function toApplicationResponse(application: Row) {
   };
 }
 
-function toDeliverableResponse(deliverable: Row) {
+export function toDeliverableResponse(deliverable: Row) {
   return {
     taskId: deliverable.taskId,
     deliverableNo: deliverable.deliverableNo,
@@ -71,6 +71,7 @@ function toDeliverableResponse(deliverable: Row) {
     description: deliverable.description,
     submissionPath: deliverable.submissionPath,
     status: deliverable.status,
+    feedback: deliverable.feedback ?? undefined,
     createdAt: deliverable.createdAt.toISOString(),
     claimedDefinitions: (deliverable.claimedDefinitions ?? []).map((item: Row) => ({
       definitionId: item.definition.definitionId,

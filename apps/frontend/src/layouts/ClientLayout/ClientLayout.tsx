@@ -2,7 +2,7 @@ import React from 'react';
 import '../../pages/client/client.css';
 import { useAuth } from '../../context/AuthContext';
 import { DashboardLayout, type DashboardNavItem } from '../common/DashboardLayout/DashboardLayout';
-import { DashboardIcon, SearchIcon, ProjectIcon, ManagerIcon } from '../../components/super-admin/Icons';
+import { DashboardIcon, SearchIcon, ProjectIcon, ManagerIcon, PaymentIcon, UsersIcon } from '../../components/super-admin/Icons';
 
 export interface ClientLayoutProps {
   currentView: string;
@@ -14,6 +14,9 @@ const navItems: DashboardNavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
   { id: 'search-talent', label: 'Search Talent', icon: <SearchIcon size={18} /> },
   { id: 'my-gigs', label: 'Active Task/Contracts', icon: <ProjectIcon size={18} />, aliases: ['review-deliverables', 'review-shortlist'] },
+  { id: 'completed-projects', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },
+  { id: 'total-spent', label: 'Total Spent', icon: <PaymentIcon size={18} /> },
+  { id: 'client-profile', label: 'Client Profile', icon: <UsersIcon size={18} /> },
   { id: 'profile-selection', label: 'Supervise Manager', icon: <ManagerIcon size={18} /> }
 ];
 

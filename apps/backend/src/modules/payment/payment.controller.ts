@@ -98,4 +98,56 @@ export class PaymentController {
       createdAt: payment.createdAt.toISOString()
     });
   }
+
+  /**
+   * Client endpoint: Fetch all payments for tasks owned by the authenticated client.
+   */
+  public static async getClientPayments(clientId: number) {
+    const payments = await PaymentService.getClientPayments(clientId);
+    const records = payments.map((payment) => {
+      const financials = PaymentService.calculateFinancials(Number(payment.amount));
+      
+      let status = 'PENDING';
+      const rawStatus = String(payment.status || '').toLowerCase();
+      if (payment.taskStatus === 'completed' || rawStatus === 'completed') {
+        status = 'COMPLETED';
+      } else if (rawStatus === 'held' || rawStatus === 'escrowed') {
+        status = 'ESCROWED';
+      } else if (rawStatus === 'failed') {
+        status = 'FAILED';
+      } else if (rawStatus === 'refunded') {
+        status = 'REFUNDED';
+      } else if (rawStatus === 'work_submitted' || rawStatus === 'awaiting_approval') {
+        status = 'AWAITING_APPROVAL';
+      } else if (rawStatus) {
+        status = rawStatus.toUpperCase();
+      }
+
+      const pIdStr = String(payment.paymentId);
+      const formattedPaymentId = pIdStr.startsWith('PAY-') ? pIdStr : 'PAY-' + pIdStr;
+
+      let createdAtStr = new Date().toISOString();
+      if (payment.createdAt instanceof Date) {
+        createdAtStr = payment.createdAt.toISOString();
+      } else if (payment.createdAt) {
+        createdAtStr = new Date(payment.createdAt).toISOString();
+      }
+
+      return {
+        paymentId: formattedPaymentId,
+        taskId: String(payment.taskId),
+        taskTitle: payment.taskTitle || payment.task?.title || `Task #${payment.taskId}`,
+        taskStatus: payment.taskStatus || payment.task?.status || 'in_progress',
+        gigProfileId: payment.gigProfileId ? String(payment.gigProfileId) : null,
+        gigProName: payment.gigProName || payment.gigProfile?.user?.name || 'Gig Professional',
+        gigAmount: financials.gigAmount,
+        platformFee: financials.platformFee,
+        totalAmount: financials.totalAmount,
+        status,
+        createdAt: createdAtStr,
+      };
+    });
+    return this.formatResponse(true, 'Client payments retrieved successfully', records);
+  }
 }
+
