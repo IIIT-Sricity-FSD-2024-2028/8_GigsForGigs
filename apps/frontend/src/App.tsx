@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
@@ -226,7 +226,34 @@ function ClientAppContent() {
  */
 function MainAppContent() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [unauthView, setUnauthView] = useState<UnauthView>('landing');
+  const [unauthView, setUnauthView] = useState<UnauthView>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      if (path === '/login' || path.startsWith('/login/')) return 'login';
+      if (path === '/signup' || path.startsWith('/signup/')) return 'signup';
+      // Protect dashboard routes against unauthenticated direct URL access
+      if (
+        path.startsWith('/admin') ||
+        path.startsWith('/client') ||
+        path.startsWith('/manager') ||
+        path.startsWith('/gig') ||
+        path.startsWith('/dashboard')
+      ) {
+        return 'login';
+      }
+    }
+    return 'landing';
+  });
+
+  // Ensure logout or session expiration returns visitor directly to the login view
+  const prevAuthRef = useRef(isAuthenticated);
+  useEffect(() => {
+    if (prevAuthRef.current && !isAuthenticated) {
+      setUnauthView('login');
+    }
+    prevAuthRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   const [isInviteFlowActive, setIsInviteFlowActive] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.location.pathname.startsWith('/admin/invite') || new URLSearchParams(window.location.search).has('admin_invite');

@@ -28,7 +28,7 @@ if (isProduction && !appUrl) {
 
 export const env = {
   isProduction,
-  databaseUrl: required("DATABASE_URL"),
+  databaseUrl: required("DATABASE_URL", "postgresql://postgres@127.0.0.1:5433/gigsforge"),
   jwtSecret,
   port: Number(process.env.PORT ?? 5000),
   /** Public frontend origin, used to build invite links. */

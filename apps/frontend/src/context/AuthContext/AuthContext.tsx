@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../../services/api/auth/authApi';
-import type { AuthUser, BackendRole } from '../../services/api/auth/authApi';
-import { ApiError, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
+import type { AuthUser } from '../../services/api/auth/authApi';
+import { ApiError, getToken, setToken, clearToken, UNAUTHORIZED_EVENT, type ActorRole } from '../../services/api/httpClient';
 import { decodeJwtPayload } from '../../utils/helpers/jwt';
 
 export type FrontendRole = 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';
@@ -117,7 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Restore active user session from localStorage so page refreshes retain the logged-in session
+  // Restore active user session from sessionStorage so page refreshes retain the logged-in session,
+  // while ensuring any invalid, missing, or expired token rejects access.
   const [user, setUser] = useState<UserSession | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('gfg_active_user');
@@ -125,10 +126,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const parsed = JSON.parse(saved);
           if (parsed && parsed.email && parsed.role) {
+            const actor = roleToActor(parsed.role);
+            const token = getToken(actor);
+            if (!token) {
+              sessionStorage.removeItem('gfg_active_user');
+              return null;
+            }
+            const payload = decodeJwtPayload<TokenPayload & { exp?: number }>(token);
+            if (!payload || !payload.role) {
+              sessionStorage.removeItem('gfg_active_user');
+              clearToken(actor);
+              return null;
+            }
+            // Check token expiration if present
+            if (payload.exp && Date.now() / 1000 >= payload.exp) {
+              sessionStorage.removeItem('gfg_active_user');
+              clearToken(actor);
+              return null;
+            }
+            // Ensure decoded role matches session role
+            if (backendRoleToFrontend(payload.role) !== parsed.role) {
+              sessionStorage.removeItem('gfg_active_user');
+              clearToken(actor);
+              return null;
+            }
             return parsed;
           }
         } catch {
-          // ignore corrupted JSON
+          sessionStorage.removeItem('gfg_active_user');
         }
       }
     }
@@ -146,16 +171,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   // A 401 from any request for the current actor means the token expired or
-  // was revoked server-side — drop the session so the app falls back to the
-  // right (role-specific) login screen instead of showing broken data.
+  // was revoked server-side — drop the session so the app falls back to login.
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ actor: ActorRole }>).detail;
-      setUser((prev) => (prev && roleToActor(prev.role) === detail.actor ? null : prev));
+      if (!detail?.actor || (user && roleToActor(user.role) === detail.actor)) {
+        (['client', 'manager', 'gig_professional', 'admin'] as ActorRole[]).forEach(clearToken);
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('gfg_active_user');
+        }
+        setUser(null);
+      }
     };
     window.addEventListener(UNAUTHORIZED_EVENT, handler);
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, handler);
-  }, []);
+  }, [user]);
 
   const signup = useCallback(
     async (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL'): Promise<boolean> => {
@@ -164,12 +194,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const backendRole = role === 'CLIENT' ? 'client' : 'gig_professional';
         const res = await authApi.signup(name, email, password, backendRole);
+        if (!res?.token || !res?.user?.role) {
+          throw new Error('Invalid signup response from server.');
+        }
         const session = sessionFromAuthResponse(res.user, res.token);
+        (['client', 'manager', 'gig_professional', 'admin'] as ActorRole[]).forEach(clearToken);
         setToken(roleToActor(session.role), res.token);
         setUser({ ...session, isNewAccount: true });
         return true;
       } catch (err) {
-        setAuthError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
+        setAuthError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Registration failed. Please try again.');
         return false;
       } finally {
         setLoading(false);
@@ -178,33 +212,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [],
   );
 
-  const login = useCallback(async (email: string, password: string, roleHint?: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, _roleHint?: string): Promise<boolean> => {
     setLoading(true);
     setAuthError(null);
 
     try {
-      const requestedRole: BackendRole | undefined =
-        roleHint === 'CLIENT'
-          ? 'client'
-          : roleHint === 'GIG_PROFESSIONAL'
-            ? 'gig_professional'
-            : roleHint === 'MANAGER'
-              ? 'manager'
-              : roleHint === 'SUPER_ADMIN'
-                ? 'admin'
-                : undefined;
-      if (!requestedRole) {
-        setAuthError('Please select the account type you want to use.');
-        return false;
+      const res = await authApi.login(email.trim(), password);
+      if (!res || !res.token || !res.user || !res.user.role) {
+        throw new Error('Invalid authentication response from server.');
       }
-
-      const res = await authApi.login(email.trim(), password, requestedRole);
       const session = sessionFromAuthResponse(res.user, res.token);
+      // Clear tokens from prior sessions across all roles to prevent leakage
+      (['client', 'manager', 'gig_professional', 'admin'] as ActorRole[]).forEach(clearToken);
       setToken(roleToActor(session.role), res.token);
       setUser(session);
       return true;
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Authentication failed. Please verify your credentials.';
+      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Authentication failed. Please verify your credentials.';
       setAuthError(msg);
       return false;
     } finally {
@@ -213,7 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loginManager = useCallback(
-    (email: string, password: string) => login(email, password, 'MANAGER'),
+    (email: string, password: string) => login(email, password),
     [login],
   );
 
@@ -235,10 +259,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(() => {
-    setUser((prev) => {
-      if (prev) clearToken(roleToActor(prev.role));
-      return null;
-    });
+    (['client', 'manager', 'gig_professional', 'admin'] as ActorRole[]).forEach(clearToken);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('gfg_active_user');
+    }
+    setUser(null);
   }, []);
 
   const logoutManager = useCallback(async (): Promise<void> => {
@@ -246,10 +271,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authApi.managerLogout();
     } catch {
-      // Logout is stateless server-side (see auth.controller.ts) — a failed
-      // request here still means the client should drop its local token.
+      // Logout is stateless server-side
     } finally {
-      clearToken('manager');
+      (['client', 'manager', 'gig_professional', 'admin'] as ActorRole[]).forEach(clearToken);
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('gfg_active_user');
+      }
       setUser(null);
       setLoading(false);
     }

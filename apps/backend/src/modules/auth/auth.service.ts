@@ -116,6 +116,12 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
     throw unauthorized("Invalid email or password");
   }
 
+  // Reject disabled, suspended, or banned accounts
+  const userStatus = (user as Record<string, unknown>).status;
+  if (userStatus === "SUSPENDED" || userStatus === "BANNED" || userStatus === "DISABLED") {
+    throw unauthorized("Account is suspended or disabled");
+  }
+
   if (requiredRole && user.role !== requiredRole) {
     throw unauthorized("Invalid email or password for this role portal");
   }
@@ -124,10 +130,10 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
   return { success: true, token: signToken(payload), user: sanitizeUser(user) };
 }
 
-// Log in only through the selected role portal. This prevents a valid account
-// from being accepted by a different portal after the frontend role picker.
+// Authoritative login: verifies credentials and determines the role directly from the trusted database account record.
+// Does NOT require, trust, or infer a role from client input or email domain.
 export function login(dto: LoginDto) {
-  return authenticate(dto, dto.role);
+  return authenticate(dto);
 }
 
 // Log in restricted to manager accounts (rejects any other role's credentials).

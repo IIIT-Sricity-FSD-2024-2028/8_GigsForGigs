@@ -13,7 +13,7 @@ export type SignupDto = z.infer<typeof signupSchema>;
 export const loginSchema = z.object({
   email: z.string().trim().max(254).email(),
   password: z.string().min(1).max(200),
-  role: z.enum(["client", "gig_professional", "manager", "admin"]),
+  role: z.enum(["client", "gig_professional", "manager", "admin"]).optional(),
 });
 export type LoginDto = z.infer<typeof loginSchema>;
 
