@@ -66,7 +66,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
       onNavigate('dashboard');
     } catch (err) {
       console.error('Save task failed:', err);
-      alert('Failed to save this task. Please try again.');
+      alert(err instanceof Error && err.message ? err.message : 'Failed to save this task. Please try again.');
     }
   };
 
@@ -87,7 +87,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
         
         <div className="form-group">
           <label className="form-label" htmlFor="gig-title">Gig Title</label>
-          <input
+          <input maxLength={255}
             type="text"
             id="gig-title"
             className="form-input"
@@ -135,7 +135,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
 
         <div className="form-group">
           <label className="form-label" htmlFor="description">Detailed Description</label>
-          <textarea
+          <textarea maxLength={5000}
             id="description"
             className="form-input"
             rows={6}
@@ -175,7 +175,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="budget">Budget (₹)</label>
-            <input
+            <input max="99999999.99"
               type="number"
               id="budget"
               className="form-input"
@@ -191,7 +191,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
 
         <div className="form-group">
           <label className="form-label">Required Skills (Comma separated)</label>
-          <input
+          <input maxLength={1000}
             type="text"
             id="skills"
             className="form-input"

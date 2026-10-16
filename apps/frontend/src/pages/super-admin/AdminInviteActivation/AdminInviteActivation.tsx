@@ -51,8 +51,12 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
 
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tempPassword.trim() && !newPassword.trim()) {
-      toast.error('Password Required', 'Please enter your assigned master password to verify and activate.');
+    if (!tempPassword.trim()) {
+      toast.error('Password Required', 'Please enter the one-time password you were given with this invite.');
+      return;
+    }
+    if (newPassword && newPassword.length < 8) {
+      toast.error('Password Too Short', 'Your new password must be at least 8 characters.');
       return;
     }
     if (newPassword && newPassword !== confirmPassword) {
@@ -62,10 +66,8 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
 
     setLoading(true);
     try {
-      const res = await adminApi.acceptAdminInvitation(token, email, newPassword || tempPassword);
-      if (res && res.token) {
-        sessionStorage.setItem('g4g_admin_token', res.token);
-      }
+      const res = await adminApi.acceptAdminInvitation(token, email, tempPassword.trim(), newPassword || undefined);
+      sessionStorage.setItem('g4g_admin_token', res.token);
       
       const permissionsMap: Record<string, string[]> = {
         AUDITOR: ['users:read', 'payments:read', 'projects:read', 'audit:read'],
@@ -76,10 +78,10 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
       };
 
       const userSession = {
-        userId: res?.user?.userId || Math.floor(100 + Math.random() * 900),
+        userId: res.user.userId,
         role: 'SUPER_ADMIN' as const,
-        name: (email.split('@')[0] || 'Admin').replace(/[^a-zA-Z]/g, ' '),
-        email: email,
+        name: res.user.name,
+        email: res.user.email,
         adminTier: (res?.user?.adminTier || assignedRole) as any,
         permissions: permissionsMap[assignedRole] || ['*'],
         appliedTaskIds: []

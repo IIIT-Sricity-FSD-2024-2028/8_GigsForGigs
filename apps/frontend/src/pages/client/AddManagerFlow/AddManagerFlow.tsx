@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
+import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
 
 export interface AddManagerFlowProps {
   onNavigate: (viewId: string) => void;
@@ -18,13 +19,18 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
 
     try {
       // Create a manager with generic name from email prefix
-      const name = email.split('@')[0];
-      await inviteManager(name.charAt(0).toUpperCase() + name.slice(1), email);
-      alert('Manager invited successfully!');
+      // "john.doe99@x.com" -> "John Doe" (names may only contain letters, spaces, . ' -)
+      const name = (email.split('@')[0] ?? '')
+        .split(/[^\p{L}]+/u)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ') || 'Manager';
+      const link = await inviteManager(name, email);
+      shareInviteLink(link);
       onNavigate('profile-selection');
     } catch (err) {
       console.error('Invite manager failed:', err);
-      alert('Failed to send the manager invite. Please try again.');
+      alert(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
     }
   };
 
@@ -122,7 +128,7 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
               <label className="form-label" htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
                 Colleague's Email Address
               </label>
-              <input
+              <input maxLength={100}
                 type="email"
                 id="email"
                 className="form-input"

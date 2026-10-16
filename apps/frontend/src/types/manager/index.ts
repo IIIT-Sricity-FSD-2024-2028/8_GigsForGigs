@@ -39,6 +39,7 @@ export interface Deliverable {
   submissionPath: string;
   status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
   createdAt?: string;
+  claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
   gigProfile?: {
     user: {
       name: string;
@@ -80,10 +81,21 @@ export interface TalentProfile {
   status: 'active' | 'busy' | 'offline';
 }
 
-export interface CreateDeliverableDto {
+/** An application against one of the manager's client's tasks (GET /managers/me/tasks/:id/applications). */
+export interface ManagerApplication {
+  applicationId: number;
   gigProfileId: number;
-  description: string;
-  submissionPath: string;
+  taskId: number;
+  status: 'pending' | 'shortlisted' | 'accepted' | 'declined';
+  rating: number | null;
+  hourlyRate: number | null;
+  createdAt: string;
+  gigProfile?: { user: { name: string } };
+}
+
+export interface ShortlistApplicationDto {
+  rating?: number;
+  hourlyRate?: number;
 }
 
 export interface ReviewDeliverableDto {

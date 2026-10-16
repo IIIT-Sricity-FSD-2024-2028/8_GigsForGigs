@@ -78,7 +78,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             </div>
             <span className="metric-badge metric-badge-up">+2 this week</span>
           </div>
-          <div className="metric-label">Active Tasks</div>
+          <div className="metric-label">Active Task/Contracts</div>
           <div className="metric-value" id="client-active-tasks">{activeCount}</div>
           <div className="metric-description">Approved &amp; in progress</div>
         </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
 import { Button } from '../../../components/common/Button';
+import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 
 interface ManagerDashboardProps {
   onNavigateToTask: (taskId: number) => void;
@@ -9,7 +10,7 @@ interface ManagerDashboardProps {
 }
 
 export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateToTask, onNavigateToQueue }) => {
-  const { profile, tasks, deliverables, reviewDeliverable, closeDeliverable } = useManager();
+  const { profile, tasks, deliverables, reviewDeliverable } = useManager();
 
   const managerName = profile?.user?.name || 'Manager';
   const pendingTasks = tasks.filter(t => t.status === 'open');
@@ -251,7 +252,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
                     Deliverable #{del.deliverableNo}: {del.description}
                   </div>
                   <div className="task-category">
-                    Link: <a href={del.submissionPath} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary-dark)' }}>{del.submissionPath}</a>
+                    Link: {safeHttpUrl(del.submissionPath) ? <a href={safeHttpUrl(del.submissionPath)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary-dark)' }}>{del.submissionPath}</a> : <span>{del.submissionPath}</span>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
@@ -265,9 +266,9 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
                   <button
                     className="btn btn-outline"
                     style={{ padding: '6px 14px', fontSize: '0.8rem' }}
-                    onClick={() => closeDeliverable(del.taskId, del.deliverableNo)}
+                    onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'revision_requested' })}
                   >
-                    Close
+                    Request revision
                   </button>
                 </div>
               </div>

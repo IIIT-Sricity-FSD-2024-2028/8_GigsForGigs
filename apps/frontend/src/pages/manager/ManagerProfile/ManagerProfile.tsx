@@ -76,9 +76,9 @@ export const ManagerProfile: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <Input label="Full Name" type="text" required value={name} onChange={e => setName(e.target.value)} />
-          <Input label="Email Address" type="email" required value={email} onChange={e => setEmail(e.target.value)} />
-          <Input label="New Password (leave blank to keep current)" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+          <Input maxLength={100} label="Full Name" type="text" required value={name} onChange={e => setName(e.target.value)} />
+          <Input maxLength={100} label="Email Address" type="email" required value={email} onChange={e => setEmail(e.target.value)} />
+          <Input maxLength={72} label="New Password (leave blank to keep current)" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
           <Button type="submit" disabled={loading} style={{ alignSelf: 'flex-start', marginTop: '8px' }}>
             {loading ? 'Updating...' : 'Save Profile Changes'}
           </Button>

@@ -142,7 +142,7 @@ export const GigDashboard: React.FC = () => {
         {/* Active Tasks Card */}
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('active-tasks')}>
           <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Active Tasks
+            Active Task/Contracts
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-primary-dark)', margin: 'var(--spacing-xs) 0' }}>
             {activeTasks.length}
@@ -293,7 +293,7 @@ export const GigDashboard: React.FC = () => {
           <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                Active Tasks Preview
+                Active Task/Contracts Preview
               </h3>
               <button
                 className="admin-btn admin-btn-outline admin-btn-sm"

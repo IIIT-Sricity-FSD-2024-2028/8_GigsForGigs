@@ -34,3 +34,8 @@ export async function acceptManagerInvite(_req: Request, res: Response): Promise
   const result = await authService.acceptManagerInvite(dto);
   res.status(201).json(result);
 }
+
+export async function getManagerInvite(req: Request, res: Response): Promise<void> {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  res.status(200).json(await authService.getManagerInvite(token));
+}

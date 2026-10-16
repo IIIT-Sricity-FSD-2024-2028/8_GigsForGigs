@@ -1,20 +1,20 @@
 import { z } from "zod";
+import { MONEY_10_2, httpUrl, id, line, money, tagList, text } from "../../lib/validation.js";
 
 // PUT /gig/profile sends the whole GigProfile object back, including
 // read-only/derived fields (name, email, rating, ...) this endpoint doesn't
-// own. .passthrough() means those are ignored rather than 400ing the request.
+// own. z.object strips unknown keys, so those are dropped rather than 400ing.
 export const updateGigProfileSchema = z
   .object({
-    bio: z.string().optional(),
-    skills: z.array(z.string().min(1).max(100)).optional(),
-    tools: z.array(z.string().min(1).max(100)).optional(),
-    portfolio: z.array(z.string().min(1).max(500)).optional(),
-  })
-  .passthrough();
+    bio: text(5000).optional(),
+    skills: tagList(50, 100).optional(),
+    tools: tagList(50, 100).optional(),
+    portfolio: z.array(httpUrl()).max(20, "at most 20 portfolio links").optional(),
+  });
 export type UpdateGigProfileDto = z.infer<typeof updateGigProfileSchema>;
 
 export const createApplicationSchema = z.object({
-  taskId: z.coerce.number().int().positive(),
+  taskId: id(),
 });
 export type CreateApplicationDto = z.infer<typeof createApplicationSchema>;
 
@@ -24,24 +24,28 @@ export const respondToRequestSchema = z.object({
 export type RespondToRequestDto = z.infer<typeof respondToRequestSchema>;
 
 export const submitDeliverableSchema = z.object({
-  taskId: z.coerce.number().int().positive(),
-  content: z.string().min(1),
-  notes: z.string().optional().nullable().or(z.literal("")),
+  taskId: id(),
+  content: text(500).refine(s => s.length > 0, "Submission details are required"),
+  notes: text(500).optional().nullable(),
+  definitionIds: z.array(id()).max(100, "too many deliverables selected").optional().default([]),
+}).refine(dto => new Set(dto.definitionIds).size === dto.definitionIds.length, {
+  message: "Each task deliverable can only be selected once",
+  path: ["definitionIds"],
 });
 export type SubmitDeliverableDto = z.infer<typeof submitDeliverableSchema>;
 
 export const createServiceSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  price: z.coerce.number().positive().max(99999999.99),
-  tags: z.array(z.string().min(1).max(100)).default([]),
-  thumbnail: z.string().max(500).optional(),
+  title: line(255),
+  description: text(5000).optional(),
+  price: money(MONEY_10_2),
+  tags: tagList(20, 100).default([]),
+  thumbnail: httpUrl().optional(),
 });
 export type CreateServiceDto = z.infer<typeof createServiceSchema>;
 
 export const createReviewSchema = z.object({
-  taskId: z.coerce.number().int().positive(),
+  taskId: id(),
   rating: z.coerce.number().int().min(1).max(5),
-  comment: z.string().max(1000).optional(),
+  comment: text(1000).optional(),
 });
 export type CreateReviewDto = z.infer<typeof createReviewSchema>;

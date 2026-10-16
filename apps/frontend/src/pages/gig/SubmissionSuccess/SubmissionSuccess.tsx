@@ -56,7 +56,7 @@ export const SubmissionSuccess: React.FC = () => {
             className="admin-btn admin-btn-outline"
             onClick={() => setActiveTab('active-tasks')}
           >
-            Back to Active Tasks
+            Back to Active Task/Contracts
           </button>
           <button
             className="admin-btn admin-btn-primary"

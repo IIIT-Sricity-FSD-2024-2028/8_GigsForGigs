@@ -85,7 +85,7 @@ export const PostService: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Service Title *
           </label>
-          <input
+          <input maxLength={255}
             type="text"
             className="admin-input"
             placeholder="e.g. Full-Stack React & Node.js Web App Development"
@@ -100,7 +100,7 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Category / Domain *
             </label>
-            <input
+            <input maxLength={50}
               type="text"
               className="admin-input"
               placeholder="e.g. Frontend Development, UI/UX"
@@ -114,7 +114,7 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Estimated Delivery Time *
             </label>
-            <input
+            <input maxLength={100}
               type="text"
               className="admin-input"
               placeholder="e.g. 5 Days, 2 Weeks"
@@ -130,7 +130,7 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Fixed Price (INR ₹) *
             </label>
-            <input
+            <input max="99999999.99" step="0.01"
               type="number"
               className="admin-input"
               placeholder="1200"
@@ -145,7 +145,7 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Thumbnail Image URL (Optional)
             </label>
-            <input
+            <input maxLength={500}
               type="url"
               className="admin-input"
               placeholder="https://images.unsplash.com/..."
@@ -159,7 +159,7 @@ export const PostService: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Service Description & Deliverables Scope *
           </label>
-          <textarea
+          <textarea maxLength={5000}
             className="admin-textarea"
             rows={5}
             placeholder="Detailed description of what is included, milestone deliverables, technical stack used, and requirements from the client..."

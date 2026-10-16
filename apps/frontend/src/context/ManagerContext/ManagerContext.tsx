@@ -5,8 +5,9 @@ import type {
   ManagerTask,
   Deliverable,
   TalentProfile,
-  CreateDeliverableDto,
+  ManagerApplication,
   ReviewDeliverableDto,
+  ShortlistApplicationDto,
   UpdateManagerProfileDto
 } from '../../types/manager';
 import { useAuth } from '../AuthContext/AuthContext';
@@ -16,13 +17,14 @@ interface ManagerContextType {
   tasks: ManagerTask[];
   selectedTask: ManagerTask | null;
   deliverables: Deliverable[];
+  applications: ManagerApplication[];
   talents: TalentProfile[];
   loading: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
   refreshTasks: () => Promise<void>;
   selectTask: (taskId: number) => Promise<void>;
-  addDeliverable: (taskId: number, dto: CreateDeliverableDto) => Promise<boolean>;
+  shortlistApplication: (taskId: number, applicationId: number, dto: ShortlistApplicationDto) => Promise<boolean>;
   reviewDeliverable: (taskId: number, deliverableNo: number, dto: ReviewDeliverableDto) => Promise<boolean>;
   closeDeliverable: (taskId: number, deliverableNo: number) => Promise<boolean>;
   searchTalent: (query?: string) => Promise<void>;
@@ -38,6 +40,7 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [tasks, setTasks] = useState<ManagerTask[]>([]);
   const [selectedTask, setSelectedTask] = useState<ManagerTask | null>(null);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
+  const [applications, setApplications] = useState<ManagerApplication[]>([]);
   const [talents, setTalents] = useState<TalentProfile[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +69,12 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const task = await managerApi.getTaskById(taskId);
       setSelectedTask(task);
       if (task) {
-        const dels = await managerApi.getTaskDeliverables(taskId);
+        const [dels, apps] = await Promise.all([
+          managerApi.getTaskDeliverables(taskId),
+          managerApi.getTaskApplications(taskId),
+        ]);
         setDeliverables(dels);
+        setApplications(apps);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load task details');
@@ -76,15 +83,15 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  const addDeliverable = async (taskId: number, dto: CreateDeliverableDto): Promise<boolean> => {
+  const shortlistApplication = async (taskId: number, applicationId: number, dto: ShortlistApplicationDto): Promise<boolean> => {
     setLoading(true);
+    setError(null);
     try {
-      await managerApi.createDeliverable(taskId, dto);
+      await managerApi.shortlistApplication(taskId, applicationId, dto);
       await selectTask(taskId);
-      await refreshTasks();
       return true;
     } catch (err: any) {
-      setError(err.message || 'Failed to create deliverable');
+      setError(err.message || 'Failed to shortlist candidate');
       return false;
     } finally {
       setLoading(false);
@@ -93,6 +100,7 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const reviewDeliverable = async (taskId: number, deliverableNo: number, dto: ReviewDeliverableDto): Promise<boolean> => {
     setLoading(true);
+    setError(null);
     try {
       await managerApi.reviewDeliverable(taskId, deliverableNo, dto);
       await selectTask(taskId);
@@ -108,6 +116,7 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const closeDeliverable = async (taskId: number, deliverableNo: number): Promise<boolean> => {
     setLoading(true);
+    setError(null);
     try {
       await managerApi.closeDeliverable(taskId, deliverableNo);
       await selectTask(taskId);
@@ -161,13 +170,14 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         tasks,
         selectedTask,
         deliverables,
+        applications,
         talents,
         loading,
         error,
         refreshProfile,
         refreshTasks,
         selectTask,
-        addDeliverable,
+        shortlistApplication,
         reviewDeliverable,
         closeDeliverable,
         searchTalent,

@@ -157,12 +157,12 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
                 Email address
               </label>
-              <input
+              <input maxLength={100}
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="aditya@techstart.io"
+                placeholder="you@company.com"
                 style={{
                   width: '100%',
                   padding: '12px 14px',
@@ -182,7 +182,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
                 Password
               </label>
-              <input
+              <input maxLength={72}
                 type="password"
                 required
                 value={password}

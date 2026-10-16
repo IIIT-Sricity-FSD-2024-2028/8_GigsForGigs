@@ -13,13 +13,15 @@ import { PrismaClient } from "./generated/prisma/client.js";
 
 const connectionString = process.env.DATABASE_URL || "postgresql://postgres@127.0.0.1:5433/gigsforge";
 
+const sslMode = new URL(connectionString).searchParams.get("sslmode");
 const isSsl =
-  connectionString.includes("sslmode") ||
+  sslMode !== "disable" &&
+  (sslMode !== null ||
   connectionString.includes("neon.tech") ||
   connectionString.includes("supabase.co") ||
   connectionString.includes("aivencloud.com") ||
   connectionString.includes("render.com") ||
-  connectionString.includes("aws");
+  connectionString.includes("aws"));
 
 // Strip sslmode/ssl via URL.searchParams rather than regex — a regex that
 // deletes "?sslmode=..." also eats the leading "?", which corrupts the URL

@@ -1,15 +1,18 @@
 import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
-import { forbidden } from "../../lib/httpError.js";
+import { badRequest, forbidden } from "../../lib/httpError.js";
 import type { ClientTokenPayload } from "../../lib/jwt.js";
 import * as clientService from "./client.service.js";
 import type {
+  CreateClientReviewDto,
   CreateManagerInviteDto,
   CreateTaskDto,
+  CreateTaskDeliverableDefinitionDto,
   ReviewDeliverableAsClientDto,
   UpdateApplicationDto,
   UpdateClientProfileDto,
   UpdateTaskDto,
+  UpdateTaskDeliverableDefinitionDto,
 } from "./client.dto.js";
 
 /** Safe past roleGuard('client'), which every route in this module sits behind. */
@@ -67,6 +70,7 @@ export async function listApplications(req: Request, res: Response): Promise<voi
 export async function reviewApplication(req: Request, res: Response): Promise<void> {
   const clientId = requireClientId(req);
   const applicationId = Number(req.params.applicationId);
+  if (!Number.isInteger(applicationId) || applicationId <= 0) throw badRequest("Invalid application id");
   const dto = getValidated<UpdateApplicationDto>(res, "body");
   const application = await clientService.reviewApplication(applicationId, clientId, dto);
   res.status(200).json(application);
@@ -82,6 +86,32 @@ export async function listTaskDeliverables(req: Request, res: Response): Promise
   const taskId = Number(req.params.taskId);
   const deliverables = await clientService.listTaskDeliverables(taskId);
   res.status(200).json(deliverables);
+}
+
+export async function listTaskDeliverableDefinitions(req: Request, res: Response): Promise<void> {
+  const definitions = await clientService.listTaskDeliverableDefinitions(Number(req.params.taskId), requireClientId(req));
+  res.status(200).json(definitions);
+}
+
+export async function createTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<CreateTaskDeliverableDefinitionDto>(res, "body");
+  const definition = await clientService.createTaskDeliverableDefinition(Number(req.params.taskId), requireClientId(req), dto);
+  res.status(201).json(definition);
+}
+
+export async function updateTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const definitionId = Number(req.params.definitionId);
+  if (!Number.isInteger(definitionId) || definitionId <= 0) throw badRequest("Invalid task deliverable id");
+  const dto = getValidated<UpdateTaskDeliverableDefinitionDto>(res, "body");
+  const definition = await clientService.updateTaskDeliverableDefinition(Number(req.params.taskId), definitionId, requireClientId(req), dto);
+  res.status(200).json(definition);
+}
+
+export async function deleteTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const definitionId = Number(req.params.definitionId);
+  if (!Number.isInteger(definitionId) || definitionId <= 0) throw badRequest("Invalid task deliverable id");
+  await clientService.deleteTaskDeliverableDefinition(Number(req.params.taskId), definitionId, requireClientId(req));
+  res.status(204).send();
 }
 
 export async function reviewDeliverable(req: Request, res: Response): Promise<void> {
@@ -122,4 +152,18 @@ export async function createManagerInvite(req: Request, res: Response): Promise<
 export async function listManagerInvites(req: Request, res: Response): Promise<void> {
   const invites = await clientService.listManagerInvites(requireClientId(req));
   res.status(200).json(invites);
+}
+
+export async function revokeManagerInvite(req: Request, res: Response): Promise<void> {
+  const inviteId = Number(req.params.inviteId);
+  if (!Number.isInteger(inviteId) || inviteId <= 0) throw badRequest("Invalid invite id");
+  await clientService.revokeManagerInvite(requireClientId(req), inviteId);
+  res.status(204).send();
+}
+
+export async function createReview(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<CreateClientReviewDto>(res, "body");
+  const user = req.user as ClientTokenPayload;
+  const review = await clientService.createReview(user.clientId, user.userId, dto);
+  res.status(201).json(review);
 }

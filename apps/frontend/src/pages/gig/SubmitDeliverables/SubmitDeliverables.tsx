@@ -11,12 +11,17 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
+import type { TaskDeliverableDefinition } from '../../../types/gig';
+import { Badge } from '../../../components/common/Badge';
 
 export const SubmitDeliverables: React.FC = () => {
   const { selectedTaskId, setActiveTab, triggerRefresh } = useGig();
   const [task, setTask] = useState<GigTask | null>(null);
   const [content, setContent] = useState('');
   const [notes, setNotes] = useState('');
+  const [definitions, setDefinitions] = useState<TaskDeliverableDefinition[]>([]);
+  const [selectedDefinitionIds, setSelectedDefinitionIds] = useState<Set<number>>(new Set());
+  const [definitionsReady, setDefinitionsReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,13 +30,21 @@ export const SubmitDeliverables: React.FC = () => {
     let mounted = true;
 
     const load = async () => {
-      if (mounted) setError(null);
+      if (mounted) { setError(null); setDefinitions([]); setDefinitionsReady(false); setSelectedDefinitionIds(new Set()); }
       try {
         const active = await gigApi.getActiveTasks();
         if (mounted) {
           const found = active.find((t) => String(t.taskId) === selectedTaskId) || active[0] || null;
           setTask(found);
-          setLoading(false);
+          if (found) {
+            try {
+              const loadedDefinitions = await gigApi.getTaskDeliverableDefinitions(found.taskId);
+              if (mounted) { setDefinitions(loadedDefinitions); setDefinitionsReady(true); }
+            } catch (definitionError) {
+              if (mounted) setError(definitionError instanceof ApiError ? definitionError.message : 'Could not load the client-defined deliverables.');
+            }
+          }
+          if (mounted) setLoading(false);
         }
       } catch (err) {
         if (mounted) {
@@ -51,8 +64,16 @@ export const SubmitDeliverables: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!task) return;
+    if (!definitionsReady) {
+      setError('Task deliverables could not be loaded. Refresh the page before submitting.');
+      return;
+    }
     if (!content.trim()) {
       setError('Please provide deliverable submission details or links.');
+      return;
+    }
+    if (definitions.length > 0 && selectedDefinitionIds.size === 0) {
+      setError('Select at least one client-defined deliverable completed by this submission.');
       return;
     }
 
@@ -62,9 +83,11 @@ export const SubmitDeliverables: React.FC = () => {
       await gigApi.submitDeliverable({
         taskId: task.taskId,
         content: content.trim(),
-        notes: notes.trim()
+        notes: notes.trim(),
+        definitionIds: Array.from(selectedDefinitionIds)
       });
       triggerRefresh();
+      void gigApi.getTaskDeliverableDefinitions(task.taskId).then(setDefinitions).catch(() => undefined);
       setActiveTab('submission-success');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error submitting deliverable.');
@@ -89,10 +112,10 @@ export const SubmitDeliverables: React.FC = () => {
       <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center' }}>
         <h2 style={{ color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>No Active Task Selected</h2>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-lg)' }}>
-          Please select an active task from your Active Tasks dashboard to submit work deliverables.
+          Please select an active task from Active Task/Contracts to submit work deliverables.
         </p>
         <button className="admin-btn admin-btn-primary" onClick={() => setActiveTab('active-tasks')}>
-          Go to Active Tasks
+          Go to Active Task/Contracts
         </button>
       </div>
     );
@@ -137,6 +160,29 @@ export const SubmitDeliverables: React.FC = () => {
       </div>
 
       {/* Existing Deliverables History */}
+      <div className="admin-card submission-definitions" style={{ padding: 'var(--spacing-xl)' }}>
+        <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>
+          Which deliverables does this submission complete?
+        </h2>
+        {definitions.length === 0 ? <p className="ui-helper">The client has not added task deliverables yet. Checkbox-based submissions will be available after they define the work items.</p> :
+          <div className="submission-definitions__list">{definitions.map(definition => {
+            const latest = definition.submissions[0];
+            const eligible = !latest || latest.status === 'revision_requested';
+            const badge = !latest ? { label: 'Not submitted', variant: 'neutral' as const } :
+              latest.status === 'approved' ? { label: 'Approved', variant: 'success' as const } :
+                latest.status === 'revision_requested' ? { label: 'Revision requested', variant: 'warning' as const } :
+                  latest.status === 'closed' ? { label: 'Closed', variant: 'neutral' as const } :
+                    { label: 'Pending review', variant: 'pending' as const };
+            return <label key={definition.definitionId} className={`submission-definition${eligible ? '' : ' submission-definition--locked'}`}>
+              <input type="checkbox" checked={selectedDefinitionIds.has(definition.definitionId)} disabled={!eligible || submitting}
+                onChange={event => setSelectedDefinitionIds(previous => { const next = new Set(previous); if (event.target.checked) next.add(definition.definitionId); else next.delete(definition.definitionId); return next; })} />
+              <span className="submission-definition__copy"><strong>{definition.title}</strong>{definition.description && <small>{definition.description}</small>}{latest?.feedback && latest.status === 'revision_requested' && <small className="submission-definition__feedback">Revision feedback: {latest.feedback}</small>}</span>
+              <Badge variant={badge.variant}>{badge.label}</Badge>
+            </label>;
+          })}</div>}
+      </div>
+
+      {/* Existing Deliverables History */}
       {task.deliverables && task.deliverables.length > 0 && (
         <div className="admin-card" style={{ padding: 'var(--spacing-xl)' }}>
           <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>
@@ -178,7 +224,7 @@ export const SubmitDeliverables: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Submission Details / Pull Request Link *
           </label>
-          <textarea
+          <textarea maxLength={500}
             className="admin-textarea"
             rows={5}
             placeholder="Describe your completed work, paste GitHub Pull Request links, or add Figma prototype URLs..."
@@ -192,7 +238,7 @@ export const SubmitDeliverables: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Additional Notes for Client (Optional)
           </label>
-          <input
+          <input maxLength={500}
             type="text"
             className="admin-input"
             placeholder="e.g. Requires environment variable setup in staging..."
@@ -212,7 +258,7 @@ export const SubmitDeliverables: React.FC = () => {
           <button
             type="submit"
             className="admin-btn admin-btn-primary"
-            disabled={submitting}
+            disabled={submitting || !definitionsReady}
           >
             {submitting ? 'Submitting...' : 'Submit Deliverable for Review'}
           </button>

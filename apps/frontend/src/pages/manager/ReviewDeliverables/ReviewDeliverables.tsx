@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
+import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 
 interface ReviewDeliverablesProps {
   onBack: () => void;
 }
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }) => {
-  const { selectedTask, deliverables, addDeliverable, reviewDeliverable, closeDeliverable, loading } = useManager();
+  const { selectedTask, deliverables, applications, shortlistApplication, reviewDeliverable, closeDeliverable, loading, error } = useManager();
 
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [description, setDescription] = useState('');
-  const [submissionPath, setSubmissionPath] = useState('');
-  const [gigProfileId, _setGigProfileId] = useState<number>(201);
   const [reviewingNo, setReviewingNo] = useState<number | null>(null);
   const [reviewStatus, setReviewStatus] = useState<'approved' | 'revision_requested'>('approved');
   const [feedback, setFeedback] = useState('');
+  const [ratings, setRatings] = useState<Record<number, number>>({});
 
   if (!selectedTask) {
     return (
@@ -28,21 +26,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
   }
 
   const assignedPro = selectedTask.assignments?.[0]?.gigProfile;
-
-  const handleCreateDeliverable = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!description || !submissionPath) return;
-    const success = await addDeliverable(selectedTask.taskId, {
-      gigProfileId: assignedPro?.gigProfileId || gigProfileId,
-      description,
-      submissionPath
-    });
-    if (success) {
-      setDescription('');
-      setSubmissionPath('');
-      setShowAddForm(false);
-    }
-  };
+  const openApplications = applications.filter(a => a.status === 'pending' || a.status === 'shortlisted');
 
   const handleReviewSubmit = async (deliverableNo: number) => {
     const success = await reviewDeliverable(selectedTask.taskId, deliverableNo, {
@@ -115,7 +99,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
           <div>
             <div style={{ fontSize: '12px', color: '#76594F' }}>Assigned Gig Professional</div>
             <div style={{ fontSize: '15px', fontWeight: 700, color: '#3A1F16', marginTop: '2px' }}>
-              {assignedPro?.user?.name || 'Arham Kansal'}
+              {assignedPro?.user?.name || 'Not hired yet'}
             </div>
           </div>
 
@@ -146,6 +130,61 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
         </div>
       </div>
 
+      {error && (
+        <div role="alert" style={{ backgroundColor: '#FDE8E8', color: '#9B1C1C', padding: '12px 16px', borderRadius: '8px' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Applicants: managers shortlist, the client makes the hire */}
+      {selectedTask.status === 'open' && (
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '24px', border: '1px solid #D9E0E3' }}>
+          <h2 style={{ fontSize: '20px', color: '#0D568D', margin: 0, fontWeight: 700 }}>Applicants ({openApplications.length})</h2>
+          <p style={{ fontSize: '13px', color: '#76594F', margin: '4px 0 16px 0' }}>
+            Shortlist strong candidates; the client approves the final hire.
+          </p>
+          {openApplications.length === 0 ? (
+            <p style={{ color: '#76594F', margin: 0 }}>No open applications yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {openApplications.map(app => (
+                <div key={app.applicationId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', border: '1px solid #E4EEF5', borderRadius: '8px', padding: '12px 16px' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#3A1F16' }}>{app.gigProfile?.user.name ?? `Professional #${app.gigProfileId}`}</div>
+                    <div style={{ fontSize: '12px', color: '#76594F' }}>
+                      Applied {new Date(app.createdAt).toLocaleDateString('en-IN')}
+                      {app.rating ? ` · Rated ${app.rating}/5` : ''}
+                    </div>
+                  </div>
+                  {app.status === 'shortlisted' ? (
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#438F82' }}>SHORTLISTED</span>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <select
+                        aria-label="Rating"
+                        value={ratings[app.applicationId] ?? ''}
+                        onChange={e => setRatings(prev => ({ ...prev, [app.applicationId]: Number(e.target.value) }))}
+                        style={{ padding: '6px', borderRadius: '4px', border: '1px solid #D5DDE0', fontSize: '12px' }}
+                      >
+                        <option value="">Rating (optional)</option>
+                        {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} / 5</option>)}
+                      </select>
+                      <button
+                        disabled={loading}
+                        onClick={() => shortlistApplication(selectedTask.taskId, app.applicationId, ratings[app.applicationId] ? { rating: ratings[app.applicationId] } : {})}
+                        style={{ backgroundColor: '#0D568D', color: '#FFF', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Shortlist
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Deliverables Section Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -153,108 +192,15 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
             Atomic Deliverables ({deliverables.length})
           </h2>
           <p style={{ fontSize: '13px', color: '#76594F', margin: '4px 0 0 0' }}>
-            Set, review, and close operational deliverables for this task.
+            Review work the professional submits. Approving work never completes the task — the client does that when releasing payment.
           </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{
-            backgroundColor: '#D47700',
-            color: '#FFFFFF',
-            border: 'none',
-            padding: '10px 18px',
-            borderRadius: '6px',
-            fontWeight: 600,
-            fontSize: '14px',
-            cursor: 'pointer'
-          }}
-        >
-          {showAddForm ? 'Cancel Add' : '+ Create Deliverable'}
-        </button>
       </div>
-
-      {/* Form: Create Deliverable */}
-      {showAddForm && (
-        <form
-          onSubmit={handleCreateDeliverable}
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #D9E0E3',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}
-        >
-          <h3 style={{ fontSize: '16px', color: '#0D568D', margin: 0 }}>Create New Deliverable</h3>
-          
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
-              Deliverable Description *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Implement authentication JWT middleware"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '6px',
-                border: '1px solid #D5DDE0',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
-              Submission Path / PR URL *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="https://github.com/org/repo/pull/1"
-              value={submissionPath}
-              onChange={e => setSubmissionPath(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '6px',
-                border: '1px solid #D5DDE0',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              style={{ backgroundColor: '#FFFFFF', border: '1px solid #D8D8D8', color: '#3A1F16', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ backgroundColor: '#0D568D', color: '#FFFFFF', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              {loading ? 'Submitting...' : 'Save Deliverable'}
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* Deliverables List */}
       {deliverables.length === 0 ? (
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '32px', textAlign: 'center', border: '1px solid #D9E0E3' }}>
-          <p style={{ color: '#76594F', margin: 0 }}>No deliverables set for this task yet.</p>
+          <p style={{ color: '#76594F', margin: 0 }}>No work has been submitted for this task yet.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -296,11 +242,20 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                   {del.description}
                 </div>
 
+                {del.claimedDefinitions && del.claimedDefinitions.length > 0 && <div className="submission-definition__claims">
+                  <strong>Client-defined deliverables:</strong>
+                  <ul>{del.claimedDefinitions.map(item => <li key={item.definitionId}>{item.title}</li>)}</ul>
+                </div>}
+
                 <div style={{ fontSize: '13px', color: '#76594F', marginTop: '4px' }}>
                   Submission Path:{' '}
-                  <a href={del.submissionPath} target="_blank" rel="noreferrer" style={{ color: '#0D568D', fontWeight: 600 }}>
-                    {del.submissionPath}
-                  </a>
+                  {safeHttpUrl(del.submissionPath) ? (
+                    <a href={safeHttpUrl(del.submissionPath)} target="_blank" rel="noopener noreferrer" style={{ color: '#0D568D', fontWeight: 600 }}>
+                      {del.submissionPath}
+                    </a>
+                  ) : (
+                    <span style={{ whiteSpace: 'pre-wrap' }}>{del.submissionPath}</span>
+                  )}
                 </div>
               </div>
 
@@ -313,10 +268,10 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                       onChange={e => setReviewStatus(e.target.value as any)}
                       style={{ padding: '6px', borderRadius: '4px', border: '1px solid #D5DDE0', fontSize: '12px' }}
                     >
-                      <option value="approved">Recommend Approval</option>
+                      <option value="approved">Approve</option>
                       <option value="revision_requested">Request Revision</option>
                     </select>
-                    <input
+                    <input maxLength={500}
                       type="text"
                       placeholder="Optional feedback..."
                       value={feedback}
@@ -340,6 +295,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                   </div>
                 ) : (
                   <>
+                    {del.status === 'submitted' && selectedTask.status === 'in_progress' && (
                     <button
                       onClick={() => setReviewingNo(del.deliverableNo)}
                       style={{
@@ -355,9 +311,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                     >
                       Review
                     </button>
+                    )}
+                    {(del.status === 'approved' || del.status === 'closed') && (
                     <button
                       onClick={() => closeDeliverable(selectedTask.taskId, del.deliverableNo)}
-                      disabled={del.status === 'closed'}
+                      disabled={del.status === 'closed' || selectedTask.status !== 'in_progress'}
                       style={{
                         backgroundColor: del.status === 'closed' ? '#D9E0E3' : '#55A99A',
                         color: '#FFFFFF',
@@ -371,6 +329,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                     >
                       {del.status === 'closed' ? 'Closed' : 'Close'}
                     </button>
+                    )}
                   </>
                 )}
               </div>

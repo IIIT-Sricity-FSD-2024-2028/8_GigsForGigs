@@ -12,11 +12,29 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  if (res.headersSent) return;
+
   if (err instanceof HttpError) {
     res.status(err.status).json({
       success: false,
       message: err.message,
       ...(err.details !== undefined ? { errors: err.details } : {}),
+    });
+    return;
+  }
+
+  // body-parser errors (malformed JSON, payload too large) carry their own 4xx status.
+  const status = (err as { status?: unknown; type?: unknown } | null)?.status;
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    const type = (err as { type?: string }).type;
+    res.status(status).json({
+      success: false,
+      message:
+        type === "entity.parse.failed"
+          ? "Malformed JSON body"
+          : type === "entity.too.large"
+            ? "Request body too large"
+            : "Bad request",
     });
     return;
   }
@@ -35,6 +53,20 @@ export function errorHandler(
       res.status(404).json({ success: false, message: "Resource not found" });
       return;
     }
+    if (code === "P2003" || code === "P2014") {
+      res.status(409).json({ success: false, message: "This record is still referenced by other data and cannot be changed or removed" });
+      return;
+    }
+    if (code === "P2034") {
+      res.status(409).json({ success: false, message: "Conflicting concurrent update, please retry" });
+      return;
+    }
+  }
+
+  // Malformed input that reached a query (e.g. a non-numeric :id becoming NaN).
+  if (err instanceof Prisma.PrismaClientValidationError) {
+    res.status(400).json({ success: false, message: "Invalid request parameters" });
+    return;
   }
 
   // eslint-disable-next-line no-console

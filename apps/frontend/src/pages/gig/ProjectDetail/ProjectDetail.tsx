@@ -10,10 +10,13 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
+import type { TaskDeliverableDefinition } from '../../../types/gig';
+import { Badge } from '../../../components/common/Badge';
 
 export const ProjectDetail: React.FC = () => {
   const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable } = useGig();
   const [task, setTask] = useState<GigTask | null>(null);
+  const [definitions, setDefinitions] = useState<TaskDeliverableDefinition[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +30,16 @@ export const ProjectDetail: React.FC = () => {
         if (mounted) {
           const found = active.find((t) => String(t.taskId) === selectedTaskId) || active[0] || null;
           setTask(found);
-          setLoading(false);
+          setDefinitions([]);
+          if (found) {
+            try {
+              const loadedDefinitions = await gigApi.getTaskDeliverableDefinitions(found.taskId);
+              if (mounted) setDefinitions(loadedDefinitions);
+            } catch (definitionError) {
+              if (mounted) setError(definitionError instanceof ApiError ? definitionError.message : 'Could not load client-defined deliverables.');
+            }
+          }
+          if (mounted) setLoading(false);
         }
       } catch (err) {
         if (mounted) {
@@ -63,7 +75,7 @@ export const ProjectDetail: React.FC = () => {
           {error || 'The requested task could not be found or is no longer active.'}
         </p>
         <button className="admin-btn admin-btn-primary" onClick={() => setActiveTab('active-tasks')}>
-          Back to Active Tasks
+          Back to Active Task/Contracts
         </button>
       </div>
     );
@@ -73,6 +85,8 @@ export const ProjectDetail: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)', maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+      {error && <div role="alert" className="deliverable-feedback deliverable-feedback--error">{error}</div>}
+
       {/* Header Context Card */}
       <div
         className="admin-card"
@@ -107,6 +121,26 @@ export const ProjectDetail: React.FC = () => {
             Submit Deliverable
           </button>
         </div>
+      </div>
+
+      {/* Specification Content */}
+      <div className="admin-card task-scope-card" style={{ padding: 'var(--spacing-xl)' }}>
+        <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-md)' }}>Client-defined deliverables</h2>
+        {definitions.length === 0 ? <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>The client has not added deliverables for this task yet.</p> :
+          <div className="task-scope-list">{definitions.map(definition => {
+            const latest = definition.submissions[0];
+            const badge = !latest ? { label: 'Not submitted', variant: 'neutral' as const } :
+              latest.status === 'approved' ? { label: 'Approved', variant: 'success' as const } :
+                latest.status === 'revision_requested' ? { label: 'Revision requested', variant: 'warning' as const } :
+                  latest.status === 'closed' ? { label: 'Closed', variant: 'neutral' as const } :
+                    { label: 'Pending review', variant: 'pending' as const };
+            return <article key={definition.definitionId} className="task-scope-item">
+              <div><strong>{definition.title}</strong>{definition.description && <p>{definition.description}</p>}</div>
+              <Badge variant={badge.variant}>{badge.label}</Badge>
+              {definition.submissions.length > 0 && <small>Submitted in {definition.submissions.length} delivery record{definition.submissions.length === 1 ? '' : 's'}</small>}
+              {latest?.feedback && latest.status === 'revision_requested' && <small className="submission-definition__feedback">Latest revision feedback: {latest.feedback}</small>}
+            </article>;
+          })}</div>}
       </div>
 
       {/* Specification Content */}
@@ -147,7 +181,7 @@ export const ProjectDetail: React.FC = () => {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4 style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-                      Deliverable #${del.deliverableNo}
+                      Deliverable #{del.deliverableNo}
                     </h4>
                     <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                       Submitted: {del.createdAt ? new Date(del.createdAt).toLocaleDateString() : 'Recent'}
@@ -161,6 +195,10 @@ export const ProjectDetail: React.FC = () => {
                       <strong>Notes:</strong> {del.submissionPath}
                     </div>
                   )}
+                  {del.claimedDefinitions && del.claimedDefinitions.length > 0 && <div className="submission-definition__claims">
+                    <strong>Included task deliverables:</strong>
+                    <ul>{del.claimedDefinitions.map(item => <li key={item.definitionId}>{item.title}</li>)}</ul>
+                  </div>}
                 </div>
               ))}
             </div>

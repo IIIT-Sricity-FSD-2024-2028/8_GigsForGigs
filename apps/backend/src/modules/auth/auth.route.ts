@@ -13,6 +13,8 @@ authRouter.post("/signup", validate(signupSchema), authController.signup);
 authRouter.post("/login", validate(loginSchema), authController.login);
 // Log in restricted to manager accounts only.
 authRouter.post("/manager/login", validate(loginSchema), authController.managerLogin);
+// Preview a manager invite (name/email/client) from its signed token, for the setup page.
+authRouter.get("/manager/invite", authController.getManagerInvite);
 // Turn a pending manager invite into a real manager account.
 authRouter.post(
   "/manager/accept-invite",

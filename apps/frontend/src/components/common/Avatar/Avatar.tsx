@@ -1,4 +1,5 @@
 import React from 'react';
+import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 
 export interface AvatarProps {
   name?: string;
@@ -44,8 +45,8 @@ export const Avatar: React.FC<AvatarProps> = ({
         ...style
       }}
     >
-      {src ? (
-        <img src={src} alt={name || 'Avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {safeHttpUrl(src) ? (
+        <img src={safeHttpUrl(src)} referrerPolicy="no-referrer" alt={name || 'Avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         children || initials
       )}

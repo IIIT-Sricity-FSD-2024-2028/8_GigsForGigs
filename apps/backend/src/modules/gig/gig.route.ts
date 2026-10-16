@@ -21,7 +21,7 @@ gigRouter.get(
   "/professionals",
   roleGuard("manager", "client", "gig_professional", "admin"),
   async (req, res) => {
-    const query = typeof req.query.q === "string" ? req.query.q : undefined;
+    const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) || undefined : undefined;
     const { searchGigProfessionals } = await import("../manager/manager.service.js");
     const { toTalentResponse } = await import("../manager/manager.controller.js");
     const list = await searchGigProfessionals(query);
@@ -60,6 +60,8 @@ gigRouter.post(
 
 // List tasks the gig professional is currently working on.
 gigRouter.get("/tasks/active", gigOnly, gigController.listActiveTasks);
+// Client-authored task scope plus real submission/review state.
+gigRouter.get("/tasks/:taskId/deliverable-definitions", gigOnly, gigController.listTaskDeliverableDefinitions);
 // Submit a deliverable against an active task.
 gigRouter.post(
   "/deliverables",

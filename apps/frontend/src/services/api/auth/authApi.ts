@@ -32,6 +32,12 @@ export const authApi = {
   managerLogin: (email: string, password: string) =>
     apiFetch<AuthResponse>('/auth/manager/login', { method: 'POST', body: { email, password } }),
 
+  getManagerInvite: (token: string) =>
+    apiFetch<{ name: string; email: string; clientName: string }>(`/auth/manager/invite?token=${encodeURIComponent(token)}`),
+
+  acceptManagerInvite: (token: string, password: string) =>
+    apiFetch<AuthResponse>('/auth/manager/accept-invite', { method: 'POST', body: { token, password } }),
+
   managerLogout: () =>
     apiFetch<{ success: boolean }>('/auth/manager/logout', { method: 'POST', actor: 'manager' }),
 };

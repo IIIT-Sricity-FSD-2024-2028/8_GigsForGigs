@@ -75,6 +75,18 @@ export interface RawApplication {
   };
 }
 
+export interface RawContractReview {
+  reviewId: number;
+  taskId: number;
+  reviewerId: number;
+  revieweeId: number;
+  reviewerName?: string;
+  revieweeName?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
 export interface RawContract {
   taskId: number;
   taskTitle: string;
@@ -84,6 +96,7 @@ export interface RawContract {
   progress: number;
   budget: number | string;
   createdAt: string;
+  reviews?: RawContractReview[];
 }
 
 export interface RawDeliverable {
@@ -100,6 +113,21 @@ export interface RawDeliverable {
       name: string;
     };
   };
+  claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
+}
+
+export interface TaskDeliverableDefinition {
+  definitionId: number;
+  taskId: number;
+  title: string;
+  description: string | null;
+  createdAt: string;
+  submissions: Array<{
+    deliverableNo: number;
+    status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
+    createdAt: string;
+    feedback: string | null;
+  }>;
 }
 
 export interface RawService {
@@ -148,6 +176,8 @@ export interface RawManagerInvite {
   email: string;
   status: 'pending' | 'accepted' | 'revoked';
   createdAt: string;
+  /** Present on pending invites: the one-time link to share with the manager. */
+  inviteLink?: string;
 }
 
 export const clientApi = {
@@ -175,7 +205,7 @@ export const clientApi = {
     });
   },
 
-  updateTask: async (taskId: number, dto: Partial<TaskDto> & { status?: string }): Promise<RawTask> => {
+  updateTask: async (taskId: number, dto: Partial<TaskDto>): Promise<RawTask> => {
     return apiFetch<RawTask>(`/tasks/${taskId}`, {
       method: 'PATCH',
       body: dto,
@@ -209,6 +239,18 @@ export const clientApi = {
   getTaskDeliverables: async (taskId: number): Promise<RawDeliverable[]> => {
     return apiFetch<RawDeliverable[]>(`/tasks/${taskId}/deliverables`, { actor });
   },
+
+  getTaskDeliverableDefinitions: async (taskId: number): Promise<TaskDeliverableDefinition[]> =>
+    apiFetch<TaskDeliverableDefinition[]>(`/tasks/${taskId}/deliverable-definitions`, { actor }),
+
+  createTaskDeliverableDefinition: async (taskId: number, values: { title: string; description?: string }): Promise<TaskDeliverableDefinition> =>
+    apiFetch<TaskDeliverableDefinition>(`/tasks/${taskId}/deliverable-definitions`, { method: 'POST', body: values, actor }),
+
+  updateTaskDeliverableDefinition: async (taskId: number, definitionId: number, values: { title?: string; description?: string }): Promise<TaskDeliverableDefinition> =>
+    apiFetch<TaskDeliverableDefinition>(`/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'PATCH', body: values, actor }),
+
+  deleteTaskDeliverableDefinition: async (taskId: number, definitionId: number): Promise<void> =>
+    apiFetch<void>(`/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'DELETE', actor }),
 
   reviewDeliverable: async (
     deliverableId: string,
@@ -267,6 +309,13 @@ export const clientApi = {
       actor,
     });
   },
+
+  revokeManagerInvite: async (inviteId: number): Promise<void> =>
+    apiFetch<void>(`/manager-invites/${inviteId}`, { method: 'DELETE', actor }),
+
+  /** Rate the professional who delivered a completed task. */
+  createReview: async (taskId: number, rating: number, comment?: string): Promise<unknown> =>
+    apiFetch<unknown>('/reviews', { method: 'POST', body: { taskId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) }, actor }),
 };
 
 export default clientApi;

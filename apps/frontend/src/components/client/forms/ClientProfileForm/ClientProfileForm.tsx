@@ -10,8 +10,8 @@ export interface ClientProfileFormProps { initialValues: ClientProfileFormValues
 export const ClientProfileForm: React.FC<ClientProfileFormProps> = ({ initialValues, onSubmit, submitting = false }) => {
   const [values, setValues] = useState(initialValues);
   return <FormContainer title="Client profile" onSubmit={event => { event.preventDefault(); void onSubmit(values); }}>
-    <Input label="Organization name" required value={values.clientName} onChange={event => setValues({ ...values, clientName: event.target.value })} />
-    <Input label="Domain" value={values.domain} onChange={event => setValues({ ...values, domain: event.target.value })} />
+    <Input maxLength={100} label="Organization name" required value={values.clientName} onChange={event => setValues({ ...values, clientName: event.target.value })} />
+    <Input maxLength={100} label="Domain" value={values.domain} onChange={event => setValues({ ...values, domain: event.target.value })} />
     <FormActions><Button type="submit" loading={submitting}>Save profile</Button></FormActions>
   </FormContainer>;
 };

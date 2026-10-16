@@ -9,9 +9,9 @@ export interface ManagerProfileFormProps { initialValues: Required<Pick<UpdateMa
 export const ManagerProfileForm: React.FC<ManagerProfileFormProps> = ({ initialValues, onSubmit, submitting = false }) => {
   const [name, setName] = useState(initialValues.name); const [email, setEmail] = useState(initialValues.email); const [password, setPassword] = useState('');
   return <FormContainer title="Manager profile" onSubmit={event => { event.preventDefault(); void onSubmit({ name, email, ...(password ? { password } : {}) }); }}>
-    <Input label="Name" required value={name} onChange={event => setName(event.target.value)} />
-    <Input label="Email" type="email" required value={email} onChange={event => setEmail(event.target.value)} />
-    <Input label="New password" type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} />
+    <Input maxLength={100} label="Name" required value={name} onChange={event => setName(event.target.value)} />
+    <Input maxLength={100} label="Email" type="email" required value={email} onChange={event => setEmail(event.target.value)} />
+    <Input maxLength={72} label="New password" type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} />
     <FormActions><Button type="submit" loading={submitting}>Save profile</Button></FormActions>
   </FormContainer>;
 };

@@ -34,8 +34,8 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters long.');
+    if (password.length < 8) {
+      setErrorMsg('Password must be at least 8 characters long.');
       return;
     }
 
@@ -196,7 +196,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Full Name
               </label>
-              <input
+              <input maxLength={100}
                 type="text"
                 required
                 value={fullName}
@@ -221,7 +221,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Email address
               </label>
-              <input
+              <input maxLength={100}
                 type="email"
                 required
                 value={email}
@@ -246,7 +246,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Password
               </label>
-              <input
+              <input maxLength={72}
                 type="password"
                 required
                 value={password}
@@ -271,7 +271,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                 Confirm Password
               </label>
-              <input
+              <input maxLength={72}
                 type="password"
                 required
                 value={confirmPassword}

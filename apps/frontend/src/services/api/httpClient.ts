@@ -14,11 +14,15 @@
 // every login fail as a network error.
 const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
 
+// Production builds without VITE_API_BASE_URL assume the API is served from
+// the same origin under /api (reverse proxy); dev talks to the local :5000 server.
 export const API_BASE_URL =
-  configuredApiUrl ??
-  (typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.hostname}:5000/api`
-    : 'http://localhost:5000/api');
+  configuredApiUrl ||
+  (import.meta.env.PROD
+    ? '/api'
+    : typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+      : 'http://localhost:5000/api');
 
 /** One sessionStorage key per actor — session-scoped so closing the tab or leaving
  * the site clears the session and returns visitors directly to the Landing Page. */

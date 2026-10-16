@@ -27,6 +27,23 @@ export interface GigDeliverable {
   submissionPath: string;
   status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
   createdAt?: string;
+  claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
+}
+
+export interface TaskDeliverableDefinition {
+  definitionId: number;
+  taskId: number;
+  title: string;
+  description: string | null;
+  createdAt: string;
+  submissions: Array<{
+    deliverableNo: number;
+    description?: string;
+    submissionPath?: string;
+    status: 'submitted' | 'approved' | 'revision_requested' | 'closed';
+    createdAt: string;
+    feedback: string | null;
+  }>;
 }
 
 /**
@@ -39,6 +56,7 @@ export interface GigTask {
   description: string;
   budget: number;
   status: 'open' | 'in_progress' | 'completed';
+  progress?: number;
   createdAt?: string;
   updatedAt?: string;
   client?: TaskClient;
@@ -62,9 +80,14 @@ export interface PendingRequest {
  */
 export interface GigReview {
   reviewId: number;
+  taskId?: number;
+  reviewerId: number;
+  revieweeId: number;
+  reviewerName?: string;
+  revieweeName?: string;
+  clientName?: string;
   rating: number;
   comment?: string;
-  clientName?: string;
   createdAt?: string;
 }
 
@@ -156,6 +179,7 @@ export interface SubmitDeliverableDto {
   taskId: number;
   content: string;
   notes?: string;
+  definitionIds?: number[];
 }
 
 /**

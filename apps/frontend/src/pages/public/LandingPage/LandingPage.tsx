@@ -94,7 +94,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
         {/* Search Input Box */}
         <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', maxWidth: '600px', margin: '0 auto', border: '1px solid #E2E8F0', borderRadius: '50px', padding: '6px 8px 6px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', backgroundColor: '#FFFFFF' }}>
           <span style={{ fontSize: '18px', color: '#A0AEC0', marginRight: '12px' }}>🔍</span>
-          <input
+          <input maxLength={100}
             type="text"
             placeholder="Try UI/UX, Web Dev..."
             value={searchQuery}

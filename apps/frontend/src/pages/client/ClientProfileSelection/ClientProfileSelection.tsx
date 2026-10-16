@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useClient, type ManagerInvite } from '../../../context/ClientContext';
+import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
 
 export interface ClientProfileSelectionProps {
   onNavigate: (viewId: string) => void;
@@ -8,7 +9,7 @@ export interface ClientProfileSelectionProps {
 
 export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { managers, updateManager, deleteManager } = useClient();
+  const { managers, updateManager, deleteManager, revokeManagerInvite } = useClient();
 
   const [editingManager, setEditingManager] = useState<ManagerInvite | null>(null);
   const [editName, setEditName] = useState('');
@@ -26,7 +27,8 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
     e.stopPropagation();
     e.preventDefault();
     if (mgr.kind !== 'manager') {
-      alert('This manager has only been invited and has not accepted yet — nothing to edit until they accept.');
+      // Pending invite: re-share its activation link instead of editing.
+      shareInviteLink(mgr.invite_link);
       return;
     }
     setEditingManager(mgr);
@@ -42,7 +44,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
         setEditingManager(null);
       } catch (err) {
         console.error('Update manager failed:', err);
-        alert('Failed to update this manager. Please try again.');
+        alert(err instanceof Error && err.message ? err.message : 'Failed to update this manager. Please try again.');
       }
     }
   };
@@ -51,7 +53,13 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
     e.stopPropagation();
     e.preventDefault();
     if (mgr.kind !== 'manager') {
-      alert('This manager has only been invited and has not accepted yet — nothing to remove yet.');
+      if (window.confirm(`Revoke the pending invite for ${mgr.email}? Its link will stop working.`)) {
+        try {
+          await revokeManagerInvite(mgr.invite_id);
+        } catch (err) {
+          alert(err instanceof Error && err.message ? err.message : 'Failed to revoke this invite.');
+        }
+      }
       return;
     }
     if (window.confirm(`Are you sure you want to remove ${mgr.name} from your team?`)) {
@@ -59,7 +67,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
         await deleteManager(mgr.invite_id);
       } catch (err) {
         console.error('Delete manager failed:', err);
-        alert('Failed to remove this manager. Please try again.');
+        alert(err instanceof Error && err.message ? err.message : 'Failed to remove this manager. Please try again.');
       }
     }
   };
@@ -258,7 +266,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                   Manager Name *
                 </label>
-                <input
+                <input maxLength={100}
                   type="text"
                   required
                   value={editName}
@@ -271,7 +279,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
                   Manager Email *
                 </label>
-                <input
+                <input maxLength={100}
                   type="email"
                   required
                   value={editEmail}

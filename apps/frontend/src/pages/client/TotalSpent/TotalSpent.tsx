@@ -100,7 +100,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
         <div className="spent-table-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--spacing-md) var(--spacing-lg)', borderBottom: '1px solid var(--color-border)', backgroundColor: 'rgba(8, 75, 131, 0.03)' }}>
           <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-dark)', fontWeight: 600 }}>Task Payment Ledger</h3>
           <div className="topbar-search" style={{ border: '1px solid var(--color-border)', background: 'var(--color-white)', padding: '4px 8px', borderRadius: '6px', width: '240px', display: 'flex', alignItems: 'center' }}>
-            <input
+            <input maxLength={100}
               type="text"
               placeholder="Filter payments..."
               value={searchTerm}

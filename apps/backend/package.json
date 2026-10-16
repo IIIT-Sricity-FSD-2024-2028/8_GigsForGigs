@@ -4,9 +4,12 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "npm --prefix src/db run build",
+    "build": "npm --prefix src/db install --include=dev && npm --prefix src/db run build",
+    "typecheck": "tsc --noEmit -p .",
+    "migrate:deploy": "prisma migrate deploy",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
+    "test": "tsx --test src/lib/taskRules.test.ts src/lib/validation.test.ts src/lib/reviewDirection.test.ts src/lib/apiReviewIntegration.test.ts",
     "test:auth": "tsx src/modules/auth/auth.test.ts"
   },
   "keywords": [],
@@ -22,6 +25,8 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.12.0",
+    "prisma": "^7.10.0",
+    "tsx": "^4.23.12",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -31,12 +36,13 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^26.4.0",
-    "prisma": "^7.10.0",
-    "tsx": "^4.23.12",
     "typescript": "^5.7.3"
   },
   "description": "",
   "allowScripts": {
     "bcrypt@6.0.0": true
+  },
+  "engines": {
+    "node": ">=20.19"
   }
 }

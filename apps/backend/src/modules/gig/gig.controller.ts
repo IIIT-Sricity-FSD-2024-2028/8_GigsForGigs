@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
 import type { GigTokenPayload } from "../../lib/jwt.js";
+import { badRequest } from "../../lib/httpError.js";
 import * as gigService from "./gig.service.js";
 import type {
   CreateApplicationDto,
@@ -22,6 +23,12 @@ type Row = any;
 // do on its own (Decimal serializes to a string, not a number).
 
 function toTaskResponse(task: Row) {
+  const definitions = task.deliverableDefinitions ?? [];
+  const submissions = task.deliverables ?? [];
+  const completedCount = definitions.length > 0
+    ? definitions.filter((definition: Row) => ["approved", "closed"].includes(definition.submissions?.[0]?.submission?.status)).length
+    : submissions.filter((submission: Row) => submission.status === "approved" || submission.status === "closed").length;
+  const progressTotal = definitions.length > 0 ? definitions.length : submissions.length;
   return {
     taskId: task.taskId,
     clientId: task.clientId,
@@ -29,6 +36,7 @@ function toTaskResponse(task: Row) {
     description: task.description ?? "",
     budget: Number(task.budget),
     status: task.status,
+    progress: progressTotal > 0 ? Math.round((completedCount / progressTotal) * 100) : 0,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
     ...(task.client
@@ -40,6 +48,7 @@ function toTaskResponse(task: Row) {
           },
         }
       : {}),
+    ...(task.deliverables ? { deliverables: task.deliverables.map(toDeliverableResponse) } : {}),
   };
 }
 
@@ -63,6 +72,11 @@ function toDeliverableResponse(deliverable: Row) {
     submissionPath: deliverable.submissionPath,
     status: deliverable.status,
     createdAt: deliverable.createdAt.toISOString(),
+    claimedDefinitions: (deliverable.claimedDefinitions ?? []).map((item: Row) => ({
+      definitionId: item.definition.definitionId,
+      title: item.definition.title,
+      description: item.definition.description,
+    })),
   };
 }
 
@@ -114,13 +128,18 @@ function toPaymentResponse(payment: Row) {
   };
 }
 
-function toReviewResponse(review: Row) {
+export function toReviewResponse(review: Row) {
   return {
     reviewId: review.reviewId,
+    taskId: review.taskId,
+    reviewerId: review.reviewerId,
+    revieweeId: review.revieweeId,
+    reviewerName: review.reviewer?.name,
+    revieweeName: review.reviewee?.name,
+    clientName: review.reviewer?.name,
     rating: review.rating,
     comment: review.comment ?? undefined,
-    clientName: review.reviewer?.name,
-    createdAt: review.createdAt.toISOString(),
+    createdAt: typeof review.createdAt?.toISOString === "function" ? review.createdAt.toISOString() : String(review.createdAt),
   };
 }
 
@@ -184,6 +203,13 @@ export async function respondToRequest(req: Request, res: Response): Promise<voi
 export async function listActiveTasks(req: Request, res: Response): Promise<void> {
   const tasks = await gigService.listActiveTasks(requireGigProfileId(req));
   res.status(200).json(tasks.map(toTaskResponse));
+}
+
+export async function listTaskDeliverableDefinitions(req: Request, res: Response): Promise<void> {
+  const taskId = Number(req.params.taskId);
+  if (!Number.isInteger(taskId) || taskId <= 0) throw badRequest("Invalid task id");
+  const definitions = await gigService.listTaskDeliverableDefinitions(requireGigProfileId(req), taskId);
+  res.status(200).json(definitions);
 }
 
 export async function submitDeliverable(req: Request, res: Response): Promise<void> {

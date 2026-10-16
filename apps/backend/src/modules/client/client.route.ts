@@ -4,12 +4,15 @@ import { roleGuard } from "../../middleware/roleGuard.js";
 import { clientOwnershipGuard } from "../../middleware/clientOwnershipGuard.js";
 import { validate } from "../../middleware/validate.js";
 import {
+  createClientReviewSchema,
   createManagerInviteSchema,
   createTaskSchema,
+  createTaskDeliverableDefinitionSchema,
   reviewDeliverableAsClientSchema,
   updateApplicationSchema,
   updateClientProfileSchema,
   updateTaskSchema,
+  updateTaskDeliverableDefinitionSchema,
 } from "./client.dto.js";
 import * as clientController from "./client.controller.js";
 
@@ -58,6 +61,13 @@ clientRouter.patch(
 // Delete a task (ownership checked by clientOwnershipGuard).
 clientRouter.delete("/tasks/:taskId", clientOwnershipGuard, clientController.deleteTask);
 
+// Client-authored scope for an active task. The owner is checked in middleware
+// and again in the service using the verified client identity.
+clientRouter.get("/tasks/:taskId/deliverable-definitions", clientOwnershipGuard, clientController.listTaskDeliverableDefinitions);
+clientRouter.post("/tasks/:taskId/deliverable-definitions", clientOwnershipGuard, validate(createTaskDeliverableDefinitionSchema), clientController.createTaskDeliverableDefinition);
+clientRouter.patch("/tasks/:taskId/deliverable-definitions/:definitionId", clientOwnershipGuard, validate(updateTaskDeliverableDefinitionSchema), clientController.updateTaskDeliverableDefinition);
+clientRouter.delete("/tasks/:taskId/deliverable-definitions/:definitionId", clientOwnershipGuard, clientController.deleteTaskDeliverableDefinition);
+
 // List applications received against the client's tasks.
 clientRouter.get("/applications", clientController.listApplications);
 // Accept/decline a gig professional's application.
@@ -98,3 +108,8 @@ clientRouter.post(
 );
 // List pending/past manager invites sent by the client.
 clientRouter.get("/manager-invites", clientController.listManagerInvites);
+// Revoke a pending manager invite (its link stops working).
+clientRouter.delete("/manager-invites/:inviteId", clientController.revokeManagerInvite);
+
+// Rate the professional who delivered a completed task.
+clientRouter.post("/reviews", validate(createClientReviewSchema), clientController.createReview);
