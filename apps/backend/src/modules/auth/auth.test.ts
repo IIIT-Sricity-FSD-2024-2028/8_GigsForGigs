@@ -31,12 +31,14 @@ async function runTests() {
   console.log("  ✓ Passed: loginSchema enforces email format and non-empty password");
 
   // Setup mock database records
+  const { hashPassword } = await import("../../lib/password.js");
+  const hashed = await hashPassword("password123");
   const mockUsers = {
-    client: { userId: 101, name: "Alice Client", email: "client@test.com", role: "client" as const, hashPassword: "password123" },
-    gigPro: { userId: 202, name: "Bob Freelancer", email: "gig@test.com", role: "gig_professional" as const, hashPassword: "password123" },
-    manager: { userId: 303, name: "Charlie Manager", email: "manager@test.com", role: "manager" as const, hashPassword: "password123" },
-    admin: { userId: 404, name: "Dave Admin", email: "admin@test.com", role: "admin" as const, hashPassword: "password123" },
-    suspended: { userId: 505, name: "Eve Suspended", email: "suspended@test.com", role: "client" as const, hashPassword: "password123", status: "SUSPENDED" },
+    client: { userId: 101, name: "Alice Client", email: "client@test.com", role: "client" as const, hashPassword: hashed },
+    gigPro: { userId: 202, name: "Bob Freelancer", email: "gig@test.com", role: "gig_professional" as const, hashPassword: hashed },
+    manager: { userId: 303, name: "Charlie Manager", email: "manager@test.com", role: "manager" as const, hashPassword: hashed },
+    admin: { userId: 404, name: "Dave Admin", email: "admin@test.com", role: "admin" as const, hashPassword: hashed },
+    suspended: { userId: 505, name: "Eve Suspended", email: "suspended@test.com", role: "client" as const, hashPassword: hashed, status: "SUSPENDED" },
   };
 
   prisma.user.findFirst = (async ({ where }: any) => {
