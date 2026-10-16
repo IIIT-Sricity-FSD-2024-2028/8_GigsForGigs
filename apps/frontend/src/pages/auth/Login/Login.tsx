@@ -7,8 +7,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignup }) => {
-  const { login, loading } = useAuth();
-  const [role, setRole] = useState<'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONAL' | 'SUPER_ADMIN' | ''>('CLIENT');
+  const { login, loading, authError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -21,9 +20,9 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
       setErrorMsg('Please enter your email and password.');
       return;
     }
-    const success = await login(email, password, role || undefined);
+    const success = await login(email, password);
     if (!success) {
-      setErrorMsg('Invalid email or password. Please verify your credentials.');
+      setErrorMsg(authError || 'Invalid email or password. Please verify your credentials.');
     }
   };
 
@@ -151,40 +150,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Log in as Dropdown */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
-                Log in as
-              </label>
-              <select
-                value={role}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === 'Super Admin' || val === 'SUPER_ADMIN') setRole('SUPER_ADMIN');
-                  else if (val === 'Manager' || val === 'MANAGER') setRole('MANAGER');
-                  else if (val === 'Client' || val === 'CLIENT') setRole('CLIENT');
-                  else if (val === 'Gig Professional' || val === 'GIG_PROFESSIONAL') setRole('GIG_PROFESSIONAL');
-                  else setRole(val as any);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#FFFFFF',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <option value="">Select your role</option>
-                <option value="CLIENT">Client</option>
-                <option value="MANAGER">Manager</option>
-                <option value="GIG_PROFESSIONAL">Gig Professional</option>
-                <option value="SUPER_ADMIN">Super Admin</option>
-              </select>
-            </div>
+
 
             {/* Email Address */}
             <div>

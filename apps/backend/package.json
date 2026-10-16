@@ -6,7 +6,8 @@
   "scripts": {
     "build": "npm --prefix src/db run build",
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "test:auth": "tsx src/modules/auth/auth.test.ts"
   },
   "keywords": [],
   "author": "",

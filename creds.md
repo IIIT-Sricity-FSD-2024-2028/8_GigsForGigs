@@ -6,13 +6,15 @@ All seeded users share the same password: `password123`
 |---|---|---|---|
 | **Super Admin** | `chaitanya.admin@gigsforgigs.internal` | Chaitanya Anand | Master Admin (`*` full access) |
 | **Super Admin** | `jovan44@yahoo.com` | Jovan Miller | Master Admin |
-| **Super Admin** | `shanna_deckow81@yahoo.com` | Lela Parisian | Seeded Admin |
-| **Client** | `margarete.olson@yahoo.com` | Mack Gusikowski | Seeded Client |
-| **Manager** | `alene11@gmail.com` | Rosario Raynor | Seeded Manager |
-| **Gig Professional** | `colten.fadel@yahoo.com` | Rochelle Baumbach | Seeded Gig Pro |
+| **Client** | `aditya@techstart.io` | Aditya Deshmukh | Seeded Client |
+| **Client** | `julian_lynch7@gmail.com` | Julian Lynch | Seeded Client |
+| **Manager** | `curtis45@hotmail.com` | Curtis Smith | Seeded Manager |
+| **Manager** | `lempi65@yahoo.com` | Mitchell Robel | Seeded Manager |
+| **Gig Professional** | `elena@gigpro.io` | Elena Rodriguez | Seeded Gig Pro |
+| **Gig Professional** | `dessie8@yahoo.com` | Dessie Davis | Seeded Gig Pro |
 
 ### How to Log In:
-1. Open the frontend at [http://localhost:5173](http://localhost:5173)
-2. Select your role in "Log in as" (**Client**, **Manager**, **Gig Professional**, or **Super Admin**)
-3. Enter the email above and password `password123`
+1. Open the frontend at [http://localhost:5173](http://localhost:5173) and click **Sign in**
+2. Enter your email and password (`password123`) — no role selector needed!
+3. The system verifies your credentials with PostgreSQL and automatically routes you to the authoritative role dashboard (**Client**, **Manager**, **Gig Professional**, or **Super Admin**).
 

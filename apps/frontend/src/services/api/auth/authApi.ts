@@ -26,11 +26,11 @@ export const authApi = {
   signup: (name: string, email: string, password: string, role: 'client' | 'gig_professional') =>
     apiFetch<AuthResponse>('/auth/signup', { method: 'POST', body: { name, email, password, role } }),
 
-  login: (email: string, password: string, role: BackendRole) =>
-    apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, password, role } }),
+  login: (email: string, password: string) =>
+    apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } }),
 
   managerLogin: (email: string, password: string) =>
-    apiFetch<AuthResponse>('/auth/manager/login', { method: 'POST', body: { email, password, role: 'manager' } }),
+    apiFetch<AuthResponse>('/auth/manager/login', { method: 'POST', body: { email, password } }),
 
   managerLogout: () =>
     apiFetch<{ success: boolean }>('/auth/manager/logout', { method: 'POST', actor: 'manager' }),
