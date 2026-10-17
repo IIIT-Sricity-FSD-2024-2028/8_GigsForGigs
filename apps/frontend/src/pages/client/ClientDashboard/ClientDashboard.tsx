@@ -9,7 +9,7 @@ export interface ClientDashboardProps {
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { tasks, applications, loading, error } = useClient();
+  const { tasks, contracts, applications, loading, error } = useClient();
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
   // Metrics
@@ -20,7 +20,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   const activeCount = activeTasks.length;                                                 
   const pendingCount = openTasks.length;
 
-  const totalSpent = completedTasks.reduce((sum, t) => sum + t.budget, 0);
+  // Total spent = what the client paid (gig amount + platform fee) on released contracts.
+  const totalSpent = contracts.filter(c => c.payment_status === 'completed').reduce((sum, c) => sum + c.total_amount, 0);
   const totalSpentFormatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',

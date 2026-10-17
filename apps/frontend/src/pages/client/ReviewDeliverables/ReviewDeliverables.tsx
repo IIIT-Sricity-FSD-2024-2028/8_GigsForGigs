@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { useClient, type Contract, type ContractReview } from '../../../context/ClientContext';
+import { useClient, type ContractReview } from '../../../context/ClientContext';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
 import { Badge } from '../../../components/common/Badge';
@@ -15,8 +15,7 @@ export interface ReviewDeliverablesProps {
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNavigate, params }) => {
   const { user } = useAuth();
-  const { contracts: clientContracts, tasks, approveDeliverable, rejectDeliverable, refreshContracts } = useClient();
-  const { payments, approveAndReleasePayment, raiseDispute, getPaymentByTask, fetchPaymentForTask } = usePayments();
+  const { contracts: clientContracts, tasks, approveDeliverable, rejectDeliverable, releasePayment, refreshContracts } = useClient();
   const taskId = params?.taskId;
   const numericTaskId = Number(String(taskId).replace(/[^0-9]/g, '')) || 1;
 
@@ -25,20 +24,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     if (!taskId) return null;
     const foundInClient = clientContracts.find((c) => c.task_id === taskId || c.contract_id === taskId);
     if (foundInClient) {
-      return {
-        contract_id: foundInClient.contract_id,
-        task_id: foundInClient.task_id,
-        task_title: foundInClient.task_title,
-        client_name: 'Client',
-        gig_pro_name: foundInClient.gig_pro_name,
-        budget: foundInClient.budget,
-        platform_fee: Math.round(foundInClient.budget * 0.07),
-        total_paid: Math.round(foundInClient.budget * 1.07),
-        payment_status: 'PAYMENT_REQUIRED',
-        progress: foundInClient.progress,
-        status: foundInClient.status,
-        reviews: foundInClient.reviews || ([] as ContractReview[]),
-      };
+      return { ...foundInClient, reviews: foundInClient.reviews || ([] as ContractReview[]) };
     }
     return null;
   }, [taskId, clientContracts]);
@@ -63,7 +49,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isReviewsViewModalOpen, setIsReviewsViewModalOpen] = useState(false);
-  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
   // Approval process state
   const [isApprovingDeliverable, setIsApprovingDeliverable] = useState(false);
@@ -74,9 +59,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const [revisionFieldError, setRevisionFieldError] = useState<string | null>(null);
   const [revisionApiError, setRevisionApiError] = useState<string | null>(null);
   const [isSubmittingRevision, setIsSubmittingRevision] = useState(false);
-
-  // Dispute form state
-  const [disputeReason, setDisputeReason] = useState('');
 
   const fetchDeliverables = useCallback(async () => {
     if (!taskId) return;
@@ -116,10 +98,12 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     return contract.reviews.find((r) => r.reviewerId !== user.userId && r.revieweeId === user.userId);
   }, [contract?.reviews, user]);
 
-  const taskPayment = taskId ? getPaymentByTask(taskId) : payments[0];
-  const gigAmount = contract?.budget || (taskInfo?.budget ?? 0);
-  const platformFee = Math.round(gigAmount * 0.07);
-  const totalAmount = gigAmount + platformFee;
+  // Amounts come from the stored payment row (via the contract), never recomputed here.
+  const gigAmount = contract?.budget ?? taskInfo?.budget ?? 0;
+  const platformFee = contract?.platform_fee ?? 0;
+  const totalAmount = contract?.total_amount ?? gigAmount;
+  // Release unlocks only once the client has funded the task and every deliverable is approved.
+  const canRelease = contract?.payment_status === 'held' && contract.progress === 100;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -184,30 +168,16 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
   // Step 2: Proceed to Payment (Authorized only after Deliverable Approval)
   const handleProcessPayment = async () => {
-    if (!taskPayment) {
-      setPageError('No payment record found for this task.');
-      return;
-    }
+    if (!contract) return;
     try {
-      await approveAndReleasePayment(taskPayment.paymentId, 'Deliverable verified & approved by client');
+      await releasePayment(contract.task_id);
       setIsPaymentModalOpen(false);
-      setSuccessNotification(`Payment of ${formatCurrency(totalAmount)} completed successfully!\n${formatCurrency(gigAmount)} released to ${contract?.gig_pro_name || 'the professional'}.`);
+      setSuccessNotification(`Payment released! ${formatCurrency(gigAmount)} sent to ${contract.gig_pro_name}; ${formatCurrency(platformFee)} kept as platform fee.`);
       await refreshContracts();
       await fetchDeliverables();
     } catch (err) {
       setPageError(err instanceof Error && err.message ? err.message : 'Payment release failed. Please try again.');
     }
-  };
-
-  const handleConfirmDispute = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!disputeReason.trim()) return;
-    if (taskPayment) {
-      await raiseDispute(taskPayment.paymentId, disputeReason);
-    }
-    setIsDisputeModalOpen(false);
-    setSuccessNotification('Issue flagged for administrative moderation.');
-    onNavigate('my-gigs');
   };
 
   // Contract not found state
@@ -349,6 +319,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
           </button>
         </div>
       )}
+
+      {contract.payment_status === 'pending' && <FundTaskCard contract={contract} />}
 
       {loadingDeliverables ? (
         <Loader label="Loading deliverables from PostgreSQL..." />
@@ -688,13 +660,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     >
                       Request Revision
                     </button>
-                    <button
-                      type="button"
-                      style={{ padding: '6px', fontSize: '0.75rem', border: 'none', background: 'none', color: '#c5221f', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
-                      onClick={() => setIsDisputeModalOpen(true)}
-                    >
-                      Raise Dispute / Issue
-                    </button>
                   </div>
                 )}
 
@@ -720,7 +685,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                         ✓ Deliverable Approved
                       </div>
                       <div style={{ fontSize: '0.78rem', color: '#3A1F16' }}>
-                        This deliverable has been accepted. Authorize payment to complete this task and release funds to the professional.
+                        {canRelease
+                          ? 'All deliverables are approved. Release the payment to complete this task.'
+                          : contract.payment_status === 'pending'
+                            ? 'Fund this task first; release unlocks once the payment is held in escrow.'
+                            : `Payment can be released once every deliverable is approved (${contract.progress}% done).`}
                       </div>
                     </div>
 
@@ -1056,44 +1025,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
           setIsReviewModalOpen(true);
         }}
       />
-
-      {/* Modal 6: Raise Dispute */}
-      {isDisputeModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleConfirmDispute} style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#c5221f', margin: '0 0 12px 0' }}>
-              Raise Payment Issue / Dispute
-            </h3>
-            <p style={{ fontSize: '13px', color: '#502419', lineHeight: 1.5, marginBottom: '16px' }}>
-              Flags this deliverable for administrative review.
-            </p>
-            <textarea
-              maxLength={1000}
-              required
-              rows={3}
-              placeholder="Explain the issue with this deliverable..."
-              value={disputeReason}
-              onChange={(e) => setDisputeReason(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #DBDFDF', fontSize: '13px', boxSizing: 'border-box', marginBottom: '20px' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsDisputeModalOpen(false)}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#c5221f', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Submit Dispute
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
     </div>
   );

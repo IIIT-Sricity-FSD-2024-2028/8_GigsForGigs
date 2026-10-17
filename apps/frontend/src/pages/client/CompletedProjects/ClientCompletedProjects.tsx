@@ -9,7 +9,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useClient, type Contract } from '../../../context/ClientContext';
-import { usePayments } from '../../../context/PaymentContext/PaymentContext';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { ClientReviewModal } from '../../../components/client/modals/ClientReviewModal';
 import { TaskReviewsModal } from '../../../components/client/modals/TaskReviewsModal';
@@ -21,7 +20,6 @@ export interface ClientCompletedProjectsProps {
 export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const { contracts, tasks } = useClient();
-  const { payments } = usePayments();
   const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
   const [viewReviewsContract, setViewReviewsContract] = useState<Contract | null>(null);
 
@@ -42,6 +40,11 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
       status: 'COMPLETED' as const,
       progress: 100,
       budget: t.budget,
+      // No payment record exists for these tasks, so there is no fee to show.
+      payment_id: null,
+      payment_status: null,
+      platform_fee: 0,
+      total_amount: t.budget,
       createdAt: t.createdAt,
       reviews: []
     }));
@@ -143,11 +146,7 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
           }}
         >
           {allCompletedProjects.map((contract) => {
-            const gigAmt = contract.budget || 0;
-            const platformFee = Math.round(gigAmt * 0.07);
-            const totalAmt = gigAmt + platformFee;
-            const p = payments.find((pay) => pay.taskId === contract.task_id);
-            const displayTotal = p ? p.totalAmount : totalAmt;
+            const displayTotal = contract.total_amount;
 
             const reviews = contract.reviews || [];
             const clientReview = user?.userId

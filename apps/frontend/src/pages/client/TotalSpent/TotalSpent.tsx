@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useClient } from '../../../context/ClientContext';
-import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
-import clientApi from '../../../services/api/client/clientApi';
+import React, { useState } from 'react';
+import { useClient, type PaymentStatus } from '../../../context/ClientContext';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Table } from '../../../components/common/Table';
 import { Loader } from '../../../components/common/Loader';
@@ -10,33 +8,35 @@ export interface TotalSpentProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
 }
 
-type StatusFilterType = 'ALL' | 'COMPLETED' | 'ESCROWED' | 'AWAITING_APPROVAL' | 'PENDING';
+type LedgerStatus = 'PENDING' | 'ESCROWED' | 'COMPLETED' | 'REFUNDED' | 'FAILED';
+type StatusFilterType = 'ALL' | 'COMPLETED' | 'ESCROWED' | 'PENDING';
+
+/** One ledger row per contract that has a payment record. */
+interface LedgerRow {
+  paymentId: string;
+  taskId: string;
+  taskTitle: string;
+  gigProName: string;
+  gigAmount: number;
+  platformFee: number;
+  totalAmount: number;
+  status: LedgerStatus;
+  createdAt: string;
+}
+
+const LEDGER_STATUS: Record<PaymentStatus, LedgerStatus> = {
+  pending: 'PENDING',
+  held: 'ESCROWED',
+  completed: 'COMPLETED',
+  refunded: 'REFUNDED',
+  failed: 'FAILED',
+};
 
 export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
-  const { contracts, tasks } = useClient();
-  const { payments: contextPayments, confirmEscrowPayment } = usePayments();
+  const { contracts, tasks, loading, payTask } = useClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
-  const [payingPayment, setPayingPayment] = useState<EscrowPayment | null>(null);
-  const [dbPayments, setDbPayments] = useState<EscrowPayment[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const loadPayments = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await clientApi.getPayments();
-      setDbPayments(res || []);
-    } catch (err) {
-      console.error('Failed to load client payments:', err);
-      setDbPayments([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadPayments();
-  }, [loadPayments]);
+  const [payingPayment, setPayingPayment] = useState<LedgerRow | null>(null);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -68,77 +68,31 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     return name.slice(0, 2).toUpperCase();
   };
 
-  // Merge loaded database payments with any live context updates and ensure any completed tasks are represented
-  const existingTaskIds = new Set(dbPayments.map((p) => String(p.taskId)));
-  const fallbackCompletedPayments: EscrowPayment[] = tasks
-    .filter((t) => t.status === 'COMPLETED' && !existingTaskIds.has(String(t.task_id)))
-    .map((t) => {
-      const gigAmount = Number(t.budget) || 0;
-      const platformFee = Math.round(gigAmount * 0.07);
-      const totalAmount = gigAmount + platformFee;
-      const contract = contracts.find((c) => String(c.task_id) === String(t.task_id));
-      return {
-        paymentId: `PAY-TASK-${t.task_id}`,
-        taskId: String(t.task_id),
-        taskTitle: t.title || `Task #${t.task_id}`,
-        gigProfileId: contract?.contract_id || '0',
-        gigProName: contract?.gig_pro_name || 'Assigned Professional',
-        gigAmount,
-        platformFee,
-        totalAmount,
-        status: 'COMPLETED' as const,
-        createdAt: t.createdAt || new Date().toISOString(),
-      };
-    });
-
-  const mergedPayments = [...dbPayments, ...fallbackCompletedPayments];
-
-  const clientPayments = mergedPayments.map((p) => {
-    const ctx = contextPayments.find((cp) => cp.paymentId === p.paymentId || String(cp.taskId) === String(p.taskId));
-    return ctx && ctx.status !== 'PENDING' ? { ...p, status: ctx.status } : p;
-  });
+  // Amounts and statuses come from the stored payment row on each contract.
+  const clientPayments: LedgerRow[] = contracts
+    .filter((c) => c.payment_status)
+    .map((c) => ({
+      paymentId: `PAY-${c.payment_id}`,
+      taskId: c.task_id,
+      taskTitle: c.task_title,
+      gigProName: c.gig_pro_name,
+      gigAmount: c.budget,
+      platformFee: c.platform_fee,
+      totalAmount: c.total_amount,
+      status: LEDGER_STATUS[c.payment_status!],
+      createdAt: c.createdAt,
+    }));
 
   // 1. Total Spent: Sum of the costs of all completed projects using existing project cost fields (budget) from actual DB records
-  const completedContracts = contracts.filter(
-    (c) => c.status === 'COMPLETED' || tasks.find((t) => t.task_id === c.task_id)?.status === 'COMPLETED'
-  );
-  const completedTasks = tasks.filter((t) => t.status === 'COMPLETED');
+  // What the client actually paid (gig amount + platform fee) on released payments.
+  const completedPayments = clientPayments.filter((p) => p.status === 'COMPLETED');
+  const totalSpent = completedPayments.reduce((sum, p) => sum + p.totalAmount, 0);
+  const completedProjectsCount = completedPayments.length;
 
-  const completedProjectMap = new Map<string, number>();
-
-  completedContracts.forEach((c) => {
-    completedProjectMap.set(String(c.task_id), Number(c.budget) || 0);
-  });
-
-  completedTasks.forEach((t) => {
-    if (!completedProjectMap.has(String(t.task_id))) {
-      completedProjectMap.set(String(t.task_id), Number(t.budget) || 0);
-    }
-  });
-
-  const completedProjectsCost = Array.from(completedProjectMap.values()).reduce((sum, cost) => sum + cost, 0);
-
-  // Fallback to payments if contracts/tasks list is not yet populated
-  const completedPaymentsCost = clientPayments
-    .filter((p) => p.status === 'COMPLETED' || p.status === 'RELEASED')
-    .reduce((sum, p) => sum + (p.gigAmount || 0), 0);
-
-  const totalSpent = completedProjectMap.size > 0 ? completedProjectsCost : completedPaymentsCost;
-  const completedProjectsCount = completedProjectMap.size > 0
-    ? completedProjectMap.size
-    : clientPayments.filter((p) => p.status === 'COMPLETED' || p.status === 'RELEASED').length;
-
-  // 2. Funds Held in Escrow: Calculated separately according to existing escrow records and platform rules
-  // (ESCROWED, WORK_SUBMITTED, AWAITING_APPROVAL, DISPUTED) — excludes PENDING (unfunded) and COMPLETED/RELEASED
+  // 2. Funds Held in Escrow — excludes PENDING (unfunded) and COMPLETED (released)
   const escrowLockedTotal = clientPayments
-    .filter(
-      (p) =>
-        p.status === 'ESCROWED' ||
-        p.status === 'WORK_SUBMITTED' ||
-        p.status === 'AWAITING_APPROVAL' ||
-        p.status === 'DISPUTED'
-    )
-    .reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+    .filter((p) => p.status === 'ESCROWED')
+    .reduce((sum, p) => sum + p.totalAmount, 0);
 
   // Active task contracts count (excluding completed)
   const activeContractsCount = contracts.filter(
@@ -149,11 +103,9 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   const filteredPayments = clientPayments.filter((p) => {
     // Status Filter
     if (statusFilter === 'COMPLETED') {
-      if (p.status !== 'COMPLETED' && p.status !== 'RELEASED') return false;
+      if (p.status !== 'COMPLETED') return false;
     } else if (statusFilter === 'ESCROWED') {
       if (p.status !== 'ESCROWED') return false;
-    } else if (statusFilter === 'AWAITING_APPROVAL') {
-      if (p.status !== 'WORK_SUBMITTED' && p.status !== 'AWAITING_APPROVAL') return false;
     } else if (statusFilter === 'PENDING') {
       if (p.status !== 'PENDING' && p.status !== 'FAILED') return false;
     }
@@ -163,22 +115,20 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     const term = searchTerm.toLowerCase().trim();
     const matchesTitle = (p.taskTitle || '').toLowerCase().includes(term);
     const matchesPro = (p.gigProName || '').toLowerCase().includes(term);
-    const matchesId = (p.paymentId || '').toLowerCase().includes(term);
+    const matchesId = p.paymentId.toLowerCase().includes(term);
     const matchesStatus = (p.status || '').toLowerCase().includes(term);
     const matchesTaskNum = String(p.taskId || '').includes(term);
 
     return matchesTitle || matchesPro || matchesId || matchesStatus || matchesTaskNum;
   });
 
-  const handlePayNow = async (payment: EscrowPayment) => {
+  const handlePayNow = async (payment: LedgerRow) => {
     try {
-      await confirmEscrowPayment(payment.paymentId);
+      await payTask(payment.taskId);
       setPayingPayment(null);
       alert(`Payment successful! ${formatCurrency(payment.totalAmount)} has been securely locked in escrow until work approval.`);
-      await loadPayments();
     } catch (err) {
-      console.error('Error confirming escrow payment:', err);
-      alert('Failed to process payment. Please try again.');
+      alert(err instanceof Error && err.message ? err.message : 'Failed to process payment. Please try again.');
     }
   };
 
@@ -188,7 +138,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     let border = '#DADCE0';
     let label = status.replace(/_/g, ' ');
 
-    if (status === 'COMPLETED' || status === 'RELEASED') {
+    if (status === 'COMPLETED') {
       bg = '#E6F4EA';
       color = '#137333';
       border = '#CEEAD6';
@@ -198,11 +148,8 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
       color = '#1A73E8';
       border = '#D2E3FC';
       label = 'Funds Secured';
-    } else if (status === 'WORK_SUBMITTED' || status === 'AWAITING_APPROVAL') {
-      bg = '#FEF7E0';
-      color = '#B06000';
-      border = '#FEEFC3';
-      label = 'Awaiting Approval';
+    } else if (status === 'REFUNDED') {
+      label = 'Refunded';
     } else if (status === 'PENDING') {
       bg = '#FFF0E6';
       color = '#D47700';
@@ -213,11 +160,6 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
       color = '#C5221F';
       border = '#FAD2CF';
       label = 'Payment Failed';
-    } else if (status === 'DISPUTED') {
-      bg = '#FEEFC3';
-      color = '#B06000';
-      border = '#FDD663';
-      label = 'Disputed';
     }
 
     return (
@@ -376,19 +318,15 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
           <div style={{ backgroundColor: '#F0F6F6', borderRadius: '8px', padding: '12px', fontSize: '0.82rem' }}>
             <div style={{ fontWeight: 600, color: '#0D568D', marginBottom: '4px' }}>Payment Calculation Rule:</div>
             <div style={{ color: '#502419' }}>
-              Total Payable = Gig Agreed Amount + 7% Platform Fee
+              Total Payable = Gig Agreed Amount + 10% Platform Fee
             </div>
           </div>
         </article>
       </section>
 
-      {clientPayments.filter(c => c.payment_status === 'pending').map(c => (
-        <FundTaskCard key={c.task_id} contract={c} />
-      ))}
-
       {/* Escrow Payments Table */}
       {loading ? (
-        <Loader label="Loading client payment ledger from PostgreSQL..." />
+        <Loader label="Loading client payment ledger..." />
       ) : (
         <section
           className="spent-table-wrap"
@@ -448,7 +386,6 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                 <option value="ALL">All Statuses</option>
                 <option value="COMPLETED">Completed / Released</option>
                 <option value="ESCROWED">Funds Secured in Escrow</option>
-                <option value="AWAITING_APPROVAL">Awaiting Approval</option>
                 <option value="PENDING">Payment Required</option>
               </select>
 
@@ -687,7 +624,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                     {/* Platform Fee */}
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--color-text-muted)' }}>
                       <div>+{formatCurrency(p.platformFee)}</div>
-                      <div style={{ fontSize: '10px', opacity: 0.8 }}>7% fee</div>
+                      <div style={{ fontSize: '10px', opacity: 0.8 }}>10% fee</div>
                     </td>
 
                     {/* Total Paid */}
@@ -710,7 +647,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
 
                     {/* Action */}
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      {p.status === 'PENDING' || p.status === 'FAILED' ? (
+                      {p.status === 'PENDING' ? (
                         <button
                           type="button"
                           onClick={() => setPayingPayment(p)}
@@ -728,10 +665,10 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                         >
                           Pay {formatCurrency(p.totalAmount)}
                         </button>
-                      ) : p.status === 'WORK_SUBMITTED' || p.status === 'AWAITING_APPROVAL' ? (
+                      ) : p.status === 'ESCROWED' ? (
                         <button
                           type="button"
-                          onClick={() => onNavigate('review-deliverables')}
+                          onClick={() => onNavigate('review-deliverables', { taskId: p.taskId })}
                           style={{
                             padding: '6px 14px',
                             borderRadius: '6px',
@@ -746,7 +683,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                         >
                           Review &amp; Release
                         </button>
-                      ) : p.status === 'COMPLETED' || p.status === 'RELEASED' ? (
+                      ) : p.status === 'COMPLETED' ? (
                         <span
                           style={{
                             fontSize: '12px',
@@ -770,7 +707,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                             gap: '4px'
                           }}
                         >
-                          ✓ Escrow Secured
+                          {p.status === 'REFUNDED' ? 'Refunded' : '—'}
                         </span>
                       )}
                     </td>
@@ -827,7 +764,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                 <strong>{formatCurrency(payingPayment.gigAmount)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Service Fee (7%):</span>
+                <span>Platform Service Fee (10%):</span>
                 <strong>{formatCurrency(payingPayment.platformFee)}</strong>
               </div>
               <div

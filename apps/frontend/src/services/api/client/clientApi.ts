@@ -326,15 +326,6 @@ export const clientApi = {
   /** Rate the professional who delivered a completed task. */
   createReview: async (taskId: number, rating: number, comment?: string): Promise<unknown> =>
     apiFetch<unknown>('/reviews', { method: 'POST', body: { taskId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) }, actor }),
-
-  /** Fetch all payments/ledger items for the authenticated client. */
-  getPayments: async (): Promise<any[]> => {
-    const res = await apiFetch<any>('/payments', { actor });
-    if (Array.isArray(res)) return res;
-    if (Array.isArray(res?.data)) return res.data;
-    if (Array.isArray(res?.payments)) return res.payments;
-    return [];
-  },
 };
 
 export default clientApi;

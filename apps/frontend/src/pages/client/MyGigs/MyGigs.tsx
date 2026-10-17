@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useClient } from '../../../context/ClientContext';
-import { usePayments, type EscrowPayment } from '../../../context/PaymentContext/PaymentContext';
+import { useClient, type Contract, type PaymentStatus } from '../../../context/ClientContext';
+import { PAYMENT_STATUS_UI } from '../../../utils/helpers/paymentStatus';
+import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
 
@@ -10,12 +11,11 @@ export interface MyGigsProps {
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const { contracts, tasks, deleteTask } = useClient();
-  const { payments } = usePayments();
-  const [selectedTaskPayment, setSelectedTaskPayment] = useState<EscrowPayment | null>(null);
+  const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_PROGRESS' | 'REVIEWING' | 'SCHEDULED'>('ALL');
-  const [paymentFilter, setPaymentFilter] = useState<'ALL' | 'PENDING' | 'ESCROWED' | 'WORK_SUBMITTED'>('ALL');
+  const [paymentFilter, setPaymentFilter] = useState<'ALL' | PaymentStatus>('ALL');
 
   // Filter out any completed contracts — completed projects appear exclusively on Completed Projects
   const activeContracts = contracts.filter((c) => {
@@ -44,12 +44,8 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
     if (statusFilter !== 'ALL' && c.status !== statusFilter) {
       return false;
     }
-    if (paymentFilter !== 'ALL') {
-      const p = payments.find((pay) => pay.taskId === c.task_id);
-      const payStatus = p?.status || 'ESCROWED';
-      if (payStatus !== paymentFilter) {
-        return false;
-      }
+    if (paymentFilter !== 'ALL' && c.payment_status !== paymentFilter) {
+      return false;
     }
     return true;
   });
@@ -77,6 +73,10 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   return (
     <div style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       <PageHeader title="Active Task/Contracts" description="Track ongoing work, view deliverables, and manage project payments." />
+
+      {activeContracts.filter(c => c.payment_status === 'pending').map(c => (
+        <FundTaskCard key={c.task_id} contract={c} />
+      ))}
 
       <div className="activity-section" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
         <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)', flexWrap: 'wrap', gap: '12px' }}>
@@ -190,9 +190,8 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                   }}
                 >
                   <option value="ALL">All Payment Statuses</option>
-                  <option value="PENDING">Payment Required</option>
-                  <option value="ESCROWED">Payment Secured</option>
-                  <option value="WORK_SUBMITTED">Awaiting Approval</option>
+                  <option value="pending">{PAYMENT_STATUS_UI.pending.label}</option>
+                  <option value="held">{PAYMENT_STATUS_UI.held.label}</option>
                 </select>
               </div>
             </div>
@@ -285,25 +284,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 </tr>
               ) : (
                 filteredContracts.map(c => {
-                  const gigAmt = c.budget || 5000;
-                  const platformFee = Math.round(gigAmt * 0.07);
-                  const totalAmt = gigAmt + platformFee;
-                  const p = payments.find(pay => pay.taskId === c.task_id) || {
-                    paymentId: 'PAY-' + c.task_id,
-                    taskId: c.task_id,
-                    taskTitle: c.task_title,
-                    clientId: '',
-                    clientName: '',
-                    gigProfileId: '',
-                    gigProName: c.gig_pro_name,
-                    gigAmount: gigAmt,
-                    platformFee,
-                    totalAmount: totalAmt,
-                    status: 'ESCROWED',
-                    paymentProvider: 'PLATFORM_PAYMENT',
-                    createdAt: c.createdAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                  } as EscrowPayment;
+                  const ps = c.payment_status ? PAYMENT_STATUS_UI[c.payment_status] : null;
 
                   return (
                     <tr key={c.contract_id} style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -327,26 +308,21 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          backgroundColor: p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED' ? '#e8f0fe' : p.status === 'PENDING' ? '#fff0f0' : '#f1f3f4',
-                          color: p.status === 'ESCROWED' || p.status === 'WORK_SUBMITTED' ? '#1a73e8' : p.status === 'PENDING' ? '#c5221f' : '#5f6368'
-                        }}>
-                          {p.status === 'PENDING' ? 'Payment Required' : p.status === 'ESCROWED' ? 'Payment Secured' : p.status === 'WORK_SUBMITTED' ? 'Awaiting Your Approval' : p.status.replace('_', ' ')}
-                        </span>
+                        {ps && (
+                          <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, backgroundColor: ps.bg, color: ps.fg }}>
+                            {ps.label}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#0D568D' }}>
-                        {formatCurrency(p.totalAmount)}
+                        {formatCurrency(c.total_amount)}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <button
                             className="btn-review-proposal"
                             style={{ padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--color-primary-blue)', borderRadius: 'var(--radius-sm)', color: 'var(--color-primary-blue)', backgroundColor: 'transparent', cursor: 'pointer' }}
-                            onClick={() => setSelectedTaskPayment(p)}
+                            onClick={() => setSelectedTaskPayment(c)}
                           >
                             View Task
                           </button>
