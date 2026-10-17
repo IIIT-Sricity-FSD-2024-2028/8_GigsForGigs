@@ -6,27 +6,27 @@ export const colors = {
   primaryOutlineHover: '#E4EEF5',
 
   // Orange (Main Accent / CTA)
-  orange: '#D47700',
-  orangeDark: '#B86300',
-  orangeLight: '#F4E3CF',
-  accent: '#D47700',
-  accentDark: '#B86300',
-  accentLight: '#F4E3CF',
+  orange: '#B45F00',
+  orangeDark: '#9A5100',
+  orangeLight: '#F6E6D3',
+  accent: '#B45F00',
+  accentDark: '#9A5100',
+  accentLight: '#F6E6D3',
 
   // Neutral Background & Surface
-  background: '#EFF6F7',
+  background: '#F2F6F8',
   surface: '#FFFFFF',
 
   // Text Colors
-  textPrimary: '#3A1F16',
+  textPrimary: '#1B2A36',
   headingBlue: '#0D568D',
-  textSecondary: '#76594F',
-  textMuted: '#927D74',
+  textSecondary: '#475764',
+  textMuted: '#5E6E7A',
 
   // Muted Teal / Green System (Success)
-  success: '#55A99A',
+  success: '#367D6F',
   successSoft: '#E4F2EF',
-  badgeSuccessText: '#438F82',
+  badgeSuccessText: '#2E6E62',
 
   // Error / Danger System
   danger: '#C94C4C',
@@ -34,9 +34,9 @@ export const colors = {
   dangerSoft: '#F8E8E8',
 
   // Warning System
-  warning: '#D47700',
+  warning: '#B45F00',
   warningSoft: '#F8EBD9',
-  warningText: '#B86300',
+  warningText: '#9A5100',
 
   // Information System
   info: '#0D568D',
@@ -46,38 +46,38 @@ export const colors = {
   sidebarBg: '#0D568D',
   sidebarText: '#FFFFFF',
   sidebarInactiveText: '#B8D0E0',
-  sidebarActiveBg: '#1F6598',
+  sidebarActiveBg: '#1D6399',
   sidebarActiveText: '#FFFFFF',
-  sidebarActiveIndicator: '#D47700',
-  sidebarHover: '#1F6598',
+  sidebarActiveIndicator: '#B45F00',
+  sidebarHover: '#16609A',
 
   // Logout Tokens
-  logoutBg: '#D47700',
-  logoutHover: '#B86300',
+  logoutBg: '#B45F00',
+  logoutHover: '#9A5100',
 
   // Borders & Progress
-  borderDefault: '#D9E0E3',
-  borderInput: '#D5DDE0',
+  borderDefault: '#DCE3E8',
+  borderInput: '#D3DCE2',
   borderSecondaryButton: '#D8D8D8',
-  progressTrack: '#D9E0E3',
+  progressTrack: '#DCE3E8',
   progressFill: '#0D568D',
-  progressCompleted: '#55A99A',
+  progressCompleted: '#367D6F',
 } as const;
 
 export const statusColors = {
-  ACTIVE: { bg: '#E4F2EF', text: '#438F82' },
-  COMPLETED: { bg: '#E4F2EF', text: '#438F82' },
-  APPROVED: { bg: '#E4F2EF', text: '#438F82' },
-  OPEN: { bg: '#E4F2EF', text: '#438F82' },
+  ACTIVE: { bg: '#E4F2EF', text: '#2E6E62' },
+  COMPLETED: { bg: '#E4F2EF', text: '#2E6E62' },
+  APPROVED: { bg: '#E4F2EF', text: '#2E6E62' },
+  OPEN: { bg: '#E4F2EF', text: '#2E6E62' },
 
-  PENDING: { bg: '#F8EBD9', text: '#B86300' },
-  REQUIRES_ACTION: { bg: '#F8EBD9', text: '#B86300' },
+  PENDING: { bg: '#F8EBD9', text: '#9A5100' },
+  REQUIRES_ACTION: { bg: '#F8EBD9', text: '#9A5100' },
 
   IN_PROGRESS: { bg: '#E4EEF5', text: '#0D568D' },
 
-  CANCELLED: { bg: '#F8E8E8', text: '#C94C4C' },
-  REJECTED: { bg: '#F8E8E8', text: '#C94C4C' },
-  DECLINED: { bg: '#F8E8E8', text: '#C94C4C' },
+  CANCELLED: { bg: '#F8E8E8', text: '#A63838' },
+  REJECTED: { bg: '#F8E8E8', text: '#A63838' },
+  DECLINED: { bg: '#F8E8E8', text: '#A63838' },
 } as const;
 
 export default colors;

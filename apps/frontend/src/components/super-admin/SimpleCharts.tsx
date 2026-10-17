@@ -140,12 +140,12 @@ export const RevenueAreaChart: React.FC<{ data?: RevenuePoint[]; height?: number
       <svg viewBox={`0 0 360 ${height}`} style={{ width: '100%', overflow: 'visible' }}>
         <defs>
           <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#bf6900" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#bf6900" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#9A5100" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#9A5100" stopOpacity="0.0" />
           </linearGradient>
         </defs>
         <polygon points={areaPoints} fill="url(#revenueGrad)" />
-        <polyline fill="none" stroke="#bf6900" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={points} />
+        <polyline fill="none" stroke="#9A5100" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={points} />
         {safeData.map((d, i) => {
           const x = (i / divisor) * 360;
           const gmv = Number(d.gmv) || 0;
@@ -157,7 +157,7 @@ export const RevenueAreaChart: React.FC<{ data?: RevenuePoint[]; height?: number
               cy={Number.isFinite(y) ? y : height / 2}
               r="4"
               fill="#ffffff"
-              stroke="#bf6900"
+              stroke="#9A5100"
               strokeWidth="2.5"
             />
           );

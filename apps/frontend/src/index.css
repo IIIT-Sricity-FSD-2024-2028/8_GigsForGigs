@@ -6,7 +6,7 @@ html, body, #root {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: var(--color-background, #EFF6F7);
+  background-color: var(--color-background, #F2F6F8);
 }
 
 /* ==========================================================================
@@ -18,16 +18,16 @@ html, body, #root {
   --color-primary-dark: #0D568D;
   --color-primary-dark-hover: #063c6b;
   --color-primary-dark-active: #053661;
-  --color-primary-blue: #D47700;
-  --color-primary-blue-hover: #B86300;
+  --color-primary-blue: #B45F00;
+  --color-primary-blue-hover: #9A5100;
   --color-secondary: #519e8a;
   --color-secondary-hover: #438876;
-  --color-bg-light: #EFF6F7;
+  --color-bg-light: #F2F6F8;
   --color-bg-white: #ffffff;
-  --color-text-dark: #3A1F16;
-  --color-text-muted: #76594F;
+  --color-text-dark: #1B2A36;
+  --color-text-muted: #475764;
   --color-text-light: #ffffff;
-  --color-border: #D9E0E3;
+  --color-border: #DCE3E8;
   --color-border-dark: #c5cbcb;
 
   /* Semantic State Tokens */
@@ -70,18 +70,18 @@ html, body, #root {
   --spacing-xxl: 3rem;    /* 48px */
 
   /* Radii */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-pill: 9999px;
 
   /* Elevation Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 2px rgba(16, 42, 64, 0.05);
+  --shadow-sm: 0 1px 2px rgba(16, 42, 64, 0.04), 0 2px 8px rgba(16, 42, 64, 0.06);
+  --shadow-md: 0 4px 14px rgba(16, 42, 64, 0.10);
+  --shadow-lg: 0 12px 32px rgba(16, 42, 64, 0.14);
+  --shadow-xl: 0 24px 48px rgba(16, 42, 64, 0.18);
 
   /* Layout */
   --sidebar-width: 280px;

@@ -86,12 +86,12 @@ export const Reviews: React.FC = () => {
     {
       header: 'Rating',
       cell: (row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#bf6900' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#9A5100' }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <ReviewIcon
               key={i}
               size={14}
-              color={i < row.rating ? '#bf6900' : 'var(--color-border)'}
+              color={i < row.rating ? '#9A5100' : 'var(--color-border)'}
             />
           ))}
           <span style={{ marginLeft: '4px', fontWeight: 700, color: 'var(--color-text-dark)' }}>

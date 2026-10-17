@@ -304,14 +304,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     backgroundColor: '#EBF4F6',
-                    color: '#084B83',
+                    color: '#084875',
                     padding: '3px 8px',
                     borderRadius: '4px'
                   }}
                 >
                   {viewingTask.category === 'design' ? 'Design Systems' : viewingTask.category === 'dev' ? 'Software Development' : 'General'}
                 </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#084B83', margin: '8px 0 0 0' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#084875', margin: '8px 0 0 0' }}>
                   {viewingTask.title}
                 </h3>
               </div>
@@ -344,13 +344,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             >
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>Budget</span>
-                <strong style={{ fontSize: '15px', color: '#084B83' }}>
+                <strong style={{ fontSize: '15px', color: '#084875' }}>
                   {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(viewingTask.budget)}
                 </strong>
               </div>
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>Status</span>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#D47700' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#B45F00' }}>
                   ● Open for Hire
                 </span>
               </div>
@@ -383,8 +383,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                       style={{
                         padding: '3px 8px',
                         borderRadius: '4px',
-                        backgroundColor: '#EFF6F7',
-                        color: '#084B83',
+                        backgroundColor: '#F2F6F8',
+                        color: '#084875',
                         fontSize: '12px',
                         fontWeight: 500
                       }}
@@ -402,7 +402,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
               return (
                 <div
                   style={{
-                    backgroundColor: taskApps.length > 0 ? '#EFF6F7' : '#FFF9F2',
+                    backgroundColor: taskApps.length > 0 ? '#F2F6F8' : '#FFF9F2',
                     border: `1px solid ${taskApps.length > 0 ? '#D5E5E9' : '#FFE8D1'}`,
                     padding: '12px 16px',
                     borderRadius: '8px',

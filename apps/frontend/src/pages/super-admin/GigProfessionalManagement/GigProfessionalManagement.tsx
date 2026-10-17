@@ -101,8 +101,8 @@ export const GigProfessionalManagement: React.FC = () => {
       header: 'Rating & Jobs',
       cell: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#bf6900', fontWeight: 700 }}>
-            <ReviewIcon size={14} color="#bf6900" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#9A5100', fontWeight: 700 }}>
+            <ReviewIcon size={14} color="#9A5100" />
             <span>{row.rating}</span>
           </div>
           <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>

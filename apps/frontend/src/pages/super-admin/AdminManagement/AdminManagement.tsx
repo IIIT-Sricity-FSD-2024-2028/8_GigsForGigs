@@ -347,7 +347,7 @@ export const AdminManagement: React.FC = () => {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontWeight: 800, color: '#0F527E', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontWeight: 800, color: '#084875', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>🔗 Active Cryptographic Access Link & Generated Password</span>
                 <span style={{ fontSize: '11px', backgroundColor: '#519e8a', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>Active (Expires in 48h)</span>
               </div>
@@ -363,7 +363,7 @@ export const AdminManagement: React.FC = () => {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', backgroundColor: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #DBDFDF' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '12px', backgroundColor: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #DCE3E8' }}>
             <div>
               <span style={{ fontSize: '11px', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>Recipient Email</span>
               <div style={{ fontWeight: 700, color: '#111', fontSize: '13px' }}>{generatedInvite.email}</div>
@@ -374,7 +374,7 @@ export const AdminManagement: React.FC = () => {
             </div>
             <div>
               <span style={{ fontSize: '11px', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>Assigned Master Password</span>
-              <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '15px', color: '#084b83' }}>
+              <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '15px', color: '#084875' }}>
                 {generatedInvite.assignedPassword}
               </div>
             </div>

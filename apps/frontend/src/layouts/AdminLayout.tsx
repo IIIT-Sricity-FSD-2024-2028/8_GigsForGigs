@@ -93,20 +93,21 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   });
 
   const tierBadgeLabels: Record<AdminTier, { text: string; bg: string; color: string }> = {
-    OWNER: { text: '👑 Platform Owner', bg: 'rgba(191, 105, 0, 0.15)', color: '#bf6900' },
-    SUPER_ADMIN: { text: '⚡ Super Admin', bg: 'rgba(8, 75, 131, 0.15)', color: '#084b83' },
+    OWNER: { text: '👑 Platform Owner', bg: 'rgba(191, 105, 0, 0.15)', color: '#9A5100' },
+    SUPER_ADMIN: { text: '⚡ Super Admin', bg: 'rgba(8, 75, 131, 0.15)', color: '#084875' },
     FINANCIAL_ADMIN: { text: '💳 Financial Admin', bg: 'rgba(81, 158, 138, 0.15)', color: '#519e8a' },
     SUPPORT_ADMIN: { text: '🎧 Support Admin', bg: 'rgba(30, 64, 175, 0.15)', color: '#1e40af' },
     CONTENT_MODERATOR: { text: '🛡️ Moderator', bg: 'rgba(126, 34, 206, 0.15)', color: '#7e22ce' },
-    AUDITOR: { text: '📋 Auditor (Read-Only)', bg: 'rgba(80, 36, 25, 0.15)', color: '#502419' }
+    AUDITOR: { text: '📋 Auditor (Read-Only)', bg: 'rgba(80, 36, 25, 0.15)', color: '#1B2A36' }
   };
 
   const badgeInfo = tierBadgeLabels[userTier] || tierBadgeLabels.OWNER;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: 'var(--color-bg-light)' }}>
+    <div className="admin-shell" style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: 'var(--color-bg-light)' }}>
       {/* Fixed Sidebar */}
       <aside
+        className="admin-shell__sidebar"
         style={{
           width: 'var(--sidebar-width)',
           backgroundColor: 'var(--color-primary-dark)',
@@ -159,22 +160,23 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </div>
 
         {/* User Role Badge in Sidebar */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div className="admin-shell__session" style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}>Active Session</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: userTier === 'AUDITOR' ? '#bf6900' : '#519e8a' }} />
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: userTier === 'AUDITOR' ? '#9A5100' : '#519e8a' }} />
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>{badgeInfo.text}</span>
           </div>
         </div>
 
         {/* Navigation Items List */}
-        <nav style={{ flex: 1, padding: 'var(--spacing-md) var(--spacing-sm)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <nav className="admin-shell__nav" style={{ flex: 1, padding: 'var(--spacing-md) var(--spacing-sm)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {filteredNavItems.map((item) => {
             const isActive = currentView === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
+                className="admin-shell__nav-item"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -216,7 +218,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </nav>
 
         {/* Bottom User Roster */}
-        <div style={{ padding: 'var(--spacing-md)', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <div className="admin-shell__roster" style={{ padding: 'var(--spacing-md)', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-sm)' }}>
             <div
               style={{
@@ -264,9 +266,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       </aside>
 
       {/* Main Content Area */}
-      <div style={{ marginLeft: 'var(--sidebar-width)', flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div className="admin-shell__workspace" style={{ marginLeft: 'var(--sidebar-width)', flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top Header */}
         <header
+          className="admin-shell__header"
           style={{
             height: 'var(--header-height)',
             backgroundColor: '#ffffff',
@@ -293,7 +296,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
 
           {/* Header Action Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+          <div className="admin-shell__header-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
             {/* Active Tier Pill */}
             <div
               style={{
@@ -325,8 +328,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               }}
             >
               <SearchIcon size={14} />
-              <span>Search platform...</span>
-              <kbd style={{ backgroundColor: '#ffffff', padding: '1px 4px', borderRadius: '3px', border: '1px solid var(--color-border)', fontSize: '10px', fontWeight: 600 }}>Ctrl+K</kbd>
+              <span className="admin-shell__search-label">Search platform...</span>
+              <kbd className="admin-shell__search-label" style={{ backgroundColor: '#ffffff', padding: '1px 4px', borderRadius: '3px', border: '1px solid var(--color-border)', fontSize: '10px', fontWeight: 600 }}>Ctrl+K</kbd>
             </button>
 
             {headerActions}
@@ -356,7 +359,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         )}
 
         {/* View Body */}
-        <main style={{ padding: 'var(--spacing-xl)', flex: 1 }}>
+        <main className="admin-shell__main" style={{ padding: 'var(--spacing-xl)', flex: 1 }}>
           {children}
         </main>
       </div>

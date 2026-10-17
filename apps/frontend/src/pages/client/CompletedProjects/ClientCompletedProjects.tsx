@@ -139,7 +139,7 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))',
             gap: 'var(--spacing-lg)',
             width: '100%',
             minWidth: 0,
@@ -289,7 +289,7 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
                     <button
                       type="button"
                       className="btn btn-primary"
-                      style={{ padding: '6px 14px', fontSize: '0.8rem', backgroundColor: '#D47700', border: 'none', color: '#FFFFFF', fontWeight: 700 }}
+                      style={{ padding: '6px 14px', fontSize: '0.8rem', backgroundColor: '#B45F00', border: 'none', color: '#FFFFFF', fontWeight: 700 }}
                       onClick={() => setReviewingContract(contract)}
                     >
                       ★ Rate &amp; Review

@@ -117,7 +117,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(8, 75, 131, 0.1)',
           overflow: 'hidden',
           animation: 'modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-          border: '1px solid #dbdfdf'
+          border: '1px solid #DCE3E8'
         }}
       >
         {/* Search Header */}
@@ -127,8 +127,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
             alignItems: 'center',
             gap: '12px',
             padding: '14px 18px',
-            borderBottom: '1px solid #dbdfdf',
-            backgroundColor: '#f0f6f6'
+            borderBottom: '1px solid #DCE3E8',
+            backgroundColor: '#F2F6F8'
           }}
         >
           <SearchIcon size={20} color="var(--color-primary-dark)" />
@@ -145,7 +145,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
               outline: 'none',
               fontSize: '15px',
               fontWeight: 500,
-              color: '#502419',
+              color: '#1B2A36',
               backgroundColor: 'transparent'
             }}
           />
@@ -154,9 +154,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
               padding: '2px 6px',
               fontSize: '11px',
               fontWeight: 700,
-              color: '#805c54',
+              color: '#475764',
               backgroundColor: '#ffffff',
-              border: '1px solid #dbdfdf',
+              border: '1px solid #DCE3E8',
               borderRadius: '4px'
             }}
           >
@@ -167,7 +167,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
         {/* Results List */}
         <div style={{ maxHeight: '340px', overflowY: 'auto', padding: '8px' }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#805c54', fontSize: '14px' }}>
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#475764', fontSize: '14px' }}>
               No matching pages or commands found.
             </div>
           ) : (
@@ -195,7 +195,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div
                       style={{
-                        color: isSelected ? 'var(--color-primary-dark)' : '#805c54',
+                        color: isSelected ? 'var(--color-primary-dark)' : '#475764',
                         display: 'flex',
                         alignItems: 'center'
                       }}
@@ -207,12 +207,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                         style={{
                           fontSize: '14px',
                           fontWeight: isSelected ? 700 : 500,
-                          color: isSelected ? 'var(--color-primary-dark)' : '#502419'
+                          color: isSelected ? 'var(--color-primary-dark)' : '#1B2A36'
                         }}
                       >
                         {item.label}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#805c54' }}>{item.category}</div>
+                      <div style={{ fontSize: '11px', color: '#475764' }}>{item.category}</div>
                     </div>
                   </div>
                   {isSelected && (
@@ -237,12 +237,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
           style={{
             padding: '10px 16px',
             backgroundColor: '#FAFBFB',
-            borderTop: '1px solid #dbdfdf',
+            borderTop: '1px solid #DCE3E8',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: '12px',
-            color: '#805c54'
+            color: '#475764'
           }}
         >
           <span>Use ↑ ↓ to navigate, ↵ to select</span>

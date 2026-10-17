@@ -283,7 +283,7 @@ function MainAppContent() {
 
   if (authLoading) {
     return (
-      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFF6F7', color: '#0D568D', fontWeight: 600 }}>
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2F6F8', color: '#0D568D', fontWeight: 600 }}>
         Loading GigsForGigs Workspace...
       </div>
     );

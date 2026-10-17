@@ -282,7 +282,7 @@ html {
 }
 
 .footer-links a {
-  color: #A0AEC0;
+  color: #6B7885;
 }
 
 .footer-links a:hover {
@@ -295,7 +295,7 @@ html {
   align-items: center;
   padding-top: var(--spacing-lg);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  color: #A0AEC0;
+  color: #6B7885;
   font-size: 0.875rem;
 }
 
@@ -543,7 +543,7 @@ html {
 /* Dashboard Metrics & Layouts */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xxl);
 }
@@ -1149,10 +1149,10 @@ html {
    client-dashboard.css
    Section 8 — Client & Manager Portal Styles (Figma-accurate)
    Color Palette:
-     Yale Blue   #084b83  — sidebar bg, primary dark
-     Copperwood  #bf6900  — warnings, active accents
-     Platinum    #f0f6f6  — page bg, light fills
-     Espresso    #502419  — body text
+     Yale Blue   #084875  — sidebar bg, primary dark
+     Copperwood  #9A5100  — warnings, active accents
+     Platinum    #F2F6F8  — page bg, light fills
+     Espresso    #1B2A36  — body text
      Seagrass    #519e8a  — success, CTA buttons
    ═══════════════════════════════════════════════════════════════════ */
 

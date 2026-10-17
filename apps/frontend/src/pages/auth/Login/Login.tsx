@@ -28,19 +28,21 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
 
   return (
     <div
+      className="auth-split"
       style={{
         minHeight: '100vh',
         width: '100%',
         display: 'flex',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         backgroundColor: '#FFFFFF'
       }}
     >
       {/* LEFT SIDE - Hero & Illustration */}
       <div
+        className="auth-split__hero"
         style={{
           flex: 1,
-          backgroundColor: '#0F527E',
+          backgroundColor: '#084875',
           color: '#FFFFFF',
           padding: '48px 64px',
           display: 'flex',
@@ -55,7 +57,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
           onClick={onBackToLanding}
         >
-          <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#D47700' }} />
+          <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#B45F00' }} />
           <span style={{ fontSize: '24px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.5px' }}>
             GigsForGigs
           </span>
@@ -74,11 +76,11 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
         {/* Stylized Bar Illustration at Bottom */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '20px', height: '180px', marginTop: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#A4C4D9', border: '3px solid #0F527E' }} />
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#A4C4D9', border: '3px solid #084875' }} />
             <div style={{ width: '64px', height: '110px', backgroundColor: '#6B5B3E', borderRadius: '12px 12px 0 0' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#C87D20', border: '3px solid #0F527E' }} />
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#C87D20', border: '3px solid #084875' }} />
             <div style={{ width: '64px', height: '150px', backgroundColor: '#5281A5', borderRadius: '12px 12px 0 0' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
@@ -89,6 +91,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
 
       {/* RIGHT SIDE - Login Form */}
       <div
+        className="auth-split__form"
         style={{
           flex: 1,
           backgroundColor: '#FFFFFF',
@@ -109,7 +112,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               right: '48px',
               background: 'none',
               border: 'none',
-              color: '#718096',
+              color: '#5E6E7A',
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -125,10 +128,10 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
         <div style={{ maxWidth: '420px', width: '100%', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F527E', margin: '0 0 8px 0' }}>
+            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#084875', margin: '0 0 8px 0' }}>
               Welcome back to GigsForGigs
             </h2>
-            <p style={{ fontSize: '15px', color: '#8C6A5E', margin: 0 }}>
+            <p style={{ fontSize: '15px', color: '#475764', margin: 0 }}>
               Please enter your details to sign in.
             </p>
           </div>
@@ -154,7 +157,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
 
             {/* Email Address */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '8px' }}>
                 Email address
               </label>
               <input maxLength={100}
@@ -167,7 +170,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
+                  border: '1px solid #D3DCE2',
                   fontSize: '15px',
                   color: '#2D3748',
                   backgroundColor: '#EFF6FC',
@@ -179,7 +182,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
 
             {/* Password */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '8px' }}>
                 Password
               </label>
               <input maxLength={72}
@@ -192,7 +195,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
+                  border: '1px solid #D3DCE2',
                   fontSize: '15px',
                   color: '#2D3748',
                   backgroundColor: '#EFF6FC',
@@ -204,7 +207,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
 
             {/* Options line: Remember me & Forgot Password */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#5C443A', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1B2A36', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={rememberMe}
@@ -216,7 +219,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               <a
                 href="#forgot"
                 onClick={(e) => e.preventDefault()}
-                style={{ color: '#D47700', textDecoration: 'none', fontWeight: 600 }}
+                style={{ color: '#B45F00', textDecoration: 'none', fontWeight: 600 }}
               >
                 Forgot password?
               </a>
@@ -228,7 +231,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               disabled={loading}
               style={{
                 width: '100%',
-                backgroundColor: '#0F527E',
+                backgroundColor: '#084875',
                 color: '#FFFFFF',
                 border: 'none',
                 padding: '14px',
@@ -247,7 +250,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '28px 0' }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
-            <span style={{ fontSize: '13px', color: '#9AA7AF' }}>or continue with</span>
+            <span style={{ fontSize: '13px', color: '#6B7885' }}>or continue with</span>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
           </div>
 
@@ -257,7 +260,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
             style={{
               width: '100%',
               backgroundColor: '#FFFFFF',
-              border: '1px solid #D5DDE0',
+              border: '1px solid #D3DCE2',
               padding: '12px',
               borderRadius: '8px',
               fontWeight: 600,
@@ -280,7 +283,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
           </button>
 
           {/* Footer prompt */}
-          <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '14px', color: '#5C443A' }}>
+          <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '14px', color: '#1B2A36' }}>
             Don't have an account?{' '}
             <a
               href="#signup"
@@ -288,7 +291,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                 e.preventDefault();
                 if (onNavigateToSignup) onNavigateToSignup();
               }}
-              style={{ color: '#D47700', fontWeight: 700, textDecoration: 'none' }}
+              style={{ color: '#B45F00', fontWeight: 700, textDecoration: 'none' }}
             >
               Sign up
             </a>

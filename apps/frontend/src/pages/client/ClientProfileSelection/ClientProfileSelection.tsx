@@ -73,7 +73,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', backgroundColor: '#EFF6F7' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', backgroundColor: '#F2F6F8' }}>
       {/* Header */}
       <header className="chooser-header container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 32px', width: '100%' }}>
         <a
@@ -82,7 +82,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
           className="logo"
           style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0D568D', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
         >
-          <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#D47700' }} />
+          <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#B45F00' }} />
           GigsForGigs
         </a>
       </header>
@@ -91,12 +91,12 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
         <h1 className="chooser-title" style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', color: '#0D568D', marginBottom: '8px', fontWeight: 800 }}>
           Team Profile Switcher & Manager Supervision
         </h1>
-        <p style={{ color: '#76594F', fontSize: '1.05rem', marginBottom: '40px', textAlign: 'center', maxWidth: '600px' }}>
+        <p style={{ color: '#475764', fontSize: '1.05rem', marginBottom: '40px', textAlign: 'center', maxWidth: '600px' }}>
           Select a manager profile to switch to their workspace dashboard, or manage team manager seats below.
         </p>
         
         {managers.length === 0 && (
-          <p id="first-time-profile-note" style={{ textAlign: 'center', color: '#76594F', marginBottom: '24px' }}>
+          <p id="first-time-profile-note" style={{ textAlign: 'center', color: '#475764', marginBottom: '24px' }}>
             No active manager seats yet. Click "Add Manager" below to invite your first manager.
           </p>
         )}
@@ -115,7 +115,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '12px' }}>
               <span className="avatar-name" style={{ fontSize: '1.125rem', color: '#1A202C', fontWeight: 700 }}>{user?.name || 'You'}</span>
-              <span className="avatar-role" style={{ fontSize: '0.85rem', color: '#76594F', fontWeight: 600 }}>Client Owner</span>
+              <span className="avatar-role" style={{ fontSize: '0.85rem', color: '#475764', fontWeight: 600 }}>Client Owner</span>
             </div>
           </button>
 
@@ -133,7 +133,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 backgroundColor: '#FFFFFF',
                 padding: '16px 12px',
                 borderRadius: '16px',
-                border: '1px solid #D9E0E3',
+                border: '1px solid #DCE3E8',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
                 position: 'relative'
               }}
@@ -148,7 +148,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                     width: '96px',
                     height: '96px',
                     borderRadius: '16px',
-                    backgroundColor: '#D47700',
+                    backgroundColor: '#B45F00',
                     color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
@@ -163,10 +163,10 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                   <span className="avatar-name" style={{ fontSize: '1rem', color: '#1A202C', fontWeight: 700, textAlign: 'center', wordBreak: 'break-word' }}>
                     {mgr.name}
                   </span>
-                  <span className="avatar-role" style={{ fontSize: '0.78rem', color: '#76594F', fontWeight: 600, marginTop: '2px' }}>
+                  <span className="avatar-role" style={{ fontSize: '0.78rem', color: '#475764', fontWeight: 600, marginTop: '2px' }}>
                     {mgr.kind === 'manager' ? 'Manager' : 'Manager (Invite Pending)'}
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: '#A0AEC0', marginTop: '2px' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#6B7885', marginTop: '2px' }}>
                     {mgr.email}
                   </span>
                 </div>
@@ -246,7 +246,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
               <span className="avatar-name" style={{ fontSize: '1.125rem', color: '#0D568D', fontWeight: 700 }}>
                 Add Manager
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#76594F' }}>Invite Team Member</span>
+              <span style={{ fontSize: '0.8rem', color: '#475764' }}>Invite Team Member</span>
             </div>
           </button>
 
@@ -263,7 +263,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
 
             <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                   Manager Name *
                 </label>
                 <input maxLength={100}
@@ -271,12 +271,12 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5DDE0', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D3DCE2', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                   Manager Email *
                 </label>
                 <input maxLength={100}
@@ -284,7 +284,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                   required
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5DDE0', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D3DCE2', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -292,7 +292,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 <button
                   type="button"
                   onClick={() => setEditingManager(null)}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #D5DDE0', backgroundColor: '#FFFFFF', color: '#4A5568', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #D3DCE2', backgroundColor: '#FFFFFF', color: '#4A5568', fontWeight: 600, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -308,7 +308,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
         </div>
       )}
 
-      <footer style={{ textAlign: 'center', padding: '20px', fontSize: '0.85rem', color: '#76594F' }}>
+      <footer style={{ textAlign: 'center', padding: '20px', fontSize: '0.85rem', color: '#475764' }}>
         © 2026 GigsForGigs. All Rights Reserved.
       </footer>
     </div>

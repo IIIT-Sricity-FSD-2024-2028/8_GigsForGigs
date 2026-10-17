@@ -175,7 +175,7 @@ export const PaymentsRevenue: React.FC = () => {
     },
     {
       header: 'Total Client Paid',
-      cell: (row) => <span style={{ fontWeight: 800, color: '#084b83' }}>{formatCurrency(row.totalAmount)}</span>
+      cell: (row) => <span style={{ fontWeight: 800, color: '#084875' }}>{formatCurrency(row.totalAmount)}</span>
     },
     {
       header: 'Payment Status',
@@ -230,7 +230,7 @@ export const PaymentsRevenue: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
       {/* Super Admin Financial Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--spacing-lg)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Total Client Payments"
           value={formatCurrency(totalClientPayments)}

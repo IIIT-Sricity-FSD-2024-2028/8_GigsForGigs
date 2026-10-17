@@ -101,7 +101,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
       </div>
 
       {/* Talent Grid */}
-      <div className="talent-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)' }}>
+      <div className="talent-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)' }}>
         {filteredServices.length === 0 ? (
           <p style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xxl)' }}>
             No talent listings match the selected filters.
@@ -347,8 +347,8 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
                       style={{
                         padding: '4px 10px',
                         borderRadius: '6px',
-                        backgroundColor: '#EFF6F7',
-                        color: '#084B83',
+                        backgroundColor: '#F2F6F8',
+                        color: '#084875',
                         fontWeight: 600,
                         fontSize: '0.8rem',
                         border: '1px solid #D5E5E9'
@@ -387,7 +387,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
                     padding: '10px 24px',
                     borderRadius: '8px',
                     border: 'none',
-                    backgroundColor: localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id) ? '#9E9E9E' : '#D47700',
+                    backgroundColor: localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id) ? '#9E9E9E' : '#B45F00',
                     color: '#FFFFFF',
                     fontWeight: 700,
                     cursor: localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id) ? 'not-allowed' : 'pointer'

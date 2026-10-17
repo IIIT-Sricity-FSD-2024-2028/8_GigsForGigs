@@ -109,7 +109,7 @@ export const ClientReviewModal: React.FC<ClientReviewModalProps> = ({
                   border: 'none',
                   cursor: submitting ? 'not-allowed' : 'pointer',
                   fontSize: '28px',
-                  color: star <= activeRating ? '#D47700' : '#D1D5DB',
+                  color: star <= activeRating ? '#B45F00' : '#D1D5DB',
                   padding: '2px',
                   lineHeight: 1,
                   transition: 'transform 0.1s ease, color 0.1s ease',

@@ -13,7 +13,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '12px 14px',
   borderRadius: '8px',
-  border: '1px solid #D5DDE0',
+  border: '1px solid #D3DCE2',
   fontSize: '15px',
   color: '#2D3748',
   backgroundColor: '#EFF6FC',
@@ -21,7 +21,7 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '8px' };
+const labelStyle: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '8px' };
 
 /** Activation page for the one-time link a client shares with an invited manager. */
 export const ManagerInviteSetup: React.FC<ManagerInviteSetupProps> = ({ token, onDone }) => {
@@ -58,11 +58,11 @@ export const ManagerInviteSetup: React.FC<ManagerInviteSetupProps> = ({ token, o
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFF6F7', padding: '16px' }}>
-      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #D9E0E3' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2F6F8', padding: '16px' }}>
+      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #DCE3E8' }}>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0D568D', marginBottom: '8px' }}>Activate your manager account</h1>
 
-        {!invite && !loadError && <p style={{ color: '#76594F' }}>Verifying your invite…</p>}
+        {!invite && !loadError && <p style={{ color: '#475764' }}>Verifying your invite…</p>}
 
         {loadError && (
           <>
@@ -75,7 +75,7 @@ export const ManagerInviteSetup: React.FC<ManagerInviteSetupProps> = ({ token, o
 
         {invite && (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
-            <p style={{ color: '#76594F', margin: 0 }}>
+            <p style={{ color: '#475764', margin: 0 }}>
               <strong>{invite.clientName}</strong> invited <strong>{invite.name}</strong> ({invite.email}) to manage their gigs. Choose a password to finish.
             </p>
             <div>

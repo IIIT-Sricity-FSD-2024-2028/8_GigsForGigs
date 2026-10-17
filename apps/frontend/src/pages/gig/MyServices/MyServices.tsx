@@ -83,7 +83,7 @@ export const MyServices: React.FC = () => {
       </div>
 
       {/* Services Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--spacing-lg)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         {services.map((srv) => (
           <div
             key={srv.serviceId}
@@ -92,7 +92,7 @@ export const MyServices: React.FC = () => {
               padding: 'var(--spacing-lg)',
               backgroundColor: '#FFFFFF',
               borderRadius: '12px',
-              border: '1px solid #DBDFDF',
+              border: '1px solid #DCE3E8',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',

@@ -63,7 +63,7 @@ export const TaskReviewsModal: React.FC<TaskReviewsModalProps> = ({
         </div>
 
         {/* 1. Review written by Client for Gig Pro */}
-        <div style={{ backgroundColor: '#F0F6F6', borderRadius: '12px', padding: '16px', border: '1px solid #D5DDE0' }}>
+        <div style={{ backgroundColor: '#F2F6F8', borderRadius: '12px', padding: '16px', border: '1px solid #D3DCE2' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#0D568D' }}>
@@ -74,7 +74,7 @@ export const TaskReviewsModal: React.FC<TaskReviewsModalProps> = ({
               </span>
             </div>
             {clientReview && (
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#D47700' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#B45F00' }}>
                 {'★'.repeat(clientReview.rating)}{'☆'.repeat(5 - clientReview.rating)} ({clientReview.rating}.0)
               </span>
             )}
@@ -105,7 +105,7 @@ export const TaskReviewsModal: React.FC<TaskReviewsModalProps> = ({
                     padding: '6px 12px',
                     borderRadius: '6px',
                     border: 'none',
-                    backgroundColor: '#D47700',
+                    backgroundColor: '#B45F00',
                     color: '#FFFFFF',
                     fontWeight: 700,
                     fontSize: '12px',
@@ -131,7 +131,7 @@ export const TaskReviewsModal: React.FC<TaskReviewsModalProps> = ({
               </span>
             </div>
             {gigReview && (
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#D47700' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#B45F00' }}>
                 {'★'.repeat(gigReview.rating)}{'☆'.repeat(5 - gigReview.rating)} ({gigReview.rating}.0)
               </span>
             )}

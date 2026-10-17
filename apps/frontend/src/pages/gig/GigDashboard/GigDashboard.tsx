@@ -132,7 +132,7 @@ export const GigDashboard: React.FC = () => {
         </>} />
 
       {/* ── KPI Cards Grid ────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--spacing-lg)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         {/* My Services Card */}
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('my-services')}>
           <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>

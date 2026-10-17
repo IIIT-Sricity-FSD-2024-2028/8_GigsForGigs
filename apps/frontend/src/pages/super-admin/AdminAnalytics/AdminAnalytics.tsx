@@ -156,7 +156,7 @@ export const AdminAnalytics: React.FC = () => {
       </div>
 
       {/* Analytics KPI Metric Tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--spacing-lg)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Gross Volume Velocity"
           value="₹4,28,900"

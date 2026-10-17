@@ -41,7 +41,7 @@ export const ManagerProfile: React.FC = () => {
             fontSize: '14px',
             fontWeight: 600,
             backgroundColor: msg.type === 'success' ? '#E4F2EF' : '#F8E8E8',
-            color: msg.type === 'success' ? '#438F82' : '#C94C4C'
+            color: msg.type === 'success' ? '#2E6E62' : '#C94C4C'
           }}
         >
           {msg.text}
@@ -56,7 +56,7 @@ export const ManagerProfile: React.FC = () => {
               width: '56px',
               height: '56px',
               borderRadius: '50%',
-              backgroundColor: '#D47700',
+              backgroundColor: '#B45F00',
               color: '#FFFFFF',
               fontSize: '22px',
               fontWeight: 700,
@@ -69,7 +69,7 @@ export const ManagerProfile: React.FC = () => {
           </div>
           <div>
             <h2 style={{ fontSize: '20px', color: '#0D568D', margin: 0, fontWeight: 700 }}>{name}</h2>
-            <div style={{ fontSize: '13px', color: '#76594F', marginTop: '2px' }}>
+            <div style={{ fontSize: '13px', color: '#475764', marginTop: '2px' }}>
               Associated Client: <strong>{profile?.client?.clientName || 'TechCorp Solutions'}</strong>
             </div>
           </div>

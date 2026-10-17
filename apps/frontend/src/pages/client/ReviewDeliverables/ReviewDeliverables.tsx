@@ -515,7 +515,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 </div>
 
                 {/* Submission Path / URL Artifact */}
-                <div style={{ backgroundColor: '#F0F6F6', padding: '16px', borderRadius: '8px', border: '1px solid #D5DDE0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+                <div style={{ backgroundColor: '#F2F6F8', padding: '16px', borderRadius: '8px', border: '1px solid #D3DCE2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
                   <div style={{ minWidth: 0, flex: '1 1 200px', maxWidth: '100%' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary-dark)', textTransform: 'uppercase', marginBottom: '4px' }}>
                       Submitted Resource / Artifact URL:
@@ -640,7 +640,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <button
                       type="button"
                       className="admin-btn admin-btn-primary"
-                      style={{ padding: '12px', fontSize: '0.9rem', fontWeight: 700, backgroundColor: '#55A99A' }}
+                      style={{ padding: '12px', fontSize: '0.9rem', fontWeight: 700, backgroundColor: '#367D6F' }}
                       onClick={() => {
                         setApproveApiError(null);
                         setIsApproveModalOpen(true);
@@ -679,12 +679,12 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
                 {/* Action State 3: Deliverable Approved, task in progress */}
                 {currentDeliverable?.status === 'approved' && contract.status !== 'COMPLETED' && (
-                  <div style={{ borderTop: '2px solid #55A99A', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ backgroundColor: '#E4F2EF', padding: '12px', borderRadius: '8px', border: '1px solid #55A99A' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#438F82', marginBottom: '2px' }}>
+                  <div style={{ borderTop: '2px solid #367D6F', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ backgroundColor: '#E4F2EF', padding: '12px', borderRadius: '8px', border: '1px solid #367D6F' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2E6E62', marginBottom: '2px' }}>
                         ✓ Deliverable Approved
                       </div>
-                      <div style={{ fontSize: '0.78rem', color: '#3A1F16' }}>
+                      <div style={{ fontSize: '0.78rem', color: '#1B2A36' }}>
                         {canRelease
                           ? 'All deliverables are approved. Release the payment to complete this task.'
                           : contract.payment_status === 'pending'
@@ -696,7 +696,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <button
                       type="button"
                       className="admin-btn admin-btn-primary"
-                      style={{ padding: '14px', fontSize: '1rem', fontWeight: 800, backgroundColor: '#D47700', opacity: canRelease ? 1 : 0.5 }}
+                      style={{ padding: '14px', fontSize: '1rem', fontWeight: 800, backgroundColor: '#B45F00', opacity: canRelease ? 1 : 0.5 }}
                       disabled={!canRelease}
                       onClick={() => setIsPaymentModalOpen(true)}
                     >
@@ -809,7 +809,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 12px 0' }}>
               Approve Submitted Deliverable?
             </h3>
-            <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '14px' }}>
+            <p style={{ fontSize: '14px', color: '#1B2A36', lineHeight: 1.5, marginBottom: '14px' }}>
               You are approving Deliverable #{currentDeliverable.deliverableNo} submitted by <strong>{contract.gig_pro_name}</strong> for <strong>{contract.task_title}</strong>.
             </p>
             <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: 1.4, marginBottom: '20px', backgroundColor: '#F0F9FF', padding: '10px 12px', borderRadius: '6px', border: '1px solid #BAE6FD' }}>
@@ -830,7 +830,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   }
                 }}
                 disabled={isApprovingDeliverable}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: isApprovingDeliverable ? 'not-allowed' : 'pointer' }}
+                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: isApprovingDeliverable ? 'not-allowed' : 'pointer' }}
               >
                 Cancel
               </button>
@@ -842,7 +842,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   padding: '10px 20px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: '#55A99A',
+                  backgroundColor: '#367D6F',
                   color: '#FFFFFF',
                   fontWeight: 700,
                   cursor: isApprovingDeliverable ? 'not-allowed' : 'pointer',
@@ -865,7 +865,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             onSubmit={handleConfirmRequestChanges}
             style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '32px', maxWidth: '480px', width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
           >
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#3A1F16', margin: '0 0 8px 0' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1B2A36', margin: '0 0 8px 0' }}>
               Request Changes / Revisions
             </h3>
             <div style={{ fontSize: '13px', fontWeight: 600, color: '#0D568D', marginBottom: '8px' }}>
@@ -873,7 +873,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               {currentDeliverable.claimedDefinitions && currentDeliverable.claimedDefinitions.length > 0 &&
                 ` (${currentDeliverable.claimedDefinitions.map(d => d.title).join(', ')})`}
             </div>
-            <p style={{ fontSize: '13px', color: '#76594F', marginBottom: '16px', lineHeight: 1.4 }}>
+            <p style={{ fontSize: '13px', color: '#475764', marginBottom: '16px', lineHeight: 1.4 }}>
               Provide specific revision feedback for <strong>{contract.gig_pro_name}</strong>. The deliverable will be marked for revision and payment remains on hold.
             </p>
 
@@ -906,7 +906,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   width: '100%',
                   padding: '10px',
                   borderRadius: '6px',
-                  border: revisionFieldError ? '1px solid #c5221f' : '1px solid #D5DDE0',
+                  border: revisionFieldError ? '1px solid #c5221f' : '1px solid #D3DCE2',
                   fontSize: '13px',
                   boxSizing: 'border-box',
                 }}
@@ -929,7 +929,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   }
                 }}
                 disabled={isSubmittingRevision}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: isSubmittingRevision ? 'not-allowed' : 'pointer' }}
+                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: isSubmittingRevision ? 'not-allowed' : 'pointer' }}
               >
                 Cancel
               </button>
@@ -940,7 +940,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   padding: '10px 20px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: '#D47700',
+                  backgroundColor: '#B45F00',
                   color: '#FFFFFF',
                   fontWeight: 700,
                   cursor: isSubmittingRevision ? 'not-allowed' : 'pointer',
@@ -963,10 +963,10 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 12px 0' }}>
               Release Payment
             </h3>
-            <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '20px' }}>
+            <p style={{ fontSize: '14px', color: '#1B2A36', lineHeight: 1.5, marginBottom: '20px' }}>
               Releasing payment for <strong>{contract.task_title}</strong>:
             </p>
-            <div style={{ backgroundColor: '#F0F6F6', borderRadius: '8px', padding: '16px', marginBottom: '20px', fontSize: '13px' }}>
+            <div style={{ backgroundColor: '#F2F6F8', borderRadius: '8px', padding: '16px', marginBottom: '20px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span>Gig Professional ({contract.gig_pro_name}):</span>
                 <strong>{formatCurrency(gigAmount)}</strong>
@@ -975,7 +975,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 <span>Platform Fee (10%):</span>
                 <strong>{formatCurrency(platformFee)}</strong>
               </div>
-              <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
+              <div style={{ borderTop: '1px solid #DCE3E8', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
                 <span>Total you paid:</span>
                 <span style={{ color: '#0D568D' }}>{formatCurrency(totalAmount)}</span>
               </div>
@@ -984,14 +984,14 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               <button
                 type="button"
                 onClick={() => setIsPaymentModalOpen(false)}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleProcessPayment}
-                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#D47700', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#B45F00', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
               >
                 Release {formatCurrency(gigAmount)}
               </button>

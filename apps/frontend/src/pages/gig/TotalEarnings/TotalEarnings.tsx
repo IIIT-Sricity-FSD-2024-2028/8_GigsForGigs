@@ -86,7 +86,7 @@ export const TotalEarnings: React.FC = () => {
         </div>
         <button
           className="admin-btn"
-          style={{ padding: '0.8rem 1.6rem', fontSize: 'var(--font-size-base)', backgroundColor: '#D47700', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+          style={{ padding: '0.8rem 1.6rem', fontSize: 'var(--font-size-base)', backgroundColor: '#B45F00', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
           disabled={withdrawing}
           onClick={handleWithdraw}
         >
@@ -95,12 +95,12 @@ export const TotalEarnings: React.FC = () => {
       </div>
 
       {/* Summary Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--spacing-lg)' }}>
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DBDFDF' }}>
-          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#805C54', textTransform: 'uppercase' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DCE3E8' }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#475764', textTransform: 'uppercase' }}>
             Available Earnings
           </span>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#084b83', margin: '6px 0' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#084875', margin: '6px 0' }}>
             {formatCurrency(earnings.totalEarnings)}
           </div>
           <span style={{ fontSize: 'var(--font-size-xs)', color: '#137333', fontWeight: 600 }}>
@@ -108,11 +108,11 @@ export const TotalEarnings: React.FC = () => {
           </span>
         </div>
 
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DBDFDF' }}>
-          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#805C54', textTransform: 'uppercase' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DCE3E8' }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#475764', textTransform: 'uppercase' }}>
             Pending Payments
           </span>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#bf6900', margin: '6px 0' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#9A5100', margin: '6px 0' }}>
             {formatCurrency(pendingTotal)}
           </div>
           <span style={{ fontSize: 'var(--font-size-xs)', color: '#1a73e8', fontWeight: 600 }}>
@@ -120,20 +120,20 @@ export const TotalEarnings: React.FC = () => {
           </span>
         </div>
 
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DBDFDF' }}>
-          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#805C54', textTransform: 'uppercase' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DCE3E8' }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#475764', textTransform: 'uppercase' }}>
             Failed Payments
           </span>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#9B1C1C', margin: '6px 0' }}>
             {formatCurrency(failedTotal)}
           </div>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: '#805C54', fontWeight: 600 }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: '#475764', fontWeight: 600 }}>
             Did Not Process
           </span>
         </div>
 
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DBDFDF' }}>
-          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#805C54', textTransform: 'uppercase' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DCE3E8' }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#475764', textTransform: 'uppercase' }}>
             Completed Tasks
           </span>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#137333', margin: '6px 0' }}>
@@ -151,34 +151,34 @@ export const TotalEarnings: React.FC = () => {
       </div>
 
       {/* Payouts Ledger Table */}
-      <div className="admin-card" style={{ padding: 'var(--spacing-xl)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DBDFDF', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: '#084b83' }}>
+      <div className="admin-card" style={{ padding: 'var(--spacing-xl)', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #DCE3E8', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+        <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: '#084875' }}>
           Project Payout Ledger
         </h2>
 
         {earnings.payments.length === 0 ? (
-          <div style={{ padding: 'var(--spacing-xl)', textAlign: 'center', color: '#805C54' }}>
+          <div style={{ padding: 'var(--spacing-xl)', textAlign: 'center', color: '#475764' }}>
             No payment records associated with your profile yet.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-sm)' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid #DBDFDF', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px', color: '#805C54' }}>Task Title</th>
-                  <th style={{ padding: '12px 16px', color: '#805C54' }}>Client Name</th>
-                  <th style={{ padding: '12px 16px', color: '#805C54', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '12px 16px', color: '#805C54', textAlign: 'center' }}>Payment Status</th>
+                <tr style={{ borderBottom: '2px solid #DCE3E8', textAlign: 'left' }}>
+                  <th style={{ padding: '12px 16px', color: '#475764' }}>Task Title</th>
+                  <th style={{ padding: '12px 16px', color: '#475764' }}>Client Name</th>
+                  <th style={{ padding: '12px 16px', color: '#475764', textAlign: 'right' }}>Amount</th>
+                  <th style={{ padding: '12px 16px', color: '#475764', textAlign: 'center' }}>Payment Status</th>
                 </tr>
               </thead>
               <tbody>
                 {earnings.payments.map((p) => (
-                  <tr key={p.paymentId} style={{ borderBottom: '1px solid #DBDFDF' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#502419' }}>
+                  <tr key={p.paymentId} style={{ borderBottom: '1px solid #DCE3E8' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1B2A36' }}>
                       {p.task?.title || 'Untitled Task'}
-                      <div style={{ fontSize: '11px', color: '#805C54', fontFamily: 'monospace' }}>PAY-{p.paymentId}</div>
+                      <div style={{ fontSize: '11px', color: '#475764', fontFamily: 'monospace' }}>PAY-{p.paymentId}</div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#502419' }}>
+                    <td style={{ padding: '12px 16px', color: '#1B2A36' }}>
                       {p.task?.client?.clientName || 'Client'}
                     </td>
                     <td style={{ padding: '12px 16px', fontWeight: 800, color: '#137333', textAlign: 'right' }}>

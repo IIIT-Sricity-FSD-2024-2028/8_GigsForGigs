@@ -115,7 +115,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#EFF6F7',
+        backgroundColor: '#F2F6F8',
         padding: '24px',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
       }}
@@ -127,17 +127,17 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
           backgroundColor: '#FFFFFF',
           borderRadius: '16px',
           boxShadow: '0 10px 30px rgba(8, 75, 131, 0.12)',
-          border: '1px solid #DBDFDF',
+          border: '1px solid #DCE3E8',
           overflow: 'hidden'
         }}
       >
         {/* Header */}
         <div
           style={{
-            backgroundColor: '#084b83',
+            backgroundColor: '#084875',
             color: '#FFFFFF',
             padding: '28px 32px',
-            borderBottom: '4px solid #bf6900'
+            borderBottom: '4px solid #9A5100'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
@@ -146,7 +146,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
               GigsForGigs Administrative Onboarding
             </h1>
           </div>
-          <p style={{ margin: 0, fontSize: '13px', opacity: 0.9, color: '#F0F6F6' }}>
+          <p style={{ margin: 0, fontSize: '13px', opacity: 0.9, color: '#F2F6F8' }}>
             Cryptographic one-time seat provisioning & credential security initialization
           </p>
         </div>

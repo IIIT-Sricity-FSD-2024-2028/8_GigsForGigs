@@ -248,7 +248,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                           style={{
                             fontSize: '13px',
                             color: '#0D568D',
-                            background: '#EFF6F7',
+                            background: '#F2F6F8',
                             border: '1px solid #0D568D',
                             padding: '6px 14px',
                             borderRadius: '4px',
@@ -270,7 +270,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                           style={{
                             fontSize: '13px',
                             color: '#0D568D',
-                            background: '#EFF6F7',
+                            background: '#F2F6F8',
                             border: '1px solid #0D568D',
                             padding: '6px 14px',
                             borderRadius: '4px',
@@ -364,11 +364,11 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 8px 0' }}>
               {selectedTaskPayment.task_title}
             </h3>
-            <p style={{ fontSize: '13px', color: '#502419', marginBottom: '16px' }}>
+            <p style={{ fontSize: '13px', color: '#1B2A36', marginBottom: '16px' }}>
               Gig Professional: <strong>{selectedTaskPayment.gig_pro_name}</strong>
             </p>
 
-            <div style={{ backgroundColor: '#F0F6F6', borderRadius: '8px', padding: '16px', marginBottom: '16px', fontSize: '13px' }}>
+            <div style={{ backgroundColor: '#F2F6F8', borderRadius: '8px', padding: '16px', marginBottom: '16px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span>Agreed Project Amount:</span>
                 <strong>{formatCurrency(selectedTaskPayment.budget)}</strong>
@@ -377,13 +377,13 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 <span>Platform Fee (10%):</span>
                 <strong>{formatCurrency(selectedTaskPayment.platform_fee)}</strong>
               </div>
-              <div style={{ borderTop: '1px solid #DBDFDF', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
+              <div style={{ borderTop: '1px solid #DCE3E8', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>
                 <span>Total Payment:</span>
                 <span style={{ color: '#0D568D' }}>{formatCurrency(selectedTaskPayment.total_amount)}</span>
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px', fontSize: '13px', color: '#502419' }}>
+            <div style={{ marginBottom: '20px', fontSize: '13px', color: '#1B2A36' }}>
               <div style={{ fontWeight: 600, marginBottom: '4px' }}>Payment Status:</div>
               {selectedTaskPayment.payment_status && (
                 <span style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, backgroundColor: PAYMENT_STATUS_UI[selectedTaskPayment.payment_status].bg, color: PAYMENT_STATUS_UI[selectedTaskPayment.payment_status].fg }}>
@@ -393,7 +393,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
             </div>
 
             {selectedTaskPayment.payment_status === 'held' && selectedTaskPayment.status === 'IN_PROGRESS' && (
-              <div style={{ marginBottom: '20px', fontSize: '13px', color: '#502419' }}>
+              <div style={{ marginBottom: '20px', fontSize: '13px', color: '#1B2A36' }}>
                 <label htmlFor="task-manager" style={{ display: 'block', fontWeight: 600, marginBottom: '4px' }}>Managed by:</label>
                 <select
                   id="task-manager"
@@ -419,13 +419,13 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                     <option key={m.invite_id} value={m.invite_id}>{m.name || m.email}</option>
                   ))}
                 </select>
-                <p style={{ fontSize: '12px', color: '#805C54', margin: '4px 0 0' }}>
+                <p style={{ fontSize: '12px', color: '#475764', margin: '4px 0 0' }}>
                   The manager can define and review deliverables. Only you can release payment.
                 </p>
               </div>
             )}
 
-            <p style={{ fontSize: '12px', color: '#805C54', marginBottom: '20px', lineHeight: 1.4 }}>
+            <p style={{ fontSize: '12px', color: '#475764', marginBottom: '20px', lineHeight: 1.4 }}>
               "Deliverables must be reviewed and approved before payment authorization is enabled."
             </p>
 
@@ -435,7 +435,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               <button
                 type="button"
                 onClick={() => setSelectedTaskPayment(null)}
-                style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #DBDFDF', backgroundColor: '#FFFFFF', color: '#502419', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: 'pointer' }}
               >
                 Close
               </button>

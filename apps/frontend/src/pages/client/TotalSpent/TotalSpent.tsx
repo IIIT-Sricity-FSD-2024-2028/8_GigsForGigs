@@ -152,7 +152,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
       label = 'Refunded';
     } else if (status === 'PENDING') {
       bg = '#FFF0E6';
-      color = '#D47700';
+      color = '#B45F00';
       border = '#FFE0B2';
       label = 'Payment Required';
     } else if (status === 'FAILED') {
@@ -192,7 +192,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
         className="spent-layout"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
           gap: 'var(--spacing-lg)',
           marginBottom: 'var(--spacing-xl)',
           width: '100%',
@@ -315,9 +315,9 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
               after you inspect and approve the completed deliverable.
             </p>
           </div>
-          <div style={{ backgroundColor: '#F0F6F6', borderRadius: '8px', padding: '12px', fontSize: '0.82rem' }}>
+          <div style={{ backgroundColor: '#F2F6F8', borderRadius: '8px', padding: '12px', fontSize: '0.82rem' }}>
             <div style={{ fontWeight: 600, color: '#0D568D', marginBottom: '4px' }}>Payment Calculation Rule:</div>
-            <div style={{ color: '#502419' }}>
+            <div style={{ color: '#1B2A36' }}>
               Total Payable = Gig Agreed Amount + 10% Platform Fee
             </div>
           </div>
@@ -447,7 +447,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                   style={{
                     border: 'none',
                     background: 'none',
-                    color: '#084B83',
+                    color: '#084875',
                     fontSize: '0.82rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -509,9 +509,9 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                           marginTop: '8px',
                           padding: '8px 16px',
                           borderRadius: '6px',
-                          border: '1px solid #084B83',
+                          border: '1px solid #084875',
                           backgroundColor: '#FFFFFF',
-                          color: '#084B83',
+                          color: '#084875',
                           fontWeight: 600,
                           fontSize: '0.85rem',
                           cursor: 'pointer'
@@ -554,7 +554,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                           padding: '6px 14px',
                           borderRadius: '6px',
                           border: 'none',
-                          backgroundColor: '#084B83',
+                          backgroundColor: '#084875',
                           color: '#FFFFFF',
                           fontWeight: 600,
                           fontSize: '0.8rem',
@@ -599,7 +599,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                             height: '28px',
                             borderRadius: '50%',
                             backgroundColor: '#EBF4F6',
-                            color: '#084B83',
+                            color: '#084875',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -655,7 +655,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                             padding: '6px 14px',
                             borderRadius: '6px',
                             border: 'none',
-                            backgroundColor: '#D47700',
+                            backgroundColor: '#B45F00',
                             color: '#FFFFFF',
                             fontWeight: 700,
                             fontSize: '12px',
@@ -746,13 +746,13 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0D568D', margin: '0 0 12px 0' }}>
               Confirm Payment to Escrow
             </h3>
-            <p style={{ fontSize: '14px', color: '#502419', lineHeight: 1.5, marginBottom: '16px' }}>
+            <p style={{ fontSize: '14px', color: '#1B2A36', lineHeight: 1.5, marginBottom: '16px' }}>
               You are funding the task <strong>{payingPayment.taskTitle}</strong> assigned to{' '}
               <strong>{payingPayment.gigProName}</strong>.
             </p>
             <div
               style={{
-                backgroundColor: '#F0F6F6',
+                backgroundColor: '#F2F6F8',
                 borderRadius: '8px',
                 padding: '16px',
                 marginBottom: '16px',
@@ -769,7 +769,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
               </div>
               <div
                 style={{
-                  borderTop: '1px solid #DBDFDF',
+                  borderTop: '1px solid #DCE3E8',
                   paddingTop: '6px',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -781,7 +781,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                 <span style={{ color: '#0D568D' }}>{formatCurrency(payingPayment.totalAmount)}</span>
               </div>
             </div>
-            <p style={{ fontSize: '12px', color: '#805C54', marginBottom: '20px', fontStyle: 'italic' }}>
+            <p style={{ fontSize: '12px', color: '#475764', marginBottom: '20px', fontStyle: 'italic' }}>
               🛡️ Your payment will be securely held by the platform until the work is completed and approved.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -791,9 +791,9 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                 style={{
                   padding: '10px 16px',
                   borderRadius: '8px',
-                  border: '1px solid #DBDFDF',
+                  border: '1px solid #DCE3E8',
                   backgroundColor: '#FFFFFF',
-                  color: '#502419',
+                  color: '#1B2A36',
                   fontWeight: 600,
                   cursor: 'pointer'
                 }}
@@ -807,7 +807,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                   padding: '10px 20px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: '#D47700',
+                  backgroundColor: '#B45F00',
                   color: '#FFFFFF',
                   fontWeight: 700,
                   cursor: 'pointer'

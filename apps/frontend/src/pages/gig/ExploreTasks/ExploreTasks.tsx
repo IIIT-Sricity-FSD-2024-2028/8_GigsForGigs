@@ -94,7 +94,7 @@ export const ExploreTasks: React.FC = () => {
       {filteredTasks.length === 0 ? (
         <EmptyState title="No marketplace tasks found" description="Try broadening your keywords." />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--spacing-xl)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-xl)' }}>
           {filteredTasks.map((task) => {
             const isApplied = appliedTaskIds.includes(String(task.taskId));
             const isSubmitting = applyingId === task.taskId;

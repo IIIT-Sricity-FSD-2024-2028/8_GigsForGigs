@@ -132,7 +132,7 @@ export const CompletedProjects: React.FC = () => {
           No completed projects found in your portfolio yet.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 'var(--spacing-xl)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))', gap: 'var(--spacing-xl)' }}>
           {projects.map((proj) => {
             const reviews = proj.reviews || [];
 
@@ -192,7 +192,7 @@ export const CompletedProjects: React.FC = () => {
                           Client Review ({clientReview?.reviewerName || proj.client?.clientName || 'Client'})
                         </span>
                         {clientReview && (
-                          <span style={{ color: '#D47700', fontSize: '0.85rem', fontWeight: 700 }}>
+                          <span style={{ color: '#B45F00', fontSize: '0.85rem', fontWeight: 700 }}>
                             {'★'.repeat(clientReview.rating)}{'☆'.repeat(5 - clientReview.rating)} ({clientReview.rating}.0)
                           </span>
                         )}
@@ -229,7 +229,7 @@ export const CompletedProjects: React.FC = () => {
                           Your Review of Client
                         </span>
                         {myReview && (
-                          <span style={{ color: '#D47700', fontSize: '0.85rem', fontWeight: 700 }}>
+                          <span style={{ color: '#B45F00', fontSize: '0.85rem', fontWeight: 700 }}>
                             {'★'.repeat(myReview.rating)}{'☆'.repeat(5 - myReview.rating)} ({myReview.rating}.0)
                           </span>
                         )}

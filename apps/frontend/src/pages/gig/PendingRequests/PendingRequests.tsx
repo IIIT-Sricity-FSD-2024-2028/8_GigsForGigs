@@ -103,7 +103,7 @@ export const PendingRequests: React.FC = () => {
           No pending client requests at this moment.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 'var(--spacing-xl)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))', gap: 'var(--spacing-xl)' }}>
           {requests.map((req) => {
             const isProcessing = processingId === req.applicationId;
 

@@ -62,7 +62,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             success: { bg: '#ffffff', border: '#137333', icon: '#137333', text: '#137333', badge: '#e6f4ea' },
             error: { bg: '#ffffff', border: '#c5221f', icon: '#c5221f', text: '#c5221f', badge: '#fce8e6' },
             warning: { bg: '#ffffff', border: '#b06000', icon: '#b06000', text: '#b06000', badge: '#fef7e0' },
-            info: { bg: '#ffffff', border: '#084b83', icon: '#084b83', text: '#084b83', badge: '#EFF6FC' }
+            info: { bg: '#ffffff', border: '#084875', icon: '#084875', text: '#084875', badge: '#EFF6FC' }
           }[t.type];
 
           return (
@@ -104,9 +104,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 {t.type === 'info' && 'i'}
               </div>
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ fontWeight: 700, fontSize: '14px', color: '#502419' }}>{t.title}</div>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: '#1B2A36' }}>{t.title}</div>
                 {t.message && (
-                  <div style={{ fontSize: '12px', color: '#805c54', marginTop: '2px', lineHeight: '1.4' }}>
+                  <div style={{ fontSize: '12px', color: '#475764', marginTop: '2px', lineHeight: '1.4' }}>
                     {t.message}
                   </div>
                 )}
@@ -116,7 +116,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#805c54',
+                  color: '#475764',
                   cursor: 'pointer',
                   fontSize: '14px',
                   padding: '2px',

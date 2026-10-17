@@ -52,16 +52,18 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
 
   return (
     <div
+      className="auth-split"
       style={{
         minHeight: '100vh',
         width: '100%',
         display: 'flex',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         backgroundColor: '#FFFFFF'
       }}
     >
       {/* LEFT SIDE - Light Hero Section */}
       <div
+        className="auth-split__hero"
         style={{
           flex: 1,
           backgroundColor: '#F4F8FA',
@@ -79,31 +81,32 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
           onClick={onBackToLanding}
         >
-          <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#D47700' }} />
-          <span style={{ fontSize: '24px', fontWeight: 700, color: '#D47700', letterSpacing: '-0.5px' }}>
+          <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#B45F00' }} />
+          <span style={{ fontSize: '24px', fontWeight: 700, color: '#B45F00', letterSpacing: '-0.5px' }}>
             GigsForGigs
           </span>
         </div>
 
         {/* Hero Text Content */}
         <div style={{ maxWidth: '440px', marginTop: '60px', marginBottom: '60px' }}>
-          <h1 style={{ fontSize: '42px', fontWeight: 800, color: '#0F527E', lineHeight: 1.2, marginBottom: '20px', letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: '42px', fontWeight: 800, color: '#084875', lineHeight: 1.2, marginBottom: '20px', letterSpacing: '-0.5px' }}>
             Empowering Global Creativity
           </h1>
-          <p style={{ fontSize: '18px', color: '#8C6A5E', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: '18px', color: '#475764', lineHeight: 1.6, margin: 0 }}>
             Join thousands of professionals finding their next big opportunity. Post tasks, find work, and collaborate globally.
           </p>
         </div>
 
         {/* Subtle Arc Graphic Illustration */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', height: '180px', position: 'relative' }}>
-          <div style={{ width: '220px', height: '220px', borderRadius: '50%', border: '2px dashed #0F527E', opacity: 0.2, position: 'absolute', bottom: '-80px' }} />
+          <div style={{ width: '220px', height: '220px', borderRadius: '50%', border: '2px dashed #084875', opacity: 0.2, position: 'absolute', bottom: '-80px' }} />
           <div style={{ width: '140px', height: '140px', borderRadius: '50%', backgroundColor: '#E2EEF5', opacity: 0.6, position: 'absolute', bottom: '-40px', left: '20%' }} />
         </div>
       </div>
 
       {/* RIGHT SIDE - Signup Form */}
       <div
+        className="auth-split__form"
         style={{
           flex: 1,
           backgroundColor: '#FFFFFF',
@@ -124,7 +127,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               right: '48px',
               background: 'none',
               border: 'none',
-              color: '#718096',
+              color: '#5E6E7A',
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -140,10 +143,10 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
         <div style={{ maxWidth: '420px', width: '100%', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F527E', margin: '0 0 6px 0' }}>
+            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#084875', margin: '0 0 6px 0' }}>
               Create your GigsForGigs account
             </h2>
-            <p style={{ fontSize: '15px', color: '#8C6A5E', margin: 0 }}>
+            <p style={{ fontSize: '15px', color: '#475764', margin: 0 }}>
               Start your journey with us today.
             </p>
           </div>
@@ -167,7 +170,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Sign up as Dropdown */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Sign up as
               </label>
               <select
@@ -177,7 +180,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
+                  border: '1px solid #D3DCE2',
                   fontSize: '15px',
                   color: '#2D3748',
                   backgroundColor: '#FFFFFF',
@@ -193,7 +196,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
 
             {/* Full Name */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Full Name
               </label>
               <input maxLength={100}
@@ -206,7 +209,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
+                  border: '1px solid #D3DCE2',
                   fontSize: '15px',
                   color: '#2D3748',
                   backgroundColor: '#FFFFFF',
@@ -218,7 +221,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
 
             {/* Email Address */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Email address
               </label>
               <input maxLength={100}
@@ -231,7 +234,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
+                  border: '1px solid #D3DCE2',
                   fontSize: '15px',
                   color: '#2D3748',
                   backgroundColor: '#FFFFFF',
@@ -243,7 +246,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
 
             {/* Password */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Password
               </label>
               <input maxLength={72}
@@ -256,7 +259,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
+                  border: '1px solid #D3DCE2',
                   fontSize: '15px',
                   color: '#2D3748',
                   backgroundColor: '#FFFFFF',
@@ -268,7 +271,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
 
             {/* Confirm Password */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3A1F16', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Confirm Password
               </label>
               <input maxLength={72}
@@ -281,7 +284,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #D5DDE0',
+                  border: '1px solid #D3DCE2',
                   fontSize: '15px',
                   color: '#2D3748',
                   backgroundColor: '#FFFFFF',
@@ -297,7 +300,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               disabled={loading}
               style={{
                 width: '100%',
-                backgroundColor: '#0F527E',
+                backgroundColor: '#084875',
                 color: '#FFFFFF',
                 border: 'none',
                 padding: '14px',
@@ -316,12 +319,12 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
-            <span style={{ fontSize: '13px', color: '#9AA7AF' }}>or continue with</span>
+            <span style={{ fontSize: '13px', color: '#6B7885' }}>or continue with</span>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
           </div>
 
           {/* Footer Link */}
-          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '14px', color: '#5C443A' }}>
+          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '14px', color: '#1B2A36' }}>
             Already have an account?{' '}
             <a
               href="#login"
@@ -329,7 +332,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
                 e.preventDefault();
                 if (onNavigateToLogin) onNavigateToLogin();
               }}
-              style={{ color: '#D47700', fontWeight: 700, textDecoration: 'none' }}
+              style={{ color: '#B45F00', fontWeight: 700, textDecoration: 'none' }}
             >
               Log in
             </a>

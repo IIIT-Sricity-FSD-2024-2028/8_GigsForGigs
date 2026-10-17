@@ -70,7 +70,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
           }}
         >
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#084B83' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#084875' }}>
               Filtered by Task:
             </span>
             <div style={{ fontWeight: 700, color: 'var(--color-text-dark)', fontSize: '1rem' }}>
