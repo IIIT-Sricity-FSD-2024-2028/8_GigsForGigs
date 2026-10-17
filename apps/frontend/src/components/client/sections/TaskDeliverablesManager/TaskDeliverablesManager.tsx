@@ -8,7 +8,10 @@ import { TextArea } from '../../../common/TextArea';
 import { ApiError } from '../../../../services/api/httpClient';
 import { clientApi, type TaskDeliverableDefinition } from '../../../../services/api/client/clientApi';
 
-export interface TaskDeliverablesManagerProps { taskId: number; readOnly?: boolean; }
+type DefinitionsApi = Pick<typeof clientApi, 'getTaskDeliverableDefinitions' | 'createTaskDeliverableDefinition' | 'updateTaskDeliverableDefinition' | 'deleteTaskDeliverableDefinition'>;
+
+/** `api` defaults to the client's endpoints; the manager view passes managerApi. */
+export interface TaskDeliverablesManagerProps { taskId: number; readOnly?: boolean; api?: DefinitionsApi; }
 
 function submissionBadge(definition: TaskDeliverableDefinition) {
   const latest = definition.submissions[0];
@@ -19,7 +22,7 @@ function submissionBadge(definition: TaskDeliverableDefinition) {
   return { label: 'Pending review', variant: 'pending' as const };
 }
 
-export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = ({ taskId, readOnly = false }) => {
+export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = ({ taskId, readOnly = false, api = clientApi }) => {
   const [definitions, setDefinitions] = useState<TaskDeliverableDefinition[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -33,7 +36,7 @@ export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = (
 
   useEffect(() => {
     let mounted = true;
-    clientApi.getTaskDeliverableDefinitions(taskId)
+    api.getTaskDeliverableDefinitions(taskId)
       .then(items => {
         if (!mounted) return;
         setDefinitions(items);
@@ -46,7 +49,7 @@ export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = (
       })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
-  }, [taskId]);
+  }, [taskId, api]);
 
   const addDefinition = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -57,7 +60,7 @@ export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = (
     setSaving(true);
     setFeedback(null);
     try {
-      const created = await clientApi.createTaskDeliverableDefinition(taskId, { title: cleanTitle, description: description.trim() || undefined });
+      const created = await api.createTaskDeliverableDefinition(taskId, { title: cleanTitle, description: description.trim() || undefined });
       setDefinitions(previous => [...previous, created]);
       setTitle('');
       setDescription('');
@@ -76,7 +79,7 @@ export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = (
     setSaving(true);
     setFeedback(null);
     try {
-      const updated = await clientApi.updateTaskDeliverableDefinition(taskId, definitionId, { title: cleanTitle, description: editDescription.trim() });
+      const updated = await api.updateTaskDeliverableDefinition(taskId, definitionId, { title: cleanTitle, description: editDescription.trim() });
       setDefinitions(previous => previous.map(item => item.definitionId === definitionId ? updated : item));
       setEditingId(null);
       setFeedback({ kind: 'success', message: 'Deliverable updated.' });
@@ -92,7 +95,7 @@ export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = (
     setSaving(true);
     setFeedback(null);
     try {
-      await clientApi.deleteTaskDeliverableDefinition(taskId, definitionId);
+      await api.deleteTaskDeliverableDefinition(taskId, definitionId);
       setDefinitions(previous => previous.filter(item => item.definitionId !== definitionId));
       setFeedback({ kind: 'success', message: 'Deliverable removed.' });
     } catch (error) {

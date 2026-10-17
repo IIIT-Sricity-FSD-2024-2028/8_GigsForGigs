@@ -5,7 +5,7 @@ const inr = (val: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
 /** Simulated checkout: the client pays gig amount + platform fee into escrow after hiring. */
-export const FundTaskCard: React.FC<{ contract: Contract }> = ({ contract }) => {
+export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }> = ({ contract, onPaid }) => {
   const { payTask } = useClient();
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
@@ -15,6 +15,7 @@ export const FundTaskCard: React.FC<{ contract: Contract }> = ({ contract }) => 
     setError('');
     try {
       await payTask(contract.task_id);
+      onPaid?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed. Please try again.');
       setPaying(false);

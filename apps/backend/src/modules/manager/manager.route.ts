@@ -10,6 +10,8 @@ import {
   updateManagerSchema,
 } from "./manager.dto.js";
 import * as managerController from "./manager.controller.js";
+import * as clientController from "../client/client.controller.js";
+import { createTaskDeliverableDefinitionSchema, updateTaskDeliverableDefinitionSchema } from "../client/client.dto.js";
 
 export const managerRouter = Router();
 
@@ -97,6 +99,14 @@ managerRouter.patch(
   taskAccessGuard,
   managerController.closeDeliverable,
 );
+
+// Deliverable definitions (scope items) on an assigned task — same handlers
+// and rules as the client's routes; taskAccessGuard restricts to assigned tasks.
+const definitionsPath = "/managers/me/tasks/:taskId/deliverable-definitions";
+managerRouter.get(definitionsPath, managerOnly, taskAccessGuard, clientController.listTaskDeliverableDefinitions);
+managerRouter.post(definitionsPath, managerOnly, taskAccessGuard, validate(createTaskDeliverableDefinitionSchema), clientController.createTaskDeliverableDefinition);
+managerRouter.patch(`${definitionsPath}/:definitionId`, managerOnly, taskAccessGuard, validate(updateTaskDeliverableDefinitionSchema), clientController.updateTaskDeliverableDefinition);
+managerRouter.delete(`${definitionsPath}/:definitionId`, managerOnly, taskAccessGuard, clientController.deleteTaskDeliverableDefinition);
 
 // Search gig professionals available to assign to a task.
 // managerApi.ts calls this with a MANAGER token even though the path lives

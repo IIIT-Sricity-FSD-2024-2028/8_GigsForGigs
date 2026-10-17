@@ -9,13 +9,18 @@ import type {
   CreateTaskDto,
   CreateTaskDeliverableDefinitionDto,
   ReviewDeliverableAsClientDto,
+  SetTaskManagerDto,
   UpdateApplicationDto,
   UpdateClientProfileDto,
   UpdateTaskDto,
   UpdateTaskDeliverableDefinitionDto,
 } from "./client.dto.js";
 
-/** Safe past roleGuard('client'), which every route in this module sits behind. */
+/**
+ * Safe past roleGuard('client'), which every route in this module sits behind.
+ * The deliverable-definition handlers are also mounted on manager routes
+ * (behind taskAccessGuard); a manager token carries its client's clientId too.
+ */
 function requireClientId(req: Request): number {
   return (req.user as ClientTokenPayload).clientId;
 }
@@ -86,6 +91,12 @@ export async function listTaskDeliverables(req: Request, res: Response): Promise
   const taskId = Number(req.params.taskId);
   const deliverables = await clientService.listTaskDeliverables(taskId);
   res.status(200).json(deliverables);
+}
+
+export async function setTaskManager(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<SetTaskManagerDto>(res, "body");
+  const result = await clientService.setTaskManager(Number(req.params.taskId), requireClientId(req), dto.managerId);
+  res.status(200).json(result);
 }
 
 export async function listTaskDeliverableDefinitions(req: Request, res: Response): Promise<void> {

@@ -16,6 +16,7 @@ import type {
   ShortlistApplicationDto,
   UpdateManagerProfileDto
 } from '../../../types/manager';
+import type { TaskDeliverableDefinition } from '../client/clientApi';
 
 const actor = 'manager' as const;
 
@@ -62,6 +63,19 @@ export const managerApi = {
       actor
     });
   },
+
+  // Deliverable definitions on an assigned task — same shape as clientApi's, for TaskDeliverablesManager.
+  getTaskDeliverableDefinitions: async (taskId: number): Promise<TaskDeliverableDefinition[]> =>
+    apiFetch<TaskDeliverableDefinition[]>(`/managers/me/tasks/${taskId}/deliverable-definitions`, { actor }),
+
+  createTaskDeliverableDefinition: async (taskId: number, values: { title: string; description?: string }): Promise<TaskDeliverableDefinition> =>
+    apiFetch<TaskDeliverableDefinition>(`/managers/me/tasks/${taskId}/deliverable-definitions`, { method: 'POST', body: values, actor }),
+
+  updateTaskDeliverableDefinition: async (taskId: number, definitionId: number, values: { title?: string; description?: string }): Promise<TaskDeliverableDefinition> =>
+    apiFetch<TaskDeliverableDefinition>(`/managers/me/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'PATCH', body: values, actor }),
+
+  deleteTaskDeliverableDefinition: async (taskId: number, definitionId: number): Promise<void> =>
+    apiFetch<void>(`/managers/me/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'DELETE', actor }),
 
   // GET /api/managers/me/tasks/{taskId}/deliverables/{deliverableNo}
   getDeliverableByNo: async (taskId: number, deliverableNo: number): Promise<Deliverable | null> => {

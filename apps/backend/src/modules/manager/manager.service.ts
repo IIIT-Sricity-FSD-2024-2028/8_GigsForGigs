@@ -30,8 +30,8 @@ export function listManagersForClient(clientId: number) {
 
 /**
  * Remove a manager from a client's roster. Tasks they supervise are handed to
- * another of the client's managers (GIG_MANAGER_ASSIGNMENT.manager_id is
- * required); the last manager can't be removed while they supervise work.
+ * another of the client's managers (the client can reassign them afterwards);
+ * the last manager can't be removed while they supervise work.
  * Their User row stays (reviews/history reference it) but authGuard rejects
  * them from then on because the MANAGER link is gone.
  */
@@ -99,18 +99,10 @@ export async function updateOwnProfile(managerId: number, dto: UpdateManagerProf
   return getOwnProfile(managerId);
 }
 
-// List tasks assigned to this manager directly, plus every task owned by their client.
-export async function listAssignedTasks(managerId: number) {
-  const manager = await prisma.manager.findUnique({ where: { managerId } });
-  const clientId = manager?.clientId;
-
+// List only the tasks the client has assigned to this manager.
+export function listAssignedTasks(managerId: number) {
   return prisma.task.findMany({
-    where: {
-      OR: [
-        { assignments: { some: { managerId } } },
-        ...(clientId ? [{ clientId }] : []),
-      ],
-    },
+    where: { assignments: { some: { managerId } } },
     include: taskInclude,
     orderBy: { createdAt: "desc" },
   });

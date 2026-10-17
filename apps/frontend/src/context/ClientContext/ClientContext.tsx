@@ -16,9 +16,8 @@ import { apiFetch, ApiError } from '../../services/api/httpClient';
  *
  * KNOWN GAPS vs. the real backend (see final task report for the full
  * writeup — kept brief here as inline comments at each affected mapping):
- *  - The backend has POST /api/auth/manager/accept-invite to turn a
- *    MANAGER_INVITE row into a real MANAGER row, but no frontend flow calls
- *    it yet — invited managers still can't self-activate from this app.
+ *  - Invited managers activate via the one-time link
+ *    (ManagerInviteSetup -> POST /api/auth/manager/accept-invite).
  *  - APPLICATION has no dedicated "candidate role"/reviewing-manager
  *    columns; ReviewShortlist approximates "role" from GigProfile.bio.
  */
@@ -89,6 +88,8 @@ export interface Contract {
   platform_fee: number;
   total_amount: number;
   payment_status: PaymentStatus | null;
+  /** MANAGER.manager_id supervising this task; null = the client supervises it. */
+  manager_id?: number | null;
   createdAt: string;
   reviews?: ContractReview[];
 }
@@ -143,6 +144,8 @@ interface ClientContextType {
   hireCandidate: (applicationId: string) => Promise<void>;
   payTask: (taskId: string) => Promise<void>;
   releasePayment: (taskId: string) => Promise<void>;
+  /** Pick the manager for a funded task; null keeps it with the client. */
+  assignTaskManager: (taskId: string, managerId: number | null) => Promise<void>;
   rejectCandidate: (applicationId: string) => Promise<void>;
   requestService: (serviceId: string) => Promise<void>;
   requestedServices: Set<string>;
@@ -208,6 +211,7 @@ interface RawContract {
   platformFee: number;
   totalAmount: number;
   paymentStatus: PaymentStatus | null;
+  managerId?: number | null;
   createdAt: string;
   reviews?: ContractReview[];
 }
@@ -321,6 +325,7 @@ function mapContract(raw: RawContract): Contract {
     platform_fee: Number(raw.platformFee),
     total_amount: Number(raw.totalAmount),
     payment_status: raw.paymentStatus,
+    manager_id: raw.managerId ?? null,
     createdAt: raw.createdAt,
     reviews: raw.reviews ?? [],
   };
@@ -760,6 +765,16 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const assignTaskManager = async (taskId: string, managerId: number | null) => {
+    setError(null);
+    try {
+      await apiFetch(`/tasks/${Number(taskId)}/manager`, { method: 'PATCH', actor: 'client', body: { managerId } });
+      await refreshContracts();
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
   const rejectCandidate = async (applicationId: string) => {
     setError(null);
     try {
@@ -828,6 +843,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       hireCandidate,
       payTask,
       releasePayment,
+      assignTaskManager,
       rejectCandidate,
       requestService,
       requestedServices,

@@ -26,11 +26,12 @@ export async function taskAccessGuard(
     return;
   }
 
-  // Enforce strict multi-tenant boundary: a manager can ONLY access tasks belonging to their hiring client (req.user.clientId).
+  // Strict: the task must belong to the manager's client AND the client must have assigned it to this manager.
   const task = await prisma.task.findFirst({
     where: {
       taskId,
       clientId: req.user.clientId,
+      assignments: { some: { managerId: req.user.managerId } },
     },
     select: { taskId: true },
   });

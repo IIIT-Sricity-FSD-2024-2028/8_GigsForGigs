@@ -137,11 +137,12 @@ model Application {
 model GigManagerAssignment {
   gigProfileId Int                    @map("gig_profile_id")
   taskId       Int                    @map("task_id")
-  managerId    Int                    @map("manager_id")
+  /// null = the client supervises the task themselves (no manager chosen).
+  managerId    Int?                   @map("manager_id")
   assignedAt   DateTime               @default(now()) @map("assigned_at")
   deliverables Deliverable[]
   gigProfile   GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
-  manager      Manager                @relation(fields: [managerId], references: [managerId])
+  manager      Manager?               @relation(fields: [managerId], references: [managerId])
   task         Task                   @relation(fields: [taskId], references: [taskId])
 
   @@id([gigProfileId, taskId])
@@ -317,8 +318,6 @@ enum PaymentStatus {
   completed
   refunded
   failed
-  held
-  refunded
 }
 
 enum ServiceStatus {

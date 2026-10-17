@@ -148,25 +148,15 @@ export function listApplications(clientId: number) {
 
 /**
  * Starts a contract for an application: task -> in_progress, every other open
- * application on the task declined, the professional assigned to one of the
- * client's managers, and the pending payment row created. Shared by the
+ * application on the task declined, the professional's assignment row created
+ * with no manager (the client supervises until they pick one after funding —
+ * see setTaskManager), and the pending payment row created. Shared by the
  * client accepting a marketplace application and the gig professional
  * accepting a service-hire request.
- *
- * Requires the client to have at least one manager: DELIVERABLE has a
- * required FK to GIG_MANAGER_ASSIGNMENT, whose manager_id is NOT NULL, so
- * without a manager the professional could never submit work.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function startContract(tx: any, application: { applicationId: number; taskId: number; gigProfileId: number }) {
-  const task = await tx.task.findUniqueOrThrow({
-    where: { taskId: application.taskId },
-    include: { client: { include: { managers: { orderBy: { managerId: "asc" }, take: 1 } } } },
-  });
-  const manager = task.client.managers[0];
-  if (!manager) {
-    throw conflict("The client needs at least one active manager before anyone can be hired. Invite a manager first.");
-  }
+  const task = await tx.task.findUniqueOrThrow({ where: { taskId: application.taskId } });
 
   // Conditional update: only one hire can ever win the open -> in_progress transition.
   const moved = await tx.task.updateMany({
@@ -184,7 +174,7 @@ export async function startContract(tx: any, application: { applicationId: numbe
   await tx.gigManagerAssignment.upsert({
     where: { gigProfileId_taskId: { gigProfileId: application.gigProfileId, taskId: application.taskId } },
     update: {},
-    create: { gigProfileId: application.gigProfileId, taskId: application.taskId, managerId: manager.managerId },
+    create: { gigProfileId: application.gigProfileId, taskId: application.taskId },
   });
 
   // Payment row is created when the contract starts (pending until the client funds it); see payment.service.
@@ -265,6 +255,7 @@ export async function listContracts(clientId: number) {
         include: {
           deliverableDefinitions: { include: latestSubmissionInclude },
           deliverables: { select: { gigProfileId: true, status: true } },
+          assignments: { select: { gigProfileId: true, managerId: true } },
           payments: true,
           reviews: {
             include: { reviewer: true, reviewee: true },
@@ -290,6 +281,8 @@ export async function listContracts(clientId: number) {
       taskTitle: application.task.title,
       gigProfileId: application.gigProfileId,
       gigProfessionalName: application.gigProfile.user.name,
+      // null = supervised by the client themselves.
+      managerId: application.task.assignments.find((a: { gigProfileId: number }) => a.gigProfileId === application.gigProfileId)?.managerId ?? null,
       status: application.task.status,
       progress: computeProgress(
         application.task.deliverableDefinitions,
@@ -300,6 +293,32 @@ export async function listContracts(clientId: number) {
       reviews: (application.task.reviews ?? []).map(toContractReviewResponse),
     };
   });
+}
+
+/**
+ * Choose who supervises a hired task: one of the client's managers, or null
+ * to keep it with the client. Allowed once the task is funded (payment held)
+ * and while it is still in progress; can be changed any time in that window.
+ * taskId ownership is pre-verified by clientOwnershipGuard.
+ */
+export async function setTaskManager(taskId: number, clientId: number, managerId: number | null) {
+  if (managerId !== null && !(await prisma.manager.findFirst({ where: { managerId, clientId } }))) {
+    throw notFound("Manager not found");
+  }
+  const task = await prisma.task.findUniqueOrThrow({ where: { taskId }, include: { payments: true } });
+  if (task.status !== "in_progress") {
+    throw conflict("A manager can only be chosen while the task is in progress");
+  }
+  if (!task.payments.some((p: { status: string }) => p.status === "held")) {
+    throw conflict("Fund the task before choosing who manages it");
+  }
+  // Same conditions in the write, so a concurrent release can't slip between check and update.
+  const updated = await prisma.gigManagerAssignment.updateMany({
+    where: { taskId, task: { status: "in_progress", payments: { some: { status: "held" } } } },
+    data: { managerId },
+  });
+  if (updated.count === 0) throw conflict("This task can no longer be reassigned");
+  return { taskId, managerId };
 }
 
 // ---- Deliverables (client-side review) -------------------------------------

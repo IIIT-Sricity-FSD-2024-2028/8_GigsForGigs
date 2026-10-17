@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
+import { managerApi } from '../../../services/api/manager/managerApi';
 
 interface ReviewDeliverablesProps {
   onBack: () => void;
@@ -183,6 +185,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
             </div>
           )}
         </div>
+      )}
+
+      {/* Scope items the professional delivers against — same editor the client uses. */}
+      {selectedTask.status !== 'open' && (
+        <TaskDeliverablesManager key={selectedTask.taskId} taskId={selectedTask.taskId} readOnly={selectedTask.status !== 'in_progress'} api={managerApi} />
       )}
 
       {/* Deliverables Section Header */}

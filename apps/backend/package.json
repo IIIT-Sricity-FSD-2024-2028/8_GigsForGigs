@@ -9,7 +9,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/lib/taskRules.test.ts src/lib/validation.test.ts src/lib/reviewDirection.test.ts src/lib/apiReviewIntegration.test.ts src/modules/payment/payment.service.test.ts",
+    "test": "tsx --test src/lib/taskRules.test.ts src/lib/validation.test.ts src/lib/reviewDirection.test.ts src/lib/apiReviewIntegration.test.ts src/modules/payment/payment.service.test.ts src/modules/client/taskManager.test.ts",
     "test:auth": "tsx src/modules/auth/auth.test.ts"
   },
   "keywords": [],

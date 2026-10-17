@@ -35,6 +35,12 @@ export const updateTaskDeliverableDefinitionSchema = z.object({
 }).refine(value => Object.keys(value).length > 0, "Provide a title or description to update");
 export type UpdateTaskDeliverableDefinitionDto = z.infer<typeof updateTaskDeliverableDefinitionSchema>;
 
+/** null keeps the task with the client (no manager). */
+export const setTaskManagerSchema = z.object({
+  managerId: id().nullable(),
+});
+export type SetTaskManagerDto = z.infer<typeof setTaskManagerSchema>;
+
 export const updateApplicationSchema = z.object({
   status: z.enum(["accepted", "declined"]),
 });

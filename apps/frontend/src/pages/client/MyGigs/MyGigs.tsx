@@ -10,7 +10,8 @@ export interface MyGigsProps {
 }
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
-  const { contracts, tasks, deleteTask } = useClient();
+  const { contracts, tasks, deleteTask, managers, assignTaskManager } = useClient();
+  const [savingManager, setSavingManager] = useState(false);
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
@@ -75,7 +76,8 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
       <PageHeader title="Active Task/Contracts" description="Track ongoing work, view deliverables, and manage project payments." />
 
       {activeContracts.filter(c => c.payment_status === 'pending').map(c => (
-        <FundTaskCard key={c.task_id} contract={c} />
+        // After funding, open the task so the client decides who manages it.
+        <FundTaskCard key={c.task_id} contract={c} onPaid={() => setSelectedTaskPayment({ ...c, payment_status: 'held' })} />
       ))}
 
       <div className="activity-section" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
@@ -389,6 +391,39 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 </span>
               )}
             </div>
+
+            {selectedTaskPayment.payment_status === 'held' && selectedTaskPayment.status === 'IN_PROGRESS' && (
+              <div style={{ marginBottom: '20px', fontSize: '13px', color: '#502419' }}>
+                <label htmlFor="task-manager" style={{ display: 'block', fontWeight: 600, marginBottom: '4px' }}>Managed by:</label>
+                <select
+                  id="task-manager"
+                  className="form-input"
+                  disabled={savingManager}
+                  value={selectedTaskPayment.manager_id ?? ''}
+                  onChange={async (e) => {
+                    const managerId = e.target.value ? Number(e.target.value) : null;
+                    setSavingManager(true);
+                    try {
+                      await assignTaskManager(selectedTaskPayment.task_id, managerId);
+                      setSelectedTaskPayment({ ...selectedTaskPayment, manager_id: managerId });
+                    } catch (err) {
+                      alert(err instanceof Error && err.message ? err.message : 'Could not change the manager.');
+                    } finally {
+                      setSavingManager(false);
+                    }
+                  }}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">Me (I'll manage this task)</option>
+                  {managers.filter(m => m.kind === 'manager').map(m => (
+                    <option key={m.invite_id} value={m.invite_id}>{m.name || m.email}</option>
+                  ))}
+                </select>
+                <p style={{ fontSize: '12px', color: '#805C54', margin: '4px 0 0' }}>
+                  The manager can define and review deliverables. Only you can release payment.
+                </p>
+              </div>
+            )}
 
             <p style={{ fontSize: '12px', color: '#805C54', marginBottom: '20px', lineHeight: 1.4 }}>
               "Deliverables must be reviewed and approved before payment authorization is enabled."

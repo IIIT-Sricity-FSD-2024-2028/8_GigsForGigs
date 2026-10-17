@@ -9,6 +9,7 @@ import {
   createTaskSchema,
   createTaskDeliverableDefinitionSchema,
   reviewDeliverableAsClientSchema,
+  setTaskManagerSchema,
   updateApplicationSchema,
   updateClientProfileSchema,
   updateTaskSchema,
@@ -60,6 +61,9 @@ clientRouter.patch(
 );
 // Delete a task (ownership checked by clientOwnershipGuard).
 clientRouter.delete("/tasks/:taskId", clientOwnershipGuard, clientController.deleteTask);
+
+// Choose (or change) which manager supervises a funded task; null keeps it with the client.
+clientRouter.patch("/tasks/:taskId/manager", clientOwnershipGuard, validate(setTaskManagerSchema), clientController.setTaskManager);
 
 // Client-authored scope for an active task. The owner is checked in middleware
 // and again in the service using the verified client identity.
