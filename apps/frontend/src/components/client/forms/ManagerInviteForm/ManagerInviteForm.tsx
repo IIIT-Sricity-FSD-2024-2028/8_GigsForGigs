@@ -6,6 +6,7 @@ import { FormActions } from '../../../common/forms/FormActions/FormActions';
 
 export interface ManagerInviteValues { name: string; email: string; }
 export interface ManagerInviteFormProps { onSubmit: (values: ManagerInviteValues) => void | Promise<void>; submitting?: boolean; }
+/** Form to invite a manager by name + email. Not rendered anywhere yet. */
 export const ManagerInviteForm: React.FC<ManagerInviteFormProps> = ({ onSubmit, submitting = false }) => {
   const [values, setValues] = useState<ManagerInviteValues>({ name: '', email: '' });
   return <FormContainer title="Invite a manager" onSubmit={event => { event.preventDefault(); void onSubmit(values); }}>

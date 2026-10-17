@@ -4,6 +4,7 @@ export interface SearchBarProps extends Omit<React.InputHTMLAttributes<HTMLInput
   onSearch?: (value: string) => void;
 }
 
+/** Search input with a magnifier icon. Calls both `onChange(event)` and `onSearch(text)` on every keystroke. */
 export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(function SearchBar(
   { className = '', onSearch, onChange, ...props }, ref
 ) {

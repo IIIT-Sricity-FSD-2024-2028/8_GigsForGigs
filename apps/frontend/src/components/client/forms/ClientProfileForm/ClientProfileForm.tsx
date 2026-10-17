@@ -7,6 +7,7 @@ import { FormActions } from '../../../common/forms/FormActions/FormActions';
 
 export type ClientProfileFormValues = Pick<ClientProfileData, 'clientName'> & { domain: string };
 export interface ClientProfileFormProps { initialValues: ClientProfileFormValues; onSubmit: (values: ClientProfileFormValues) => void | Promise<void>; submitting?: boolean; }
+/** Form to edit the organisation name and domain. Not rendered anywhere yet. */
 export const ClientProfileForm: React.FC<ClientProfileFormProps> = ({ initialValues, onSubmit, submitting = false }) => {
   const [values, setValues] = useState(initialValues);
   return <FormContainer title="Client profile" onSubmit={event => { event.preventDefault(); void onSubmit(values); }}>

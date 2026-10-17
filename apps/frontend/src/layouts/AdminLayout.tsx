@@ -1,3 +1,9 @@
+/**
+ * @file AdminLayout.tsx
+ * @description Shell for the Super Admin portal: fixed dark sidebar (brand, tier
+ * badge, nav filtered by admin tier, user + sign out), sticky header with page
+ * title and Ctrl+K search, and a read-only banner for auditors.
+ */
 import React, { useState, useEffect } from 'react';
 import { useAuth, type AdminTier } from '../context/AuthContext/AuthContext';
 import {
@@ -17,6 +23,7 @@ import {
 } from '../components/super-admin/Icons';
 import { CommandPalette } from '../components/super-admin/CommandPalette';
 
+/** One sidebar link. */
 export interface NavItem {
   id: string;
   label: string;
@@ -34,6 +41,42 @@ export interface AdminLayoutProps {
   headerActions?: React.ReactNode;
 }
 
+/** Every admin page. `badgeCount` shows a small number bubble. */
+const ALL_NAV_ITEMS: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
+  { id: 'analytics', label: 'Analytics & Trends', icon: <AnalyticsIcon size={18} /> },
+  { id: 'clients', label: 'Client Management', icon: <ClientIcon size={18} /> },
+  { id: 'gig-pros', label: 'Gig Professionals', icon: <GigProIcon size={18} /> },
+  { id: 'managers', label: 'Manager Oversight', icon: <ManagerIcon size={18} /> },
+  { id: 'projects', label: 'Projects & Tasks', icon: <ProjectIcon size={18} /> },
+  { id: 'payments', label: 'Payments & Revenue', icon: <PaymentIcon size={18} /> },
+  { id: 'reviews', label: 'Reviews & Feedback', icon: <ReviewIcon size={18} /> },
+  { id: 'disputes', label: 'Disputes & Arbitration', icon: <DisputeIcon size={18} />, badgeCount: 2 },
+  { id: 'admin-staff', label: 'Admin Staff & Roles', icon: <ShieldIcon size={18} /> },
+  { id: 'profile', label: 'Admin Profile & 2FA', icon: <UsersIcon size={18} /> },
+  { id: 'settings', label: 'Platform Settings', icon: <SettingsIcon size={18} /> }
+];
+
+/**
+ * Pages each limited admin tier may open. Tiers not listed (OWNER, SUPER_ADMIN) see everything;
+ * AUDITOR is handled separately (everything except settings).
+ */
+const TIER_ALLOWED_VIEWS: Partial<Record<AdminTier, string[]>> = {
+  FINANCIAL_ADMIN: ['dashboard', 'analytics', 'payments', 'projects', 'settings', 'profile'],
+  SUPPORT_ADMIN: ['dashboard', 'disputes', 'reviews', 'clients', 'gig-pros', 'projects', 'profile'],
+  CONTENT_MODERATOR: ['reviews', 'gig-pros', 'clients', 'projects', 'profile'],
+};
+
+/** Label and colours of the tier pill shown in the sidebar and header. */
+const TIER_BADGES: Record<AdminTier, { text: string; bg: string; color: string }> = {
+  OWNER: { text: '👑 Platform Owner', bg: 'rgba(191, 105, 0, 0.15)', color: '#9A5100' },
+  SUPER_ADMIN: { text: '⚡ Super Admin', bg: 'rgba(8, 75, 131, 0.15)', color: '#084875' },
+  FINANCIAL_ADMIN: { text: '💳 Financial Admin', bg: 'rgba(81, 158, 138, 0.15)', color: '#519e8a' },
+  SUPPORT_ADMIN: { text: '🎧 Support Admin', bg: 'rgba(30, 64, 175, 0.15)', color: '#1e40af' },
+  CONTENT_MODERATOR: { text: '🛡️ Moderator', bg: 'rgba(126, 34, 206, 0.15)', color: '#7e22ce' },
+  AUDITOR: { text: '📋 Auditor (Read-Only)', bg: 'rgba(80, 36, 25, 0.15)', color: '#1B2A36' }
+};
+
 export const AdminLayout: React.FC<AdminLayoutProps> = ({
   currentView,
   onNavigate,
@@ -45,7 +88,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const { user, logout } = useAuth();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-  // Global Ctrl+K / Cmd+K listener
+  // Global Ctrl+K / Cmd+K listener toggles the command palette (quick page search)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -57,51 +100,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const allNavItems: NavItem[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
-    { id: 'analytics', label: 'Analytics & Trends', icon: <AnalyticsIcon size={18} /> },
-    { id: 'clients', label: 'Client Management', icon: <ClientIcon size={18} /> },
-    { id: 'gig-pros', label: 'Gig Professionals', icon: <GigProIcon size={18} /> },
-    { id: 'managers', label: 'Manager Oversight', icon: <ManagerIcon size={18} /> },
-    { id: 'projects', label: 'Projects & Tasks', icon: <ProjectIcon size={18} /> },
-    { id: 'payments', label: 'Payments & Revenue', icon: <PaymentIcon size={18} /> },
-    { id: 'reviews', label: 'Reviews & Feedback', icon: <ReviewIcon size={18} /> },
-    { id: 'disputes', label: 'Disputes & Arbitration', icon: <DisputeIcon size={18} />, badgeCount: 2 },
-    { id: 'admin-staff', label: 'Admin Staff & Roles', icon: <ShieldIcon size={18} /> },
-    { id: 'profile', label: 'Admin Profile & 2FA', icon: <UsersIcon size={18} /> },
-    { id: 'settings', label: 'Platform Settings', icon: <SettingsIcon size={18} /> }
-  ];
-
-  // Granular Dynamic RBAC Navigation Filtering
+  // Which sidebar links this admin may see.
   const userTier: AdminTier = user?.adminTier || 'OWNER';
-  const filteredNavItems = allNavItems.filter((item) => {
-    if (userTier === 'OWNER' || userTier === 'SUPER_ADMIN') return true;
-    if (userTier === 'FINANCIAL_ADMIN') {
-      return ['dashboard', 'analytics', 'payments', 'projects', 'settings', 'profile'].includes(item.id);
-    }
-    if (userTier === 'SUPPORT_ADMIN') {
-      return ['dashboard', 'disputes', 'reviews', 'clients', 'gig-pros', 'projects', 'profile'].includes(item.id);
-    }
-    if (userTier === 'CONTENT_MODERATOR') {
-      return ['reviews', 'gig-pros', 'clients', 'projects', 'profile'].includes(item.id);
-    }
-    if (userTier === 'AUDITOR') {
-      // Auditors can inspect all data except modifying platform settings
-      return item.id !== 'settings';
-    }
-    return true;
+  const filteredNavItems = ALL_NAV_ITEMS.filter((item) => {
+    // Auditors can inspect all data except modifying platform settings
+    if (userTier === 'AUDITOR') return item.id !== 'settings';
+    const allowed = TIER_ALLOWED_VIEWS[userTier];
+    return allowed ? allowed.includes(item.id) : true;
   });
 
-  const tierBadgeLabels: Record<AdminTier, { text: string; bg: string; color: string }> = {
-    OWNER: { text: '👑 Platform Owner', bg: 'rgba(191, 105, 0, 0.15)', color: '#9A5100' },
-    SUPER_ADMIN: { text: '⚡ Super Admin', bg: 'rgba(8, 75, 131, 0.15)', color: '#084875' },
-    FINANCIAL_ADMIN: { text: '💳 Financial Admin', bg: 'rgba(81, 158, 138, 0.15)', color: '#519e8a' },
-    SUPPORT_ADMIN: { text: '🎧 Support Admin', bg: 'rgba(30, 64, 175, 0.15)', color: '#1e40af' },
-    CONTENT_MODERATOR: { text: '🛡️ Moderator', bg: 'rgba(126, 34, 206, 0.15)', color: '#7e22ce' },
-    AUDITOR: { text: '📋 Auditor (Read-Only)', bg: 'rgba(80, 36, 25, 0.15)', color: '#1B2A36' }
-  };
-
-  const badgeInfo = tierBadgeLabels[userTier] || tierBadgeLabels.OWNER;
+  const badgeInfo = TIER_BADGES[userTier] || TIER_BADGES.OWNER;
 
   return (
     <div className="admin-shell" style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: 'var(--color-bg-light)' }}>
@@ -234,6 +242,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 color: '#ffffff'
               }}
             >
+              {/* Initials avatar: first two letters of the name */}
               {(user?.name || 'A').slice(0, 2).toUpperCase()}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

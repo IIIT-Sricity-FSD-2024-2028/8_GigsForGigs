@@ -4,6 +4,7 @@ export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> 
   wrapperClassName?: string;
 }
 
+/** <table> inside a wrapper div that scrolls horizontally on small screens. */
 export const Table = React.forwardRef<HTMLTableElement, TableProps>(function Table(
   { children, className = '', wrapperClassName = '', ...props }, ref
 ) {

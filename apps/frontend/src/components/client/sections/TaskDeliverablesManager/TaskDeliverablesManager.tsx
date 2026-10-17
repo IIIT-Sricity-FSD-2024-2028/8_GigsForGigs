@@ -13,6 +13,7 @@ type DefinitionsApi = Pick<typeof clientApi, 'getTaskDeliverableDefinitions' | '
 /** `api` defaults to the client's endpoints; the manager view passes managerApi. */
 export interface TaskDeliverablesManagerProps { taskId: number; readOnly?: boolean; api?: DefinitionsApi; }
 
+/** Badge for a definition, based on its most recent submission (submissions[0]). */
 function submissionBadge(definition: TaskDeliverableDefinition) {
   const latest = definition.submissions[0];
   if (!latest) return { label: 'Not submitted', variant: 'neutral' as const };
@@ -22,6 +23,10 @@ function submissionBadge(definition: TaskDeliverableDefinition) {
   return { label: 'Pending review', variant: 'pending' as const };
 }
 
+/**
+ * Lists a task's expected deliverables and lets the client/manager add, edit or remove them.
+ * Items that already have a submission are locked. `readOnly` hides all editing controls.
+ */
 export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = ({ taskId, readOnly = false, api = clientApi }) => {
   const [definitions, setDefinitions] = useState<TaskDeliverableDefinition[]>([]);
   const [title, setTitle] = useState('');

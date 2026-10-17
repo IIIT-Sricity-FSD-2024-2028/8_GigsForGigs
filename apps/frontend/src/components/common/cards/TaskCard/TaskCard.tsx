@@ -12,6 +12,7 @@ export interface TaskCardProps extends React.HTMLAttributes<HTMLDivElement> {
   actions?: React.ReactNode;
 }
 
+/** ProjectCard plus a progress bar (when `progress` is given). */
 export const TaskCard: React.FC<TaskCardProps> = ({ progress, ...props }) =>
   <ProjectCard {...props}>{progress !== undefined && <ProgressBar value={progress} aria-label="Task progress" />}</ProjectCard>;
 

@@ -4,6 +4,7 @@ import { SummaryCard } from '../../../common/dashboard/SummaryCard/SummaryCard';
 import { SummaryGrid } from '../../../common/dashboard/SummaryGrid/SummaryGrid';
 
 export interface DashboardSummaryProps { userName: string; activeTasks: number; openTasks: number; completedTasks: number; totalSpent: React.ReactNode; actions?: React.ReactNode; }
+/** Welcome banner + four stat cards for the client dashboard. Not rendered anywhere yet. */
 export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ userName, activeTasks, openTasks, completedTasks, totalSpent, actions }) =>
   <div className="client-dashboard-summary"><DashboardWelcome title={`Welcome back, ${userName}!`} description="Here’s a summary of your workspace activities." actions={actions} /><SummaryGrid>
     <SummaryCard title="Active tasks" value={activeTasks} description="Approved and in progress" />

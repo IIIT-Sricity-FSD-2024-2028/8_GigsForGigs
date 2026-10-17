@@ -31,6 +31,9 @@ export interface GigDeliverable {
   claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
 }
 
+/**
+ * A deliverable the client expects on a task, plus the submissions made against it.
+ */
 export interface TaskDeliverableDefinition {
   definitionId: number;
   taskId: number;

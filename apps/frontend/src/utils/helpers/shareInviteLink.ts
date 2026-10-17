@@ -8,6 +8,7 @@ export function shareInviteLink(link: string | undefined): void {
     alert('Invite created. Open your manager list to copy the activation link.');
     return;
   }
+  // Clipboard API can be missing (non-HTTPS) or denied; the prompt below still shows the link.
   navigator.clipboard?.writeText(link).catch(() => {});
   window.prompt('Invite created. Share this one-time activation link with your manager (copied to clipboard):', link);
 }

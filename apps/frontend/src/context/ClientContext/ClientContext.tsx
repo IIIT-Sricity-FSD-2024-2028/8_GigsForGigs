@@ -22,6 +22,7 @@ import { apiFetch, ApiError } from '../../services/api/httpClient';
  *    columns; ReviewShortlist approximates "role" from GigProfile.bio.
  */
 
+/** A task (job) the client has posted. */
 export interface Task {
   task_id: string;
   title: string;
@@ -35,6 +36,7 @@ export interface Task {
   duration?: string;
 }
 
+/** A manager row: either a pending invite or an active manager (see `kind`). */
 export interface ManagerInvite {
   invite_id: string;
   client_id: string;
@@ -54,6 +56,7 @@ export interface ManagerInvite {
   kind: 'invite' | 'manager';
 }
 
+/** A service a gig pro offers on the marketplace. */
 export interface Service {
   service_id: string;
   title: string;
@@ -64,6 +67,7 @@ export interface Service {
   gig_profile_id: string;
 }
 
+/** A review left on a finished contract (by client or gig pro). */
 export interface ContractReview {
   reviewId: number;
   taskId: number;
@@ -76,6 +80,7 @@ export interface ContractReview {
   createdAt: string;
 }
 
+/** A task that has a hired gig pro, with progress and payment info. */
 export interface Contract {
   contract_id: string;
   task_id: string;
@@ -97,6 +102,7 @@ export interface Contract {
 /** Mirrors the PAYMENT.status enum: pending = awaiting client funding, held = in escrow. */
 export type PaymentStatus = 'pending' | 'held' | 'completed' | 'refunded' | 'failed';
 
+/** One piece of work a gig pro submitted on a task. */
 export interface Deliverable {
   task_id: string;
   deliverable_no: number;
@@ -106,6 +112,7 @@ export interface Deliverable {
   feedback?: string | null;
 }
 
+/** A gig pro's application to one of the client's tasks. */
 export interface Application {
   application_id: string;
   task_id: string;
@@ -122,6 +129,7 @@ export interface Application {
   is_service_request: boolean;
 }
 
+/** Everything exposed by useClient(): the data lists plus the actions that change them. */
 interface ClientContextType {
   tasks: Task[];
   managers: ManagerInvite[];
@@ -272,7 +280,22 @@ interface RawManager {
 }
 
 // ---- Mapping helpers (raw API shape -> internal UI shape) -----------------
+// The API uses camelCase + numeric ids + lowercase statuses; the client pages
+// were written against snake_case + string ids + UPPERCASE statuses.
 
+/** Turn a UI id string (e.g. "12" or "TASK-12") into the number the API expects. */
+function toNumericId(id: string): number {
+  return Number(id.replace(/[^0-9]/g, '')) || Number(id);
+}
+
+/** Split "React, Node , " into ['React', 'Node']; undefined stays undefined. */
+function parseSkills(skills?: string): string[] | undefined {
+  return skills === undefined
+    ? undefined
+    : skills.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+/** API task status -> UI task status. */
 function mapTaskStatus(status: RawTaskStatus): Task['status'] {
   switch (status) {
     case 'in_progress':
@@ -284,6 +307,7 @@ function mapTaskStatus(status: RawTaskStatus): Task['status'] {
   }
 }
 
+/** API task -> UI Task. */
 function mapTask(raw: RawTask): Task {
   return {
     task_id: String(raw.taskId),
@@ -299,6 +323,7 @@ function mapTask(raw: RawTask): Task {
   };
 }
 
+/** API status -> contract status (an "open" task with a hire is shown as SCHEDULED). */
 function mapContractStatus(status: RawTaskStatus): Contract['status'] {
   switch (status) {
     case 'in_progress':
@@ -310,6 +335,7 @@ function mapContractStatus(status: RawTaskStatus): Contract['status'] {
   }
 }
 
+/** API contract -> UI Contract (money fields arrive as strings and are converted to numbers). */
 function mapContract(raw: RawContract): Contract {
   return {
     // CONTRACT has no surrogate id server-side — contracts are derived from
@@ -331,6 +357,7 @@ function mapContract(raw: RawContract): Contract {
   };
 }
 
+/** API deliverable status -> UI status ('submitted' becomes PENDING). */
 function mapDeliverableStatus(status: RawDeliverable['status']): Deliverable['status'] {
   switch (status) {
     case 'approved':
@@ -344,6 +371,7 @@ function mapDeliverableStatus(status: RawDeliverable['status']): Deliverable['st
   }
 }
 
+/** API deliverable -> UI Deliverable. */
 function mapDeliverable(raw: RawDeliverable): Deliverable {
   return {
     task_id: String(raw.taskId),
@@ -355,6 +383,7 @@ function mapDeliverable(raw: RawDeliverable): Deliverable {
   };
 }
 
+/** API application status -> UI status ('declined' becomes REJECTED). */
 function mapApplicationStatus(status: RawApplication['status']): Application['status'] {
   switch (status) {
     case 'shortlisted':
@@ -368,6 +397,7 @@ function mapApplicationStatus(status: RawApplication['status']): Application['st
   }
 }
 
+/** API application -> UI Application. */
 function mapApplication(raw: RawApplication): Application {
   return {
     application_id: String(raw.applicationId),
@@ -383,10 +413,12 @@ function mapApplication(raw: RawApplication): Application {
     hourlyRate: raw.hourlyRate ? Number(raw.hourlyRate) : undefined,
     rate: raw.task?.budget ? Number(raw.task.budget) : 0,
     createdAt: raw.createdAt,
+    // Service-hire tasks are tagged with the special skill 'Service Hire' by the backend.
     is_service_request: raw.task?.skills?.includes('Service Hire') ?? false,
   };
 }
 
+/** API service -> UI Service (tags become a plain skills list). */
 function mapService(raw: RawService): Service {
   return {
     service_id: String(raw.serviceId),
@@ -399,6 +431,7 @@ function mapService(raw: RawService): Service {
   };
 }
 
+/** A pending invite -> manager row (kind 'invite'). */
 function mapInviteToManagerInvite(raw: RawManagerInvite): ManagerInvite {
   return {
     invite_id: String(raw.inviteId),
@@ -412,6 +445,7 @@ function mapInviteToManagerInvite(raw: RawManagerInvite): ManagerInvite {
   };
 }
 
+/** An active manager -> manager row (kind 'manager'). */
 function mapManagerToManagerInvite(raw: RawManager): ManagerInvite {
   return {
     invite_id: String(raw.managerId),
@@ -425,6 +459,11 @@ function mapManagerToManagerInvite(raw: RawManager): ManagerInvite {
   };
 }
 
+/**
+ * Holds all data for the logged-in client and the actions that change it.
+ * Pattern for every action: clear the error, call the API, then re-fetch the
+ * lists that the change affects so the UI always shows server truth.
+ */
 export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
 
@@ -438,11 +477,15 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Show the API's message (or a generic one) and re-throw so the calling page can react too.
   const handleError = (err: unknown): never => {
     const message = err instanceof ApiError ? err.message : 'Something went wrong. Please try again.';
     setError(message);
     throw err;
   };
+
+  // ---- Loaders: fetch a list, map it to UI shape, store it. On failure, log,
+  // surface the message (401s are handled by AuthContext), and show an empty list.
 
   const refreshTasks = useCallback(async () => {
     try {
@@ -496,6 +539,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  // Remembers which services were already requested, so the "Request" button can be disabled.
   const refreshServiceRequests = useCallback(async () => {
     try {
       const raw = await apiFetch<RawServiceRequest[]>('/requests', { method: 'GET', actor: 'client' });
@@ -506,6 +550,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  // Manager list = active managers + still-pending invites, merged into one list.
   const refreshManagers = useCallback(async () => {
     try {
       const [invites, realManagers] = await Promise.all([
@@ -553,11 +598,9 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [user?.role, refreshTasks, refreshApplications, refreshContracts, refreshServices, refreshServiceRequests, refreshManagers]);
 
-  const parseSkills = (skills?: string): string[] | undefined =>
-    skills === undefined
-      ? undefined
-      : skills.split(',').map((s) => s.trim()).filter(Boolean);
+  // ---- Actions (called from client pages) ----
 
+  /** Post a new task. Skills default to ['Full-Stack', 'React'] when none given. */
   const addTask = async (
     title: string,
     description: string,
@@ -581,6 +624,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Edit an existing task. */
   const updateTask = async (
     taskId: string,
     title: string,
@@ -593,7 +637,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setError(null);
     const parsedSkills = parseSkills(skills) || ['Full-Stack', 'React'];
     try {
-      const numericId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+      const numericId = toNumericId(taskId);
       await apiFetch(`/tasks/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
@@ -605,10 +649,11 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Delete a task (also refreshes contracts, since a contract may disappear). */
   const deleteTask = async (taskId: string) => {
     setError(null);
     try {
-      const numericId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+      const numericId = toNumericId(taskId);
       await apiFetch(`/tasks/${numericId}`, { method: 'DELETE', actor: 'client' });
       await Promise.all([refreshTasks(), refreshContracts()]);
     } catch (err) {
@@ -632,6 +677,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Cancel a pending manager invite. */
   const revokeManagerInvite = async (inviteId: string) => {
     setError(null);
     try {
@@ -642,6 +688,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Rename / change email of an active manager (pending invites can't be edited). */
   const updateManager = async (inviteId: string, name: string, email: string) => {
     setError(null);
     const target = managers.find((m) => m.invite_id === inviteId);
@@ -652,7 +699,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       throw new Error(message);
     }
     try {
-      const numericId = Number(inviteId.replace(/[^0-9]/g, '')) || Number(inviteId);
+      const numericId = toNumericId(inviteId);
       await apiFetch(`/managers/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
@@ -664,6 +711,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Remove an active manager (pending invites must be revoked instead). */
   const deleteManager = async (inviteId: string) => {
     setError(null);
     const target = managers.find((m) => m.invite_id === inviteId);
@@ -674,7 +722,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       throw new Error(message);
     }
     try {
-      const numericId = Number(inviteId.replace(/[^0-9]/g, '')) || Number(inviteId);
+      const numericId = toNumericId(inviteId);
       await apiFetch(`/managers/${numericId}`, { method: 'DELETE', actor: 'client' });
       await refreshManagers();
     } catch (err) {
@@ -682,10 +730,11 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Load deliverables for one task, replacing any previously loaded ones for that task. */
   const fetchTaskDeliverables = async (taskId: string) => {
     setError(null);
     try {
-      const numericId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+      const numericId = toNumericId(taskId);
       const raw = await apiFetch<RawDeliverable[]>(`/tasks/${numericId}/deliverables`, {
         method: 'GET',
         actor: 'client',
@@ -696,13 +745,14 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  // Shared by approve/reject. Deliverable id on the API is "<taskId>-<deliverableNo>"; feedback is capped at 500 chars.
   const reviewDeliverable = async (
     taskId: string,
     deliverableNo: number,
     status: 'approved' | 'revision_requested',
     feedback?: string,
   ) => {
-    const numericTaskId = Number(taskId.replace(/[^0-9]/g, '')) || Number(taskId);
+    const numericTaskId = toNumericId(taskId);
     await apiFetch(`/deliverables/${numericTaskId}-${deliverableNo}`, {
       method: 'PATCH',
       actor: 'client',
@@ -729,10 +779,11 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Accept an application -> the gig pro is hired (creates a contract). */
   const hireCandidate = async (applicationId: string) => {
     setError(null);
     try {
-      const numericId = Number(applicationId.replace(/[^0-9]/g, '')) || Number(applicationId);
+      const numericId = toNumericId(applicationId);
       await apiFetch(`/applications/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
@@ -755,6 +806,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Release escrowed money to the gig pro once the work is approved. */
   const releasePayment = async (taskId: string) => {
     setError(null);
     try {
@@ -765,6 +817,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Hand a task to a manager (null = client supervises it). */
   const assignTaskManager = async (taskId: string, managerId: number | null) => {
     setError(null);
     try {
@@ -775,10 +828,11 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Decline an application. */
   const rejectCandidate = async (applicationId: string) => {
     setError(null);
     try {
-      const numericId = Number(applicationId.replace(/[^0-9]/g, '')) || Number(applicationId);
+      const numericId = toNumericId(applicationId);
       await apiFetch(`/applications/${numericId}`, {
         method: 'PATCH',
         actor: 'client',
@@ -790,10 +844,11 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Ask a gig pro to do one of their services. 409 = already requested, which we treat as success. */
   const requestService = async (serviceId: string) => {
     setError(null);
     try {
-      const numericId = Number(serviceId.replace(/[^0-9]/g, '')) || Number(serviceId);
+      const numericId = toNumericId(serviceId);
       await apiFetch(`/services/${numericId}/requests`, { method: 'POST', actor: 'client' });
       setRequestedServices((prev) => new Set(prev).add(serviceId));
       await Promise.all([refreshContracts(), refreshTasks()]);
@@ -806,6 +861,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  /** Rate the gig pro on a completed task. */
   const submitReview = async (taskId: number, rating: number, comment?: string) => {
     setError(null);
     try {
@@ -855,6 +911,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 };
 
+/** Access client data/actions. Must be used inside <ClientProvider>. */
 export const useClient = () => {
   const context = useContext(ClientContextInstance);
   if (context === undefined) {

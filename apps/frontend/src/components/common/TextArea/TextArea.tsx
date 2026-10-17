@@ -6,10 +6,13 @@ export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   label?: string;
 }
 
+/** Multi-line input with label/helper/error, like Input. */
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
   { className = '', error, helperText, label, id, required, ...props }, ref
 ) {
+  // Use the given id, or build one from the label ("Full Name" -> "…-full-name") so <label htmlFor> works.
   const textareaId = id || (label ? `textarea-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined);
+  // Links the helper/error text to the field for screen readers (aria-describedby).
   const descriptionId = textareaId ? `${textareaId}-description` : undefined;
   return <div className="ui-field">
     {label && <label className="ui-label" htmlFor={textareaId}>{label}{required && <span aria-hidden="true"> *</span>}</label>}

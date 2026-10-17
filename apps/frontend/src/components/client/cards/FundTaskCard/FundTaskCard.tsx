@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { useClient, type Contract } from '../../../../context/ClientContext';
 
+/** Format a number as Indian Rupees with no decimals, e.g. 15000 -> "₹15,000". */
 const inr = (val: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
-/** Simulated checkout: the client pays gig amount + platform fee into escrow after hiring. */
+/**
+ * Simulated checkout: the client pays gig amount + platform fee into escrow after hiring.
+ * Shown on a contract whose payment is still pending. `onPaid` lets the parent refresh/close.
+ */
 export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }> = ({ contract, onPaid }) => {
   const { payTask } = useClient();
   const [paying, setPaying] = useState(false);
@@ -20,6 +24,7 @@ export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }>
       setError(err instanceof Error ? err.message : 'Payment failed. Please try again.');
       setPaying(false);
     }
+    // On success `paying` stays true: the card is replaced once the contract refreshes.
   };
 
   return (

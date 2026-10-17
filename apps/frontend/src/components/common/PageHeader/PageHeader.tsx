@@ -8,6 +8,7 @@ export interface PageHeaderProps {
   className?: string;
 }
 
+/** Page title block: optional breadcrumbs, h1 title, description, and actions on the right. */
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, breadcrumbs, actions, className = '' }) =>
   <header className={`ui-page-header ${className}`.trim()}>
     {breadcrumbs && <div className="ui-page-header__breadcrumbs">{breadcrumbs}</div>}

@@ -12,6 +12,7 @@ export interface ServiceCardProps extends React.HTMLAttributes<HTMLDivElement> {
   actions?: React.ReactNode;
 }
 
+/** Card for a service listing: optional image (safe URLs only), tag badges and a price/actions footer. */
 export const ServiceCard: React.FC<ServiceCardProps> = ({ title, description, price, tags = [], imageUrl, actions, className = '', ...props }) =>
   <BaseCard title={title} description={description} className={`service-card ${className}`.trim()} {...props}>
     {safeHttpUrl(imageUrl) && <img className="service-card__image" src={safeHttpUrl(imageUrl)} alt="" loading="lazy" referrerPolicy="no-referrer" />}

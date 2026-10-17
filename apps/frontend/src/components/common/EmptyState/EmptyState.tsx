@@ -7,6 +7,7 @@ export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   action?: React.ReactNode;
 }
 
+/** Friendly "nothing here" message with optional icon and action button. */
 export const EmptyState: React.FC<EmptyStateProps> = ({ title = 'Nothing here yet', description, icon, action, children, className = '', ...props }) =>
   <div role="status" className={`ui-feedback ui-empty ${className}`.trim()} {...props}>
     {icon && <div className="ui-empty__icon">{icon}</div>}

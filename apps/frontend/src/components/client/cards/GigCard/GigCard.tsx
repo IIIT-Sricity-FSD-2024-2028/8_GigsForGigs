@@ -3,6 +3,7 @@ import type { RawService } from '../../../../services/api/client/clientApi';
 import { ServiceCard } from '../../../common/cards/ServiceCard/ServiceCard';
 
 export interface GigCardProps { service: RawService; onSelect?: (service: RawService) => void; actionLabel?: string; }
+/** ServiceCard for a raw API service: price formatted in INR, tags as badges, optional select button. Not rendered anywhere yet. */
 export const GigCard: React.FC<GigCardProps> = ({ service, onSelect, actionLabel = 'View service' }) =>
   <ServiceCard title={service.title} description={service.description || undefined} imageUrl={service.thumbnail || undefined}
     price={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(service.price))}

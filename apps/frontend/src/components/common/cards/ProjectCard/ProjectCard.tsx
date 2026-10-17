@@ -11,6 +11,7 @@ export interface ProjectCardProps extends React.HTMLAttributes<HTMLDivElement> {
   actions?: React.ReactNode;
 }
 
+/** Card for a project: title/description, status badge top-right, and a footer with client name, budget and actions. */
 export const ProjectCard: React.FC<ProjectCardProps> = ({ title, description, status, budget, clientName, actions, children, className = '', ...props }) =>
   <BaseCard title={title} description={description} className={`project-card ${className}`.trim()} actions={status && <StatusBadge status={status} />} {...props}>
     {children}

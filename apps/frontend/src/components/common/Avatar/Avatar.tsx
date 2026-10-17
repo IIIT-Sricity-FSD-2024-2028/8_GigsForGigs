@@ -10,6 +10,7 @@ export interface AvatarProps {
   style?: React.CSSProperties;
 }
 
+/** Round avatar: shows the image at `src` (only if it is a safe http(s) URL), otherwise `children`, otherwise the first two initials of `name`. */
 export const Avatar: React.FC<AvatarProps> = ({
   name = '',
   src,
@@ -18,6 +19,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   className = '',
   style
 }) => {
+  // "Ada Lovelace" -> "AL"; no name -> "U" (user).
   const initials = name
     ? name
         .split(' ')

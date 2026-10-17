@@ -10,6 +10,7 @@ export interface UserCardProps extends React.HTMLAttributes<HTMLDivElement> {
   actions?: React.ReactNode;
 }
 
+/** Card showing a person: avatar, name, subtitle, extra details and actions. */
 export const UserCard: React.FC<UserCardProps> = ({ name, subtitle, avatarUrl, details, actions, className = '', ...props }) =>
   <BaseCard className={`user-card ${className}`.trim()} {...props}>
     <div className="user-card__content"><Avatar name={name} src={avatarUrl} size={44} /><div className="user-card__identity"><strong>{name}</strong>{subtitle && <span>{subtitle}</span>}{details}</div>{actions}</div>

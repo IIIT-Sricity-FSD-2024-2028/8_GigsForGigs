@@ -9,5 +9,6 @@ export interface SummaryCardProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   action?: React.ReactNode;
 }
 
+/** StatCard where `action` is shown in the footer slot. */
 export const SummaryCard: React.FC<SummaryCardProps> = ({ action, ...props }) => <StatCard {...props} trend={action} />;
 export default SummaryCard;

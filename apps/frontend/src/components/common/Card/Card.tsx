@@ -5,6 +5,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   interactive?: boolean;
 }
 
+/** Plain white panel. `padding` sets inner spacing; `interactive` adds a hover style. */
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
   { children, className = '', padding = 'md', interactive = false, ...props }, ref
 ) {

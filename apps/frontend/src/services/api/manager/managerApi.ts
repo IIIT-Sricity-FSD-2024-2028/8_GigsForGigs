@@ -18,6 +18,7 @@ import type {
 } from '../../../types/manager';
 import type { TaskDeliverableDefinition } from '../client/clientApi';
 
+// Every call here is made with the manager's JWT.
 const actor = 'manager' as const;
 
 export const managerApi = {
@@ -68,11 +69,17 @@ export const managerApi = {
   getTaskDeliverableDefinitions: async (taskId: number): Promise<TaskDeliverableDefinition[]> =>
     apiFetch<TaskDeliverableDefinition[]>(`/managers/me/tasks/${taskId}/deliverable-definitions`, { actor }),
 
+  /** Add an expected deliverable. */
+
   createTaskDeliverableDefinition: async (taskId: number, values: { title: string; description?: string }): Promise<TaskDeliverableDefinition> =>
     apiFetch<TaskDeliverableDefinition>(`/managers/me/tasks/${taskId}/deliverable-definitions`, { method: 'POST', body: values, actor }),
 
+  /** Edit an expected deliverable. */
+
   updateTaskDeliverableDefinition: async (taskId: number, definitionId: number, values: { title?: string; description?: string }): Promise<TaskDeliverableDefinition> =>
     apiFetch<TaskDeliverableDefinition>(`/managers/me/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'PATCH', body: values, actor }),
+
+  /** Remove an expected deliverable. */
 
   deleteTaskDeliverableDefinition: async (taskId: number, definitionId: number): Promise<void> =>
     apiFetch<void>(`/managers/me/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'DELETE', actor }),
@@ -99,7 +106,7 @@ export const managerApi = {
     });
   },
 
-  // Search Talent
+  // GET /api/gig/professionals?q= — search gig pros by name/skill (all when no query).
   searchTalent: async (query?: string): Promise<TalentProfile[]> => {
     return apiFetch<TalentProfile[]>(`/gig/professionals${query ? `?q=${encodeURIComponent(query)}` : ''}`, { actor });
   }

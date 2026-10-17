@@ -1,3 +1,8 @@
+/**
+ * @file ManagerContext.tsx
+ * @description Data + actions for the Manager portal: profile, supervised tasks,
+ * the currently opened task (with its deliverables and applications), and talent search.
+ */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { managerApi } from '../../services/api/manager';
 import type {
@@ -12,12 +17,20 @@ import type {
 } from '../../types/manager';
 import { useAuth } from '../AuthContext/AuthContext';
 
+/** Message from a thrown error, or the fallback when it has none. */
+const errorText = (err: unknown, fallback: string): string =>
+  (err as { message?: string } | null)?.message || fallback;
+
+/** Everything exposed by useManager(). */
 interface ManagerContextType {
   profile: ManagerProfile | null;
   tasks: ManagerTask[];
+  /** The task opened on the review page (set by selectTask). */
   selectedTask: ManagerTask | null;
+  /** Deliverables / applications of the selected task. */
   deliverables: Deliverable[];
   applications: ManagerApplication[];
+  /** Results of the last talent search. */
   talents: TalentProfile[];
   loading: boolean;
   error: string | null;
@@ -45,12 +58,14 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ---- Loaders ----
+
   const refreshProfile = useCallback(async () => {
     try {
       const p = await managerApi.getProfile();
       setProfile(p);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load manager profile');
+    } catch (err) {
+      setError(errorText(err, 'Failed to load manager profile'));
     }
   }, []);
 
@@ -58,11 +73,12 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const tList = await managerApi.getAssignedTasks();
       setTasks(tList);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load assigned tasks');
+    } catch (err) {
+      setError(errorText(err, 'Failed to load assigned tasks'));
     }
   }, []);
 
+  /** Open a task: load it, then its deliverables and applications in parallel. */
   const selectTask = useCallback(async (taskId: number) => {
     setLoading(true);
     try {
@@ -76,12 +92,15 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setDeliverables(dels);
         setApplications(apps);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load task details');
+    } catch (err) {
+      setError(errorText(err, 'Failed to load task details'));
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // ---- Actions: each returns true on success; on failure it sets `error` and returns false.
+  // After a change the selected task is reloaded so the page shows fresh data.
 
   const shortlistApplication = async (taskId: number, applicationId: number, dto: ShortlistApplicationDto): Promise<boolean> => {
     setLoading(true);
@@ -90,8 +109,8 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       await managerApi.shortlistApplication(taskId, applicationId, dto);
       await selectTask(taskId);
       return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to shortlist candidate');
+    } catch (err) {
+      setError(errorText(err, 'Failed to shortlist candidate'));
       return false;
     } finally {
       setLoading(false);
@@ -106,8 +125,8 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       await selectTask(taskId);
       await refreshTasks();
       return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to review deliverable');
+    } catch (err) {
+      setError(errorText(err, 'Failed to review deliverable'));
       return false;
     } finally {
       setLoading(false);
@@ -122,21 +141,22 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       await selectTask(taskId);
       await refreshTasks();
       return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to close deliverable');
+    } catch (err) {
+      setError(errorText(err, 'Failed to close deliverable'));
       return false;
     } finally {
       setLoading(false);
     }
   };
 
+  /** Search gig pros (no query = everyone). */
   const searchTalent = useCallback(async (query?: string) => {
     setLoading(true);
     try {
       const results = await managerApi.searchTalent(query);
       setTalents(results);
-    } catch (err: any) {
-      setError(err.message || 'Failed to search talent');
+    } catch (err) {
+      setError(errorText(err, 'Failed to search talent'));
     } finally {
       setLoading(false);
     }
@@ -148,14 +168,15 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = await managerApi.updateProfile(dto);
       setProfile(updated);
       return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+    } catch (err) {
+      setError(errorText(err, 'Failed to update profile'));
       return false;
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial load once logged in: profile, tasks, and the full talent list.
   useEffect(() => {
     if (isAuthenticated) {
       setLoading(true);
@@ -189,6 +210,7 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
+/** Access manager data/actions. Must be used inside <ManagerProvider>. */
 export const useManager = () => {
   const context = useContext(ManagerContext);
   if (!context) {

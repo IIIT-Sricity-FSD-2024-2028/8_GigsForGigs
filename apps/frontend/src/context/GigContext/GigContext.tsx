@@ -8,6 +8,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 
+/** Every page the gig portal can show (App.tsx renders the matching component). */
 export type GigViewTab =
   | 'dashboard'
   | 'explore'
@@ -27,10 +28,12 @@ export type GigViewTab =
 interface GigContextType {
   activeTab: GigViewTab;
   setActiveTab: (tab: GigViewTab) => void;
+  /** Task opened on the detail / submit pages. */
   selectedTaskId: string | null;
   setSelectedTaskId: (taskId: string | null) => void;
   navigateToTaskDetail: (taskId: string) => void;
   navigateToSubmitDeliverable: (taskId: string) => void;
+  /** A counter pages can put in effect deps; bump it with triggerRefresh() to make them re-fetch. */
   refreshTrigger: number;
   triggerRefresh: () => void;
 }
@@ -45,6 +48,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
+  // Shortcuts: remember the task, then switch page.
   const navigateToTaskDetail = (taskId: string) => {
     setSelectedTaskId(taskId);
     setActiveTab('project-detail');

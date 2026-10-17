@@ -1,3 +1,8 @@
+/**
+ * @file GigLayout.tsx
+ * @description Shell for the gig professional portal: sidebar nav (with a live
+ * pending-request count), page title, search box and "Post Service" button.
+ */
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext/AuthContext';
 import { useGig, type GigViewTab } from '../../context/GigContext/GigContext';
@@ -9,7 +14,8 @@ import { SearchBar } from '../../components/common/SearchBar';
 export type GigNavItem = DashboardNavItem;
 export interface GigLayoutProps { children: React.ReactNode; }
 
-const formatBreadcrumb = (tab: GigViewTab) => ({
+/** Header title for each gig page. */
+const GIG_PAGE_TITLES: Partial<Record<GigViewTab, string>> = {
   dashboard: 'Gig Dashboard', explore: 'Marketplace Tasks', 'my-services': 'My Posted Services',
   'active-tasks': 'Active Task/Contracts', 'pending-requests': 'Pending Client Requests',
   'completed-projects': 'Completed Projects Portfolio', earnings: 'Financial Overview & Payouts',
@@ -17,16 +23,22 @@ const formatBreadcrumb = (tab: GigViewTab) => ({
   'post-service': 'Publish Service Offering', 'service-published': 'Service Published',
   'project-detail': 'Task Specification Details', profile: 'Professional Identity & Portfolio',
   'profile-completion': 'Edit Gig Profile & Skills'
-} as Partial<Record<GigViewTab, string>>)[tab] || 'Gig Portal';
+};
 
 export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const { activeTab, setActiveTab, refreshTrigger } = useGig();
   const [pendingCount, setPendingCount] = useState(0);
+  // Note: the header search box is display-only for now; nothing reads this value.
   const [globalSearch, setGlobalSearch] = useState('');
+
+  // Re-count pending requests whenever the page changes or something triggers a refresh.
+  // `mounted` stops a late response from updating state after unmount.
   useEffect(() => {
     let mounted = true;
-    gigApi.getPendingRequests().then((requests) => { if (mounted) setPendingCount(requests.length); }).catch(() => { if (mounted) setPendingCount(0); });
+    gigApi.getPendingRequests()
+      .then((requests) => { if (mounted) setPendingCount(requests.length); })
+      .catch(() => { if (mounted) setPendingCount(0); });
     return () => { mounted = false; };
   }, [refreshTrigger, activeTab]);
 
@@ -40,14 +52,25 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
     { id: 'earnings', label: 'Total Earnings', icon: <PaymentIcon size={18} /> },
     { id: 'profile', label: 'My Gig Profile', icon: <UsersIcon size={18} /> }
   ];
-  return <DashboardLayout className="dashboard-shell--gig" roleLabel="Gig Professional Hub" userName={user?.name || 'Gig Professional'}
-    activeView={activeTab} navItems={navItems} onNavigate={(view) => setActiveTab(view as GigViewTab)} onLogout={logout}
-    headerTitle={formatBreadcrumb(activeTab)} headerActions={<>
-      <SearchBar aria-label="Search tasks, projects, skills" placeholder="Search tasks, projects, skills..." value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} />
-      <button type="button" className="ui-button ui-button--primary ui-button--sm" onClick={() => setActiveTab('post-service')}>＋ Post Service</button>
-    </>}>
-    {children}
-  </DashboardLayout>;
+
+  return (
+    <DashboardLayout
+      className="dashboard-shell--gig"
+      roleLabel="Gig Professional Hub"
+      userName={user?.name || 'Gig Professional'}
+      activeView={activeTab}
+      navItems={navItems}
+      onNavigate={(view) => setActiveTab(view as GigViewTab)}
+      onLogout={logout}
+      headerTitle={GIG_PAGE_TITLES[activeTab] || 'Gig Portal'}
+      headerActions={<>
+        <SearchBar aria-label="Search tasks, projects, skills" placeholder="Search tasks, projects, skills..." value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} />
+        <button type="button" className="ui-button ui-button--primary ui-button--sm" onClick={() => setActiveTab('post-service')}>＋ Post Service</button>
+      </>}
+    >
+      {children}
+    </DashboardLayout>
+  );
 };
 
 export default GigLayout;

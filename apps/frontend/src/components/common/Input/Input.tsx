@@ -6,10 +6,13 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   label?: string;
 }
 
+/** Text input with optional label, helper text and error message, wired up for accessibility. */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
   { className = '', error, helperText, label, id, required, ...props }, ref
 ) {
+  // Use the given id, or build one from the label ("Full Name" -> "…-full-name") so <label htmlFor> works.
   const inputId = id || (label ? `input-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined);
+  // Links the helper/error text to the field for screen readers (aria-describedby).
   const descriptionId = inputId ? `${inputId}-description` : undefined;
   return <div className="ui-field">
     {label && <label className="ui-label" htmlFor={inputId}>{label}{required && <span aria-hidden="true"> *</span>}</label>}

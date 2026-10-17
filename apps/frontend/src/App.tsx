@@ -1,3 +1,13 @@
+/**
+ * @file App.tsx
+ * @description Top-level "router" for the whole frontend.
+ *
+ * The app does not use a routing library. Instead:
+ *  - Logged-out visitors switch between Landing / Login / Signup via local state.
+ *  - Logged-in users get one "portal" per role (Super Admin, Manager, Client, Gig Pro).
+ *    Each portal keeps the currently visible page in state and renders it by name.
+ *  - Two special one-time flows (admin invite, manager invite) are detected from the URL.
+ */
 import { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
@@ -67,45 +77,46 @@ import { LandingPage } from './pages/public/LandingPage/LandingPage';
 import { Login } from './pages/auth/Login/Login';
 import { Signup } from './pages/auth/Signup/Signup';
 
+/** Pages a logged-out visitor can see. */
 type UnauthView = 'landing' | 'login' | 'signup';
+/** Pages inside the manager portal. */
 type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
 
+/** sessionStorage key that remembers the last open admin page across refreshes. */
+const ADMIN_TAB_KEY = 'gfg_admin_tab';
+
+/** Header title/subtitle shown by AdminLayout for each admin page. */
+const ADMIN_VIEW_METADATA: Record<string, { title: string; subtitle: string }> = {
+  dashboard: { title: 'Executive Overview', subtitle: 'Real-time platform health, KPIs, and operational activity' },
+  analytics: { title: 'Business Intelligence & Trends', subtitle: 'Marketplace volume velocity, rake take rates, and cohort retention' },
+  clients: { title: 'Client Organizations', subtitle: 'Client master directory, KYC approvals, and enterprise spend oversight' },
+  'gig-pros': { title: 'Gig Professionals & Talent', subtitle: 'Freelancer directory, skill verification, and badge moderation' },
+  managers: { title: 'Manager Oversight', subtitle: 'Organizational hierarchy linkages and RBAC permission enforcement' },
+  projects: { title: 'Projects & Tasks Monitor', subtitle: 'Platform-wide task lifecycle tracking and emergency milestone overrides' },
+  payments: { title: 'Financial Ledger & Escrow', subtitle: 'Milestone escrow tracking, commission rake accounting, and disbursements' },
+  reviews: { title: 'Reviews & Reputation Moderation', subtitle: 'Marketplace feedback queue, profanity detection, and rating recalculation' },
+  disputes: { title: 'Arbitration Court & Disputes', subtitle: 'Evidence inspector and 1-click binding dispute settlement engine' },
+  'admin-staff': { title: 'Admin Staff & Governance', subtitle: 'Multi-tier delegate admin provisioning and SOC-2 compliant audit trails' },
+  profile: { title: 'Administrator Profile & Security', subtitle: 'Root credentials, TOTP two-factor authentication, and session revocation' },
+  settings: { title: 'Platform Configuration', subtitle: 'Commission rake percentages, minimum budgets, and maintenance controls' }
+};
+
 /**
- * 👑 Super Admin Platform Portal (12 Views Suite)
+ * 👑 Super Admin portal: sidebar layout + one of 12 admin pages.
+ * The open page is remembered in sessionStorage so a refresh keeps you where you were.
  */
 function SuperAdminPortal() {
-  const [currentView, setCurrentView] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('gfg_admin_tab');
-      if (saved) return saved;
-    }
-    return 'dashboard';
-  });
+  const [currentView, setCurrentView] = useState(() => sessionStorage.getItem(ADMIN_TAB_KEY) || 'dashboard');
 
   const handleNavigate = (view: string) => {
     setCurrentView(view);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('gfg_admin_tab', view);
-    }
+    sessionStorage.setItem(ADMIN_TAB_KEY, view);
   };
 
-  const viewMetadata: Record<string, { title: string; subtitle: string }> = {
-    dashboard: { title: 'Executive Overview', subtitle: 'Real-time platform health, KPIs, and operational activity' },
-    analytics: { title: 'Business Intelligence & Trends', subtitle: 'Marketplace volume velocity, rake take rates, and cohort retention' },
-    clients: { title: 'Client Organizations', subtitle: 'Client master directory, KYC approvals, and enterprise spend oversight' },
-    'gig-pros': { title: 'Gig Professionals & Talent', subtitle: 'Freelancer directory, skill verification, and badge moderation' },
-    managers: { title: 'Manager Oversight', subtitle: 'Organizational hierarchy linkages and RBAC permission enforcement' },
-    projects: { title: 'Projects & Tasks Monitor', subtitle: 'Platform-wide task lifecycle tracking and emergency milestone overrides' },
-    payments: { title: 'Financial Ledger & Escrow', subtitle: 'Milestone escrow tracking, commission rake accounting, and disbursements' },
-    reviews: { title: 'Reviews & Reputation Moderation', subtitle: 'Marketplace feedback queue, profanity detection, and rating recalculation' },
-    disputes: { title: 'Arbitration Court & Disputes', subtitle: 'Evidence inspector and 1-click binding dispute settlement engine' },
-    'admin-staff': { title: 'Admin Staff & Governance', subtitle: 'Multi-tier delegate admin provisioning and SOC-2 compliant audit trails' },
-    profile: { title: 'Administrator Profile & Security', subtitle: 'Root credentials, TOTP two-factor authentication, and session revocation' },
-    settings: { title: 'Platform Configuration', subtitle: 'Commission rake percentages, minimum budgets, and maintenance controls' }
-  };
+  // Fallback header for an unknown view name (e.g. stale value in sessionStorage).
+  const activeMeta = ADMIN_VIEW_METADATA[currentView] || { title: 'Super Admin', subtitle: 'GigsForGigs Portal' };
 
-  const activeMeta = viewMetadata[currentView] || { title: 'Super Admin', subtitle: 'GigsForGigs Portal' };
-
+  // Pick the page component for the current view (unknown views fall back to the dashboard).
   const renderActiveView = () => {
     switch (currentView) {
       case 'dashboard': return <Dashboard onNavigate={handleNavigate} />;
@@ -137,7 +148,8 @@ function SuperAdminPortal() {
 }
 
 /**
- * ⚡ Gig Professional Portal
+ * ⚡ Gig Professional portal. The active page lives in GigContext (`activeTab`)
+ * so any gig page can navigate by calling `setActiveTab`.
  */
 function GigAppContent() {
   const { activeTab } = useGig();
@@ -163,7 +175,8 @@ function GigAppContent() {
 }
 
 /**
- * 👔 Manager Portal
+ * 👔 Manager portal. Opening a task stores it in ManagerContext (`selectTask`)
+ * and switches to the task-detail (review deliverables) page.
  */
 function ManagerAppContent() {
   const { selectTask } = useManager();
@@ -195,7 +208,8 @@ function ManagerAppContent() {
 }
 
 /**
- * 💼 Client Portal
+ * 💼 Client portal. Pages navigate with `onNavigate(viewId, params?)`;
+ * `params` (e.g. a task id) are kept here and handed to the pages that need them.
  */
 function ClientAppContent() {
   const [clientView, setClientView] = useState<string>('dashboard');
@@ -203,6 +217,7 @@ function ClientAppContent() {
 
   const handleClientNavigate = (viewId: string, params?: Record<string, string>) => {
     if (params) setClientParams(params);
+    // Old view names that now live on the "My Gigs" page.
     const resolvedView = viewId === 'active-contracts' || viewId === 'active-tasks' ? 'my-gigs' : viewId;
     setClientView(resolvedView);
   };
@@ -225,31 +240,31 @@ function ClientAppContent() {
   );
 }
 
+/** URL prefixes that belong to a logged-in portal; visiting one while logged out shows Login. */
+const PROTECTED_PATH_PREFIXES = ['/admin', '/client', '/manager', '/gig', '/dashboard'];
+
+/** Decide which logged-out page to show first, based on the URL the visitor opened. */
+function initialUnauthView(): UnauthView {
+  const path = window.location.pathname.toLowerCase();
+  if (path === '/login' || path.startsWith('/login/')) return 'login';
+  if (path === '/signup' || path.startsWith('/signup/')) return 'signup';
+  if (PROTECTED_PATH_PREFIXES.some((prefix) => path.startsWith(prefix))) return 'login';
+  return 'landing';
+}
+
 /**
- * Main application router deciding layout and portal shell based on user role.
+ * Picks what to show based on auth state:
+ *  1. Manager invite link (/?manager_invite=TOKEN) -> password setup page
+ *  2. Session still being checked -> loading screen
+ *  3. Admin invite link (/admin/invite or ?admin_invite) -> admin activation page
+ *  4. Logged out -> Landing / Login / Signup
+ *  5. Logged in -> the portal for the user's role
  */
 function MainAppContent() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [unauthView, setUnauthView] = useState<UnauthView>(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname.toLowerCase();
-      if (path === '/login' || path.startsWith('/login/')) return 'login';
-      if (path === '/signup' || path.startsWith('/signup/')) return 'signup';
-      // Protect dashboard routes against unauthenticated direct URL access
-      if (
-        path.startsWith('/admin') ||
-        path.startsWith('/client') ||
-        path.startsWith('/manager') ||
-        path.startsWith('/gig') ||
-        path.startsWith('/dashboard')
-      ) {
-        return 'login';
-      }
-    }
-    return 'landing';
-  });
+  const [unauthView, setUnauthView] = useState<UnauthView>(initialUnauthView);
 
-  // Ensure logout or session expiration returns visitor directly to the login view
+  // When the user logs out (or the session expires), send them to Login instead of Landing.
   const prevAuthRef = useRef(isAuthenticated);
   useEffect(() => {
     if (prevAuthRef.current && !isAuthenticated) {
@@ -258,14 +273,13 @@ function MainAppContent() {
     prevAuthRef.current = isAuthenticated;
   }, [isAuthenticated]);
 
-  const [isInviteFlowActive, setIsInviteFlowActive] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.location.pathname.startsWith('/admin/invite') || new URLSearchParams(window.location.search).has('admin_invite');
-  });
+  const [isInviteFlowActive, setIsInviteFlowActive] = useState(() =>
+    window.location.pathname.startsWith('/admin/invite') || new URLSearchParams(window.location.search).has('admin_invite'),
+  );
 
   // Manager invite links look like /?manager_invite=<signed token>.
   const [managerInviteToken, setManagerInviteToken] = useState<string | null>(() =>
-    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('manager_invite'),
+    new URLSearchParams(window.location.search).get('manager_invite'),
   );
 
   if (managerInviteToken && !user) {
@@ -275,6 +289,7 @@ function MainAppContent() {
         onDone={() => {
           setManagerInviteToken(null);
           setUnauthView('login');
+          // Strip the token from the address bar so a refresh doesn't reopen the invite.
           window.history.replaceState({}, document.title, '/');
         }}
       />
@@ -294,15 +309,13 @@ function MainAppContent() {
       <AdminInviteActivation
         onActivationSuccess={() => {
           setIsInviteFlowActive(false);
-          if (typeof window !== 'undefined') {
-            window.history.replaceState({}, document.title, '/');
-          }
+          window.history.replaceState({}, document.title, '/');
         }}
       />
     );
   }
 
-  // 1. Unauthenticated Visitor Flow (ALWAYS starts on Landing Page!)
+  // Logged-out visitor: Landing, Signup, or (default) Login.
   if (!isAuthenticated || !user) {
     if (unauthView === 'landing') {
       return (
@@ -328,6 +341,7 @@ function MainAppContent() {
     );
   }
 
+  // Logged in: each role gets its own data provider + portal.
   return (
     <div style={{ position: 'relative' }}>
       {user.role === 'SUPER_ADMIN' && <SuperAdminPortal />}
@@ -350,6 +364,7 @@ function MainAppContent() {
   );
 }
 
+/** Root component: auth + toast notifications wrap everything. */
 export default function App() {
   return (
     <AuthProvider>

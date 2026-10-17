@@ -1,3 +1,8 @@
+/**
+ * @file ClientLayout.tsx
+ * @description Shell for the client portal: sidebar nav + header with a "Post a Task" button.
+ * A few onboarding-style pages render fullscreen without the sidebar.
+ */
 import React from 'react';
 import '../../pages/client/client.css';
 import { useAuth } from '../../context/AuthContext';
@@ -5,11 +10,13 @@ import { DashboardLayout, type DashboardNavItem } from '../common/DashboardLayou
 import { DashboardIcon, SearchIcon, ProjectIcon, ManagerIcon, PaymentIcon, UsersIcon, CheckIcon } from '../../components/super-admin/Icons';
 
 export interface ClientLayoutProps {
+  /** Id of the page currently shown (highlights the matching nav item). */
   currentView: string;
   onNavigate: (viewId: string) => void;
   children: React.ReactNode;
 }
 
+// Sidebar entries. `aliases` = other page ids that should highlight the same entry.
 const navItems: DashboardNavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
   { id: 'search-talent', label: 'Search Talent', icon: <SearchIcon size={18} /> },
@@ -21,16 +28,32 @@ const navItems: DashboardNavItem[] = [
   { id: 'profile-selection', label: 'Supervise Manager', icon: <ManagerIcon size={18} /> }
 ];
 
+/** Pages shown without the sidebar/header. */
+const FULLSCREEN_VIEWS = ['profile-completion', 'profile-selection', 'add-manager', 'add-manager-flow'];
+
 export const ClientLayout: React.FC<ClientLayoutProps> = ({ currentView, onNavigate, children }) => {
   const { user, logout } = useAuth();
-  const fullscreen = ['profile-completion', 'profile-selection', 'add-manager', 'add-manager-flow'].includes(currentView);
-  if (fullscreen) return <div className="profile-chooser" style={{ minHeight: '100vh', width: '100%' }}>{children}</div>;
 
-  return <DashboardLayout roleLabel="Client Portal" userName={user?.name || 'Client'} activeView={currentView}
-    navItems={navItems} onNavigate={onNavigate} onLogout={logout} headerTitle="Client Workspace"
-    headerActions={<button type="button" className="ui-button ui-button--primary ui-button--sm" onClick={() => onNavigate('post-gig')}>＋ Post a Task</button>}>
-    {children}
-  </DashboardLayout>;
+  if (FULLSCREEN_VIEWS.includes(currentView)) {
+    return <div className="profile-chooser" style={{ minHeight: '100vh', width: '100%' }}>{children}</div>;
+  }
+
+  return (
+    <DashboardLayout
+      roleLabel="Client Portal"
+      userName={user?.name || 'Client'}
+      activeView={currentView}
+      navItems={navItems}
+      onNavigate={onNavigate}
+      onLogout={logout}
+      headerTitle="Client Workspace"
+      headerActions={
+        <button type="button" className="ui-button ui-button--primary ui-button--sm" onClick={() => onNavigate('post-gig')}>＋ Post a Task</button>
+      }
+    >
+      {children}
+    </DashboardLayout>
+  );
 };
 
 export default ClientLayout;

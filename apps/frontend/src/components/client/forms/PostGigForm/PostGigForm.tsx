@@ -8,6 +8,7 @@ import { FormActions } from '../../../common/forms/FormActions/FormActions';
 
 export interface PostGigFormProps { onSubmit: (values: TaskDto) => void | Promise<void>; submitting?: boolean; }
 const initial: TaskDto = { title: '', description: '', category: '', duration: '', skills: [], budget: 0, dueDate: '' };
+/** Basic "post a task" form (title, description, category, budget). Not rendered anywhere yet. The real flow is pages/client/PostGig. */
 export const PostGigForm: React.FC<PostGigFormProps> = ({ onSubmit, submitting = false }) => {
   const [values, setValues] = useState(initial);
   return <FormContainer title="Post a task" onSubmit={event => { event.preventDefault(); void onSubmit(values); }}>

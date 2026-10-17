@@ -7,8 +7,10 @@
 
 import { apiFetch } from '../httpClient';
 
+// Every call here is made with the client's JWT.
 const actor = 'client' as const;
 
+/** The client organisation profile as returned by the API. */
 export interface ClientProfileData {
   clientId: number;
   userId: number;
@@ -23,6 +25,7 @@ export interface ClientProfileData {
   };
 }
 
+/** Body for creating/updating a task. */
 export interface TaskDto {
   title: string;
   description?: string;
@@ -33,6 +36,7 @@ export interface TaskDto {
   dueDate?: string;
 }
 
+/** A task exactly as the API returns it (mapped to UI shape in ClientContext). */
 export interface RawTask {
   taskId: number;
   clientId: number;
@@ -48,6 +52,7 @@ export interface RawTask {
   skills: string[];
 }
 
+/** A gig pro's application to a task, with task + applicant details. */
 export interface RawApplication {
   applicationId: number;
   gigProfileId: number;
@@ -75,6 +80,7 @@ export interface RawApplication {
   };
 }
 
+/** A review left on a completed contract. */
 export interface RawContractReview {
   reviewId: number;
   taskId: number;
@@ -87,6 +93,7 @@ export interface RawContractReview {
   createdAt: string;
 }
 
+/** An assigned task ("contract") with progress and reviews. */
 export interface RawContract {
   taskId: number;
   taskTitle: string;
@@ -99,6 +106,7 @@ export interface RawContract {
   reviews?: RawContractReview[];
 }
 
+/** One submission of work by a gig pro. */
 export interface RawDeliverable {
   taskId: number;
   deliverableNo: number;
@@ -116,6 +124,7 @@ export interface RawDeliverable {
   claimedDefinitions?: Array<{ definitionId: number; title: string; description: string | null }>;
 }
 
+/** An expected deliverable defined on a task, with the submissions made against it. */
 export interface TaskDeliverableDefinition {
   definitionId: number;
   taskId: number;
@@ -130,6 +139,7 @@ export interface TaskDeliverableDefinition {
   }>;
 }
 
+/** A service listing published by a gig pro. */
 export interface RawService {
   serviceId: number;
   gigProfileId: number;
@@ -150,6 +160,7 @@ export interface RawService {
   };
 }
 
+/** A client's request to hire a service. */
 export interface RawServiceRequest {
   requestId: number;
   serviceId: number;
@@ -158,6 +169,7 @@ export interface RawServiceRequest {
   createdAt: string;
 }
 
+/** An active manager linked to this client. */
 export interface RawManager {
   clientId: number;
   managerId: number;
@@ -169,6 +181,7 @@ export interface RawManager {
   };
 }
 
+/** An invitation sent to a prospective manager. */
 export interface RawManagerInvite {
   inviteId: number;
   clientId: number;
@@ -181,9 +194,12 @@ export interface RawManagerInvite {
 }
 
 export const clientApi = {
+  /** GET /clients/me — the logged-in client's organisation profile. */
   getProfile: async (): Promise<ClientProfileData> => {
     return apiFetch<ClientProfileData>('/clients/me', { actor });
   },
+
+  /** Update profile. Pass a clientId to POST /clients/:id/profile (first-time setup), or just the fields to PATCH /clients/me/profile. */
 
   updateProfile: async (
     dtoOrClientId: { clientName?: string; domain?: string } | number,
@@ -203,9 +219,13 @@ export const clientApi = {
     });
   },
 
+  /** GET /tasks — all tasks posted by this client. */
+
   getTasks: async (): Promise<RawTask[]> => {
     return apiFetch<RawTask[]>('/tasks', { actor });
   },
+
+  /** POST /tasks — post a new task. */
 
   createTask: async (dto: TaskDto): Promise<RawTask> => {
     return apiFetch<RawTask>('/tasks', {
@@ -215,6 +235,8 @@ export const clientApi = {
     });
   },
 
+  /** PATCH /tasks/:id — edit a task. */
+
   updateTask: async (taskId: number, dto: Partial<TaskDto>): Promise<RawTask> => {
     return apiFetch<RawTask>(`/tasks/${taskId}`, {
       method: 'PATCH',
@@ -223,6 +245,8 @@ export const clientApi = {
     });
   },
 
+  /** DELETE /tasks/:id */
+
   deleteTask: async (taskId: number): Promise<void> => {
     return apiFetch<void>(`/tasks/${taskId}`, {
       method: 'DELETE',
@@ -230,9 +254,13 @@ export const clientApi = {
     });
   },
 
+  /** GET /applications — gig pros who applied to this client's tasks. */
+
   getApplications: async (): Promise<RawApplication[]> => {
     return apiFetch<RawApplication[]>('/applications', { actor });
   },
+
+  /** PATCH /applications/:id — accept, decline or shortlist an applicant. */
 
   reviewApplication: async (applicationId: number, status: 'accepted' | 'declined' | 'shortlisted'): Promise<RawApplication> => {
     return apiFetch<RawApplication>(`/applications/${applicationId}`, {
@@ -242,25 +270,39 @@ export const clientApi = {
     });
   },
 
+  /** GET /contracts — tasks that have an assigned professional. */
+
   getContracts: async (): Promise<RawContract[]> => {
     return apiFetch<RawContract[]>('/contracts', { actor });
   },
+
+  /** GET /tasks/:id/deliverables — work submitted for a task. */
 
   getTaskDeliverables: async (taskId: number): Promise<RawDeliverable[]> => {
     return apiFetch<RawDeliverable[]>(`/tasks/${taskId}/deliverables`, { actor });
   },
 
+  /** GET the list of deliverables the client expects for a task. */
+
   getTaskDeliverableDefinitions: async (taskId: number): Promise<TaskDeliverableDefinition[]> =>
     apiFetch<TaskDeliverableDefinition[]>(`/tasks/${taskId}/deliverable-definitions`, { actor }),
+
+  /** Add an expected deliverable to a task. */
 
   createTaskDeliverableDefinition: async (taskId: number, values: { title: string; description?: string }): Promise<TaskDeliverableDefinition> =>
     apiFetch<TaskDeliverableDefinition>(`/tasks/${taskId}/deliverable-definitions`, { method: 'POST', body: values, actor }),
 
+  /** Edit an expected deliverable. */
+
   updateTaskDeliverableDefinition: async (taskId: number, definitionId: number, values: { title?: string; description?: string }): Promise<TaskDeliverableDefinition> =>
     apiFetch<TaskDeliverableDefinition>(`/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'PATCH', body: values, actor }),
 
+  /** Remove an expected deliverable. */
+
   deleteTaskDeliverableDefinition: async (taskId: number, definitionId: number): Promise<void> =>
     apiFetch<void>(`/tasks/${taskId}/deliverable-definitions/${definitionId}`, { method: 'DELETE', actor }),
+
+  /** PATCH /deliverables/:id — approve or request a revision (optional feedback). */
 
   reviewDeliverable: async (
     deliverableId: string,
@@ -274,9 +316,13 @@ export const clientApi = {
     });
   },
 
+  /** GET /services — services gig pros offer on the marketplace. */
+
   getServices: async (): Promise<RawService[]> => {
     return apiFetch<RawService[]>('/services', { actor });
   },
+
+  /** POST /services/:id/requests — ask a gig pro to do their service. */
 
   requestService: async (serviceId: number): Promise<unknown> => {
     return apiFetch<unknown>(`/services/${serviceId}/requests`, {
@@ -285,13 +331,19 @@ export const clientApi = {
     });
   },
 
+  /** GET /requests — service requests this client has sent. */
+
   getServiceRequests: async (): Promise<RawServiceRequest[]> => {
     return apiFetch<RawServiceRequest[]>('/requests', { actor });
   },
 
+  /** GET /managers — managers who accepted this client's invite. */
+
   getManagers: async (): Promise<RawManager[]> => {
     return apiFetch<RawManager[]>('/managers', { actor });
   },
+
+  /** PATCH /managers/:id — rename / change email. */
 
   updateManager: async (managerId: number, dto: { name?: string; email?: string }): Promise<unknown> => {
     return apiFetch<unknown>(`/managers/${managerId}`, {
@@ -301,6 +353,8 @@ export const clientApi = {
     });
   },
 
+  /** DELETE /managers/:id */
+
   deleteManager: async (managerId: number): Promise<void> => {
     return apiFetch<void>(`/managers/${managerId}`, {
       method: 'DELETE',
@@ -308,9 +362,13 @@ export const clientApi = {
     });
   },
 
+  /** GET /manager-invites — pending and past invites. */
+
   getManagerInvites: async (): Promise<RawManagerInvite[]> => {
     return apiFetch<RawManagerInvite[]>('/manager-invites', { actor });
   },
+
+  /** POST /manager-invites — returns the invite incl. its one-time link. */
 
   createManagerInvite: async (dto: { name: string; email: string }): Promise<RawManagerInvite> => {
     return apiFetch<RawManagerInvite>('/manager-invites', {
@@ -319,6 +377,8 @@ export const clientApi = {
       actor,
     });
   },
+
+  /** DELETE /manager-invites/:id — cancel a pending invite. */
 
   revokeManagerInvite: async (inviteId: number): Promise<void> =>
     apiFetch<void>(`/manager-invites/${inviteId}`, { method: 'DELETE', actor }),

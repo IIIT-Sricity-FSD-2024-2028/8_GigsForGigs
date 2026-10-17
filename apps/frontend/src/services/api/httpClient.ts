@@ -18,11 +18,7 @@ const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
 // the same origin under /api (reverse proxy); dev talks to the local :5000 server.
 export const API_BASE_URL =
   configuredApiUrl ||
-  (import.meta.env.PROD
-    ? '/api'
-    : typeof window !== 'undefined'
-      ? `${window.location.protocol}//${window.location.hostname}:5000/api`
-      : 'http://localhost:5000/api');
+  (import.meta.env.PROD ? '/api' : `${window.location.protocol}//${window.location.hostname}:5000/api`);
 
 /** One sessionStorage key per actor — session-scoped so closing the tab or leaving
  * the site clears the session and returns visitors directly to the Landing Page. */
@@ -35,27 +31,29 @@ const TOKEN_KEYS: Record<ActorRole, string> = {
   admin: 'g4g_admin_token',
 };
 
-// Purge legacy persistent localStorage tokens
-if (typeof window !== 'undefined') {
-  Object.values(TOKEN_KEYS).forEach((k) => localStorage.removeItem(k));
-  localStorage.removeItem('gfg_active_user');
-}
+// Older builds kept tokens in localStorage (survives tab close). Wipe them on load.
+Object.values(TOKEN_KEYS).forEach((k) => localStorage.removeItem(k));
+localStorage.removeItem('gfg_active_user');
 
+/** Read the saved JWT for one actor (null when that actor isn't logged in). */
 export function getToken(actor: ActorRole): string | null {
-  if (typeof window === 'undefined') return null;
   return sessionStorage.getItem(TOKEN_KEYS[actor]);
 }
 
+/** Save the JWT returned by login/signup for one actor. */
 export function setToken(actor: ActorRole, token: string): void {
-  if (typeof window === 'undefined') return;
   sessionStorage.setItem(TOKEN_KEYS[actor], token);
 }
 
+/** Forget one actor's JWT (logout / expired session). */
 export function clearToken(actor: ActorRole): void {
-  if (typeof window === 'undefined') return;
   sessionStorage.removeItem(TOKEN_KEYS[actor]);
 }
 
+/** Every role's token slot — handy for "log out of everything". */
+export const ALL_ACTORS: ActorRole[] = ['client', 'manager', 'gig_professional', 'admin'];
+
+/** Error thrown by apiFetch for any failed request. `status` is 0 for network errors. */
 export class ApiError extends Error {
   status: number;
   errors?: unknown;
@@ -77,9 +75,16 @@ interface RequestOptions {
   actor?: ActorRole;
 }
 
+/**
+ * Call the backend and return the parsed JSON body typed as T.
+ * @param path    API path after the base URL, e.g. '/client/tasks'.
+ * @param options method (default GET), JSON body, and which actor's token to send.
+ * @throws ApiError on network failure or any non-2xx response.
+ */
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, actor } = options;
 
+  // Always JSON; add "Authorization: Bearer <jwt>" when the call is made on behalf of an actor.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (actor) {
     const token = getToken(actor);
@@ -105,10 +110,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   if (!res.ok) {
+    // 401 = token expired/revoked: drop it and tell AuthContext to log this actor out.
     if (res.status === 401 && actor) {
       clearToken(actor);
       window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { actor } }));
     }
+    // Prefer the backend's own error message when it sent one.
     const message =
       (data as { message?: string } | null)?.message ?? `Request failed with status ${res.status}`;
     throw new ApiError(res.status, message, (data as { errors?: unknown } | null)?.errors);
