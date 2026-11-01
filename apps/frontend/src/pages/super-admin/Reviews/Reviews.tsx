@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
-import { ReviewIcon } from '../../../components/super-admin/Icons';
+import { ReviewIcon, ArrowRightIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
@@ -78,7 +78,11 @@ export const Reviews: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.taskTitle}</span>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-            From: {row.reviewerName} ({row.reviewerRole}) → To: {row.targetUserName}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <span>From: {row.reviewerName} ({row.reviewerRole})</span>
+              <ArrowRightIcon size={11} color="var(--color-text-muted)" />
+              <span>To: {row.targetUserName}</span>
+            </span>
           </span>
         </div>
       )

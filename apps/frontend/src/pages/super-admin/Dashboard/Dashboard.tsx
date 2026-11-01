@@ -7,7 +7,8 @@ import {
   UsersIcon,
   PaymentIcon,
   ProjectIcon,
-  DisputeIcon
+  DisputeIcon,
+  ArrowRightIcon
 } from '../../../components/super-admin/Icons';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
@@ -330,7 +331,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('clients')}
                 style={{ background: 'none', border: 'none', color: 'var(--color-primary-blue)', fontSize: 'var(--font-size-xs)', fontWeight: 700, cursor: 'pointer' }}
               >
-                View All Clients $\rightarrow$
+                View All Clients <ArrowRightIcon size={13} color="var(--color-primary-blue)" style={{ marginLeft: '4px' }} />
               </button>
             )}
           </div>
@@ -352,7 +353,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('projects')}
                 style={{ background: 'none', border: 'none', color: 'var(--color-primary-blue)', fontSize: 'var(--font-size-xs)', fontWeight: 700, cursor: 'pointer' }}
               >
-                View All Tasks $\rightarrow$
+                View All Tasks <ArrowRightIcon size={13} color="var(--color-primary-blue)" style={{ marginLeft: '4px' }} />
               </button>
             )}
           </div>

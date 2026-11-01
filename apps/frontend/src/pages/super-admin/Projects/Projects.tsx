@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
+import { ArrowRightIcon } from '../../../components/super-admin/Icons';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
@@ -87,7 +88,15 @@ export const Projects: React.FC = () => {
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
           <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.client?.clientName || row.clientName || 'Direct Client'}</span>
-          <span style={{ color: 'var(--color-text-muted)' }}>{row.gigProName ? `→ ${row.gigProName}` : 'Open Bidding'}</span>
+          <span style={{ color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            {row.gigProName ? (
+              <>
+                <ArrowRightIcon size={11} color="var(--color-text-muted)" /> {row.gigProName}
+              </>
+            ) : (
+              'Open Bidding'
+            )}
+          </span>
         </div>
       )
     },

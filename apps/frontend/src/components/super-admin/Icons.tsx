@@ -11,6 +11,7 @@ export interface IconProps {
   className?: string;
   size?: number;
   color?: string;
+  style?: React.CSSProperties;
 }
 
 export const DashboardIcon: React.FC<IconProps> = ({ className = '', size = 20, color = 'currentColor' }) => (
@@ -152,5 +153,18 @@ export const ExportIcon: React.FC<IconProps> = ({ className = '', size = 18, col
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" />
     <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+export const ArrowRightIcon: React.FC<IconProps> = ({ className = "", size = 14, color = "currentColor", style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} style={{ display: "inline-block", verticalAlign: "middle", ...style }}>
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </svg>
+);
+
+export const ChevronRightIcon: React.FC<IconProps> = ({ className = "", size = 14, color = "currentColor", style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} style={{ display: "inline-block", verticalAlign: "middle", ...style }}>
+    <polyline points="9 18 15 12 9 6" />
   </svg>
 );
