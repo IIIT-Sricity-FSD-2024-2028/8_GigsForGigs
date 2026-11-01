@@ -164,28 +164,45 @@ export const PaymentsRevenue: React.FC = () => {
     },
     {
       header: 'Actions',
-      cell: (row) => (
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {row.status === 'HELD_IN_ESCROW' && hasPermission('payments:release') && (
-            <button
-              onClick={() => handleOpenOverride(row, 'RELEASE')}
-              className="admin-btn admin-btn-primary"
-              style={{ padding: '4px 8px', fontSize: '11px' }}
-            >
-              Release Payment
-            </button>
-          )}
-          {row.status === 'HELD_IN_ESCROW' && hasPermission('payments:refund') && (
-            <button
-              onClick={() => handleOpenOverride(row, 'REFUND')}
-              className="admin-btn admin-btn-danger"
-              style={{ padding: '4px 8px', fontSize: '11px' }}
-            >
-              Refund Client
-            </button>
-          )}
-        </div>
-      )
+      cell: (row) => {
+        if (row.status === 'HELD_IN_ESCROW') {
+          if (!hasPermission('payments:release') && !hasPermission('payments:refund')) {
+            return <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Read Only (Auditor)</span>;
+          }
+          return (
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {hasPermission('payments:release') && (
+                <button
+                  onClick={() => handleOpenOverride(row, 'RELEASE')}
+                  className="admin-btn admin-btn-primary"
+                  style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
+                >
+                  Release Payment
+                </button>
+              )}
+              {hasPermission('payments:refund') && (
+                <button
+                  onClick={() => handleOpenOverride(row, 'REFUND')}
+                  className="admin-btn admin-btn-danger"
+                  style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
+                >
+                  Refund Client
+                </button>
+              )}
+            </div>
+          );
+        }
+        if (row.status === 'RELEASED') {
+          return <span style={{ fontSize: '11px', color: 'var(--color-success-text)', fontWeight: 600 }}>✓ Settled (Paid)</span>;
+        }
+        if (row.status === 'REFUNDED') {
+          return <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Settled (Refunded)</span>;
+        }
+        if (row.status === 'AWAITING_FUNDING') {
+          return <span style={{ fontSize: '11px', color: '#b06000' }}>Awaiting Deposit</span>;
+        }
+        return <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>Failed Transaction</span>;
+      }
     }
   ];
 
