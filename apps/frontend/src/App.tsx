@@ -1,38 +1,29 @@
-/**
- * @file App.tsx
- * @description Top-level "router" for the whole frontend.
- *
- * The app does not use a routing library. Instead:
- *  - Logged-out visitors switch between Landing / Login / Signup via local state.
- *  - Logged-in users get one "portal" per role (Super Admin, Manager, Client, Gig Pro).
- *    Each portal keeps the currently visible page in state and renders it by name.
- *  - Two special one-time flows (admin invite, manager invite) are detected from the URL.
- */
-import { Suspense, lazy, useState, useEffect, useRef } from 'react';
+/** Application route tree and role-aware portal layouts. */
+import { Suspense, lazy, useEffect } from 'react';
+import {
+  Navigate,
+  Outlet,
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
-import { GigProvider, useGig } from './context/GigContext/GigContext';
+import { GigProvider } from './context/GigContext/GigContext';
 import { ToastProvider } from './components/super-admin/Toast';
-
-// 👑 Super Admin Layout & 12 Views
 import { AdminLayout } from './layouts/AdminLayout';
-const Dashboard = lazy(() => import('./pages/super-admin/Dashboard').then((m) => ({ default: m.Dashboard })));
-const AdminAnalytics = lazy(() => import('./pages/super-admin/AdminAnalytics').then((m) => ({ default: m.AdminAnalytics })));
-const ClientManagement = lazy(() => import('./pages/super-admin/ClientManagement').then((m) => ({ default: m.ClientManagement })));
-const GigProfessionalManagement = lazy(() => import('./pages/super-admin/GigProfessionalManagement').then((m) => ({ default: m.GigProfessionalManagement })));
-const ManagersManagement = lazy(() => import('./pages/super-admin/ManagersManagement').then((m) => ({ default: m.ManagersManagement })));
-const Projects = lazy(() => import('./pages/super-admin/Projects').then((m) => ({ default: m.Projects })));
-const PaymentsRevenue = lazy(() => import('./pages/super-admin/PaymentsRevenue').then((m) => ({ default: m.PaymentsRevenue })));
-const Reviews = lazy(() => import('./pages/super-admin/Reviews').then((m) => ({ default: m.Reviews })));
-const DisputesReports = lazy(() => import('./pages/super-admin/DisputesReports').then((m) => ({ default: m.DisputesReports })));
-const AdminManagement = lazy(() => import('./pages/super-admin/AdminManagement').then((m) => ({ default: m.AdminManagement })));
-const AdminProfile = lazy(() => import('./pages/super-admin/AdminProfile').then((m) => ({ default: m.AdminProfile })));
-const PlatformSettings = lazy(() => import('./pages/super-admin/PlatformSettings').then((m) => ({ default: m.PlatformSettings })));
-import { AdminInviteActivation } from './pages/super-admin/AdminInviteActivation/AdminInviteActivation';
-
-// 💼 Client Pages & Layout
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
+import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
+import { GigLayout } from './layouts/GigLayout/GigLayout';
+import { AdminInviteActivation } from './pages/super-admin/AdminInviteActivation/AdminInviteActivation';
+import { LandingPage } from './pages/public/LandingPage/LandingPage';
+import { Login } from './pages/auth/Login/Login';
+import { Signup } from './pages/auth/Signup/Signup';
+import { ManagerInviteSetup } from './pages/manager/ManagerInviteSetup/ManagerInviteSetup';
 import { ClientDashboard } from './pages/client/ClientDashboard/ClientDashboard';
 import { SearchTalent as ClientSearchTalent } from './pages/client/SearchTalent/SearchTalent';
 import { MyGigs } from './pages/client/MyGigs/MyGigs';
@@ -45,18 +36,12 @@ import { ReviewDeliverables as ClientReviewDeliverables } from './pages/client/R
 import { ReviewShortlist } from './pages/client/ReviewShortlist/ReviewShortlist';
 import { ClientCompletedProjects } from './pages/client/CompletedProjects/ClientCompletedProjects';
 import { ClientProfile } from './pages/client/ClientProfile/ClientProfile';
-
-// 👔 Manager Pages & Layout
-import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
+import { ManagerProfileView } from './pages/client/ClientProfileSelection/ManagerProfileView';
 import { ManagerDashboard } from './pages/manager/ManagerDashboard/ManagerDashboard';
 import { SearchTalent as ManagerSearchTalent } from './pages/manager/SearchTalent/SearchTalent';
 import { ManagerTasks } from './pages/manager/ManagerTasks/ManagerTasks';
 import { ReviewDeliverables as ManagerReviewDeliverables } from './pages/manager/ReviewDeliverables/ReviewDeliverables';
 import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
-import { ManagerInviteSetup } from './pages/manager/ManagerInviteSetup/ManagerInviteSetup';
-
-// ⚡ Gig Professional Pages & Layout
-import { GigLayout } from './layouts/GigLayout/GigLayout';
 import { GigDashboard } from './pages/gig/GigDashboard/GigDashboard';
 import { ExploreTasks } from './pages/gig/ExploreTasks/ExploreTasks';
 import { ActiveTasks } from './pages/gig/ActiveTasks/ActiveTasks';
@@ -72,20 +57,19 @@ import { GigProfile } from './pages/gig/GigProfile/GigProfile';
 import { GigProfileCompletion } from './pages/gig/GigProfileCompletion/GigProfileCompletion';
 import { MyServices } from './pages/gig/MyServices/MyServices';
 
-// 🌐 Public & Auth Pages
-import { LandingPage } from './pages/public/LandingPage/LandingPage';
-import { Login } from './pages/auth/Login/Login';
-import { Signup } from './pages/auth/Signup/Signup';
+const Dashboard = lazy(() => import('./pages/super-admin/Dashboard').then((m) => ({ default: m.Dashboard })));
+const AdminAnalytics = lazy(() => import('./pages/super-admin/AdminAnalytics').then((m) => ({ default: m.AdminAnalytics })));
+const ClientManagement = lazy(() => import('./pages/super-admin/ClientManagement').then((m) => ({ default: m.ClientManagement })));
+const GigProfessionalManagement = lazy(() => import('./pages/super-admin/GigProfessionalManagement').then((m) => ({ default: m.GigProfessionalManagement })));
+const ManagersManagement = lazy(() => import('./pages/super-admin/ManagersManagement').then((m) => ({ default: m.ManagersManagement })));
+const Projects = lazy(() => import('./pages/super-admin/Projects').then((m) => ({ default: m.Projects })));
+const PaymentsRevenue = lazy(() => import('./pages/super-admin/PaymentsRevenue').then((m) => ({ default: m.PaymentsRevenue })));
+const Reviews = lazy(() => import('./pages/super-admin/Reviews').then((m) => ({ default: m.Reviews })));
+const DisputesReports = lazy(() => import('./pages/super-admin/DisputesReports').then((m) => ({ default: m.DisputesReports })));
+const AdminManagement = lazy(() => import('./pages/super-admin/AdminManagement').then((m) => ({ default: m.AdminManagement })));
+const AdminProfile = lazy(() => import('./pages/super-admin/AdminProfile').then((m) => ({ default: m.AdminProfile })));
+const PlatformSettings = lazy(() => import('./pages/super-admin/PlatformSettings').then((m) => ({ default: m.PlatformSettings })));
 
-/** Pages a logged-out visitor can see. */
-type UnauthView = 'landing' | 'login' | 'signup';
-/** Pages inside the manager portal. */
-type ManagerTabType = 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
-
-/** sessionStorage key that remembers the last open admin page across refreshes. */
-const ADMIN_TAB_KEY = 'gfg_admin_tab';
-
-/** Header title/subtitle shown by AdminLayout for each admin page. */
 const ADMIN_VIEW_METADATA: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: 'Executive Overview', subtitle: 'Real-time platform health, KPIs, and operational activity' },
   analytics: { title: 'Business Intelligence & Trends', subtitle: 'Marketplace volume velocity, rake take rates, and cohort retention' },
@@ -98,271 +82,286 @@ const ADMIN_VIEW_METADATA: Record<string, { title: string; subtitle: string }> =
   disputes: { title: 'Arbitration Court & Disputes', subtitle: 'Evidence inspector and 1-click binding dispute settlement engine' },
   'admin-staff': { title: 'Admin Staff & Governance', subtitle: 'Multi-tier delegate admin provisioning and an append-only audit trail' },
   profile: { title: 'Administrator Profile & Security', subtitle: 'Root credentials, TOTP two-factor authentication, and session revocation' },
-  settings: { title: 'Platform Configuration', subtitle: 'Commission rake percentages, minimum budgets, and maintenance controls' }
+  settings: { title: 'Platform Configuration', subtitle: 'Commission rake percentages, minimum budgets, and maintenance controls' },
 };
 
-/**
- * 👑 Super Admin portal: sidebar layout + one of 12 admin pages.
- * The open page is remembered in sessionStorage so a refresh keeps you where you were.
- */
-function SuperAdminPortal() {
-  const [currentView, setCurrentView] = useState(() => sessionStorage.getItem(ADMIN_TAB_KEY) || 'dashboard');
-
-  const handleNavigate = (view: string) => {
-    setCurrentView(view);
-    sessionStorage.setItem(ADMIN_TAB_KEY, view);
+function HomeRedirect() {
+  const { user, isAuthenticated } = useAuth();
+  if (!isAuthenticated || !user) return <Navigate to="/" replace />;
+  const roleHome: Record<string, string> = {
+    SUPER_ADMIN: '/admin/dashboard',
+    CLIENT: '/client/dashboard',
+    MANAGER: '/manager/dashboard',
+    GIG_PROFESSIONAL: '/gig/dashboard',
   };
+  return <Navigate to={roleHome[user.role] || '/login'} replace />;
+}
 
-  // Fallback header for an unknown view name (e.g. stale value in sessionStorage).
-  const activeMeta = ADMIN_VIEW_METADATA[currentView] || { title: 'Super Admin', subtitle: 'GigsForGigs Portal' };
+function PublicOnly() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <HomeRedirect /> : <Outlet />;
+}
 
-  // Pick the page component for the current view (unknown views fall back to the dashboard).
-  const renderActiveView = () => {
-    switch (currentView) {
-      case 'dashboard': return <Dashboard onNavigate={handleNavigate} />;
-      case 'analytics': return <AdminAnalytics />;
-      case 'clients': return <ClientManagement />;
-      case 'gig-pros': return <GigProfessionalManagement />;
-      case 'managers': return <ManagersManagement />;
-      case 'projects': return <Projects />;
-      case 'payments': return <PaymentsRevenue />;
-      case 'reviews': return <Reviews />;
-      case 'disputes': return <DisputesReports />;
-      case 'admin-staff': return <AdminManagement />;
-      case 'profile': return <AdminProfile />;
-      case 'settings': return <PlatformSettings />;
-      default: return <Dashboard onNavigate={handleNavigate} />;
-    }
+function LandingRoute() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const managerToken = params.get('manager_invite');
+  const adminToken = params.get('admin_invite') || params.get('token') || undefined;
+  const adminInvite = Boolean(adminToken);
+  if (managerToken) return <ManagerInviteSetup token={managerToken} onDone={() => navigate('/login', { replace: true })} />;
+  if (adminInvite) return <AdminInviteActivation initialToken={adminToken} onActivationSuccess={() => navigate('/login', { replace: true })} />;
+  return <LandingPage onNavigateToLogin={() => navigate('/login')} onNavigateToSignup={() => navigate('/signup')} />;
+}
+
+function LoginRoute() {
+  const navigate = useNavigate();
+  return <Login onBackToLanding={() => navigate('/')} onNavigateToSignup={() => navigate('/signup')} />;
+}
+
+function SignupRoute() {
+  const navigate = useNavigate();
+  return <Signup onBackToLanding={() => navigate('/')} onNavigateToLogin={() => navigate('/login')} />;
+}
+
+function InviteRoutes() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { token: pathToken } = useParams();
+  const query = new URLSearchParams(location.search);
+  const managerToken = query.get('manager_invite');
+  const adminToken = query.get('admin_invite');
+  const isAdminInvite = location.pathname.startsWith('/admin/invite') || Boolean(adminToken);
+
+  if (managerToken) {
+    return <ManagerInviteSetup token={managerToken} onDone={() => navigate('/login', { replace: true })} />;
+  }
+  if (isAdminInvite) {
+    return <AdminInviteActivation initialToken={pathToken || adminToken || undefined} onActivationSuccess={() => navigate('/login', { replace: true })} />;
+  }
+  return <Navigate to="/login" replace />;
+}
+
+function ClientPortal() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { taskId } = useParams();
+  const path = location.pathname;
+  const currentView = path.includes('/manager/setup') ? 'add-manager-flow'
+    : path.includes('/manager/add') ? 'add-manager'
+      : path.includes('/manager') ? 'profile-selection'
+        : path.includes('/profile') ? 'client-profile'
+          : path.includes('/shortlist') ? 'review-shortlist'
+            : path.includes('/review') ? 'review-deliverables'
+              : path.includes('/completed') ? 'completed-projects'
+                : path.includes('/spending') ? 'total-spent'
+                  : path.includes('/talent') ? 'search-talent'
+                    : path.includes('/new') ? 'post-gig'
+                      : path.includes('/gigs') ? 'my-gigs' : 'dashboard';
+
+  const onNavigate = (viewId: string, params?: Record<string, string>) => {
+    const urls: Record<string, string> = {
+      dashboard: '/client/dashboard', 'search-talent': '/client/talent', 'my-gigs': '/client/gigs',
+      'active-contracts': '/client/gigs', 'active-tasks': '/client/gigs',
+      'completed-projects': '/client/gigs/completed', 'total-spent': '/client/spending',
+      'client-profile': '/client/profile', 'profile-selection': '/client/manager',
+      'manager-profile': `/client/manager/${params?.managerId || ''}`,
+      'add-manager': '/client/manager/add', 'add-manager-flow': '/client/manager/setup',
+      'post-gig': '/client/gigs/new', 'review-deliverables': `/client/gigs/${params?.taskId || taskId || ''}/review`,
+      'review-shortlist': params?.taskId || taskId
+        ? `/client/gigs/${params?.taskId || taskId}/shortlist`
+        : '/client/gigs/shortlist',
+      'pending-requests': '/client/gigs/shortlist',
+    };
+    const target = urls[viewId] || '/client/dashboard';
+    const editId = params?.editId;
+    navigate(editId && viewId === 'post-gig' ? `${target}?editId=${encodeURIComponent(editId)}` : target);
   };
 
   return (
-    <AdminLayout
-      currentView={currentView}
-      onNavigate={handleNavigate}
-      pageTitle={activeMeta.title}
-      pageSubtitle={activeMeta.subtitle}
-    >
+    <ClientLayout currentView={currentView} onNavigate={(view) => onNavigate(view)}>
+      <Routes>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<ClientDashboard onNavigate={onNavigate} />} />
+        <Route path="talent" element={<ClientSearchTalent onNavigate={onNavigate} />} />
+        <Route path="gigs" element={<MyGigs onNavigate={onNavigate} />} />
+        <Route path="gigs/completed" element={<ClientCompletedProjects onNavigate={onNavigate} />} />
+        <Route path="spending" element={<TotalSpent onNavigate={onNavigate} />} />
+        <Route path="profile" element={<ClientProfile onNavigate={onNavigate} />} />
+        <Route path="manager" element={<ClientProfileSelection onNavigate={onNavigate} />} />
+        <Route path="manager/:managerId" element={<ClientManagerProfileRoute onNavigate={onNavigate} />} />
+        <Route path="manager/add" element={<AddManager onNavigate={onNavigate} />} />
+        <Route path="manager/setup" element={<AddManagerFlow onNavigate={onNavigate} />} />
+        <Route path="gigs/new" element={<PostGig onNavigate={onNavigate} params={Object.fromEntries(new URLSearchParams(location.search))} />} />
+        <Route path="gigs/:taskId/review" element={<ClientReviewRoute onNavigate={onNavigate} />} />
+        <Route path="gigs/shortlist" element={<ReviewShortlist onNavigate={onNavigate} />} />
+        <Route path="gigs/:taskId/shortlist" element={<ClientShortlistRoute onNavigate={onNavigate} />} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
+      </Routes>
+    </ClientLayout>
+  );
+}
+
+function ClientReviewRoute({ onNavigate }: { onNavigate: (viewId: string, params?: Record<string, string>) => void }) {
+  const { taskId } = useParams();
+  return <ClientReviewDeliverables onNavigate={onNavigate} params={taskId ? { taskId } : undefined} />;
+}
+
+function ClientShortlistRoute({ onNavigate }: { onNavigate: (viewId: string, params?: Record<string, string>) => void }) {
+  const { taskId } = useParams();
+  return <ReviewShortlist onNavigate={onNavigate} params={taskId ? { taskId } : undefined} />;
+}
+
+function ClientManagerProfileRoute({ onNavigate }: { onNavigate: (viewId: string, params?: Record<string, string>) => void }) {
+  const { managerId } = useParams();
+  if (!managerId) return <Navigate to="/client/manager" replace />;
+  return <ManagerProfileView managerId={managerId} onBack={() => onNavigate('profile-selection')} />;
+}
+
+function ManagerPortal() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.includes('/talent') ? 'talent'
+    : location.pathname.includes('/tasks/') ? 'task-detail'
+      : location.pathname.includes('/tasks') ? 'tasks'
+        : location.pathname.includes('/profile') ? 'profile' : 'dashboard';
+
+  const go = (view: string) => navigate(({ dashboard: '/manager/dashboard', talent: '/manager/talent', tasks: '/manager/tasks', 'task-detail': '/manager/tasks', profile: '/manager/profile' } as Record<string, string>)[view] || '/manager/dashboard');
+  const openTask = (id: number) => navigate(`/manager/tasks/${id}`);
+
+  return (
+    <ManagerLayout activeTab={activeTab} setActiveTab={go}>
+      <Routes>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<ManagerDashboard onNavigateToTask={openTask} onNavigateToQueue={() => go('tasks')} />} />
+        <Route path="talent" element={<ManagerSearchTalent />} />
+        <Route path="tasks" element={<ManagerTasks onSelectTask={openTask} />} />
+        <Route path="tasks/:taskId" element={<ManagerTaskRoute onBack={() => go('tasks')} />} />
+        <Route path="profile" element={<ManagerProfile />} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
+      </Routes>
+    </ManagerLayout>
+  );
+}
+
+function ManagerTaskRoute({ onBack }: { onBack: () => void }) {
+  const { taskId } = useParams();
+  const { selectTask } = useManager();
+  useEffect(() => {
+    if (taskId) void selectTask(Number(taskId));
+  }, [taskId, selectTask]);
+  return <ManagerReviewDeliverables onBack={onBack} />;
+}
+
+function GigPortal() {
+  return (
+    <GigLayout>
+      <Routes>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<GigDashboard />} />
+        <Route path="tasks/explore" element={<ExploreTasks />} />
+        <Route path="tasks/active" element={<ActiveTasks />} />
+        <Route path="tasks/:taskId/submit" element={<GigTaskRoute page="submit" />} />
+        <Route path="tasks/:taskId/submitted" element={<GigTaskRoute page="submitted" />} />
+        <Route path="tasks/:taskId" element={<GigTaskRoute page="detail" />} />
+        <Route path="services" element={<MyServices />} />
+        <Route path="services/new" element={<PostService />} />
+        <Route path="services/published" element={<ServicePublished />} />
+        <Route path="requests" element={<PendingRequests />} />
+        <Route path="projects/completed" element={<CompletedProjects />} />
+        <Route path="earnings" element={<TotalEarnings />} />
+        <Route path="profile" element={<GigProfile />} />
+        <Route path="profile/complete" element={<GigProfileCompletion />} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
+      </Routes>
+    </GigLayout>
+  );
+}
+
+function GigTaskRoute({ page }: { page: 'detail' | 'submit' | 'submitted' }) {
+  if (page === 'submit') return <SubmitDeliverables />;
+  if (page === 'submitted') return <SubmissionSuccess />;
+  return <ProjectDetail />;
+}
+
+function AdminPortal() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const segment = location.pathname.split('/')[2] || 'dashboard';
+  const currentView = ({ 'gig-professionals': 'gig-pros', staff: 'admin-staff' } as Record<string, string>)[segment] || segment;
+  const metadata = ADMIN_VIEW_METADATA[currentView] || ADMIN_VIEW_METADATA.dashboard;
+  const go = (view: string) => navigate(`/admin/${({ 'gig-pros': 'gig-professionals', 'admin-staff': 'staff' } as Record<string, string>)[view] || view}`);
+
+  return (
+    <AdminLayout currentView={currentView} onNavigate={go} pageTitle={metadata.title} pageSubtitle={metadata.subtitle}>
       <Suspense fallback={<div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading…</div>}>
-        {renderActiveView()}
+        <Routes>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard onNavigate={go} />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="clients" element={<ClientManagement />} />
+          <Route path="gig-professionals" element={<GigProfessionalManagement />} />
+          <Route path="managers" element={<ManagersManagement />} />
+          <Route path="projects" element={<Projects />} />
+          <Route path="payments" element={<PaymentsRevenue />} />
+          <Route path="reviews" element={<Reviews />} />
+          <Route path="disputes" element={<DisputesReports />} />
+          <Route path="staff" element={<AdminManagement />} />
+          <Route path="profile" element={<AdminProfile />} />
+          <Route path="settings" element={<PlatformSettings />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Routes>
       </Suspense>
     </AdminLayout>
   );
 }
 
-/**
- * ⚡ Gig Professional portal. The active page lives in GigContext (`activeTab`)
- * so any gig page can navigate by calling `setActiveTab`.
- */
-function GigAppContent() {
-  const { activeTab } = useGig();
-
-  return (
-    <GigLayout>
-      {activeTab === 'dashboard' && <GigDashboard />}
-      {activeTab === 'explore' && <ExploreTasks />}
-      {activeTab === 'my-services' && <MyServices />}
-      {activeTab === 'active-tasks' && <ActiveTasks />}
-      {activeTab === 'pending-requests' && <PendingRequests />}
-      {activeTab === 'completed-projects' && <CompletedProjects />}
-      {activeTab === 'earnings' && <TotalEarnings />}
-      {activeTab === 'submit-deliverables' && <SubmitDeliverables />}
-      {activeTab === 'submission-success' && <SubmissionSuccess />}
-      {activeTab === 'post-service' && <PostService />}
-      {activeTab === 'service-published' && <ServicePublished />}
-      {activeTab === 'project-detail' && <ProjectDetail />}
-      {activeTab === 'profile' && <GigProfile />}
-      {activeTab === 'profile-completion' && <GigProfileCompletion />}
-    </GigLayout>
-  );
-}
-
-/**
- * 👔 Manager portal. Opening a task stores it in ManagerContext (`selectTask`)
- * and switches to the task-detail (review deliverables) page.
- */
-function ManagerAppContent() {
-  const { selectTask } = useManager();
-  const [managerActiveTab, setManagerActiveTab] = useState<ManagerTabType>('dashboard');
-
-  const handleNavigateToTask = (taskId: number) => {
-    selectTask(taskId);
-    setManagerActiveTab('task-detail');
-  };
-
-  return (
-    <ManagerLayout activeTab={managerActiveTab} setActiveTab={setManagerActiveTab}>
-      {managerActiveTab === 'dashboard' && (
-        <ManagerDashboard
-          onNavigateToTask={handleNavigateToTask}
-          onNavigateToQueue={() => setManagerActiveTab('tasks')}
-        />
-      )}
-      {managerActiveTab === 'talent' && <ManagerSearchTalent />}
-      {managerActiveTab === 'tasks' && (
-        <ManagerTasks onSelectTask={handleNavigateToTask} />
-      )}
-      {managerActiveTab === 'task-detail' && (
-        <ManagerReviewDeliverables onBack={() => setManagerActiveTab('tasks')} />
-      )}
-      {managerActiveTab === 'profile' && <ManagerProfile />}
-    </ManagerLayout>
-  );
-}
-
-/**
- * 💼 Client portal. Pages navigate with `onNavigate(viewId, params?)`;
- * `params` (e.g. a task id) are kept here and handed to the pages that need them.
- */
-function ClientAppContent() {
-  const [clientView, setClientView] = useState<string>('dashboard');
-  const [clientParams, setClientParams] = useState<Record<string, string>>({});
-
-  const handleClientNavigate = (viewId: string, params?: Record<string, string>) => {
-    if (params) setClientParams(params);
-    // Old view names that now live on the "My Gigs" page.
-    const resolvedView = viewId === 'active-contracts' || viewId === 'active-tasks' ? 'my-gigs' : viewId;
-    setClientView(resolvedView);
-  };
-
-  return (
-    <ClientLayout currentView={clientView} onNavigate={handleClientNavigate}>
-      {clientView === 'dashboard' && <ClientDashboard onNavigate={handleClientNavigate} />}
-      {clientView === 'search-talent' && <ClientSearchTalent onNavigate={handleClientNavigate} />}
-      {clientView === 'my-gigs' && <MyGigs onNavigate={handleClientNavigate} />}
-      {clientView === 'completed-projects' && <ClientCompletedProjects onNavigate={handleClientNavigate} />}
-      {clientView === 'total-spent' && <TotalSpent onNavigate={handleClientNavigate} />}
-      {clientView === 'client-profile' && <ClientProfile onNavigate={handleClientNavigate} />}
-      {clientView === 'profile-selection' && <ClientProfileSelection onNavigate={handleClientNavigate} />}
-      {clientView === 'add-manager' && <AddManager onNavigate={handleClientNavigate} />}
-      {clientView === 'add-manager-flow' && <AddManagerFlow onNavigate={handleClientNavigate} />}
-      {clientView === 'post-gig' && <PostGig onNavigate={handleClientNavigate} params={clientParams} />}
-      {clientView === 'review-deliverables' && <ClientReviewDeliverables onNavigate={handleClientNavigate} params={clientParams} />}
-      {clientView === 'review-shortlist' && <ReviewShortlist onNavigate={handleClientNavigate} params={clientParams} />}
-    </ClientLayout>
-  );
-}
-
-/** URL prefixes that belong to a logged-in portal; visiting one while logged out shows Login. */
-const PROTECTED_PATH_PREFIXES = ['/admin', '/client', '/manager', '/gig', '/dashboard'];
-
-/** Decide which logged-out page to show first, based on the URL the visitor opened. */
-function initialUnauthView(): UnauthView {
-  const path = window.location.pathname.toLowerCase();
-  if (path === '/login' || path.startsWith('/login/')) return 'login';
-  if (path === '/signup' || path.startsWith('/signup/')) return 'signup';
-  if (PROTECTED_PATH_PREFIXES.some((prefix) => path.startsWith(prefix))) return 'login';
-  return 'landing';
-}
-
-/**
- * Picks what to show based on auth state:
- *  1. Manager invite link (/?manager_invite=TOKEN) -> password setup page
- *  3. Admin invite link (/admin/invite or ?admin_invite) -> admin activation page
- *  4. Logged out -> Landing / Login / Signup
- *  5. Logged in -> the portal for the user's role
- */
-function MainAppContent() {
+function ProtectedRole({ role }: { role: 'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONAL' | 'SUPER_ADMIN' }) {
   const { user, isAuthenticated } = useAuth();
-  const [unauthView, setUnauthView] = useState<UnauthView>(initialUnauthView);
+  const location = useLocation();
+  if (!isAuthenticated || !user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (user.role !== role) return <HomeRedirect />;
+  if (role === 'CLIENT') return <ClientProvider><Outlet /></ClientProvider>;
+  if (role === 'MANAGER') return <ManagerProvider><Outlet /></ManagerProvider>;
+  if (role === 'GIG_PROFESSIONAL') return <GigProvider><Outlet /></GigProvider>;
+  return <Outlet />;
+}
 
-  // When the user logs out (or the session expires), send them to Login instead of Landing.
-  const prevAuthRef = useRef(isAuthenticated);
-  useEffect(() => {
-    if (prevAuthRef.current && !isAuthenticated) {
-      setUnauthView('login');
-    }
-    prevAuthRef.current = isAuthenticated;
-  }, [isAuthenticated]);
+function RouteTree() {
+  const { user, isAuthenticated } = useAuth();
 
-  const [isInviteFlowActive, setIsInviteFlowActive] = useState(() =>
-    window.location.pathname.startsWith('/admin/invite') || new URLSearchParams(window.location.search).has('admin_invite'),
-  );
-
-  // Manager invite links look like /?manager_invite=<signed token>.
-  const [managerInviteToken, setManagerInviteToken] = useState<string | null>(() =>
-    new URLSearchParams(window.location.search).get('manager_invite'),
-  );
-
-  if (managerInviteToken && !user) {
-    return (
-      <ManagerInviteSetup
-        token={managerInviteToken}
-        onDone={() => {
-          setManagerInviteToken(null);
-          setUnauthView('login');
-          // Strip the token from the address bar so a refresh doesn't reopen the invite.
-          window.history.replaceState({}, document.title, '/');
-        }}
-      />
-    );
-  }
-
-if (isInviteFlowActive) {
-    return (
-      <AdminInviteActivation
-        onActivationSuccess={() => {
-          setIsInviteFlowActive(false);
-          window.history.replaceState({}, document.title, '/');
-        }}
-      />
-    );
-  }
-
-  // Logged-out visitor: Landing, Signup, or (default) Login.
-  if (!isAuthenticated || !user) {
-    if (unauthView === 'landing') {
-      return (
-        <LandingPage
-          onNavigateToLogin={() => setUnauthView('login')}
-          onNavigateToSignup={() => setUnauthView('signup')}
-        />
-      );
-    }
-    if (unauthView === 'signup') {
-      return (
-        <Signup
-          onBackToLanding={() => setUnauthView('landing')}
-          onNavigateToLogin={() => setUnauthView('login')}
-        />
-      );
-    }
-    return (
-      <Login
-        onBackToLanding={() => setUnauthView('landing')}
-        onNavigateToSignup={() => setUnauthView('signup')}
-      />
-    );
-  }
-
-  // Logged in: each role gets its own data provider + portal.
   return (
-    <div style={{ position: 'relative' }}>
-      {user.role === 'SUPER_ADMIN' && <SuperAdminPortal />}
-      {user.role === 'MANAGER' && (
-        <ManagerProvider>
-          <ManagerAppContent />
-        </ManagerProvider>
-      )}
-      {user.role === 'CLIENT' && (
-        <ClientProvider>
-          <ClientAppContent />
-        </ClientProvider>
-      )}
-      {user.role === 'GIG_PROFESSIONAL' && (
-        <GigProvider>
-          <GigAppContent />
-        </GigProvider>
-      )}
-    </div>
+    <Routes>
+      <Route element={<PublicOnly />}>
+        <Route path="/" element={<LandingRoute />} />
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/signup" element={<SignupRoute />} />
+      </Route>
+      <Route path="/admin/invite" element={<InviteRoutes />} />
+      <Route path="/admin/invite/:token" element={<InviteRoutes />} />
+      <Route path="/manager/invite" element={<InviteRoutes />} />
+      <Route element={<ProtectedRole role="CLIENT" />}>
+        <Route path="/client/*" element={<ClientPortal />} />
+      </Route>
+      <Route element={<ProtectedRole role="MANAGER" />}>
+        <Route path="/manager/*" element={<ManagerPortal />} />
+      </Route>
+      <Route element={<ProtectedRole role="GIG_PROFESSIONAL" />}>
+        <Route path="/gig/*" element={<GigPortal />} />
+      </Route>
+      <Route element={<ProtectedRole role="SUPER_ADMIN" />}>
+        <Route path="/admin/*" element={<AdminPortal />} />
+      </Route>
+      {isAuthenticated && user ? <Route path="*" element={<HomeRedirect />} /> : <Route path="*" element={<Navigate to="/" replace />} />}
+    </Routes>
   );
 }
 
-/** Root component: auth + toast notifications wrap everything. */
 export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <MainAppContent />
+        <BrowserRouter><RouteTree /></BrowserRouter>
       </ToastProvider>
     </AuthProvider>
   );

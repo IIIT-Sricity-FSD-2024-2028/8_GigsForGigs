@@ -38,6 +38,11 @@ function contentSecurityPolicy(apiBaseUrl: string | undefined): Plugin {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), contentSecurityPolicy(loadEnv(mode, process.cwd(), 'VITE_').VITE_API_BASE_URL)],
+  // React Router is installed at the monorepo root while this app has its own
+  // React install. Resolve all React imports to the frontend's single runtime.
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
   build: {
     rolldownOptions: {
       // Third-party code changes less often than ours, so it caches separately.

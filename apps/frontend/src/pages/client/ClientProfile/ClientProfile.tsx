@@ -187,20 +187,6 @@ export const ClientProfile: React.FC<ClientProfileProps> = () => {
             <Button type="submit" disabled={isSaving}>
               {isSaving ? 'Saving Changes...' : 'Save Profile Changes'}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isSaving}
-              onClick={() => {
-                if (profile) {
-                  setClientName(profile.clientName || '');
-                  setDomain(profile.domain || '');
-                  setMsg(null);
-                }
-              }}
-            >
-              Reset
-            </Button>
           </div>
         </form>
       </Card>

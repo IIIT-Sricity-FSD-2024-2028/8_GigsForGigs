@@ -42,6 +42,7 @@ export interface ManagerInvite {
   client_id: string;
   name: string;
   email: string;
+  clientName?: string;
   status: 'PENDING' | 'ACCEPTED';
   createdAt: string;
   /** One-time activation link for a pending invite (shared by the client; nothing is emailed). */
@@ -277,6 +278,7 @@ interface RawManager {
   clientId: number;
   userId: number;
   user: RawUser;
+  client?: { clientName: string };
 }
 
 // ---- Mapping helpers (raw API shape -> internal UI shape) -----------------
@@ -452,6 +454,7 @@ function mapManagerToManagerInvite(raw: RawManager): ManagerInvite {
     client_id: String(raw.clientId),
     name: raw.user?.name ?? '',
     email: raw.user?.email ?? '',
+    clientName: raw.client?.clientName,
     status: 'ACCEPTED',
     // MANAGER has no created_at column in the schema.
     createdAt: '',

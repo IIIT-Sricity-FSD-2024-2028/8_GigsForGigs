@@ -45,9 +45,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
     }
 
     const success = await signup(fullName, email, password, role);
-    if (!success) {
-      setErrorMsg(authError || 'Registration failed. Please try again.');
-    }
+    if (success) setErrorMsg(null);
   };
 
   return (
@@ -151,8 +149,10 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
             </p>
           </div>
 
-          {errorMsg && (
+          {(errorMsg || authError) && (
             <div
+              role="alert"
+              aria-live="assertive"
               style={{
                 backgroundColor: '#FDE8E8',
                 color: '#9B1C1C',
@@ -163,7 +163,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
                 fontWeight: 600
               }}
             >
-              {errorMsg}
+              {errorMsg || authError}
             </div>
           )}
 
