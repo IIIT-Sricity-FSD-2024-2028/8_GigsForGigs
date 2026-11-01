@@ -10,6 +10,8 @@ import {
 } from "../../lib/taskRules.js";
 import { managerInviteToken } from "../auth/auth.service.js";
 import { platformFeeFor } from "../payment/payment.service.js";
+import { getPlatformSettings } from "../admin/platformSettings.js";
+import { initialReviewStatus } from "../../lib/textQuality.js";
 import { parseDeliverableKey } from "./client.dto.js";
 import type {
   CreateClientReviewDto,
@@ -50,7 +52,11 @@ export function updateProfile(clientId: number, dto: UpdateClientProfileDto) {
 // no route into task create/update/delete at all.
 
 // Post a new task owned by the client.
-export function createTask(clientId: number, dto: CreateTaskDto) {
+export async function createTask(clientId: number, dto: CreateTaskDto) {
+  const { minimumTaskBudget } = await getPlatformSettings();
+  if (Number(dto.budget) < minimumTaskBudget) {
+    throw badRequest(`Budget must be at least ₹${minimumTaskBudget.toLocaleString('en-IN')}`);
+  }
   const skills = stripReservedSkills(dto.skills);
   return prisma.task.create({
     data: {
@@ -185,7 +191,7 @@ export async function startContract(tx: any, application: { applicationId: numbe
       taskId: application.taskId,
       gigProfileId: application.gigProfileId,
       amount: task.budget,
-      platformFee: platformFeeFor(Number(task.budget)),
+      platformFee: platformFeeFor(Number(task.budget), (await getPlatformSettings()).commissionRakePercent),
       status: "pending",
     },
   });
@@ -302,7 +308,7 @@ export async function listContracts(clientId: number) {
  * taskId ownership is pre-verified by clientOwnershipGuard.
  */
 export async function setTaskManager(taskId: number, clientId: number, managerId: number | null) {
-  if (managerId !== null && !(await prisma.manager.findFirst({ where: { managerId, clientId } }))) {
+  if (managerId !== null && !(await prisma.manager.findFirst({ where: { managerId, clientId, user: { status: "ACTIVE" } } }))) {
     throw notFound("Manager not found");
   }
   const task = await prisma.task.findUniqueOrThrow({ where: { taskId }, include: { payments: true } });
@@ -635,6 +641,7 @@ export async function createReview(clientId: number, userId: number, dto: Create
       taskId: dto.taskId,
       reviewerId: userId,
       revieweeId: hired.gigProfile.userId,
+      status: initialReviewStatus(dto.comment),
       rating: dto.rating,
       ...(dto.comment !== undefined ? { comment: dto.comment } : {}),
     },

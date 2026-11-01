@@ -17,24 +17,29 @@ import { adminApi } from '../../../services/api/admin/adminApi';
 
 interface CategoryDemand {
   category: string;
-  activeContracts: number;
+  contracts: number;
   totalVolume: number;
-  avgBudget: number;
-  growthRate: string;
+  avgContractValue: number;
+  marketShare: number;
 }
 
 export const AdminAnalytics: React.FC = () => {
   const toast = useToast();
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'ytd'>('30d');
   const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     async function loadAnalytics() {
-      const data = await adminApi.getAnalytics(timeRange);
-      if (isMounted && data) {
-        setAnalyticsData(data);
+      try {
+        const data = await adminApi.getAnalytics(timeRange);
+        if (isMounted) {
+          setAnalyticsData(data);
+          setLoadError(null);
+        }
+      } catch (err: any) {
+        if (isMounted) setLoadError(err?.message || 'Failed to load analytics.');
       }
     }
     loadAnalytics();
@@ -44,55 +49,61 @@ export const AdminAnalytics: React.FC = () => {
   const categoryColumns: ColumnDef<CategoryDemand>[] = [
     { header: 'Category', accessorKey: 'category' },
     {
-      header: 'Active Gigs',
-      cell: (row) => <span style={{ fontWeight: 600 }}>{row.activeContracts ?? 0}</span>
+      header: 'Settled Contracts',
+      cell: (row) => <span style={{ fontWeight: 600 }}>{row.contracts}</span>
     },
     {
       header: 'Total Volume',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>₹{Number(row.totalVolume || 0).toLocaleString('en-IN')}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>₹{row.totalVolume.toLocaleString('en-IN')}</span>
     },
     {
       header: 'Average Order Value',
-      cell: (row) => <span>₹{Number(row.avgBudget || 0).toLocaleString('en-IN')}</span>
+      cell: (row) => <span>₹{row.avgContractValue.toLocaleString('en-IN')}</span>
     },
     {
       header: 'Market Share (% GMV)',
       cell: (row) => (
         <span style={{ color: 'var(--color-primary-dark)', fontWeight: 700 }}>
-          {row.growthRate || '0%'}
+          {row.marketShare}%
         </span>
       )
     }
   ];
 
+  /** Download what's on screen. CSV is one row per time bucket, then one per category. */
   const handleExport = (format: 'CSV' | 'JSON') => {
-    setIsExporting(true);
-    setTimeout(() => {
-      setIsExporting(false);
-      const dataStr = `data:text/json;charset=utf-8,` + encodeURIComponent(JSON.stringify(analyticsData || {}, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', `gigsforgigs-analytics-${timeRange}.${format.toLowerCase()}`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      toast.success('Report Exported', `Generated ${format} report for time range ${timeRange}.`);
-    }, 600);
+    if (!analyticsData) return;
+    const csvCell = (value: unknown) => `"${String(value).replace(/"/g, '""')}"`;
+    const content = format === 'JSON'
+      ? JSON.stringify(analyticsData, null, 2)
+      : [
+          'period,gmv,rake',
+          ...velocity.map((v: { date: string; gmv: number; rake: number }) => [csvCell(v.date), v.gmv, v.rake].join(',')),
+          '',
+          'category,contracts,volume,avg_contract_value,market_share_percent',
+          ...categories.map((c) => [csvCell(c.category), c.contracts, c.totalVolume, c.avgContractValue, c.marketShare].join(','))
+        ].join('\n');
+    const url = URL.createObjectURL(new Blob([content], { type: format === 'JSON' ? 'application/json' : 'text/csv' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `gigsforgigs-analytics-${timeRange}.${format.toLowerCase()}`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success('Report Exported', `Generated ${format} report for ${timeRange.toUpperCase()}.`);
   };
 
   const rawVelocity = analyticsData?.velocity;
   const velocity = Array.isArray(rawVelocity) ? rawVelocity : [];
 
-  const rawCategories = analyticsData?.categories;
-  const categories: CategoryDemand[] = Array.isArray(rawCategories)
-    ? rawCategories.map((c: any) => ({
-        category: c.category || c.name || 'Category',
-        activeContracts: Number(c.activeContracts || c.activeTasks || 0),
-        totalVolume: Number(c.totalVolume || c.gmv || 0),
-        avgBudget: Number(c.avgBudget || (c.gmv && c.activeTasks ? Math.round(c.gmv / c.activeTasks) : 0)),
-        growthRate: String(c.growthRate || (c.percentage ? `+${c.percentage}%` : '+0%'))
-      }))
-    : [];
+  const categories: CategoryDemand[] = Array.isArray(analyticsData?.categories) ? analyticsData.categories : [];
+
+  if (loadError) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {loadError}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
@@ -123,16 +134,14 @@ export const AdminAnalytics: React.FC = () => {
         <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
           <button
             onClick={() => handleExport('CSV')}
-            disabled={isExporting}
             className="admin-btn admin-btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <ExportIcon size={16} />
-            <span>{isExporting ? 'Exporting...' : 'Export CSV'}</span>
+            <span>Export CSV</span>
           </button>
           <button
             onClick={() => handleExport('JSON')}
-            disabled={isExporting}
             className="admin-btn admin-btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
@@ -145,35 +154,27 @@ export const AdminAnalytics: React.FC = () => {
       {/* Analytics KPI Metric Tiles (100% Dynamically Fed from DB & Time Range) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
-          title="Gross Volume Velocity"
-          value={`₹${Number(analyticsData?.grossVolume || 0).toLocaleString('en-IN')}`}
-          deltaText={`${timeRange.toUpperCase()} Interval`}
-          isPositive={true}
-          subtitle={`Aggregated platform GMV (${timeRange.toUpperCase()})`}
+          title="Gross Volume"
+          value={`₹${Number(analyticsData?.grossVolume ?? 0).toLocaleString('en-IN')}`}
+          subtitle={`Released in the last ${timeRange.toUpperCase()}`}
           accentColor="var(--color-primary-blue)"
         />
         <KPICard
-          title="Platform Take Rate"
-          value={analyticsData?.grossVolume && analyticsData?.platformRake ? `${((analyticsData.platformRake / analyticsData.grossVolume) * 100).toFixed(1)}%` : "10.0%"}
-          deltaText="Standard Commission"
-          isPositive={true}
-          subtitle="Net platform commission rake"
+          title="Effective Take Rate"
+          value={analyticsData?.grossVolume ? `${((analyticsData.platformRake / analyticsData.grossVolume) * 100).toFixed(1)}%` : '—'}
+          subtitle="Rake as a share of gross volume"
           accentColor="var(--color-primary-dark)"
         />
         <KPICard
-          title="Avg Contract Budget"
-          value={`₹${Number(analyticsData?.avgContractBudget || 0).toLocaleString('en-IN')}`}
-          deltaText="Real-time AOV"
-          isPositive={true}
-          subtitle="Average across all closed tasks"
+          title="Avg Contract Value"
+          value={analyticsData?.avgContractValue == null ? '—' : `₹${analyticsData.avgContractValue.toLocaleString('en-IN')}`}
+          subtitle="Across contracts settled in this range"
           accentColor="var(--color-secondary)"
         />
         <KPICard
           title="Repeat Client Rate"
-          value={analyticsData?.repeatClientRate || "0%"}
-          deltaText="Retention Health"
-          isPositive={true}
-          subtitle="Clients with multiple task contracts"
+          value={analyticsData?.repeatClientRate == null ? '—' : `${analyticsData.repeatClientRate}%`}
+          subtitle="All-time: clients with 2+ tasks"
           accentColor="var(--color-text-dark)"
         />
       </div>
@@ -189,11 +190,13 @@ export const AdminAnalytics: React.FC = () => {
               Comparison of total marketplace money-in versus retained transaction rake.
             </p>
           </div>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Live Escrow Volumes (INR ₹)</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+            {analyticsData?.peak ? `Peak: ${analyticsData.peak.date} (₹${analyticsData.peak.gmv.toLocaleString('en-IN')})` : 'No released payments in this range'}
+          </span>
         </div>
         <RevenueAreaChart data={velocity} />
         <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
-          💡 <strong>Financial Insight:</strong> Tracks gross transaction throughput (GMV) against retained platform commissions (10% rake) dynamically queried for {timeRange.toUpperCase()}. A tight correlation indicates healthy take rate realization with zero uncollected fees or unallocated escrow.
+          💡 <strong>Financial Insight:</strong> Tracks gross transaction throughput (GMV) against retained platform commissions dynamically queried for {timeRange.toUpperCase()}. A tight correlation indicates healthy take rate realization with zero uncollected fees or unallocated escrow.
         </div>
       </div>
 

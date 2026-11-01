@@ -14,10 +14,9 @@ export interface ModerationReview {
   reviewerRole: 'CLIENT' | 'GIG_PROFESSIONAL';
   targetUserName: string;
   rating: number;
-  comment: string;
-  flagCount: number;
-  flagReason?: string;
-  status: 'APPROVED' | 'FLAGGED' | 'HIDDEN';
+  comment: string | null;
+  moderatorNotes: string | null;
+  status: 'PUBLISHED' | 'FLAGGED' | 'HIDDEN';
   createdAt: string;
 }
 
@@ -59,14 +58,14 @@ export const Reviews: React.FC = () => {
         r.id === id ? { ...r, status: newStatus } : r
       );
       setReviews(updated);
-      toast.info('Review Moderated', `Review status changed to ${newStatus}. Aggregate ratings recalculated.`);
+      toast.info('Review Moderated', `Review is now ${newStatus}. Hidden reviews don't count toward ratings.`);
     } catch (err: any) {
       toast.error('Moderation Failed', err?.message || 'Failed to update review status.');
     }
   };
 
   const filteredReviews = reviews.filter((r) => {
-    if (activeTab === 'flagged') return r.status === 'FLAGGED' || r.flagCount > 0;
+    if (activeTab === 'flagged') return r.status === 'FLAGGED';
     if (activeTab === 'hidden') return r.status === 'HIDDEN';
     return true;
   });
@@ -109,11 +108,11 @@ export const Reviews: React.FC = () => {
       cell: (row) => (
         <div style={{ maxWidth: '380px' }}>
           <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)' }}>
-            "{row.comment}"
+            {row.comment ? `"${row.comment}"` : 'No comment left'}
           </p>
-          {row.flagReason && (
-            <span style={{ fontSize: '11px', color: 'var(--color-danger-text)', fontWeight: 600, marginTop: '2px', display: 'block' }}>
-              🚩 Flag Reason: {row.flagReason}
+          {row.moderatorNotes && (
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+              Moderator: {row.moderatorNotes}
             </span>
           )}
         </div>
@@ -127,13 +126,13 @@ export const Reviews: React.FC = () => {
       header: 'Moderation Actions',
       cell: (row) => (
         <div style={{ display: 'flex', gap: '6px' }}>
-          {row.status !== 'APPROVED' && (
+          {row.status !== 'PUBLISHED' && (
             <button
-              onClick={() => handleModerate(row.id, 'APPROVED')}
+              onClick={() => handleModerate(row.id, 'PUBLISHED')}
               className="admin-btn admin-btn-secondary"
               style={{ padding: '4px 8px', fontSize: '11px' }}
             >
-              Approve
+              Publish
             </button>
           )}
           {row.status !== 'HIDDEN' && (
@@ -167,7 +166,7 @@ export const Reviews: React.FC = () => {
       <AdminTabs
         tabs={[
           { id: 'all', label: 'All Reviews', count: reviews.length },
-          { id: 'flagged', label: 'Flagged Queue', count: reviews.filter((r) => r.status === 'FLAGGED' || r.flagCount > 0).length },
+          { id: 'flagged', label: 'Flagged Queue', count: reviews.filter((r) => r.status === 'FLAGGED').length },
           { id: 'hidden', label: 'Hidden / Suppressed', count: reviews.filter((r) => r.status === 'HIDDEN').length }
         ]}
         activeTab={activeTab}

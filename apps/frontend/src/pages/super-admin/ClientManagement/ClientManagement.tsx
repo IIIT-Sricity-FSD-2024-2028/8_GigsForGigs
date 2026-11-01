@@ -11,13 +11,15 @@ export interface ClientDetail {
   name: string;
   companyName: string;
   email: string;
-  domain: string;
+  domain: string | null;
   totalSpent: number;
   activeGigsCount: number;
   assignedManagersCount: number;
   isVerified: boolean;
-  status: 'ACTIVE' | 'SUSPENDED' | 'PENDING_KYC';
+  kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  status: 'ACTIVE' | 'SUSPENDED';
   joinedDate: string;
+  managers: { managerId: number; name: string; email: string; status: string }[];
 }
 
 export const ClientManagement: React.FC = () => {
@@ -58,27 +60,31 @@ export const ClientManagement: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
-  const handleVerifyKYC = async () => {
+  /** Records the decision, and only updates the screen once the server has accepted it. */
+  const handleKycDecision = async (decision: 'VERIFIED' | 'REJECTED') => {
     if (!selectedClient) return;
-    await adminApi.verifyClientKYC(selectedClient.id);
-    const updated = clients.map((c) =>
-      c.id === selectedClient.id ? { ...c, isVerified: true, status: 'ACTIVE' as const } : c
-    );
-    setClients(updated);
-    setSelectedClient({ ...selectedClient, isVerified: true, status: 'ACTIVE' });
-    toast.success('KYC Approved', `Client ${selectedClient.name} (${selectedClient.companyName}) verified.`);
+    try {
+      await adminApi.decideClientKYC(selectedClient.id, decision);
+      const patch = { kycStatus: decision, isVerified: decision === 'VERIFIED' };
+      setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, ...patch } : c)));
+      setSelectedClient({ ...selectedClient, ...patch });
+      toast.success(decision === 'VERIFIED' ? 'KYC Approved' : 'KYC Rejected', `Decision recorded for ${selectedClient.companyName}.`);
+    } catch (err: any) {
+      toast.error('KYC Update Failed', err?.message || 'Could not record the KYC decision.');
+    }
   };
 
   const handleSuspendConfirm = async () => {
     if (!selectedClient) return;
-    await adminApi.updateUserStatus(selectedClient.id, 'SUSPENDED', 'Compliance review');
-    const updated = clients.map((c) =>
-      c.id === selectedClient.id ? { ...c, status: 'SUSPENDED' as const } : c
-    );
-    setClients(updated);
+    try {
+      await adminApi.updateUserStatus(selectedClient.id, 'SUSPENDED', 'Compliance review');
+      setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, status: 'SUSPENDED' as const } : c)));
+      setIsDrawerOpen(false);
+      toast.warning('Client Suspended', `Account for ${selectedClient.companyName} paused.`);
+    } catch (err: any) {
+      toast.error('Suspension Failed', err?.message || 'Could not suspend this client.');
+    }
     setIsSuspendDialogOpen(false);
-    setIsDrawerOpen(false);
-    toast.warning('Client Suspended', `Account for ${selectedClient.companyName} paused.`);
   };
 
   const handleReactivateClient = async () => {
@@ -128,7 +134,7 @@ export const ClientManagement: React.FC = () => {
             gap: '4px'
           }}
         >
-          {row.isVerified ? '✓ Verified' : '⏳ Pending KYC'}
+          {row.kycStatus === 'VERIFIED' ? '✓ Verified' : row.kycStatus === 'REJECTED' ? '✕ Rejected' : '⏳ Pending KYC'}
         </span>
       )
     },
@@ -201,19 +207,26 @@ export const ClientManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Delegated Managers</span>
                 <div style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>
-                  {selectedClient.assignedManagersCount} Active Seats
+                  {selectedClient.assignedManagersCount} {selectedClient.assignedManagersCount === 1 ? 'Seat' : 'Seats'}
                 </div>
+                {selectedClient.managers.map((m) => (
+                  <div key={m.managerId} style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                    {m.name} ({m.email}) · {m.status}
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Compliance Action Row */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
-              {!selectedClient.isVerified && (
-                <button
-                  onClick={handleVerifyKYC}
-                  className="admin-btn admin-btn-primary"
-                >
-                  ✓ Approve KYC Credentials
+              {selectedClient.kycStatus !== 'VERIFIED' && (
+                <button onClick={() => handleKycDecision('VERIFIED')} className="admin-btn admin-btn-primary">
+                  ✓ Approve KYC
+                </button>
+              )}
+              {selectedClient.kycStatus !== 'REJECTED' && (
+                <button onClick={() => handleKycDecision('REJECTED')} className="admin-btn admin-btn-secondary">
+                  ✕ Reject KYC
                 </button>
               )}
               {selectedClient.status !== 'SUSPENDED' ? (
@@ -240,7 +253,7 @@ export const ClientManagement: React.FC = () => {
       <ConfirmDialog
         isOpen={isSuspendDialogOpen}
         title={`Suspend ${selectedClient?.companyName}?`}
-        message="Suspending this client will immediately freeze all open hiring posts, pause active milestones, and restrict access for all delegated managers. This action is logged in the audit trail."
+        message="This signs the client out on their next request and blocks new logins. Their tasks, managers and escrow are left exactly as they are, and reactivating restores access."
         confirmLabel="Confirm Suspension"
         isDanger={true}
         onConfirm={handleSuspendConfirm}

@@ -15,11 +15,16 @@ export interface DisputeCase {
   filedByRole: 'CLIENT' | 'GIG_PROFESSIONAL';
   againstName: string;
   disputeAmount: number;
+  escrowHeld: number;
   reason: string;
   description: string;
   evidenceUrls: string[];
   status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
-  slaHoursLeft: number;
+  /** Derived by the server from createdAt. Negative once breached, null when closed. */
+  slaHoursLeft: number | null;
+  resolutionNotes: string | null;
+  settlementType: string | null;
+  splitPercent: number | null;
   createdAt: string;
 }
 
@@ -34,13 +39,16 @@ export const DisputesReports: React.FC = () => {
   const [settlementType, setSettlementType] = useState<'FULL_REFUND' | 'FULL_RELEASE' | 'SPLIT'>('FULL_REFUND');
   const [splitClientPercent, setSplitClientPercent] = useState<number>(50);
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     async function loadDisputes() {
-      const data = await adminApi.getDisputes();
-      if (isMounted) {
-        setDisputes(Array.isArray(data) ? data : []);
+      try {
+        const data = await adminApi.getDisputes();
+        if (isMounted) setDisputes(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        if (isMounted) setLoadError(err?.message || 'Failed to load the dispute docket.');
       }
     }
     loadDisputes();
@@ -58,17 +66,28 @@ export const DisputesReports: React.FC = () => {
     e.preventDefault();
     if (!selectedDispute || !resolutionNotes.trim()) return;
 
+    // Only claim success if the server moved the money: a failed ruling must stay visibly open.
     try {
-      await adminApi.settleDispute(selectedDispute.id, settlementType, resolutionNotes, splitClientPercent);
-    } catch (err) {
-      console.warn('[DisputesReports] Settle dispute error:', err);
+      const outcome = await adminApi.settleDispute(
+        selectedDispute.id,
+        settlementType,
+        resolutionNotes,
+        settlementType === 'SPLIT' ? splitClientPercent : undefined
+      );
+      setDisputes(disputes.map((d) =>
+        d.id === selectedDispute.id
+          ? { ...d, status: 'RESOLVED' as const, escrowHeld: 0, slaHoursLeft: null, settlementType, resolutionNotes }
+          : d
+      ));
+      setIsDocketOpen(false);
+      const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+      toast.success(
+        'Ruling Executed',
+        `Client ${inr(outcome.refundToClient)} · Pro ${inr(outcome.payoutToPro)} · Platform ${inr(outcome.platformFee)}`
+      );
+    } catch (err: any) {
+      toast.error('Ruling Failed', err?.message || 'The ruling was not applied. No money moved.');
     }
-    const updated = disputes.map((d) =>
-      d.id === selectedDispute.id ? { ...d, status: 'RESOLVED' as const } : d
-    );
-    setDisputes(updated);
-    setIsDocketOpen(false);
-    toast.success('Dispute Case Settled', `Ruling executed for ${selectedDispute.id} via ${settlementType.replace('_', ' ')}.`);
   };
 
   const columns: ColumnDef<DisputeCase>[] = [
@@ -105,10 +124,10 @@ export const DisputesReports: React.FC = () => {
           style={{
             fontSize: '11px',
             fontWeight: 700,
-            color: row.slaHoursLeft < 24 ? 'var(--color-danger-text)' : 'var(--color-warning-text)'
+            color: row.slaHoursLeft === null ? 'var(--color-text-muted)' : row.slaHoursLeft < 24 ? 'var(--color-danger-text)' : 'var(--color-warning-text)'
           }}
         >
-          ⏱ {row.slaHoursLeft}h remaining
+          {row.slaHoursLeft === null ? 'Closed' : row.slaHoursLeft < 0 ? `⚠ Breached by ${-row.slaHoursLeft}h` : `⏱ ${row.slaHoursLeft}h remaining`}
         </span>
       )
     },
@@ -124,11 +143,19 @@ export const DisputesReports: React.FC = () => {
           className="admin-btn admin-btn-primary"
           style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
         >
-          Arbitrate Docket
+          {row.status === 'RESOLVED' || row.status === 'DISMISSED' ? 'View Ruling' : 'Arbitrate Docket'}
         </button>
       )
     }
   ];
+
+  if (loadError) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {loadError}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
@@ -152,7 +179,8 @@ export const DisputesReports: React.FC = () => {
           <form onSubmit={handleExecuteSettlement} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
             <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
               <div><strong>Task:</strong> {selectedDispute.taskTitle}</div>
-              <div><strong>Disputed Escrow:</strong> ₹{selectedDispute.disputeAmount.toLocaleString('en-IN')}</div>
+              <div><strong>Claimed Amount:</strong> ₹{selectedDispute.disputeAmount.toLocaleString('en-IN')}</div>
+              <div><strong>Held in Escrow:</strong> ₹{selectedDispute.escrowHeld.toLocaleString('en-IN')} (a ruling applies to this whole amount)</div>
               <div><strong>Filer:</strong> {selectedDispute.filedByName} ({selectedDispute.filedByRole})</div>
               <div><strong>Against:</strong> {selectedDispute.againstName}</div>
               <div style={{ marginTop: '8px' }}><strong>Filer Description:</strong> {selectedDispute.description}</div>
@@ -164,6 +192,9 @@ export const DisputesReports: React.FC = () => {
                 Evidence Documents & Artifact Logs
               </span>
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                {(selectedDispute.evidenceUrls ?? []).length === 0 && (
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>No evidence submitted</span>
+                )}
                 {(selectedDispute.evidenceUrls ?? []).map((url, i) => (
                   <a
                     key={i}
@@ -187,7 +218,15 @@ export const DisputesReports: React.FC = () => {
             </div>
 
             {/* Settlement Ruling Controls */}
-            {hasPermission('disputes:resolve') ? (
+            {selectedDispute.status === 'RESOLVED' || selectedDispute.status === 'DISMISSED' ? (
+              <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}>
+                <div>
+                  <strong>Ruling:</strong> {(selectedDispute.settlementType ?? 'None recorded').replace(/_/g, ' ')}
+                  {selectedDispute.splitPercent != null && ` (${selectedDispute.splitPercent}% to client)`}
+                </div>
+                <div style={{ marginTop: '6px' }}><strong>Notes:</strong> {selectedDispute.resolutionNotes || '—'}</div>
+              </div>
+            ) : hasPermission('disputes:resolve') ? (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
                   <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
@@ -223,8 +262,8 @@ export const DisputesReports: React.FC = () => {
                     </label>
                     <input
                       type="range"
-                      min="10"
-                      max="90"
+                      min="5"
+                      max="95"
                       step="5"
                       value={splitClientPercent}
                       onChange={(e) => setSplitClientPercent(Number(e.target.value))}
@@ -235,7 +274,7 @@ export const DisputesReports: React.FC = () => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
-                    Legal & Operational Arbitration Notes (Sent to both parties)
+                    Arbitration Notes (Recorded on the docket)
                   </label>
                   <textarea
                     className="admin-textarea"
@@ -258,6 +297,8 @@ export const DisputesReports: React.FC = () => {
                   <button
                     type="submit"
                     className="admin-btn admin-btn-primary"
+                    disabled={selectedDispute.escrowHeld <= 0}
+                    title={selectedDispute.escrowHeld <= 0 ? 'No funds are held in escrow for this task' : undefined}
                   >
                     Execute Final Arbitration Ruling
                   </button>

@@ -2,7 +2,9 @@ import { Router } from "express";
 import { authGuard } from "../../middleware/authGuard.js";
 import { roleGuard } from "../../middleware/roleGuard.js";
 import { validate } from "../../middleware/validate.js";
+import { act, audited, can } from "../../middleware/adminGuard.js";
 import {
+  acceptAdminInvitationSchema,
   createAdminInvitationSchema,
   createApplicationSchema,
   createAssignmentSchema,
@@ -10,180 +12,136 @@ import {
   createDeliverableSchema,
   createGigProfileSchema,
   createManagerSchema,
-  createPaymentSchema,
   createReviewSchema,
   createTaskSchema,
   createUserSchema,
+  kycDecisionSchema,
+  moderateReviewSchema,
+  overridePaymentSchema,
+  settleDisputeSchema,
+  twoFactorCodeSchema,
   updateApplicationSchema,
+  updateBadgeSchema,
   updateClientSchema,
   updateDeliverableSchema,
   updateGigProfileSchema,
-  overridePaymentSchema,
-  updatePaymentSchema,
+  updatePasswordSchema,
   updatePlatformSettingsSchema,
   updateReviewSchema,
   updateTaskSchema,
   updateUserSchema,
+  updateUserStatusSchema,
 } from "./admin.dto.js";
 import * as adminController from "./admin.controller.js";
 
+/**
+ * Super Admin API. Three layers apply in order:
+ *   1. authGuard + roleGuard("admin"): a live, non-suspended admin session.
+ *   2. can(permission): the RBAC check, read fresh from the DB on every request.
+ *   3. audited(action): one append-only AUDIT_LOG row per successful mutation.
+ * act(permission, action) is (2) + (3) and guards every write below.
+ * Reads with no can() (dashboard, disputes, reviews, audit log, settings) are
+ * open to every admin tier, because even a read-only auditor needs them.
+ */
 export const adminRouter = Router();
 
-// Public invitation acceptance route (exchanges one-time cryptographic invite token for session)
-adminRouter.post("/invitations/accept", adminController.acceptAdminInvitation);
+// Public: an invitee has no session yet. Proof is the signed token plus the one-time password.
+adminRouter.post("/invitations/accept", validate(acceptAdminInvitationSchema), adminController.acceptAdminInvitation);
 
-// Every route below requires valid Super Admin authentication
 adminRouter.use(authGuard, roleGuard("admin"));
 
-// Platform-wide KPI/dashboard summary numbers.
-adminRouter.get("/dashboard/stats", adminController.getDashboardStats);
+// Dashboard & analytics.
 adminRouter.get("/kpis", adminController.getDashboardStats);
+adminRouter.get("/analytics", adminController.getAnalytics);
 
-// Users: list/get/create/update/delete any USER row directly.
-adminRouter.get("/users", adminController.listUsers);
-adminRouter.get("/users/:userId", adminController.getUser);
-adminRouter.post("/users", validate(createUserSchema), adminController.createUser);
-adminRouter.patch("/users/:userId", validate(updateUserSchema), adminController.updateUser);
-adminRouter.delete("/users/:userId", adminController.deleteUser);
+// Users. Admin accounts are refused by updateUser, and removing one needs admins:invite too.
+adminRouter.get("/users", can("users:read"), adminController.listUsers);
+adminRouter.get("/users/:userId", can("users:read"), adminController.getUser);
+adminRouter.post("/users", act("users:ban", "USER_CREATE"), validate(createUserSchema), adminController.createUser);
+adminRouter.patch("/users/:userId", act("users:ban", "USER_UPDATE"), validate(updateUserSchema), adminController.updateUser);
+adminRouter.delete("/users/:userId", act("users:ban", "USER_DELETE"), adminController.deleteUser);
+adminRouter.patch("/users/:userId/status", act("users:ban", "USER_STATUS_CHANGE"), validate(updateUserStatusSchema), adminController.updateUserStatus);
 
-// Clients: list/get/create/update/delete.
-adminRouter.get("/clients", adminController.listClients);
-adminRouter.get("/clients/:clientId", adminController.getClient);
-adminRouter.post("/clients", validate(createClientSchema), adminController.createClient);
-adminRouter.patch(
-  "/clients/:clientId",
-  validate(updateClientSchema),
-  adminController.updateClient,
-);
-adminRouter.delete("/clients/:clientId", adminController.deleteClient);
+// Clients.
+adminRouter.get("/clients", can("users:read"), adminController.listClients);
+adminRouter.get("/clients/:clientId", can("users:read"), adminController.getClient);
+adminRouter.post("/clients", act("users:ban", "CLIENT_CREATE"), validate(createClientSchema), adminController.createClient);
+adminRouter.patch("/clients/:clientId", act("users:ban", "CLIENT_UPDATE"), validate(updateClientSchema), adminController.updateClient);
+adminRouter.delete("/clients/:clientId", act("users:ban", "CLIENT_DELETE"), adminController.deleteClient);
+adminRouter.patch("/clients/:clientId/kyc", act("users:ban", "KYC_DECISION"), validate(kycDecisionSchema), adminController.decideClientKyc);
 
-// Managers: list/create/delete (no direct update route — see updateManager on manager.route.ts instead).
-adminRouter.get("/managers", adminController.listManagers);
-adminRouter.post("/managers", validate(createManagerSchema), adminController.createManager);
-adminRouter.delete("/managers/:clientId/:managerId", adminController.deleteManager);
+// Managers.
+adminRouter.get("/managers", can("users:read"), adminController.listManagers);
+adminRouter.post("/managers", act("users:ban", "MANAGER_CREATE"), validate(createManagerSchema), adminController.createManager);
+adminRouter.delete("/managers/:clientId/:managerId", act("users:ban", "MANAGER_DELETE"), adminController.deleteManager);
 
-// Gig professional profiles: list/get/create/update/delete.
-adminRouter.get("/gig-profiles", adminController.listGigProfiles);
-adminRouter.get("/gig-pros", adminController.listGigProfiles);
-adminRouter.get("/gig-profiles/:gigProfileId", adminController.getGigProfile);
-adminRouter.post(
-  "/gig-profiles",
-  validate(createGigProfileSchema),
-  adminController.createGigProfile,
-);
-adminRouter.patch(
-  "/gig-profiles/:gigProfileId",
-  validate(updateGigProfileSchema),
-  adminController.updateGigProfile,
-);
-adminRouter.delete("/gig-profiles/:gigProfileId", adminController.deleteGigProfile);
+// Gig professionals.
+adminRouter.get("/gig-pros", can("users:read"), adminController.listGigProfiles);
+adminRouter.get("/gig-profiles/:gigProfileId", can("users:read"), adminController.getGigProfile);
+adminRouter.post("/gig-profiles", act("users:ban", "GIG_PROFILE_CREATE"), validate(createGigProfileSchema), adminController.createGigProfile);
+adminRouter.patch("/gig-profiles/:gigProfileId", act("users:ban", "GIG_PROFILE_UPDATE"), validate(updateGigProfileSchema), adminController.updateGigProfile);
+adminRouter.delete("/gig-profiles/:gigProfileId", act("users:ban", "GIG_PROFILE_DELETE"), adminController.deleteGigProfile);
+adminRouter.patch("/gig-pros/:gigProId/badge", act("users:ban", "BADGE_UPDATE"), validate(updateBadgeSchema), adminController.updateGigProBadge);
 
-// Tasks/projects: list/get/create/update/delete, plus a status-only PATCH alias.
-adminRouter.get("/tasks", adminController.listTasks);
+// Tasks. Delivery pipeline changes sit with whoever arbitrates delivery.
 adminRouter.get("/projects", adminController.listTasks);
 adminRouter.get("/tasks/:taskId", adminController.getTask);
-adminRouter.post("/tasks", validate(createTaskSchema), adminController.createTask);
-adminRouter.patch("/tasks/:taskId", validate(updateTaskSchema), adminController.updateTask);
-adminRouter.patch("/projects/:taskId/status", validate(updateTaskSchema), adminController.updateTask);
-adminRouter.delete("/tasks/:taskId", adminController.deleteTask);
+adminRouter.post("/tasks", act("disputes:resolve", "TASK_CREATE"), validate(createTaskSchema), adminController.createTask);
+adminRouter.patch("/tasks/:taskId", act("disputes:resolve", "TASK_UPDATE"), validate(updateTaskSchema), adminController.updateTask);
+adminRouter.delete("/tasks/:taskId", act("disputes:resolve", "TASK_DELETE"), adminController.deleteTask);
 
-// Applications: list/create/update (status)/delete.
+// Applications.
 adminRouter.get("/applications", adminController.listApplications);
-adminRouter.post(
-  "/applications",
-  validate(createApplicationSchema),
-  adminController.createApplication,
-);
-adminRouter.patch(
-  "/applications/:applicationId",
-  validate(updateApplicationSchema),
-  adminController.updateApplication,
-);
-adminRouter.delete("/applications/:applicationId", adminController.deleteApplication);
+adminRouter.post("/applications", act("disputes:resolve", "APPLICATION_CREATE"), validate(createApplicationSchema), adminController.createApplication);
+adminRouter.patch("/applications/:applicationId", act("disputes:resolve", "APPLICATION_UPDATE"), validate(updateApplicationSchema), adminController.updateApplication);
+adminRouter.delete("/applications/:applicationId", act("disputes:resolve", "APPLICATION_DELETE"), adminController.deleteApplication);
 
-// Gig-manager assignments: list/create/delete.
+// Assignments.
 adminRouter.get("/assignments", adminController.listAssignments);
-adminRouter.post(
-  "/assignments",
-  validate(createAssignmentSchema),
-  adminController.createAssignment,
-);
-adminRouter.delete("/assignments/:gigProfileId/:taskId", adminController.deleteAssignment);
+adminRouter.post("/assignments", act("disputes:resolve", "ASSIGNMENT_CREATE"), validate(createAssignmentSchema), adminController.createAssignment);
+adminRouter.delete("/assignments/:gigProfileId/:taskId", act("disputes:resolve", "ASSIGNMENT_DELETE"), adminController.deleteAssignment);
 
-// Deliverables: list/create/update/delete.
+// Deliverables.
 adminRouter.get("/deliverables", adminController.listDeliverables);
-adminRouter.post(
-  "/deliverables",
-  validate(createDeliverableSchema),
-  adminController.createDeliverable,
-);
-adminRouter.patch(
-  "/deliverables/:taskId/:deliverableNo",
-  validate(updateDeliverableSchema),
-  adminController.updateDeliverable,
-);
-adminRouter.delete("/deliverables/:taskId/:deliverableNo", adminController.deleteDeliverable);
+adminRouter.post("/deliverables", act("disputes:resolve", "DELIVERABLE_CREATE"), validate(createDeliverableSchema), adminController.createDeliverable);
+adminRouter.patch("/deliverables/:taskId/:deliverableNo", act("disputes:resolve", "DELIVERABLE_UPDATE"), validate(updateDeliverableSchema), adminController.updateDeliverable);
+adminRouter.delete("/deliverables/:taskId/:deliverableNo", act("disputes:resolve", "DELIVERABLE_DELETE"), adminController.deleteDeliverable);
 
-// Payments: list/create/update/delete.
-adminRouter.get("/payments", adminController.listPayments);
-adminRouter.post("/payments", validate(createPaymentSchema), adminController.createPayment);
+// Payments: read plus escrow override only. No raw create/update/delete, so the ledger can't be edited.
+// Release and refund are separate grants, so the required permission depends on the request.
+adminRouter.get("/payments", can("payments:read"), adminController.listPayments);
 adminRouter.patch(
-  "/payments/:paymentId",
-  validate(updatePaymentSchema),
-  adminController.updatePayment,
+  "/payments/:paymentId/override",
+  act((req) => (req.body?.action === "REFUND" ? "payments:refund" : "payments:release"), "ESCROW_OVERRIDE"),
+  validate(overridePaymentSchema),
+  adminController.overridePayment,
 );
-adminRouter.delete("/payments/:paymentId", adminController.deletePayment);
 
-// Reviews: list/create/update/delete.
+// Reviews.
 adminRouter.get("/reviews", adminController.listReviews);
-adminRouter.post("/reviews", validate(createReviewSchema), adminController.createReview);
-adminRouter.patch(
-  "/reviews/:reviewId",
-  validate(updateReviewSchema),
-  adminController.updateReview,
-);
-adminRouter.delete("/reviews/:reviewId", adminController.deleteReview);
+adminRouter.post("/reviews", act("reviews:moderate", "REVIEW_CREATE"), validate(createReviewSchema), adminController.createReview);
+adminRouter.patch("/reviews/:reviewId", act("reviews:moderate", "REVIEW_UPDATE"), validate(updateReviewSchema), adminController.updateReview);
+adminRouter.delete("/reviews/:reviewId", act("reviews:moderate", "REVIEW_DELETE"), adminController.deleteReview);
+adminRouter.patch("/reviews/:reviewId/moderate", act("reviews:moderate", "REVIEW_MODERATE"), validate(moderateReviewSchema), adminController.moderateReview);
 
-// Admin staff roster.
-adminRouter.get("/admin-staff", adminController.listAdminStaff);
-// Disputes: list, and resolve/settle (both paths hit the same controller).
+// Disputes.
 adminRouter.get("/disputes", adminController.listDisputes);
-adminRouter.patch("/disputes/:disputeId/resolve", adminController.resolveDispute);
-adminRouter.post("/disputes/:disputeId/settle", adminController.resolveDispute);
-// Escrow override: release a held payment to the gig pro, or refund it to the client.
-adminRouter.patch("/payments/:paymentId/override", validate(overridePaymentSchema), adminController.overridePayment);
-adminRouter.post("/payments/:paymentId/override", validate(overridePaymentSchema), adminController.overridePayment);
-// Audit log trail (written to by recordAuditLog in admin.service.ts on every mutating admin action).
-adminRouter.get("/audit-logs", adminController.listAuditLogs);
-// Platform-wide settings: read/update (three verb aliases for the same update).
-adminRouter.get("/settings", adminController.getPlatformSettings);
-adminRouter.patch("/settings", validate(updatePlatformSettingsSchema), adminController.updatePlatformSettings);
-adminRouter.put("/settings", validate(updatePlatformSettingsSchema), adminController.updatePlatformSettings);
-adminRouter.post("/settings", validate(updatePlatformSettingsSchema), adminController.updatePlatformSettings);
-// Platform analytics (time-range trends, separate from the dashboard KPI snapshot above).
-adminRouter.get("/analytics", adminController.getAnalytics);
-// Invite a new admin staff member.
-adminRouter.post("/invitations", validate(createAdminInvitationSchema), adminController.createAdminInvitation);
+adminRouter.post("/disputes/:disputeId/settle", act("disputes:resolve", "DISPUTE_SETTLE"), validate(settleDisputeSchema), adminController.settleDispute);
 
-// Specialized mutation route aliases.
-// NOTE: verifyClientKYC/updateGigProBadge/updateUserStatus/revokeAdminSession/
-// moderateReview/updateProfilePassword/updateProfile2FA below are all backend
-// no-ops — admin.service.ts only writes an audit-log line and returns
-// {success: true} for these; there's no kycStatus/badge/status column,
-// session table, or moderation column in schema.prisma to actually persist
-// to. See the CLAUDE.md "Current implementation state" note.
-adminRouter.patch("/clients/:clientId/kyc", adminController.verifyClientKYC);
-adminRouter.post("/clients/:clientId/kyc", adminController.verifyClientKYC);
-adminRouter.patch("/gig-pros/:gigProId/badge", adminController.updateGigProBadge);
-adminRouter.patch("/gig-profiles/:gigProfileId/badge", adminController.updateGigProBadge);
-adminRouter.patch("/users/:userId/status", adminController.updateUserStatus);
-adminRouter.post("/users/:userId/status", adminController.updateUserStatus);
-adminRouter.post("/sessions/:staffId/revoke", adminController.revokeAdminSession);
-adminRouter.delete("/sessions/:staffId", adminController.revokeAdminSession);
-adminRouter.patch("/reviews/:reviewId/moderate", adminController.moderateReview);
-adminRouter.post("/reviews/:reviewId/moderate", adminController.moderateReview);
+// Admin staff, invitations and the audit trail.
+adminRouter.get("/admin-staff", adminController.listAdminStaff);
+adminRouter.get("/audit-logs", adminController.listAuditLogs);
+adminRouter.post("/invitations", act("admins:invite", "ADMIN_INVITE"), validate(createAdminInvitationSchema), adminController.createAdminInvitation);
+// Self-service is allowed for any admin; revoking someone else is checked in the service.
+adminRouter.post("/sessions/:staffId/revoke", audited("SESSIONS_REVOKE"), adminController.revokeSessions);
+
+// Platform settings.
+adminRouter.get("/settings", adminController.getPlatformSettings);
+adminRouter.put("/settings", act("settings:manage", "SETTINGS_UPDATE"), validate(updatePlatformSettingsSchema), adminController.updatePlatformSettings);
+
+// Own profile. Always acts on the session's user, never on an id or email from the request.
 adminRouter.get("/profile", adminController.getProfile);
-adminRouter.post("/profile/password", adminController.updateProfilePassword);
-adminRouter.patch("/profile/password", adminController.updateProfilePassword);
-adminRouter.post("/profile/2fa", adminController.updateProfile2FA);
-adminRouter.patch("/profile/2fa", adminController.updateProfile2FA);
+adminRouter.post("/profile/password", audited("PASSWORD_CHANGE"), validate(updatePasswordSchema), adminController.updateProfilePassword);
+adminRouter.post("/profile/2fa/enroll", adminController.enrollTwoFactor);
+adminRouter.post("/profile/2fa/confirm", audited("TWO_FACTOR_ENABLE"), validate(twoFactorCodeSchema), adminController.confirmTwoFactor);
+adminRouter.post("/profile/2fa/disable", audited("TWO_FACTOR_DISABLE"), validate(twoFactorCodeSchema), adminController.disableTwoFactor);

@@ -103,3 +103,11 @@ export function textProblem(s: string, o: QualityOptions): string | null {
   }
   return null;
 }
+
+// ponytail: a short word list, not a classifier. It only routes a review to the
+// human moderation queue, so a miss costs little. Swap in a real service if volume grows.
+const PROFANITY = /\b(fuck\w*|shit\w*|bitch\w*|asshole\w*|bastard\w*|scam\w*|fraud\w*)\b/i;
+
+/** Initial moderation status: suspect language is held back for review, everything else publishes. */
+export const initialReviewStatus = (comment: string | null | undefined): "PUBLISHED" | "FLAGGED" =>
+  comment && PROFANITY.test(comment) ? "FLAGGED" : "PUBLISHED";

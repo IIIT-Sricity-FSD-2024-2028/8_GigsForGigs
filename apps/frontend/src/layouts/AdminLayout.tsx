@@ -101,7 +101,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   }, []);
 
   // Which sidebar links this admin may see.
-  const userTier: AdminTier = user?.adminTier || 'OWNER';
+  const userTier: AdminTier = user?.adminTier || 'AUDITOR';
   const filteredNavItems = ALL_NAV_ITEMS.filter((item) => {
     // Auditors can inspect all data except modifying platform settings
     if (userTier === 'AUDITOR') return item.id !== 'settings';

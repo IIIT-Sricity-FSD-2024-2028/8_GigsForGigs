@@ -3,7 +3,8 @@ import type { User } from "db";
 import { comparePassword, hashPassword } from "../../lib/password.js";
 import { signInviteToken, signToken, verifyInviteToken } from "../../lib/jwt.js";
 import type { TokenPayload } from "../../lib/jwt.js";
-import { badRequest, conflict, notFound, unauthorized } from "../../lib/httpError.js";
+import { HttpError, badRequest, conflict, notFound, unauthorized } from "../../lib/httpError.js";
+import { decryptSecret, verifyTotp } from "../../lib/totp.js";
 import type { AcceptManagerInviteDto, LoginDto, SignupDto } from "./auth.dto.js";
 
 function sanitizeUser(user: User) {
@@ -14,7 +15,9 @@ function sanitizeUser(user: User) {
     role: user.role,
     status: user.status,
     twoFactorEnabled: user.twoFactorEnabled,
-    createdAt: user.createdAt
+    createdAt: user.createdAt,
+    // The UI reads these to show or hide controls. The API enforces them separately.
+    ...(user.role === "admin" ? { adminTier: user.adminTier, permissions: user.adminPermissions } : {}),
   };
 }
 
@@ -114,7 +117,7 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
   const cleanEmail = dto.email.trim();
   const user = await prisma.user.findFirst({
     where: { email: { equals: cleanEmail, mode: "insensitive" } },
-    omit: { hashPassword: false },
+    omit: { hashPassword: false, totpSecret: false },
   });
 
   // Always run one bcrypt compare so response time doesn't reveal whether the email exists.
@@ -124,10 +127,16 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
     throw unauthorized("Invalid email or password");
   }
 
-  // Reject disabled, suspended, or banned accounts
-  const userStatus = (user as Record<string, unknown>).status;
-  if (userStatus === "SUSPENDED" || userStatus === "BANNED" || userStatus === "DISABLED") {
-    throw unauthorized("Account is suspended or disabled");
+  // Fail closed: only ACTIVE signs in. INVITED seats must use their activation link.
+  if (user.status === "INVITED") throw unauthorized("Activate this account using your invitation link first");
+  if (user.status !== "ACTIVE") throw unauthorized("Account is suspended or disabled");
+
+  // Second factor, checked only after the password so the prompt reveals nothing to a stranger.
+  if (user.twoFactorEnabled && user.totpSecret) {
+    if (!dto.totpCode) throw new HttpError(401, "Enter the 6-digit code from your authenticator app", { twoFactorRequired: true });
+    if (!verifyTotp(decryptSecret(user.totpSecret), dto.totpCode)) {
+      throw new HttpError(401, "Invalid authentication code", { twoFactorRequired: true });
+    }
   }
 
   if (requiredRole && user.role !== requiredRole) {
@@ -135,7 +144,7 @@ async function authenticate(dto: LoginDto, requiredRole?: TokenPayload["role"]) 
   }
 
   const payload = await buildTokenPayload(user);
-  return { success: true, token: signToken(payload), user: sanitizeUser(user) };
+  return { success: true, token: signToken({ ...payload, tv: user.tokenVersion }), user: sanitizeUser(user) };
 }
 
 // Authoritative login: verifies credentials and determines the role directly from the trusted database account record.

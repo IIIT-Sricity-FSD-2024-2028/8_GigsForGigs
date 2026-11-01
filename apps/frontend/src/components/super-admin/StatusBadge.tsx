@@ -21,6 +21,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
   switch (normalized) {
     case 'ACTIVE':
     case 'COMPLETED':
+    case 'PUBLISHED':
     case 'APPROVED':
     case 'RELEASED':
     case 'ACCEPTED':

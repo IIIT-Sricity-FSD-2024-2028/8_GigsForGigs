@@ -374,7 +374,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 <strong>{formatCurrency(selectedTaskPayment.budget)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Fee (10%):</span>
+                <span>Platform Fee:</span>
                 <strong>{formatCurrency(selectedTaskPayment.platform_fee)}</strong>
               </div>
               <div style={{ borderTop: '1px solid #DCE3E8', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>

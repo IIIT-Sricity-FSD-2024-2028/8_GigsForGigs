@@ -6,18 +6,20 @@ import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ReviewIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
+import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 
 export interface GigProDetail {
   id: string;
   name: string;
-  headline: string;
-  category: string;
+  headline: string | null;
   skills: string[];
-  hourlyRate: number;
+  totalEarnings: number;
   completedJobs: number;
-  rating: number;
+  rating: number | null;
+  reviewCount: number;
+  portfolioUrls: string[];
   badge: 'NONE' | 'VERIFIED_PRO' | 'TOP_RATED';
-  status: 'ACTIVE' | 'SUSPENDED' | 'UNDER_REVIEW';
+  status: 'ACTIVE' | 'SUSPENDED';
   portfolioCount: number;
 }
 
@@ -61,25 +63,27 @@ export const GigProfessionalManagement: React.FC = () => {
 
   const handleUpdateBadge = async (newBadge: GigProDetail['badge']) => {
     if (!selectedPro) return;
-    await adminApi.updateGigProBadge(selectedPro.id, newBadge);
-    const updated = gigPros.map((p) =>
-      p.id === selectedPro.id ? { ...p, badge: newBadge } : p
-    );
-    setGigPros(updated);
-    setSelectedPro({ ...selectedPro, badge: newBadge });
-    toast.success('Badge Awarded', `Updated badge to ${newBadge.replace('_', ' ')} for ${selectedPro.name}.`);
+    try {
+      await adminApi.updateGigProBadge(selectedPro.id, newBadge);
+      setGigPros(gigPros.map((p) => (p.id === selectedPro.id ? { ...p, badge: newBadge } : p)));
+      setSelectedPro({ ...selectedPro, badge: newBadge });
+      toast.success('Badge Updated', `Badge set to ${newBadge.replace('_', ' ')} for ${selectedPro.name}.`);
+    } catch (err: any) {
+      toast.error('Badge Update Failed', err?.message || 'Could not update the badge.');
+    }
   };
 
   const handleSuspendConfirm = async () => {
     if (!selectedPro) return;
-    await adminApi.updateUserStatus(selectedPro.id, 'SUSPENDED', 'Quality standards review');
-    const updated = gigPros.map((p) =>
-      p.id === selectedPro.id ? { ...p, status: 'SUSPENDED' as const } : p
-    );
-    setGigPros(updated);
+    try {
+      await adminApi.updateUserStatus(selectedPro.id, 'SUSPENDED', 'Quality standards review');
+      setGigPros(gigPros.map((p) => (p.id === selectedPro.id ? { ...p, status: 'SUSPENDED' as const } : p)));
+      setIsDrawerOpen(false);
+      toast.warning('Freelancer Suspended', `Account for ${selectedPro.name} paused.`);
+    } catch (err: any) {
+      toast.error('Suspension Failed', err?.message || 'Could not suspend this account.');
+    }
     setIsSuspendDialogOpen(false);
-    setIsDrawerOpen(false);
-    toast.warning('Freelancer Suspended', `Account for ${selectedPro.name} paused.`);
   };
 
   const handleReactivatePro = async () => {
@@ -103,14 +107,13 @@ export const GigProfessionalManagement: React.FC = () => {
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.name}</span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.headline}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.skills.slice(0, 3).join(', ') || 'No skills listed'}</span>
         </div>
       )
     },
-    { header: 'Category', accessorKey: 'category' },
     {
-      header: 'Rate',
-      cell: (row) => <span style={{ fontWeight: 700 }}>₹{row.hourlyRate}/hr</span>
+      header: 'Earnings',
+      cell: (row) => <span style={{ fontWeight: 700 }}>₹{row.totalEarnings.toLocaleString('en-IN')}</span>
     },
     {
       header: 'Rating & Jobs',
@@ -118,10 +121,10 @@ export const GigProfessionalManagement: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#9A5100', fontWeight: 700 }}>
             <ReviewIcon size={14} color="#9A5100" />
-            <span>{row.rating}</span>
+            <span>{row.rating ?? '—'}</span>
           </div>
           <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
-            ({row.completedJobs} jobs)
+            ({row.reviewCount} reviews, {row.completedJobs} jobs)
           </span>
         </div>
       )
@@ -185,7 +188,7 @@ export const GigProfessionalManagement: React.FC = () => {
                 <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>{selectedPro.name}</span>
                 <StatusBadge status={selectedPro.status} />
               </div>
-              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>{selectedPro.headline}</span>
+              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>{selectedPro.headline || 'No bio provided'}</span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: 'var(--spacing-xs)' }}>
                 {selectedPro.skills.map((skill) => (
                   <span
@@ -202,6 +205,15 @@ export const GigProfessionalManagement: React.FC = () => {
                   >
                     {skill}
                   </span>
+                ))}
+              </div>
+              <div style={{ marginTop: 'var(--spacing-sm)', fontSize: 'var(--font-size-xs)' }}>
+                <strong>Portfolio ({selectedPro.portfolioUrls.length}):</strong>{' '}
+                {selectedPro.portfolioUrls.length === 0 && 'none submitted'}
+                {selectedPro.portfolioUrls.map((url) => (
+                  <div key={url}>
+                    <a href={safeHttpUrl(url)} target="_blank" rel="noreferrer">{url}</a>
+                  </div>
                 ))}
               </div>
             </div>

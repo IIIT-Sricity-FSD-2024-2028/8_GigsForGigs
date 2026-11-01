@@ -33,7 +33,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     activeTasks: 0,
     totalUsers: 0,
     pendingDisputes: 0,
-    escrowHeld: 0
+    escrowHeld: 0,
+    kycVerificationRate: null as number | null
   });
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -65,16 +66,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         setLoading(true);
         setError(null);
         const [kpiRes, projRes, clientRes, proRes, mgrRes, staffRes, analyticsRes] = await Promise.all([
-          adminApi.getKPIs().catch(() => null),
-          adminApi.getProjects().catch(() => []),
-          adminApi.getClients().catch(() => []),
-          adminApi.getGigPros().catch(() => []),
-          adminApi.getManagers().catch(() => []),
-          adminApi.getAdminStaff().catch(() => []),
-          adminApi.getAnalytics('7d').catch(() => null)
+          // No per-call fallbacks: a failed request shows an error, never a zero that reads as real data.
+          adminApi.getKPIs(),
+          adminApi.getProjects(),
+          adminApi.getClients(),
+          adminApi.getGigPros(),
+          adminApi.getManagers(),
+          adminApi.getAdminStaff(),
+          adminApi.getAnalytics('7d')
         ]);
         if (isMounted) {
-          if (kpiRes) setKpis(kpiRes);
+          setKpis(kpiRes);
           setProjects(Array.isArray(projRes) ? projRes : []);
           setClients(Array.isArray(clientRes) ? clientRes : []);
           setGigPros(Array.isArray(proRes) ? proRes : []);
@@ -143,11 +145,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       )
     },
     {
-      header: 'Client $\\rightarrow$ Pro',
+      header: 'Client → Pro',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-primary-dark)' }}>{row.clientName}</span>
-          <span style={{ color: 'var(--color-text-muted)' }}>$\\rightarrow$ {row.gigProName || 'Open Bidding'}</span>
+          <span style={{ color: 'var(--color-text-muted)' }}>→ {row.gigProName || 'Open Bidding'}</span>
         </div>
       )
     },
@@ -205,7 +207,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 {kpis.pendingDisputes} Pending Disputes Require Super Admin Arbitration
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                Unresolved payment disputes have active SLAs. Review docket evidence to prevent automatic escrow forfeiture.
+                Unresolved payment disputes have active SLAs. Review the docket evidence and rule before the SLA is breached.
               </div>
             </div>
           </div>
@@ -226,14 +228,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <KPICard
           title="Gross Merchandise Volume"
           value={`₹${kpis.grossMerchandiseVolume.toLocaleString('en-IN')}`}
-          subtitle="Total platform contract flow"
+          subtitle="Held in escrow plus released"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-blue)"
         />
         <KPICard
           title="Platform Take Revenue"
           value={`₹${kpis.platformRevenue.toLocaleString('en-IN')}`}
-          subtitle="Direct platform commission (10% rake)"
+          subtitle="Fees on released payments"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-dark)"
         />
@@ -247,9 +249,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <KPICard
           title="Platform Users"
           value={kpis.totalUsers.toLocaleString()}
-          subtitle="Clients, Pros & Managers"
+          subtitle="All roles, including admin staff"
           icon={<UsersIcon size={20} />}
           accentColor="var(--color-text-dark)"
+        />
+        <KPICard
+          title="Active Dispute Dockets"
+          value={kpis.pendingDisputes}
+          subtitle="Open or under review"
+          icon={<DisputeIcon size={20} />}
+          accentColor="var(--color-danger-text)"
+        />
+        <KPICard
+          title="KYC Verification Rate"
+          value={kpis.kycVerificationRate === null ? '—' : `${kpis.kycVerificationRate}%`}
+          subtitle="Clients with verified KYC"
+          icon={<UsersIcon size={20} />}
+          accentColor="var(--color-secondary)"
         />
       </div>
 

@@ -1,7 +1,10 @@
 import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
+import { hasPermission } from "../../middleware/adminGuard.js";
+import * as platformSettings from "./platformSettings.js";
 import * as adminService from "./admin.service.js";
 import type {
+  AcceptAdminInvitationDto,
   CreateAdminInvitationDto,
   CreateApplicationDto,
   CreateAssignmentDto,
@@ -9,7 +12,6 @@ import type {
   CreateDeliverableDto,
   CreateGigProfileDto,
   CreateManagerDto,
-  CreatePaymentDto,
   CreateReviewDto,
   CreateTaskDto,
   CreateUserDto,
@@ -17,9 +19,15 @@ import type {
   UpdateClientDto,
   UpdateDeliverableDto,
   UpdateGigProfileDto,
+  KycDecisionDto,
+  ModerateReviewDto,
   OverridePaymentDto,
-  UpdatePaymentDto,
+  SettleDisputeDto,
+  TwoFactorCodeDto,
+  UpdateBadgeDto,
+  UpdatePasswordDto,
   UpdatePlatformSettingsDto,
+  UpdateUserStatusDto,
   UpdateReviewDto,
   UpdateTaskDto,
   UpdateUserDto,
@@ -42,7 +50,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
   res.status(200).json(await adminService.updateUser(Number(req.params.userId), dto));
 }
 export async function deleteUser(req: Request, res: Response): Promise<void> {
-  await adminService.deleteUser(Number(req.params.userId), req.user!.userId);
+  await adminService.deleteUser(Number(req.params.userId), req.user!.userId, hasPermission(req, "admins:invite"));
   res.status(204).send();
 }
 
@@ -192,24 +200,11 @@ export async function deleteDeliverable(req: Request, res: Response): Promise<vo
 export async function listPayments(_req: Request, res: Response): Promise<void> {
   res.status(200).json(await adminService.listPayments());
 }
-export async function createPayment(_req: Request, res: Response): Promise<void> {
-  const dto = getValidated<CreatePaymentDto>(res, "body");
-  res.status(201).json(await adminService.createPayment(dto));
-}
-export async function updatePayment(req: Request, res: Response): Promise<void> {
-  const dto = getValidated<UpdatePaymentDto>(res, "body");
-  res.status(200).json(await adminService.updatePayment(Number(req.params.paymentId), dto));
-}
 export async function overridePayment(req: Request, res: Response): Promise<void> {
   const dto = getValidated<OverridePaymentDto>(res, "body");
   // Ids may arrive as "PAY-12" / "pay-12"; the DB key is the number.
   res.status(200).json(await adminService.overridePayment(Number(String(req.params.paymentId).replace(/\D/g, "")), dto));
 }
-export async function deletePayment(req: Request, res: Response): Promise<void> {
-  await adminService.deletePayment(Number(req.params.paymentId));
-  res.status(204).send();
-}
-
 // ---- Reviews ------------------------------------------------------------
 
 export async function listReviews(_req: Request, res: Response): Promise<void> {
@@ -246,11 +241,9 @@ export async function listDisputes(_req: Request, res: Response): Promise<void> 
   res.status(200).json(await adminService.listDisputes());
 }
 
-export async function resolveDispute(req: Request, res: Response): Promise<void> {
-  const { resolution, refundRatio, settlementType, resolutionNotes, splitClientPercent } = req.body || {};
-  const finalResolution = String(resolution || settlementType || 'FULL_REFUND').slice(0, 100);
-  const finalRatio = refundRatio !== undefined ? refundRatio : (splitClientPercent !== undefined ? splitClientPercent / 100 : 1.0);
-  res.status(200).json(await adminService.resolveDispute(String(req.params.disputeId), finalResolution, finalRatio));
+export async function settleDispute(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<SettleDisputeDto>(res, "body");
+  res.status(200).json(await adminService.settleDispute(String(req.params.disputeId), dto));
 }
 
 // ---- Audit Logs -----------------------------------------------------------
@@ -262,11 +255,11 @@ export async function listAuditLogs(_req: Request, res: Response): Promise<void>
 // ---- Settings -------------------------------------------------------------
 
 export async function getPlatformSettings(_req: Request, res: Response): Promise<void> {
-  res.status(200).json(await adminService.getPlatformSettings());
+  res.status(200).json(await platformSettings.getPlatformSettings());
 }
 
-export async function updatePlatformSettings(req: Request, res: Response): Promise<void> {
-  res.status(200).json(await adminService.updatePlatformSettings(getValidated<UpdatePlatformSettingsDto>(res, "body")));
+export async function updatePlatformSettings(_req: Request, res: Response): Promise<void> {
+  res.status(200).json(await platformSettings.updatePlatformSettings(getValidated<UpdatePlatformSettingsDto>(res, "body")));
 }
 
 // ---- Analytics ------------------------------------------------------------
@@ -279,52 +272,62 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
 // ---- Admin Invitations ---------------------------------------------------
 
 export async function createAdminInvitation(req: Request, res: Response): Promise<void> {
-  const { email, role, permissions } = getValidated<CreateAdminInvitationDto>(res, "body");
-  res.status(201).json(await adminService.createAdminInvitation(email, role, permissions));
+  const dto = getValidated<CreateAdminInvitationDto>(res, "body");
+  res.status(201).json(await adminService.createAdminInvitation(dto, req.account?.adminPermissions ?? []));
 }
 
 export async function acceptAdminInvitation(req: Request, res: Response): Promise<void> {
-  const { token, email, password, newPassword } = req.body || {};
-  res.status(200).json(await adminService.acceptAdminInvitation(token, email, password, newPassword));
+  const dto = getValidated<AcceptAdminInvitationDto>(res, "body");
+  res.status(200).json(await adminService.acceptAdminInvitation(dto, req.ip ?? null));
 }
 
-// ---- Direct Admin Mutation Handlers ----------------------------------------
+// ---- Account Governance ----------------------------------------------------
 
-export async function verifyClientKYC(req: Request, res: Response): Promise<void> {
-  res.status(200).json(await adminService.verifyClientKYC(String(req.params.clientId || '')));
+export async function decideClientKyc(req: Request, res: Response): Promise<void> {
+  const { status } = getValidated<KycDecisionDto>(res, "body");
+  res.status(200).json(await adminService.decideClientKyc(String(req.params.clientId), status));
 }
 
 export async function updateGigProBadge(req: Request, res: Response): Promise<void> {
-  const badge = req.body?.badge || 'VERIFIED';
-  const proId = String(req.params.gigProId || req.params.gigProfileId || '');
-  res.status(200).json(await adminService.updateGigProBadge(proId, badge));
+  const { badge } = getValidated<UpdateBadgeDto>(res, "body");
+  res.status(200).json(await adminService.updateGigProBadge(String(req.params.gigProId), badge));
 }
 
 export async function updateUserStatus(req: Request, res: Response): Promise<void> {
-  const { status, reason } = req.body || {};
-  res.status(200).json(await adminService.updateUserStatus(String(req.params.userId || ''), status || 'SUSPENDED', reason));
+  const { status } = getValidated<UpdateUserStatusDto>(res, "body");
+  res.status(200).json(await adminService.updateUserStatus(String(req.params.userId), status, req.user!.userId, hasPermission(req, "admins:invite")));
 }
 
-export async function revokeAdminSession(req: Request, res: Response): Promise<void> {
-  res.status(200).json(await adminService.revokeAdminSession(String(req.params.staffId || '')));
+export async function revokeSessions(req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.revokeSessions(String(req.params.staffId), req.user!.userId, hasPermission(req, "admins:invite")));
 }
 
 export async function moderateReview(req: Request, res: Response): Promise<void> {
-  const { status, moderatorNotes } = req.body || {};
-  res.status(200).json(await adminService.moderateReview(String(req.params.reviewId || ''), status || 'HIDDEN', moderatorNotes));
+  const dto = getValidated<ModerateReviewDto>(res, "body");
+  res.status(200).json(await adminService.moderateReview(String(req.params.reviewId), dto));
 }
 
-export async function updateProfilePassword(req: Request, res: Response): Promise<void> {
-  const { currentPassword, newPassword } = req.body || {};
-  res.status(200).json(await adminService.updateProfilePassword(req.user!.userId, currentPassword, newPassword));
-}
-
-export async function updateProfile2FA(req: Request, res: Response): Promise<void> {
-  const { email, isEnabled } = req.body || {};
-  res.status(200).json(await adminService.toggleProfile2FA(String(email || ''), Boolean(isEnabled)));
-}
-
+// ---- Own Profile -----------------------------------------------------------
 
 export async function getProfile(req: Request, res: Response): Promise<void> {
   res.status(200).json(await adminService.getProfile(req.user!.userId));
+}
+
+export async function updateProfilePassword(req: Request, res: Response): Promise<void> {
+  const { currentPassword, newPassword } = getValidated<UpdatePasswordDto>(res, "body");
+  res.status(200).json(await adminService.updateProfilePassword(req.user!.userId, currentPassword, newPassword));
+}
+
+export async function enrollTwoFactor(req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.enrollTwoFactor(req.user!.userId));
+}
+
+export async function confirmTwoFactor(req: Request, res: Response): Promise<void> {
+  const { code } = getValidated<TwoFactorCodeDto>(res, "body");
+  res.status(200).json(await adminService.setTwoFactor(req.user!.userId, code, true));
+}
+
+export async function disableTwoFactor(req: Request, res: Response): Promise<void> {
+  const { code } = getValidated<TwoFactorCodeDto>(res, "body");
+  res.status(200).json(await adminService.setTwoFactor(req.user!.userId, code, false));
 }

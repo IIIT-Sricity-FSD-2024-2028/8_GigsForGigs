@@ -6,8 +6,10 @@ import { unauthorized } from "../lib/httpError.js";
 
 /**
  * Parses `Authorization: Bearer <token>`, verifies it, then re-checks the
- * account against the DB so a deleted user, a removed manager, or a changed
- * role loses access immediately instead of when the 7-day JWT expires.
+ * account against the DB so a deleted user, a removed manager, a changed role,
+ * a suspended account or a revoked session (tokenVersion bump) loses access
+ * immediately instead of when the 7-day JWT expires. That one indexed lookup
+ * per request is the price of revocable stateless tokens.
  */
 export async function authGuard(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.header("authorization");
@@ -30,6 +32,11 @@ export async function authGuard(req: Request, _res: Response, next: NextFunction
     where: { userId: payload.userId },
     select: {
       role: true,
+      email: true,
+      status: true,
+      tokenVersion: true,
+      adminTier: true,
+      adminPermissions: true,
       client: { select: { clientId: true } },
       managerLink: { select: { managerId: true, clientId: true } },
       gigProfile: { select: { gigProfileId: true } },
@@ -39,6 +46,8 @@ export async function authGuard(req: Request, _res: Response, next: NextFunction
   const stillValid =
     !!user &&
     user.role === payload.role &&
+    user.status === "ACTIVE" &&
+    user.tokenVersion === (payload.tv ?? 0) &&
     (payload.role === "client"
       ? user.client?.clientId === payload.clientId
       : payload.role === "manager"
@@ -53,5 +62,6 @@ export async function authGuard(req: Request, _res: Response, next: NextFunction
   }
 
   req.user = payload;
+  req.account = { email: user!.email, adminTier: user!.adminTier, adminPermissions: user!.adminPermissions };
   next();
 }

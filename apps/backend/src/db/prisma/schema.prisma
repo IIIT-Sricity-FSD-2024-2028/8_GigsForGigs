@@ -15,6 +15,14 @@ model User {
   role            Role
   status          String                  @default("ACTIVE") @db.VarChar(50)
   twoFactorEnabled Boolean                @default(false) @map("two_factor_enabled")
+  /// AES-256-GCM ciphertext (lib/totp.ts). Globally omitted from queries, like hashPassword.
+  totpSecret      String?                 @map("totp_secret") @db.VarChar(255)
+  /// Part of every session JWT; incrementing it revokes all of this user's sessions.
+  tokenVersion    Int                     @default(0) @map("token_version")
+  /// Admins only: OWNER | SUPER_ADMIN | FINANCIAL_ADMIN | SUPPORT_ADMIN | CONTENT_MODERATOR | AUDITOR.
+  adminTier       String?                 @map("admin_tier") @db.VarChar(50)
+  /// Admins only: the permission set the API enforces. Starts from the tier's defaults.
+  adminPermissions String[]               @default([]) @map("admin_permissions")
   createdAt       DateTime                @default(now()) @map("created_at")
   client          Client?
   gigProfile      GigProfessionalProfile?
@@ -33,7 +41,7 @@ model Client {
   clientName      String           @map("client_name") @db.VarChar(100)
   numberOfManager Int              @default(0) @map("number_of_manager")
   domain          String?          @db.VarChar(100)
-  kycStatus       String           @default("VERIFIED") @map("kyc_status") @db.VarChar(50)
+  kycStatus       String           @default("PENDING") @map("kyc_status") @db.VarChar(50)
   user            User             @relation(fields: [userId], references: [userId])
   managers        Manager[]
   managerInvites  ManagerInvite[]
@@ -210,6 +218,8 @@ model Payment {
   platformFee  Decimal                @default(0) @map("platform_fee") @db.Decimal(10, 2)
   status       PaymentStatus          @default(pending)
   createdAt    DateTime               @default(now()) @map("created_at")
+  /// When escrow was released or refunded. Revenue is time-bucketed on this, not on createdAt.
+  settledAt    DateTime?              @map("settled_at")
   gigProfile   GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId])
   task         Task                   @relation(fields: [taskId], references: [taskId])
 
@@ -358,6 +368,7 @@ model Dispute {
   description     String    @db.VarChar(1000)
   status          String    @default("OPEN") @db.VarChar(50)
   evidenceUrls    String[]  @default([]) @map("evidence_urls")
+  /// The SLA window in hours, counted from createdAt. The hours actually remaining are derived on read.
   slaHoursLeft    Int       @default(48) @map("sla_hours_left")
   resolutionNotes String?   @map("resolution_notes") @db.VarChar(1000)
   settlementType  String?   @map("settlement_type") @db.VarChar(50)
@@ -369,4 +380,28 @@ model Dispute {
   againstUser     User      @relation("DisputeAgainst", fields: [againstUserId], references: [userId])
 
   @@map("DISPUTES")
+}
+
+/// Singleton (CHECK id = 1). Stored as JSON so adding a setting doesn't need a migration.
+model PlatformSettings {
+  id        Int      @id @default(1)
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("PLATFORM_SETTINGS")
+}
+
+/// Append-only, enforced by a database trigger. No FK to USERS: rows must outlive the account.
+model AuditLog {
+  auditId     Int      @id @default(autoincrement()) @map("audit_id")
+  actorUserId Int?     @map("actor_user_id")
+  actorEmail  String   @map("actor_email") @db.VarChar(100)
+  action      String   @db.VarChar(60)
+  target      String   @db.VarChar(255)
+  details     String?  @db.VarChar(1000)
+  ipAddress   String?  @map("ip_address") @db.VarChar(64)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("AUDIT_LOG")
 }

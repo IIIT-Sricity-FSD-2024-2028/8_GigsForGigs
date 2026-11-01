@@ -37,7 +37,7 @@ export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }>
       </p>
       <div style={{ background: '#fff', borderRadius: '8px', padding: '12px', fontSize: '0.85rem', marginBottom: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gig amount</span><strong>{inr(contract.budget)}</strong></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Platform fee (10%)</span><strong>{inr(contract.platform_fee)}</strong></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Platform fee</span><strong>{inr(contract.platform_fee)}</strong></div>
         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #DCE3E8', marginTop: '6px', paddingTop: '6px', fontWeight: 700 }}>
           <span>Total payable now</span><span style={{ color: '#0D568D' }}>{inr(contract.total_amount)}</span>
         </div>

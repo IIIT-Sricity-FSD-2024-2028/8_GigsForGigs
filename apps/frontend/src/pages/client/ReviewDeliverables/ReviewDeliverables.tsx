@@ -619,7 +619,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <span style={{ fontWeight: 600 }}>{formatCurrency(gigAmount)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee (10%):</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee:</span>
                     <span style={{ fontWeight: 600 }}>{formatCurrency(platformFee)}</span>
                   </div>
                   <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
@@ -972,7 +972,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 <strong>{formatCurrency(gigAmount)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Fee (10%):</span>
+                <span>Platform Fee:</span>
                 <strong>{formatCurrency(platformFee)}</strong>
               </div>
               <div style={{ borderTop: '1px solid #DCE3E8', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '15px' }}>

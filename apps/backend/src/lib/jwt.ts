@@ -27,11 +27,19 @@ export interface AdminTokenPayload {
   userId: number;
 }
 
-export type TokenPayload =
+/**
+ * `tv` is the account's tokenVersion when the token was issued. JWTs are
+ * stateless, so to revoke them authGuard compares this to the DB on every
+ * request: incrementing USERS.token_version kills every outstanding token for
+ * that user at once, with no blocklist. Tokens from before this claim existed
+ * read as 0, which is the column default, so deploying signs nobody out.
+ */
+export type TokenPayload = (
   | ClientTokenPayload
   | ManagerTokenPayload
   | GigTokenPayload
-  | AdminTokenPayload;
+  | AdminTokenPayload
+) & { tv?: number };
 
 const EXPIRES_IN = "7d";
 const SESSION_AUDIENCE = "session";

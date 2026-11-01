@@ -11,11 +11,16 @@ export interface ProjectTask {
   title: string;
   clientName: string;
   gigProName?: string;
-  managerName?: string;
-  category: string;
+  managerName?: string | null;
+  category: string | null;
   budget: number;
-  status: 'OPEN' | 'IN_PROGRESS' | 'REVIEWING' | 'COMPLETED' | 'CANCELLED';
-  dueDate?: string;
+  platformFee: number | null;
+  escrowStatus: string | null;
+  deliverablesCount: number;
+  deliverablesApproved: number;
+  applicationsCount: number;
+  status: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
+  dueDate?: string | null;
   createdAt: string;
 }
 
@@ -87,7 +92,7 @@ export const Projects: React.FC = () => {
       header: 'Client',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
-          <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.client?.clientName || row.clientName || 'Direct Client'}</span>
+          <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.clientName}</span>
           <span style={{ color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             {row.gigProName ? (
               <>
@@ -100,7 +105,7 @@ export const Projects: React.FC = () => {
         </div>
       )
     },
-    { header: 'Category', cell: (row) => row.category || 'General' },
+    { header: 'Category', cell: (row) => row.category || '—' },
     {
       header: 'Budget',
       cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>₹{Number(row.budget || 0).toLocaleString('en-IN')}</span>
@@ -148,7 +153,7 @@ export const Projects: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
       {/* Status Filter Navigation Pills */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {(['ALL', 'OPEN', 'IN_PROGRESS', 'REVIEWING', 'COMPLETED', 'CANCELLED'] as const).map((st) => (
+        {(['ALL', 'OPEN', 'IN_PROGRESS', 'COMPLETED'] as const).map((st) => (
           <button
             key={st}
             type="button"
@@ -196,10 +201,15 @@ export const Projects: React.FC = () => {
         {selectedTask && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
             <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOTAL BUDGET</span>
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>GIG BUDGET</span>
               <h4 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
                 ₹{Number(selectedTask.budget).toLocaleString('en-IN')}
               </h4>
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                {selectedTask.escrowStatus
+                  ? `Escrow: ${selectedTask.escrowStatus.replace(/_/g, ' ')} · Fee ₹${Number(selectedTask.platformFee).toLocaleString('en-IN')}`
+                  : 'Escrow: no contract yet'}
+              </span>
             </div>
 
             <div>
@@ -213,7 +223,15 @@ export const Projects: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Assigned Professional:</span>
-                  <span style={{ fontWeight: 600 }}>{selectedTask.gigProName || 'Open Bidding'}</span>
+                  <span style={{ fontWeight: 600 }}>{selectedTask.gigProName || `Open (${selectedTask.applicationsCount} applications)`}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Supervised By:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedTask.managerName || 'Client (no manager)'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Deliverables:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedTask.deliverablesApproved} approved of {selectedTask.deliverablesCount} submitted</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Current Status:</span>

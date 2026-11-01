@@ -6,29 +6,26 @@ import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { PlusIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
-import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { TIER_PERMISSIONS, useAuth, type AdminTier } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
 export interface AdminStaff {
   id: string;
   name: string;
   email: string;
-  role: 'OWNER' | 'SUPER_ADMIN' | 'FINANCIAL_ADMIN' | 'SUPPORT_ADMIN' | 'CONTENT_MODERATOR' | 'AUDITOR';
+  role: AdminTier;
   permissions: string[];
   isTwoFactorEnabled: boolean;
-  lastLogin: string;
   status: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
 }
 
 export interface AuditLogEntry {
   id: string;
-  adminName: string;
   adminEmail: string;
   action: string;
-  targetType: string;
-  targetId: string;
-  diffSummary: string;
-  ipAddress: string;
+  target: string;
+  details: string | null;
+  ipAddress: string | null;
   createdAt: string;
 }
 
@@ -53,11 +50,7 @@ export const AdminManagement: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'SUPER_ADMIN' | 'FINANCIAL_ADMIN' | 'SUPPORT_ADMIN' | 'CONTENT_MODERATOR' | 'AUDITOR'>('SUPER_ADMIN');
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([
-    'users:read', 'users:ban', 'payments:read', 'payments:refund',
-    'payments:release', 'disputes:resolve', 'reviews:moderate',
-    'settings:manage', 'admins:invite'
-  ]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(TIER_PERMISSIONS.SUPER_ADMIN);
 
   // Generated Link Modal State
   const [generatedInvite, setGeneratedInvite] = useState<GeneratedInvite | null>(null);
@@ -135,23 +128,13 @@ export const AdminManagement: React.FC = () => {
       expiresAt
     };
 
-    const newStaff: AdminStaff = {
-      id: `adm-${Date.now()}`,
-      name: inviteEmail.split('@')[0] || 'Admin',
-      email: inviteEmail,
-      role: inviteRole,
-      permissions: selectedPermissions,
-      isTwoFactorEnabled: false,
-      lastLogin: 'Never (Invited)',
-      status: 'INVITED'
-    };
-
-    setStaffList([newStaff, ...staffList]);
+    // Re-read the roster so the row shows the real id and INVITED status from the database.
+    setStaffList(await adminApi.getAdminStaff());
     setGeneratedInvite(inviteObj);
     setIsInviteModalOpen(false);
     setIsLinkModalOpen(true);
     setInviteEmail('');
-    toast.success('Invitation Token Dispatched', `Cryptographic 48h token issued for ${inviteEmail}`);
+    toast.success('Invitation Created', `Signed 48h link issued for ${inviteEmail}. Share it yourself; nothing is emailed.`);
   };
 
   const handleCopyInviteDetails = () => {
@@ -276,8 +259,8 @@ export const AdminManagement: React.FC = () => {
       header: 'Actor',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.adminName}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{row.ipAddress}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.adminEmail}</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{row.ipAddress ?? '—'}</span>
         </div>
       )
     },
@@ -289,13 +272,13 @@ export const AdminManagement: React.FC = () => {
       header: 'Target Entity',
       cell: (row) => (
         <span style={{ fontSize: '11px', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-          {row.targetType} ({row.targetId})
+          {row.target}
         </span>
       )
     },
     {
-      header: 'Diff Summary',
-      accessorKey: 'diffSummary'
+      header: 'Details',
+      cell: (row) => row.details ?? '—'
     }
   ];
 
@@ -318,7 +301,7 @@ export const AdminManagement: React.FC = () => {
         <AdminTabs
           tabs={[
             { id: 'staff', label: 'Admin Staff & Provisioning', count: staffList.length },
-            { id: 'audit', label: 'SOC-2 Immutable Audit Trail', count: auditLogs.length }
+            { id: 'audit', label: 'Append-Only Audit Trail', count: auditLogs.length }
           ]}
           activeTab={activeTab}
           onChange={(tabId) => setActiveTab(tabId as any)}
@@ -377,7 +360,7 @@ export const AdminManagement: React.FC = () => {
               <div><StatusBadge status={generatedInvite.role} /></div>
             </div>
             <div>
-              <span style={{ fontSize: '11px', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>Assigned Master Password</span>
+              <span style={{ fontSize: '11px', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>One-Time Password</span>
               <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '15px', color: '#084875' }}>
                 {generatedInvite.assignedPassword}
               </div>
@@ -385,7 +368,7 @@ export const AdminManagement: React.FC = () => {
           </div>
 
           <div>
-            <span style={{ fontSize: '11px', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>Cryptographic One-Time Access Link (Contains Verification Hash)</span>
+            <span style={{ fontSize: '11px', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>Signed One-Time Access Link</span>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
               <input
                 type="text"
@@ -455,16 +438,10 @@ export const AdminManagement: React.FC = () => {
               className="admin-select"
               value={inviteRole}
               onChange={(e) => {
-                const newRole = e.target.value as any;
+                const newRole = e.target.value as typeof inviteRole;
                 setInviteRole(newRole);
-                const roleDefaults: Record<string, string[]> = {
-                  SUPER_ADMIN: availablePermissions.map((p) => p.key),
-                  FINANCIAL_ADMIN: ['users:read', 'payments:read', 'payments:refund', 'payments:release'],
-                  SUPPORT_ADMIN: ['users:read', 'disputes:resolve', 'reviews:moderate'],
-                  CONTENT_MODERATOR: ['users:read', 'reviews:moderate'],
-                  AUDITOR: ['users:read', 'payments:read']
-                };
-                setSelectedPermissions(roleDefaults[newRole] || ['users:read']);
+                // Changing the tier resets the checkboxes to that tier's defaults.
+                setSelectedPermissions(TIER_PERMISSIONS[newRole]);
               }}
             >
               <option value="SUPER_ADMIN">👑 Super Admin (Full Governance)</option>
@@ -477,7 +454,7 @@ export const AdminManagement: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '6px' }}>
-              Granular Permission Bitmask
+              Granular Permissions
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
               {availablePermissions.map((p) => (
@@ -531,7 +508,7 @@ export const AdminManagement: React.FC = () => {
                 fontWeight: 600
               }}
             >
-              ✓ Cryptographic invitation token recorded in database. The invited user must use this activation link and assigned password to activate their Super Admin seat.
+              ✓ Admin seat created with status INVITED. The invited user must use this activation link and assigned password to activate their Super Admin seat.
             </div>
 
             <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -546,7 +523,7 @@ export const AdminManagement: React.FC = () => {
               </div>
 
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Assigned Master Password</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>One-Time Password</span>
                 <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '15px', color: 'var(--color-primary-dark)' }}>
                   {generatedInvite.assignedPassword}
                 </div>
@@ -587,9 +564,9 @@ export const AdminManagement: React.FC = () => {
       {/* Revoke Session Confirmation */}
       <ConfirmDialog
         isOpen={isRevokeDialogOpen}
-        title={`Revoke Access for ${targetStaff?.name}?`}
-        message="This action will immediately invalidate all active JWT tokens for this user via tokenVersion increment, terminating all existing browser sessions and API keys."
-        confirmLabel="Revoke All Access"
+        title={`Remove ${targetStaff?.name}?`}
+        message="This deletes the admin account. Its sessions stop working on the next request because authGuard re-reads the account every time. Its audit trail is kept."
+        confirmLabel="Remove Admin"
         isDanger={true}
         onConfirm={handleRevokeConfirm}
         onCancel={() => setIsRevokeDialogOpen(false)}

@@ -8,7 +8,7 @@
  *    Each portal keeps the currently visible page in state and renders it by name.
  *  - Two special one-time flows (admin invite, manager invite) are detected from the URL.
  */
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
@@ -17,18 +17,18 @@ import { ToastProvider } from './components/super-admin/Toast';
 
 // 👑 Super Admin Layout & 12 Views
 import { AdminLayout } from './layouts/AdminLayout';
-import { Dashboard } from './pages/super-admin/Dashboard';
-import { AdminAnalytics } from './pages/super-admin/AdminAnalytics';
-import { ClientManagement } from './pages/super-admin/ClientManagement';
-import { GigProfessionalManagement } from './pages/super-admin/GigProfessionalManagement';
-import { ManagersManagement } from './pages/super-admin/ManagersManagement';
-import { Projects } from './pages/super-admin/Projects';
-import { PaymentsRevenue } from './pages/super-admin/PaymentsRevenue';
-import { Reviews } from './pages/super-admin/Reviews';
-import { DisputesReports } from './pages/super-admin/DisputesReports';
-import { AdminManagement } from './pages/super-admin/AdminManagement';
-import { AdminProfile } from './pages/super-admin/AdminProfile';
-import { PlatformSettings } from './pages/super-admin/PlatformSettings';
+const Dashboard = lazy(() => import('./pages/super-admin/Dashboard').then((m) => ({ default: m.Dashboard })));
+const AdminAnalytics = lazy(() => import('./pages/super-admin/AdminAnalytics').then((m) => ({ default: m.AdminAnalytics })));
+const ClientManagement = lazy(() => import('./pages/super-admin/ClientManagement').then((m) => ({ default: m.ClientManagement })));
+const GigProfessionalManagement = lazy(() => import('./pages/super-admin/GigProfessionalManagement').then((m) => ({ default: m.GigProfessionalManagement })));
+const ManagersManagement = lazy(() => import('./pages/super-admin/ManagersManagement').then((m) => ({ default: m.ManagersManagement })));
+const Projects = lazy(() => import('./pages/super-admin/Projects').then((m) => ({ default: m.Projects })));
+const PaymentsRevenue = lazy(() => import('./pages/super-admin/PaymentsRevenue').then((m) => ({ default: m.PaymentsRevenue })));
+const Reviews = lazy(() => import('./pages/super-admin/Reviews').then((m) => ({ default: m.Reviews })));
+const DisputesReports = lazy(() => import('./pages/super-admin/DisputesReports').then((m) => ({ default: m.DisputesReports })));
+const AdminManagement = lazy(() => import('./pages/super-admin/AdminManagement').then((m) => ({ default: m.AdminManagement })));
+const AdminProfile = lazy(() => import('./pages/super-admin/AdminProfile').then((m) => ({ default: m.AdminProfile })));
+const PlatformSettings = lazy(() => import('./pages/super-admin/PlatformSettings').then((m) => ({ default: m.PlatformSettings })));
 import { AdminInviteActivation } from './pages/super-admin/AdminInviteActivation/AdminInviteActivation';
 
 // 💼 Client Pages & Layout
@@ -96,7 +96,7 @@ const ADMIN_VIEW_METADATA: Record<string, { title: string; subtitle: string }> =
   payments: { title: 'Financial Ledger & Escrow', subtitle: 'Milestone escrow tracking, commission rake accounting, and disbursements' },
   reviews: { title: 'Reviews & Reputation Moderation', subtitle: 'Marketplace feedback queue, profanity detection, and rating recalculation' },
   disputes: { title: 'Arbitration Court & Disputes', subtitle: 'Evidence inspector and 1-click binding dispute settlement engine' },
-  'admin-staff': { title: 'Admin Staff & Governance', subtitle: 'Multi-tier delegate admin provisioning and SOC-2 compliant audit trails' },
+  'admin-staff': { title: 'Admin Staff & Governance', subtitle: 'Multi-tier delegate admin provisioning and an append-only audit trail' },
   profile: { title: 'Administrator Profile & Security', subtitle: 'Root credentials, TOTP two-factor authentication, and session revocation' },
   settings: { title: 'Platform Configuration', subtitle: 'Commission rake percentages, minimum budgets, and maintenance controls' }
 };
@@ -142,7 +142,9 @@ function SuperAdminPortal() {
       pageTitle={activeMeta.title}
       pageSubtitle={activeMeta.subtitle}
     >
-      {renderActiveView()}
+      <Suspense fallback={<div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading…</div>}>
+        {renderActiveView()}
+      </Suspense>
     </AdminLayout>
   );
 }
@@ -255,13 +257,12 @@ function initialUnauthView(): UnauthView {
 /**
  * Picks what to show based on auth state:
  *  1. Manager invite link (/?manager_invite=TOKEN) -> password setup page
- *  2. Session still being checked -> loading screen
  *  3. Admin invite link (/admin/invite or ?admin_invite) -> admin activation page
  *  4. Logged out -> Landing / Login / Signup
  *  5. Logged in -> the portal for the user's role
  */
 function MainAppContent() {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [unauthView, setUnauthView] = useState<UnauthView>(initialUnauthView);
 
   // When the user logs out (or the session expires), send them to Login instead of Landing.
@@ -296,15 +297,7 @@ function MainAppContent() {
     );
   }
 
-  if (authLoading) {
-    return (
-      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2F6F8', color: '#0D568D', fontWeight: 600 }}>
-        Loading GigsForGigs Workspace...
-      </div>
-    );
-  }
-
-  if (isInviteFlowActive) {
+if (isInviteFlowActive) {
     return (
       <AdminInviteActivation
         onActivationSuccess={() => {

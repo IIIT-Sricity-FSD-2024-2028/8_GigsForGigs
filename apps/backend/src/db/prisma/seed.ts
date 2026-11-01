@@ -113,6 +113,11 @@ async function seedUsers() {
           email: faker.internet.email().toLowerCase(),
           hashPassword,
           role: Role.admin,
+          // The first admin is the platform owner; the rest are full-governance staff.
+          adminTier: i === 0 ? "OWNER" : "SUPER_ADMIN",
+          adminPermissions: i === 0
+            ? ["*"]
+            : ["users:read", "users:ban", "payments:read", "payments:refund", "payments:release", "disputes:resolve", "reviews:moderate", "settings:manage", "admins:invite"],
         },
       }),
     );
@@ -375,16 +380,23 @@ async function seedDeliverables(
 }
 
 async function seedPayments(assignments: Array<{ gigProfileId: number; taskId: number }>) {
-  const rows = assignments.map((assignment) => ({
-    taskId: assignment.taskId,
-    gigProfileId: assignment.gigProfileId,
-    amount: faker.number.int({ min: 200, max: 8000 }),
-    status: faker.helpers.arrayElement([
+  const rows = assignments.map((assignment) => {
+    const amount = faker.number.int({ min: 200, max: 8000 });
+    const status = faker.helpers.arrayElement([
       PaymentStatus.pending,
       PaymentStatus.completed,
       PaymentStatus.failed,
-    ]),
-  }));
+    ]);
+    return {
+      taskId: assignment.taskId,
+      gigProfileId: assignment.gigProfileId,
+      amount,
+      platformFee: Math.round(amount * 10) / 100,
+      status,
+      // Released within the last 90 days, so the velocity charts have data to show.
+      settledAt: status === PaymentStatus.completed ? faker.date.recent({ days: 90 }) : null,
+    };
+  });
 
   await prisma.payment.createMany({ data: rows });
   return rows;

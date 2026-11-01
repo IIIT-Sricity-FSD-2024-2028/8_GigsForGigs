@@ -7,8 +7,7 @@ import { adminApi } from '../../../services/api/admin/adminApi';
 export interface PlatformConfig {
   platformRakePercentage: number;
   minimumGigBudget: number;
-  escrowHoldingDays: number;
-  maxFileUploadMb: number;
+  maxEscrowThreshold: number;
   isMaintenanceMode: boolean;
   allowedCategories: string[];
 }
@@ -16,38 +15,44 @@ export interface PlatformConfig {
 export const PlatformSettings: React.FC = () => {
   const { hasPermission } = useAuth();
   const toast = useToast();
-  const [config, setConfig] = useState<PlatformConfig>({
-    platformRakePercentage: 10.0,
-    minimumGigBudget: 50,
-    escrowHoldingDays: 14,
-    maxFileUploadMb: 100,
-    isMaintenanceMode: false,
-    allowedCategories: ['Software Development', 'Design & Creative', 'AI & Data Science', '3D & Spatial Computing']
-  });
+  // Null until the database answers, so the form never shows invented values.
+  const [config, setConfig] = useState<PlatformConfig | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [newCategory, setNewCategory] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     async function loadSettings() {
-      const data = await adminApi.getPlatformSettings();
-      if (isMounted && data) {
-        // FIXED: Map backend Zod DTO fields (commissionRakePercent, minimumTaskBudget, escrowHoldPeriodDays) to local UI state (regression introduced in commit d53234e)
-        setConfig({
-          platformRakePercentage: (data as any).commissionRakePercent ?? (data as any).platformRakePercentage ?? 10.0,
-          minimumGigBudget: (data as any).minimumTaskBudget ?? (data as any).minimumGigBudget ?? 50,
-          escrowHoldingDays: (data as any).escrowHoldPeriodDays ?? (data as any).escrowHoldingDays ?? 14,
-          maxFileUploadMb: (data as any).maxFileUploadMb ?? 100,
-          isMaintenanceMode: (data as any).maintenanceMode ?? (data as any).isMaintenanceMode ?? false,
-          allowedCategories: Array.isArray(data.allowedCategories) ? data.allowedCategories : [
-            'Software Development', 'Design & Creative', 'AI & Data Science', '3D & Spatial Computing'
-          ]
-        });
+      try {
+        const data = await adminApi.getPlatformSettings();
+        if (isMounted) {
+          setConfig({
+            platformRakePercentage: data.commissionRakePercent,
+            minimumGigBudget: data.minimumTaskBudget,
+            maxEscrowThreshold: data.maxEscrowThreshold,
+            isMaintenanceMode: data.maintenanceMode,
+            allowedCategories: data.allowedCategories
+          });
+        }
+      } catch (err: any) {
+        if (isMounted) setLoadError(err?.message || 'Failed to load platform settings.');
       }
     }
     loadSettings();
     return () => { isMounted = false; };
   }, []);
+
+  if (loadError) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {loadError}
+      </div>
+    );
+  }
+  if (!config) {
+    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading settings…</div>;
+  }
 
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,17 +79,20 @@ export const PlatformSettings: React.FC = () => {
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await adminApi.updatePlatformSettings({
+        commissionRakePercent: config.platformRakePercentage,
+        minimumTaskBudget: config.minimumGigBudget,
+        maxEscrowThreshold: config.maxEscrowThreshold,
+        allowedCategories: config.allowedCategories,
+        maintenanceMode: config.isMaintenanceMode
+      });
+    } catch (err: any) {
+      toast.error('Save Failed', err?.message || 'Settings were not saved.');
+      return;
+    }
     setIsSaved(true);
-    // FIXED: Map frontend keys to backend Zod .strict() schema (commissionRakePercent, minimumTaskBudget, escrowHoldPeriodDays) introduced in commit d53234e
-    const backendPayload = {
-      commissionRakePercent: config.platformRakePercentage,
-      minimumTaskBudget: config.minimumGigBudget,
-      escrowHoldPeriodDays: config.escrowHoldingDays,
-      allowedCategories: config.allowedCategories,
-      maintenanceMode: config.isMaintenanceMode
-    };
-    await adminApi.updatePlatformSettings(backendPayload);
-    toast.success('Platform Settings Saved', `Platform commission set to ${config.platformRakePercentage}% and parameters updated.`);
+    toast.success('Platform Settings Saved', `Commission is ${config.platformRakePercentage}% for new contracts. Existing contracts keep their agreed fee.`);
     setTimeout(() => setIsSaved(false), 2500);
   };
 
@@ -123,7 +131,7 @@ export const PlatformSettings: React.FC = () => {
               <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>%</span>
             </div>
             <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
-              Deducted automatically from gross milestone payments upon release.
+              Added on top of the gig amount for new contracts. Existing contracts keep the fee they agreed.
             </span>
           </div>
 
@@ -140,19 +148,6 @@ export const PlatformSettings: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
-              Escrow Dispute Holding Window (Days)
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="90"
-              className="admin-input"
-              value={config.escrowHoldingDays}
-              onChange={(e) => setConfig({ ...config, escrowHoldingDays: parseInt(e.target.value, 10) || 0 })}
-            />
-          </div>
         </div>
 
         {/* Operational Constraints */}
@@ -163,15 +158,14 @@ export const PlatformSettings: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
-              Deliverable Upload Ceiling (MB)
+              Maximum Escrow per Contract (₹)
             </label>
             <input
               type="number"
-              min="10"
-              max="1024"
+              min="1"
               className="admin-input"
-              value={config.maxFileUploadMb}
-              onChange={(e) => setConfig({ ...config, maxFileUploadMb: parseInt(e.target.value, 10) || 0 })}
+              value={config.maxEscrowThreshold}
+              onChange={(e) => setConfig({ ...config, maxEscrowThreshold: Number(e.target.value) || 0 })}
             />
           </div>
 

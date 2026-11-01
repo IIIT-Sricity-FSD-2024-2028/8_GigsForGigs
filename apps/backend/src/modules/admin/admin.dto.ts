@@ -1,11 +1,13 @@
 import { z } from "zod";
+import { ADMIN_PERMISSIONS } from "../../middleware/adminGuard.js";
 import { MONEY_10_2, id, line, money, orgName, personName, saneDate, tag, tagList, text } from "../../lib/validation.js";
 
 export const createUserSchema = z.object({
   name: personName(100),
   email: z.string().trim().email().max(100),
   password: z.string().min(8, "Password must be at least 8 characters").max(72),
-  role: z.enum(["client", "gig_professional", "manager", "admin"]),
+  // Not "admin": admin seats only come from invitations, which carry a tier and permissions.
+  role: z.enum(["client", "gig_professional", "manager"]),
 });
 export type CreateUserDto = z.infer<typeof createUserSchema>;
 
@@ -92,20 +94,6 @@ export const updateDeliverableSchema = z.object({
 });
 export type UpdateDeliverableDto = z.infer<typeof updateDeliverableSchema>;
 
-export const createPaymentSchema = z.object({
-  taskId: id(),
-  gigProfileId: id(),
-  amount: money(MONEY_10_2),
-  status: z.enum(["pending", "held", "completed", "refunded", "failed"]).optional(),
-});
-export type CreatePaymentDto = z.infer<typeof createPaymentSchema>;
-
-export const updatePaymentSchema = z.object({
-  amount: money(MONEY_10_2).optional(),
-  status: z.enum(["pending", "held", "completed", "refunded", "failed"]).optional(),
-});
-export type UpdatePaymentDto = z.infer<typeof updatePaymentSchema>;
-
 export const overridePaymentSchema = z.object({
   action: z.enum(["RELEASE", "REFUND"]),
   auditReason: text(500),
@@ -132,17 +120,63 @@ export const adminTierSchema = z.enum(["SUPER_ADMIN", "FINANCIAL_ADMIN", "SUPPOR
 export const createAdminInvitationSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(100),
   role: adminTierSchema.default("SUPER_ADMIN"),
-  permissions: z.array(line(50)).max(50).optional(),
+  permissions: z.array(z.enum(ADMIN_PERMISSIONS)).max(ADMIN_PERMISSIONS.length).optional(),
 });
 export type CreateAdminInvitationDto = z.infer<typeof createAdminInvitationSchema>;
+
+export const acceptAdminInvitationSchema = z.object({
+  token: z.string().min(1).max(2048),
+  email: z.string().trim().email().max(100),
+  password: z.string().min(1).max(200),
+  // Required: the inviter saw the one-time password, so it must not stay valid.
+  newPassword: z.string().min(8, "Password must be at least 8 characters").max(72),
+});
+export type AcceptAdminInvitationDto = z.infer<typeof acceptAdminInvitationSchema>;
 
 /** Only known keys with sane ranges; unknown keys (incl. "__proto__") are rejected. */
 export const updatePlatformSettingsSchema = z.object({
   commissionRakePercent: z.coerce.number().min(0).max(50),
   minimumTaskBudget: money(MONEY_10_2),
-  escrowHoldPeriodDays: z.coerce.number().int().min(0).max(365),
-  autoDisputeThresholdDays: z.coerce.number().int().min(0).max(365),
+  maxEscrowThreshold: z.coerce.number().min(1).max(MONEY_10_2),
   allowedCategories: tagList(50),
   maintenanceMode: z.boolean(),
 }).partial().strict();
 export type UpdatePlatformSettingsDto = z.infer<typeof updatePlatformSettingsSchema>;
+
+export const kycDecisionSchema = z.object({ status: z.enum(["VERIFIED", "REJECTED"]), reason: text(500).optional() });
+export type KycDecisionDto = z.infer<typeof kycDecisionSchema>;
+
+export const updateBadgeSchema = z.object({ badge: z.enum(["NONE", "VERIFIED_PRO", "TOP_RATED"]) });
+export type UpdateBadgeDto = z.infer<typeof updateBadgeSchema>;
+
+export const updateUserStatusSchema = z.object({
+  status: z.enum(["ACTIVE", "SUSPENDED"]),
+  // Goes to the audit trail: an account action with no stated reason can't be reviewed later.
+  reason: text(500),
+});
+export type UpdateUserStatusDto = z.infer<typeof updateUserStatusSchema>;
+
+export const moderateReviewSchema = z.object({
+  status: z.enum(["PUBLISHED", "FLAGGED", "HIDDEN"]),
+  moderatorNotes: text(500).optional(),
+});
+export type ModerateReviewDto = z.infer<typeof moderateReviewSchema>;
+
+export const settleDisputeSchema = z.object({
+  settlementType: z.enum(["FULL_REFUND", "FULL_RELEASE", "SPLIT"]),
+  resolutionNotes: text(1000),
+  splitClientPercent: z.coerce.number().int().min(1).max(99).optional(),
+}).refine((v) => v.settlementType !== "SPLIT" || v.splitClientPercent !== undefined, {
+  message: "A split ruling needs the client's percentage",
+  path: ["splitClientPercent"],
+});
+export type SettleDisputeDto = z.infer<typeof settleDisputeSchema>;
+
+export const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(8, "Password must be at least 8 characters").max(72),
+});
+export type UpdatePasswordDto = z.infer<typeof updatePasswordSchema>;
+
+export const twoFactorCodeSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code") });
+export type TwoFactorCodeDto = z.infer<typeof twoFactorCodeSchema>;

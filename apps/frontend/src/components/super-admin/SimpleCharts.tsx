@@ -155,7 +155,7 @@ export const RevenueAreaChart: React.FC<{ data?: RevenuePoint[]; height?: number
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#0F527E" }} />
-          <span style={{ color: "var(--color-text-dark)" }}>Net Platform Take Rate (10% Rake)</span>
+          <span style={{ color: "var(--color-text-dark)" }}>Platform Rake</span>
         </div>
       </div>
 

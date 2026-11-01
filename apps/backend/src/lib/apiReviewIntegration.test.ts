@@ -18,7 +18,7 @@ before(async () => {
   // Ensure Task 94 exists with clean assignment and deliverable for integration test
   let t94 = await prisma.task.findUnique({ where: { taskId: TEST_TASK_ID } });
   if (!t94) {
-    const client = await prisma.client.findFirst();
+    const client = await prisma.client.findFirst({ where: { user: { status: "ACTIVE" } } });
     const gig = await prisma.gigProfessionalProfile.findFirst();
     if (client && gig) {
       await prisma.task.create({
@@ -204,7 +204,7 @@ test("Scenario 7: Client cannot review a task they do not own", async () => {
   assert.ok(task, "Completed task should exist");
 
   const allClients = await prisma.client.findMany({
-    where: { clientId: { not: task.clientId } },
+    where: { clientId: { not: task.clientId }, user: { status: "ACTIVE" } },
     include: { user: true },
     take: 1,
   });

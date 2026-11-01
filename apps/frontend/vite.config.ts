@@ -38,6 +38,12 @@ function contentSecurityPolicy(apiBaseUrl: string | undefined): Plugin {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), contentSecurityPolicy(loadEnv(mode, process.cwd(), 'VITE_').VITE_API_BASE_URL)],
+  build: {
+    rolldownOptions: {
+      // Third-party code changes less often than ours, so it caches separately.
+      output: { codeSplitting: { groups: [{ name: 'vendor', test: /node_modules/ }] } },
+    },
+  },
   server: {
     host: true, // Listens on all local IP addresses (0.0.0.0)
     port: 5173

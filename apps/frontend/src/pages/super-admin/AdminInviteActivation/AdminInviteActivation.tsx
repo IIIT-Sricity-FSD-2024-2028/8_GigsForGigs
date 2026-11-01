@@ -25,7 +25,6 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isTokenVerified, setIsTokenVerified] = useState(false);
 
   useEffect(() => {
     // Parse URL params if not passed via props
@@ -36,20 +35,9 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
       const urlRole = params.get('role');
 
       if (urlToken) setToken(urlToken);
-      if (urlRole) {
-        setAssignedRole(urlRole);
-      } else if (urlEmail) {
-        setEmail(urlEmail);
-        if (urlEmail.toLowerCase().includes('auditor')) setAssignedRole('AUDITOR');
-        else if (urlEmail.toLowerCase().includes('finance')) setAssignedRole('FINANCIAL_ADMIN');
-        else if (urlEmail.toLowerCase().includes('support')) setAssignedRole('SUPPORT_ADMIN');
-        else setAssignedRole('SUPER_ADMIN');
-      }
+      // Display only. The tier and permissions that count come back from the server on activation.
+      if (urlRole) setAssignedRole(urlRole);
       if (urlEmail) setEmail(urlEmail);
-
-      if (urlToken && urlToken.length > 6) {
-        setIsTokenVerified(true);
-      }
     }
   }, [initialToken, initialEmail]);
 
@@ -59,37 +47,27 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
       toast.error('Password Required', 'Please enter the one-time password you were given with this invite.');
       return;
     }
-    if (newPassword && newPassword.length < 8) {
+    if (newPassword.length < 8) {
       toast.error('Password Too Short', 'Your new password must be at least 8 characters.');
       return;
     }
-    if (newPassword && newPassword !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
       toast.error('Password Mismatch', 'New password and confirmation do not match.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await adminApi.acceptAdminInvitation(token, email, tempPassword.trim(), newPassword || undefined);
+      const res = await adminApi.acceptAdminInvitation(token, email, tempPassword.trim(), newPassword);
       
-      const permissionsMap: Record<string, string[]> = {
-        AUDITOR: ['users:read', 'payments:read', 'projects:read', 'audit:read'],
-        FINANCIAL_ADMIN: ['users:read', 'payments:read', 'payments:release', 'payments:refund', 'projects:read'],
-        SUPPORT_ADMIN: ['users:read', 'projects:read', 'disputes:resolve', 'reviews:moderate'],
-        SUPER_ADMIN: ['*'],
-        OWNER: ['*']
-      };
-
-      const roleTier = res?.user?.adminTier || assignedRole;
-      const permissions = res?.user?.permissions || permissionsMap[roleTier] || ['users:read'];
 
       const userSession = {
         userId: res.user.userId,
         role: 'SUPER_ADMIN' as const,
         name: res.user.name,
         email: res.user.email,
-        adminTier: roleTier as any,
-        permissions,
+        adminTier: res.user.adminTier,
+        permissions: res.user.permissions,
         appliedTaskIds: []
       };
 
@@ -162,7 +140,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
 
         {/* Form Container */}
         <div style={{ padding: '32px' }}>
-          {isTokenVerified && (
+          {token && (
             <div
               style={{
                 backgroundColor: '#ECFDF5',
@@ -179,7 +157,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
               }}
             >
               <span>🛡️</span>
-              <span>Cryptographic 256-Bit Invitation Token Verified & Active</span>
+              <span>Invitation link detected. It is verified when you activate.</span>
             </div>
           )}
 
@@ -250,18 +228,20 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
             {/* Set New Personal Password */}
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                Set New Personal Password (Optional)
+                Set Your Password
               </label>
               <input
                 type="password"
                 className="admin-input"
-                placeholder="Leave blank to use assigned master password"
+                required
+                minLength={8}
+                placeholder="At least 8 characters"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
             </div>
 
-            {newPassword && (
+            {(
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Confirm New Password

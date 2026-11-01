@@ -1,29 +1,39 @@
-import { PLATFORM_FEE_RATE, platformFeeFor, refundPayment, releasePayment } from "../payment/payment.service.js";
+/**
+ * Business logic behind the Super Admin API. Every number returned comes from a
+ * query: a missing value is returned as null and shown as a dash, never replaced
+ * with a plausible-looking default.
+ *
+ * Authorization and audit logging are applied per route (see admin.route.ts and
+ * middleware/adminGuard.ts), so functions here only check business rules.
+ */
 import { randomBytes } from "node:crypto";
-import { z } from "zod";
 import { prisma } from "db";
 import { comparePassword, hashPassword } from "../../lib/password.js";
 import { signInviteToken, signToken, verifyInviteToken } from "../../lib/jwt.js";
 import { env } from "../../lib/env.js";
-import { HttpError, badRequest, conflict, notFound, unauthorized } from "../../lib/httpError.js";
+import { badRequest, conflict, forbidden, notFound, unauthorized } from "../../lib/httpError.js";
+import { decryptSecret, encryptSecret, newTotpSecret, verifyTotp } from "../../lib/totp.js";
+import { writeAudit, type AdminPermission } from "../../middleware/adminGuard.js";
+import { assertNoOpenDispute, refundPayment, releasePayment, settleDisputedEscrow } from "../payment/payment.service.js";
 import type {
+  AcceptAdminInvitationDto,
+  CreateAdminInvitationDto,
   CreateApplicationDto,
   CreateAssignmentDto,
   CreateClientDto,
   CreateDeliverableDto,
   CreateGigProfileDto,
   CreateManagerDto,
-  CreatePaymentDto,
   CreateReviewDto,
   CreateTaskDto,
   CreateUserDto,
+  ModerateReviewDto,
+  OverridePaymentDto,
+  SettleDisputeDto,
   UpdateApplicationDto,
   UpdateClientDto,
   UpdateDeliverableDto,
   UpdateGigProfileDto,
-  UpdatePaymentDto,
-  UpdatePlatformSettingsDto,
-  OverridePaymentDto,
   UpdateReviewDto,
   UpdateTaskDto,
   UpdateUserDto,
@@ -37,63 +47,41 @@ const PAYMENT_STATUS_LABEL = {
   failed: "FAILED",
 } as const;
 
-export const platformConfig = {
-  commissionRakePercent: PLATFORM_FEE_RATE * 100, // display only; payments store their own platform_fee
-  minimumTaskBudget: 50,
-  escrowHoldPeriodDays: 14,
-  autoDisputeThresholdDays: 7,
-  allowedCategories: [
-    "Software Development",
-    "AI & Data Science",
-    "UI/UX & Product Design",
-    "DevOps & Cloud Engineering",
-    "Mobile App Development",
-    "Cybersecurity"
-  ],
-  maintenanceMode: false
-};
+/** The UI sends ids like "cli-12" and "PAY-3"; the database key is the number. Unparseable input becomes 0, which matches no row. */
+const numericId = (raw: string | number): number => Number(String(raw).replace(/\D/g, "")) || 0;
 
-export const auditLogs: any[] = [];
+const dateOnly = (d: Date) => d.toISOString().split("T")[0];
 
-function recordAuditLog(action: string, actor: string, details: string) {
-  auditLogs.unshift({
-    id: "aud-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-    action,
-    actor,
-    details,
-    timestamp: new Date().toISOString()
-  });
-  if (auditLogs.length > 200) auditLogs.pop();
-}
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // ---- Users --------------------------------------------------------------
 
-// List every user with a role-derived display summary (client org / gig skills / manager's client).
+/** List every user with a role-derived summary. Status comes from the account row. */
 export const listUsers = async () => {
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       client: true,
-      gigProfile: { include: { skills: true, tools: true } },
+      gigProfile: { include: { skills: true } },
       managerLink: { include: { client: true } },
-    }
+    },
   });
 
-  return users.map(u => ({
+  return users.map((u) => ({
     id: "usr-" + u.userId,
     userId: u.userId,
     name: u.name,
     email: u.email,
     role: u.role.toUpperCase(),
-    status: "ACTIVE",
+    status: u.status,
     createdAt: u.createdAt.toISOString(),
     profileSummary: u.client
       ? "Client Organization: " + u.client.clientName
       : u.gigProfile
-      ? "Gig Professional (" + (u.gigProfile.skills.map(s => s.skill).join(", ") || "Specialist") + ")"
-      : u.managerLink
-      ? "Manager (Client: " + (u.managerLink.client?.clientName || "Assigned") + ")"
-      : "Super Admin Governance"
+        ? "Gig Professional (" + u.gigProfile.skills.map((sk) => sk.skill).join(", ") + ")"
+        : u.managerLink
+          ? "Manager (Client: " + u.managerLink.client.clientName + ")"
+          : "Admin Staff",
   }));
 };
 
@@ -104,8 +92,8 @@ export const getUser = async (userId: number) => {
     include: {
       client: { include: { tasks: true, managers: true } },
       gigProfile: { include: { skills: true, deliverables: true, services: true, payments: true } },
-      managerLink: { include: { client: true, assignments: true } }
-    }
+      managerLink: { include: { client: true, assignments: true } },
+    },
   });
   return {
     id: "usr-" + u.userId,
@@ -113,95 +101,100 @@ export const getUser = async (userId: number) => {
     name: u.name,
     email: u.email,
     role: u.role.toUpperCase(),
-    status: "ACTIVE",
+    status: u.status,
     createdAt: u.createdAt.toISOString(),
     client: u.client,
     gigProfile: u.gigProfile,
-    managerLink: u.managerLink
+    managerLink: u.managerLink,
   };
 };
 
-// Create a user directly (admin-only escape hatch outside the normal signup flow) and audit-log it.
+/** Create a non-admin user directly. Admin seats only come from invitations, so the DTO excludes that role. */
 export async function createUser(dto: CreateUserDto) {
-  const hashedPassword = await hashPassword(dto.password);
-  const created = await prisma.user.create({
-    data: { name: dto.name, email: dto.email.trim(), hashPassword: hashedPassword, role: dto.role },
+  return prisma.user.create({
+    data: { name: dto.name, email: dto.email.trim(), hashPassword: await hashPassword(dto.password), role: dto.role },
   });
-  recordAuditLog("CREATE_USER", "Super Admin", "Created user " + dto.email + " with role " + dto.role);
-  return created;
 }
 
-// Update a user's fields (including role/password) and audit-log it.
+/**
+ * Update a non-admin user. Admin accounts are refused because this route needs
+ * only users:ban, and resetting an admin's password or role through it would be
+ * a privilege escalation. A password or role change also ends their sessions.
+ */
 export async function updateUser(userId: number, dto: UpdateUserDto) {
-  const updated = await prisma.user.update({
+  const target = await prisma.user.findUniqueOrThrow({ where: { userId } });
+  if (target.role === "admin") throw forbidden("Admin accounts are managed through Admin Staff, not this route");
+  return prisma.user.update({
     where: { userId },
     data: {
       ...(dto.name !== undefined ? { name: dto.name } : {}),
       ...(dto.email !== undefined ? { email: dto.email.trim() } : {}),
       ...(dto.password !== undefined ? { hashPassword: await hashPassword(dto.password) } : {}),
       ...(dto.role !== undefined ? { role: dto.role } : {}),
+      ...(dto.password !== undefined || dto.role !== undefined ? { tokenVersion: { increment: 1 } } : {}),
     },
   });
-  recordAuditLog("UPDATE_USER", "Super Admin", "Updated user #" + userId);
-  return updated;
 }
 
-// Delete a user and audit-log it.
-export async function deleteUser(userId: number, actorUserId: number): Promise<void> {
+/**
+ * Delete a user. Removing an admin also needs admins:invite, and the OWNER seat
+ * and your own account can never be removed, so the platform can't be left without a root admin.
+ */
+export async function deleteUser(userId: number, actorUserId: number, actorCanManageAdmins: boolean): Promise<void> {
   if (userId === actorUserId) throw conflict("You cannot remove your own account");
   const target = await prisma.user.findUniqueOrThrow({ where: { userId } });
-  if (target.role === "admin" && (await prisma.user.count({ where: { role: "admin" } })) <= 1) {
-    throw conflict("The last admin account cannot be removed");
+  if (target.role === "admin") {
+    if (!actorCanManageAdmins) throw forbidden("Requires permission: admins:invite");
+    if (target.adminTier === "OWNER") throw conflict("The platform owner account cannot be removed");
   }
   await prisma.user.delete({ where: { userId } });
-  recordAuditLog("DELETE_USER", "Super Admin", "Deleted user #" + userId);
 }
 
 // ---- Clients --------------------------------------------------------------
 
-// List every client with computed totalSpent/active/completed task counts.
+/**
+ * List clients with spend derived from the ledger. Spend is what they actually
+ * committed (gig amount + fee, held or released), so a posted-but-unfunded
+ * budget doesn't count and a refund correctly drops out.
+ */
 export const listClients = async () => {
   const clients = await prisma.client.findMany({
     include: {
       user: true,
       managers: { include: { user: true } },
       tasks: { include: { payments: true } },
-      serviceRequests: true
     },
-    orderBy: { clientId: "asc" }
+    orderBy: { clientId: "asc" },
   });
 
-  return clients.map(c => {
-    const totalSpent = c.tasks.reduce((sum, t) => {
-      const taskPayments = t.payments.filter(p => p.status === "completed");
-      const paid = taskPayments.reduce((pSum, p) => pSum + Math.round(Number(p.amount) * 1.07), 0);
-      return sum + (paid > 0 ? paid : Number(t.budget || 0));
-    }, 0);
-
-    const activeTasks = c.tasks.filter(t => t.status === "open" || t.status === "in_progress").length;
-    const completedTasks = c.tasks.filter(t => t.status === "completed").length;
+  return clients.map((c) => {
+    const totalSpent = c.tasks
+      .flatMap((t) => t.payments)
+      .filter((p) => p.status === "completed" || p.status === "held")
+      .reduce((sum, p) => sum + Number(p.amount) + Number(p.platformFee), 0);
 
     return {
       id: "cli-" + c.clientId,
       clientId: c.clientId,
       userId: "usr-" + c.userId,
-      name: c.clientName,
+      name: c.user.name,
       companyName: c.clientName,
-      email: c.user?.email || ("client" + c.clientId + "@gigsforgigs.internal"),
-      domain: c.domain || "Technology & Digital Services",
+      email: c.user.email,
+      domain: c.domain,
       totalSpent,
-      activeGigsCount: activeTasks,
-      completedGigsCount: completedTasks,
+      activeGigsCount: c.tasks.filter((t) => t.status === "open" || t.status === "in_progress").length,
+      completedGigsCount: c.tasks.filter((t) => t.status === "completed").length,
       assignedManagersCount: c.managers.length,
-      managers: c.managers.map(m => ({
+      managers: c.managers.map((m) => ({
         managerId: m.managerId,
-        name: m.user?.name || ("Manager #" + m.managerId),
-        email: m.user?.email
+        name: m.user.name,
+        email: m.user.email,
+        status: m.user.status,
       })),
-      isVerified: (c as any).kycStatus === "VERIFIED",
-      kycStatus: (c as any).kycStatus || "VERIFIED",
-      status: c.user?.status || "ACTIVE",
-      joinedDate: c.user?.createdAt ? c.user.createdAt.toISOString().split("T")[0] : "2026-01-15"
+      kycStatus: c.kycStatus,
+      isVerified: c.kycStatus === "VERIFIED",
+      status: c.user.status,
+      joinedDate: dateOnly(c.user.createdAt),
     };
   });
 };
@@ -245,30 +238,33 @@ export async function deleteClient(clientId: number): Promise<void> {
 
 // ---- Managers ---------------------------------------------------------
 
-// List every manager with their client link and count of supervised task assignments.
+/**
+ * List managers with their live workload. Suspending a manager only flips their
+ * account status: assignments stay in place so no task is orphaned, the client
+ * keeps full control, and they can reassign the work from their own portal.
+ */
 export const listManagers = async () => {
   const managers = await prisma.manager.findMany({
     include: {
       user: true,
-      client: { include: { user: true } },
-      assignments: { include: { task: true, gigProfile: { include: { user: true } } } },
+      client: true,
+      assignments: { include: { task: true } },
     },
-    orderBy: { managerId: "asc" }
+    orderBy: { managerId: "asc" },
   });
 
-  return managers.map(m => ({
+  return managers.map((m) => ({
     id: "mgr-" + m.managerId,
     managerId: m.managerId,
     userId: "usr-" + m.userId,
-    name: m.user?.name || ("Manager #" + m.managerId),
-    email: m.user?.email || ("manager" + m.managerId + "@gigsforgigs.internal"),
+    name: m.user.name,
+    email: m.user.email,
     clientId: m.clientId,
-    clientName: m.client?.clientName || "Enterprise Partner",
-    linkedClients: [m.client?.clientName || "Enterprise Partner"],
-    activeSupervisedTasks: m.assignments.length,
-    permissionsLevel: "FULL_SUPERVISOR",
-    status: m.user?.status || "ACTIVE",
-    createdAt: m.createdAt ? m.createdAt.toISOString().split("T")[0] : "2026-02-01"
+    clientName: m.client.clientName,
+    linkedClients: [m.client.clientName],
+    activeSupervisedTasks: m.assignments.filter((a) => a.task.status === "in_progress").length,
+    status: m.user.status,
+    createdAt: dateOnly(m.createdAt),
   }));
 };
 
@@ -284,52 +280,42 @@ export async function deleteManager(clientId: number, managerId: number): Promis
 // ---- Gig profiles -------------------------------------------------------
 
 /**
- * List every gig professional profile with computed earnings/completed-jobs/
- * badge. hourlyRate/rating/badge thresholds and the TypeScript/React/Node.js
- * skill fallback are display placeholders with no backing column — there's
- * no rate, rating, or badge field in schema.prisma.
+ * List gig professionals. Rating averages only reviews that aren't HIDDEN, so
+ * moderating a review really changes the score, and is null until a pro has
+ * one. Badge is whatever an admin awarded; it is never inferred.
  */
 export const listGigProfiles = async () => {
   const pros = await prisma.gigProfessionalProfile.findMany({
     include: {
-      user: true,
+      user: { include: { reviewsReceived: { where: { status: { not: "HIDDEN" } }, select: { rating: true } } } },
       skills: true,
       tools: true,
       portfolio: true,
-      services: true,
-      applications: true,
-      deliverables: true,
       payments: true,
       assignments: { include: { task: true } },
     },
-    orderBy: { gigProfileId: "asc" }
+    orderBy: { gigProfileId: "asc" },
   });
 
   return pros.map((g) => {
-    const totalEarnings = g.payments
-      .filter(p => p.status === "completed")
-      .reduce((sum, p) => sum + Number(p.amount), 0);
-
-    const completedJobs = g.deliverables.filter(d => d.status === "approved").length ||
-      g.assignments.filter(a => a.task?.status === "completed").length;
-
+    const ratings = g.user.reviewsReceived.map((r) => r.rating);
     return {
       id: "gig-" + g.gigProfileId,
       gigProfileId: g.gigProfileId,
       userId: "usr-" + g.userId,
-      name: g.user?.name || ("Gig Pro #" + g.gigProfileId),
-      email: g.user?.email || ("gig" + g.gigProfileId + "@gigsforgigs.internal"),
-      headline: g.bio || "Senior Full-Stack & Cloud Specialist",
-      category: "Software Development",
-      skills: g.skills.map(s => s.skill).length > 0 ? g.skills.map(s => s.skill) : ["TypeScript", "React", "Node.js"],
-      tools: g.tools.map(t => t.tool),
+      name: g.user.name,
+      email: g.user.email,
+      headline: g.bio,
+      skills: g.skills.map((sk) => sk.skill),
+      tools: g.tools.map((t) => t.tool),
+      portfolioUrls: g.portfolio.map((p) => p.url),
       portfolioCount: g.portfolio.length,
-      hourlyRate: 65 + (g.gigProfileId * 5),
-      totalEarnings,
-      completedJobs,
-      rating: 4.9,
-      badge: (g as any).badge || (totalEarnings > 1000 || completedJobs > 2 ? "TOP_RATED" : "VERIFIED_PRO"),
-      status: g.user?.status || "ACTIVE"
+      totalEarnings: g.payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + Number(p.amount), 0),
+      completedJobs: g.assignments.filter((a) => a.task.status === "completed").length,
+      rating: ratings.length > 0 ? round1(ratings.reduce((a, b) => a + b, 0) / ratings.length) : null,
+      reviewCount: ratings.length,
+      badge: g.badge ?? "NONE",
+      status: g.user.status,
     };
   });
 };
@@ -361,51 +347,52 @@ export async function deleteGigProfile(gigProfileId: number): Promise<void> {
 
 // ---- Tasks & Projects ---------------------------------------------------
 
-// List tasks (optionally filtered by status) with computed platform fee and assigned gig pro/manager.
-export const listTasks = async (statusFilter?: string) => {
-  const tasks = await (prisma.task.findMany as any)({
-    where: statusFilter ? { status: statusFilter } : {},
+/**
+ * List tasks with their escrow state and delivery progress. Fee and escrow
+ * status come from the PAYMENT row; before anyone is hired there isn't one, so
+ * they are null. A null managerName means the client supervises the task.
+ */
+export const listTasks = async () => {
+  const tasks = await prisma.task.findMany({
     include: {
-      client: { include: { user: true, managers: { include: { user: true } } } },
+      client: true,
       deliverables: true,
-      applications: { include: { gigProfile: { include: { user: true } } } },
+      applications: true,
       payments: true,
       assignments: {
         include: {
           gigProfile: { include: { user: true } },
-          manager: { include: { user: true } }
-        }
-      }
+          manager: { include: { user: true } },
+        },
+      },
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
   });
 
-  return tasks.map((t: any) => {
-    const assignedGig = t.assignments?.[0]?.gigProfile;
-    const assignedMgr = t.assignments?.[0]?.manager || t.client?.managers?.[0];
-    const budget = Number(t.budget);
-    const platformFee = platformFeeFor(budget);
-
+  return tasks.map((t) => {
+    const assignment = t.assignments[0];
+    const payment = t.payments[0];
     return {
       id: "tsk-" + t.taskId,
       taskId: t.taskId,
       title: t.title,
-      description: t.description || "",
-      category: t.category || "Engineering & Software",
+      description: t.description,
+      category: t.category,
       clientId: "cli-" + t.clientId,
-      clientName: t.client?.clientName || t.client?.user?.name || ("Client #" + t.clientId),
-      gigProId: assignedGig ? ("gig-" + assignedGig.gigProfileId) : undefined,
-      gigProName: assignedGig?.user?.name || "Unassigned",
-      managerId: assignedMgr ? ("mgr-" + assignedMgr.managerId) : undefined,
-      managerName: assignedMgr?.user?.name || "Assigned Delivery Manager",
-      budget,
-      platformFee,
-      totalBudget: budget + platformFee,
-      status: String(t.status).toUpperCase(),
-      deliverablesCount: t.deliverables?.length || 0,
-      applicationsCount: t.applications?.length || 0,
-      createdAt: t.createdAt.toISOString().split("T")[0],
-      updatedAt: t.updatedAt.toISOString().split("T")[0]
+      clientName: t.client.clientName,
+      gigProId: assignment ? "gig-" + assignment.gigProfileId : null,
+      gigProName: assignment?.gigProfile.user.name ?? null,
+      managerName: assignment?.manager?.user.name ?? null,
+      budget: Number(t.budget),
+      platformFee: payment ? Number(payment.platformFee) : null,
+      escrowStatus: payment ? PAYMENT_STATUS_LABEL[payment.status] : null,
+      status: t.status.toUpperCase(),
+      deliverablesCount: t.deliverables.length,
+      deliverablesApproved: t.deliverables.filter((d) => d.status === "approved" || d.status === "closed").length,
+      applicationsCount: t.applications.length,
+      dueDate: t.dueDate ? dateOnly(t.dueDate) : null,
+      createdAt: dateOnly(t.createdAt),
+      updatedAt: dateOnly(t.updatedAt),
     };
   });
 };
@@ -438,9 +425,17 @@ export const createTask = (dto: CreateTaskDto) =>
     },
   });
 
-// Update any of a task's fields, including forcing its status (used by the /projects/:taskId/status alias too).
-export const updateTask = (taskId: number, dto: UpdateTaskDto) =>
-  prisma.task.update({
+/**
+ * Update a task, including an admin status override. While money is in escrow,
+ * only in_progress is allowed: completing or reopening the task here would strand
+ * the funds, so that has to go through a release, refund or arbitration ruling.
+ */
+export async function updateTask(taskId: number, dto: UpdateTaskDto) {
+  if (dto.status !== undefined && dto.status !== "in_progress") {
+    const held = await prisma.payment.count({ where: { taskId, status: "held" } });
+    if (held > 0) throw conflict("Funds are held in escrow for this task. Release or refund them instead of overriding its status.");
+  }
+  return prisma.task.update({
     where: { taskId },
     data: {
       ...(dto.title !== undefined ? { title: dto.title } : {}),
@@ -453,6 +448,7 @@ export const updateTask = (taskId: number, dto: UpdateTaskDto) =>
       ...(dto.status !== undefined ? { status: dto.status } : {}),
     },
   });
+}
 
 // Delete a task.
 export async function deleteTask(taskId: number): Promise<void> {
@@ -471,18 +467,18 @@ export const listApplications = async () => {
     orderBy: { createdAt: "desc" }
   });
 
-  return applications.map((a: any) => ({
+  return applications.map((a) => ({
     id: "app-" + a.applicationId,
     applicationId: a.applicationId,
     taskId: a.taskId,
-    taskTitle: a.task?.title || ("Task #" + a.taskId),
-    clientName: a.task?.client?.clientName || "Client",
+    taskTitle: a.task.title,
+    clientName: a.task.client.clientName,
     gigProfileId: a.gigProfileId,
-    gigProName: a.gigProfile?.user?.name || ("Gig Pro #" + a.gigProfileId),
-    hourlyRate: a.hourlyRate ? Number(a.hourlyRate) : 75,
-    rating: a.rating || 5,
-    status: String(a.status).toUpperCase(),
-    createdAt: a.createdAt.toISOString().split("T")[0]
+    gigProName: a.gigProfile.user.name,
+    hourlyRate: a.hourlyRate ? Number(a.hourlyRate) : null,
+    rating: a.rating,
+    status: a.status.toUpperCase(),
+    createdAt: dateOnly(a.createdAt),
   }));
 };
 
@@ -547,19 +543,19 @@ export const listDeliverables = async () => {
     orderBy: { createdAt: "desc" }
   });
 
-  return deliverables.map((d: any) => ({
+  return deliverables.map((d) => ({
     id: "del-" + d.taskId + "-" + d.deliverableNo,
     taskId: d.taskId,
     deliverableNo: d.deliverableNo,
-    taskTitle: d.task?.title || ("Task #" + d.taskId),
-    clientName: d.task?.client?.clientName || "Client Organization",
+    taskTitle: d.task.title,
+    clientName: d.task.client.clientName,
     gigProfileId: d.gigProfileId,
-    gigProName: d.gigProfile?.user?.name || ("Gig Pro #" + d.gigProfileId),
+    gigProName: d.gigProfile.user.name,
     description: d.description,
     submissionPath: d.submissionPath,
-    status: String(d.status).toUpperCase(),
+    status: d.status.toUpperCase(),
     feedback: d.feedback,
-    createdAt: d.createdAt.toISOString().split("T")[0]
+    createdAt: dateOnly(d.createdAt),
   }));
 };
 
@@ -606,107 +602,77 @@ export async function deleteDeliverable(taskId: number, deliverableNo: number): 
 
 // ---- Payments -----------------------------------------------------------
 
-// List every payment platform-wide, with the platform fee/escrow status derived on read (not stored).
+/**
+ * The transaction ledger, read-only by design: there is deliberately no raw
+ * create, update or delete route for payments. Rows only change through escrow
+ * transitions, which are audited.
+ */
 export const listPayments = async () => {
   const payments = await prisma.payment.findMany({
     include: {
-      task: { include: { client: { include: { user: true } } } },
-      gigProfile: { include: { user: true } }
+      task: { include: { client: true } },
+      gigProfile: { include: { user: true } },
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
   });
 
-  return payments.map(p => {
+  return payments.map((p) => {
     const amount = Number(p.amount);
     const platformFee = Number(p.platformFee);
-    const totalAmount = amount + platformFee;
-
     return {
       id: "pay-" + p.paymentId,
       paymentId: p.paymentId,
       taskId: "tsk-" + p.taskId,
-      taskTitle: p.task?.title || ("Task #" + p.taskId),
-      clientId: p.task ? ("cli-" + p.task.clientId) : "cli-1",
-      clientName: p.task?.client?.clientName || p.task?.client?.user?.name || "Client",
+      taskTitle: p.task.title,
+      clientId: "cli-" + p.task.clientId,
+      clientName: p.task.client.clientName,
       gigProId: "gig-" + p.gigProfileId,
-      gigProName: p.gigProfile?.user?.name || ("Gig Pro #" + p.gigProfileId),
+      gigProName: p.gigProfile.user.name,
       amount,
-      grossAmount: amount,
       platformFee,
-      platformRake: platformFee,
-      totalAmount,
-      netPayout: amount,
+      totalAmount: amount + platformFee,
       status: PAYMENT_STATUS_LABEL[p.status],
-      escrowStatus: PAYMENT_STATUS_LABEL[p.status],
-      createdAt: p.createdAt.toISOString().split("T")[0]
+      createdAt: dateOnly(p.createdAt),
+      settledAt: p.settledAt ? dateOnly(p.settledAt) : null,
     };
   });
 };
 
-// Create a payment record directly.
-export const createPayment = (dto: CreatePaymentDto) =>
-  prisma.payment.create({
-    data: {
-      taskId: dto.taskId,
-      gigProfileId: dto.gigProfileId,
-      amount: dto.amount,
-      platformFee: platformFeeFor(Number(dto.amount)),
-      ...(dto.status !== undefined ? { status: dto.status } : {}),
-    },
-  });
-
-// Update a payment's amount/status — also backs the /payments/:id/override escrow-override alias.
-export const updatePayment = (paymentId: number, dto: UpdatePaymentDto) =>
-  prisma.payment.update({
-    where: { paymentId },
-    data: {
-      ...(dto.amount !== undefined ? { amount: dto.amount, platformFee: platformFeeFor(Number(dto.amount)) } : {}),
-      ...(dto.status !== undefined ? { status: dto.status } : {}),
-    },
-  });
-
-/** Settle a payment held in escrow: release it to the gig pro or refund the client. */
+/**
+ * Manually release or refund a held payment, with the reason captured in the
+ * audit trail. Refused during an open dispute, where only the ruling may move the money.
+ */
 export async function overridePayment(paymentId: number, dto: OverridePaymentDto) {
   const payment = await prisma.payment.findUnique({ where: { paymentId } });
   if (!payment) throw notFound("Payment not found");
+  await assertNoOpenDispute(payment.taskId);
   if (dto.action === "RELEASE") await releasePayment(payment.taskId, payment.gigProfileId);
   else await refundPayment(payment.taskId, payment.gigProfileId);
-  recordAuditLog(`PAYMENT_${dto.action}`, "Super Admin", `Payment ${paymentId}: ${dto.auditReason}`);
   return prisma.payment.findUniqueOrThrow({ where: { paymentId } });
-}
-
-// Delete a payment.
-export async function deletePayment(paymentId: number): Promise<void> {
-  await prisma.payment.delete({ where: { paymentId } });
 }
 
 // ---- Reviews ------------------------------------------------------------
 
-/** List every review platform-wide. status/flagCount/comment fallback are display placeholders — there's no moderation-status or flag column in schema.prisma. */
+/** The moderation queue. A review with no comment returns null rather than invented text. */
 export const listReviews = async () => {
   const reviews = await prisma.review.findMany({
-    include: {
-      reviewer: true,
-      reviewee: true,
-      task: true
-    },
-    orderBy: { createdAt: "desc" }
+    include: { reviewer: true, reviewee: true, task: true },
+    orderBy: { createdAt: "desc" },
   });
 
-  return reviews.map(r => ({
+  return reviews.map((r) => ({
     id: "rev-" + r.reviewId,
     reviewId: r.reviewId,
     taskId: "tsk-" + r.taskId,
-    taskTitle: r.task?.title || ("Task #" + r.taskId),
-    reviewerName: r.reviewer?.name || "Reviewer",
-    reviewerRole: r.reviewer?.role?.toUpperCase() || "CLIENT",
-    targetUserName: r.reviewee?.name || "Reviewee",
+    taskTitle: r.task.title,
+    reviewerName: r.reviewer.name,
+    reviewerRole: r.reviewer.role.toUpperCase(),
+    targetUserName: r.reviewee.name,
     rating: r.rating,
-    comment: r.comment || "Great collaboration!",
-    status: (r as any).status || "PUBLISHED",
-    flagCount: (r as any).status === "FLAGGED" ? 1 : 0,
-    moderatorNotes: (r as any).moderatorNotes || null,
-    createdAt: r.createdAt ? r.createdAt.toISOString().split("T")[0] : "2026-02-01"
+    comment: r.comment,
+    status: r.status,
+    moderatorNotes: r.moderatorNotes,
+    createdAt: dateOnly(r.createdAt),
   }));
 };
 
@@ -739,616 +705,500 @@ export async function deleteReview(reviewId: number): Promise<void> {
 
 // ---- Dashboard stats & Analytics ------------------------------------------
 
-// Aggregate platform-wide counts (users/tasks/services/applications) and payment totals (volume, payouts, platform revenue, escrow held) for the admin dashboard.
+/**
+ * Dashboard KPIs, aggregated in the database rather than loading every payment.
+ * GMV counts money actually committed (held + released). Revenue counts only the
+ * fee on released payments, since a fee in escrow can still be refunded.
+ * Rates are null when there's nothing to divide by, not a flattering default.
+ */
 export async function getDashboardStats() {
-  const [
-    totalUsers,
-    totalClients,
-    totalGigPros,
-    totalManagers,
-    totalAdmins,
-    tasksOpen,
-    tasksInProgress,
-    tasksCompleted,
-    totalTasks,
-    totalServices,
-    totalApplications,
-    payments,
-    reviewAgg,
-  ] = await Promise.all([
+  const [totalUsers, activeTasks, pendingDisputes, payments, kyc, ratings] = await Promise.all([
     prisma.user.count(),
-    prisma.client.count(),
-    prisma.gigProfessionalProfile.count(),
-    prisma.manager.count(),
-    prisma.user.count({ where: { role: "admin" } }),
-    prisma.task.count({ where: { status: "open" } }),
-    prisma.task.count({ where: { status: "in_progress" } }),
-    prisma.task.count({ where: { status: "completed" } }),
-    prisma.task.count(),
-    prisma.service.count(),
-    prisma.application.count(),
-    prisma.payment.findMany(),
-    prisma.review.aggregate({ _avg: { rating: true }, _count: { reviewId: true } }),
+    prisma.task.count({ where: { status: { in: ["open", "in_progress"] } } }),
+    prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }),
+    prisma.payment.groupBy({ by: ["status"], _sum: { amount: true, platformFee: true } }),
+    prisma.client.groupBy({ by: ["kycStatus"], _count: { clientId: true } }),
+    prisma.review.aggregate({ where: { status: { not: "HIDDEN" } }, _avg: { rating: true } }),
   ]);
 
-  let totalVolume = 0;
-  let totalGigPayouts = 0;
-  let platformRevenue = 0;
-  let escrowHeld = 0;
-  let completedTransactions = 0;
-  let pendingTransactions = 0;
-
-  for (const p of payments) {
-    const amount = Number(p.amount);
-    const rake = Number(p.platformFee);
-    const total = amount + rake;
-
-    if (p.status === "completed") {
-      totalVolume += total;
-      completedTransactions += 1;
-      totalGigPayouts += amount;
-      platformRevenue += rake;
-    } else if (p.status === "held") {
-      totalVolume += total;
-      pendingTransactions += 1;
-      escrowHeld += total;
-    }
-  }
+  const totalFor = (status: "completed" | "held") => {
+    const row = payments.find((p) => p.status === status);
+    return Number(row?._sum.amount ?? 0) + Number(row?._sum.platformFee ?? 0);
+  };
+  const totalClients = kyc.reduce((sum, row) => sum + row._count.clientId, 0);
+  const verifiedClients = kyc.find((row) => row.kycStatus === "VERIFIED")?._count.clientId ?? 0;
 
   return {
-    users: {
-      total: totalUsers,
-      clients: totalClients,
-      gigProfessionals: totalGigPros,
-      managers: totalManagers,
-      admins: totalAdmins,
-    },
-    tasks: {
-      total: totalTasks,
-      open: tasksOpen,
-      inProgress: tasksInProgress,
-      completed: tasksCompleted,
-    },
-    services: {
-      total: totalServices,
-      active: totalServices,
-    },
-    payments: {
-      totalTransactions: payments.length,
-      completed: completedTransactions,
-      pending: pendingTransactions,
-      totalVolume,
-      gigPayouts: totalGigPayouts,
-      platformRevenue,
-      escrowHeld,
-    },
-    reviews: {
-      total: reviewAgg._count.reviewId ?? 0,
-      averageRating: Number(reviewAgg._avg.rating ?? 5.0),
-    },
-    grossMerchandiseVolume: totalVolume,
-    platformRevenue,
-    activeTasks: tasksOpen + tasksInProgress,
+    grossMerchandiseVolume: totalFor("completed") + totalFor("held"),
+    platformRevenue: Number(payments.find((p) => p.status === "completed")?._sum.platformFee ?? 0),
+    escrowHeld: totalFor("held"),
+    activeTasks,
     totalUsers,
-    pendingDisputes: await (prisma as any).dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }),
-    escrowHeld,
-    avgPlatformRating: Number(reviewAgg._avg.rating ?? 5.0),
+    pendingDisputes,
+    kycVerificationRate: totalClients > 0 ? round1((verifiedClients / totalClients) * 100) : null,
+    avgPlatformRating: ratings._avg.rating === null ? null : round1(Number(ratings._avg.rating)),
   };
 }
 
-/** Build dynamic GMV/platform-rake time series from payments and tasks according to selected timeRange. */
-export async function getAnalytics(_timeRange: string = "30d") {
-  const now = new Date();
-  let startDate: Date;
-  let dayCount = 30;
-  let bucketCount = 6;
+export type AnalyticsRange = "7d" | "30d" | "90d" | "ytd";
 
-  if (_timeRange === "7d") {
-    dayCount = 7;
-    bucketCount = 7;
-    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  } else if (_timeRange === "30d") {
-    dayCount = 30;
-    bucketCount = 6;
-    startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  } else if (_timeRange === "90d") {
-    dayCount = 90;
-    bucketCount = 6;
-    startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-  } else if (_timeRange === "ytd") {
-    startDate = new Date(now.getFullYear(), 0, 1);
-    dayCount = Math.max(1, Math.ceil((now.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)));
-    bucketCount = 6;
-  } else {
-    startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    dayCount = 30;
-    bucketCount = 6;
-  }
+export interface VelocityBucket {
+  label: string;
+  start: number;
+  end: number;
+}
 
-  const kpis = await getDashboardStats();
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-  const allPayments = await prisma.payment.findMany({
-    where: { status: "completed" },
-    include: { task: true },
-    orderBy: { createdAt: "asc" }
-  });
+/**
+ * Splits a range into fixed, non-overlapping intervals: 7D daily, 30D 5-day,
+ * 90D 15-day, YTD calendar bi-monthly. Each payment lands in exactly one bucket
+ * at its true amount, so a chart bar is a plain sum with no scaling or
+ * multiplier applied. End is exclusive, and the last bucket reaches "now" so a
+ * payment made this instant is counted. All dates are UTC so a bucket doesn't
+ * depend on the server's timezone.
+ */
+export function buildVelocityBuckets(range: AnalyticsRange, now: Date): VelocityBucket[] {
+  const nowMs = now.getTime();
+  const shortDate = (ms: number, options: Intl.DateTimeFormatOptions) =>
+    new Date(ms).toLocaleDateString("en-US", { timeZone: "UTC", ...options });
 
-  // Divide the selected time range into bucketCount discrete chronological intervals
-  const bucketMs = (now.getTime() - startDate.getTime()) / bucketCount;
-  const buckets: { label: string; start: number; end: number; gmv: number; rake: number }[] = [];
-
-  for (let i = 0; i < bucketCount; i++) {
-    const bStart = startDate.getTime() + i * bucketMs;
-    const bEnd = startDate.getTime() + (i + 1) * bucketMs;
-    const midDate = new Date(bStart + bucketMs / 2);
-    const label = _timeRange === "7d"
-      ? midDate.toLocaleDateString("en-US", { weekday: "short", day: "numeric" })
-      : _timeRange === "ytd"
-      ? midDate.toLocaleDateString("en-US", { month: "short" })
-      : midDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-    buckets.push({
-      label,
-      start: bStart,
-      end: bEnd,
-      gmv: 0,
-      rake: 0
-    });
-  }
-
-  // Aggregate real completed payments into their respective time interval
-  for (const p of allPayments) {
-    const pTime = p.createdAt.getTime();
-    if (pTime < startDate.getTime() || pTime > now.getTime()) continue;
-    const amount = Number(p.amount);
-    const rake = Number(p.platformFee) || Math.round(amount * (platformConfig.commissionRakePercent / 100));
-
-    for (const b of buckets) {
-      if (pTime >= b.start && pTime <= b.end) {
-        b.gmv += amount + rake;
-        b.rake += rake;
-        break;
-      }
+  if (range === "ytd") {
+    const year = now.getUTCFullYear();
+    const buckets: VelocityBucket[] = [];
+    for (let month = 0; month <= now.getUTCMonth(); month += 2) {
+      const start = Date.UTC(year, month, 1);
+      const end = Math.min(Date.UTC(year, month + 2, 1), nowMs + 1);
+      buckets.push({
+        label: shortDate(start, { month: "short" }) + "–" + shortDate(Date.UTC(year, month + 1, 1), { month: "short" }),
+        start,
+        end,
+      });
     }
+    return buckets;
   }
 
-  const velocity = buckets.map(b => ({
-    date: b.label,
-    gmv: b.gmv,
-    rake: b.rake
-  }));
-
-  const tasks = await prisma.task.findMany({
-    include: { payments: true }
+  const { days, count } = { "7d": { days: 1, count: 7 }, "30d": { days: 5, count: 6 }, "90d": { days: 15, count: 6 } }[range];
+  return Array.from({ length: count }, (_, i) => {
+    const end = nowMs + 1 - (count - 1 - i) * days * DAY_MS;
+    const start = end - days * DAY_MS;
+    return {
+      label: range === "7d"
+        ? shortDate(start, { weekday: "short", day: "numeric" })
+        : shortDate(start, { month: "short", day: "numeric" }),
+      start,
+      end,
+    };
   });
+}
 
-  const categoryMap: Record<string, { count: number; gmv: number }> = {};
-  let totalCatBudget = 0;
-  for (const t of tasks) {
-    const cat = t.category || "Software Development";
-    const b = Number(t.budget || 0);
-    totalCatBudget += b;
-    if (!categoryMap[cat]) categoryMap[cat] = { count: 0, gmv: 0 };
-    categoryMap[cat].count += 1;
-    categoryMap[cat].gmv += b;
+/**
+ * Financial velocity and category mix for a time range, from released payments
+ * bucketed on settledAt, the moment money moved, rather than on when the job was
+ * hired. Category volume uses the same payments, so the table reconciles exactly
+ * to the chart: shares sum to 100% of the GMV shown for the same range.
+ */
+export async function getAnalytics(rawRange: string = "30d") {
+  const range: AnalyticsRange = rawRange === "7d" || rawRange === "90d" || rawRange === "ytd" ? rawRange : "30d";
+  const buckets = buildVelocityBuckets(range, new Date());
+
+  const [payments, tasksPerClient] = await Promise.all([
+    prisma.payment.findMany({
+      where: { status: "completed", settledAt: { gte: new Date(buckets[0]!.start) } },
+      include: { task: { select: { category: true, clientId: true } } },
+    }),
+    prisma.task.groupBy({ by: ["clientId"], _count: { taskId: true } }),
+  ]);
+
+  const velocity = buckets.map((b) => ({ date: b.label, gmv: 0, rake: 0 }));
+  const categoryTotals = new Map<string, { contracts: number; gmv: number }>();
+  let grossVolume = 0;
+  let platformRake = 0;
+
+  for (const p of payments) {
+    const settled = p.settledAt!.getTime();
+    const index = buckets.findIndex((b) => settled >= b.start && settled < b.end);
+    if (index < 0) continue;
+    const rake = Number(p.platformFee);
+    const gmv = Number(p.amount) + rake;
+    velocity[index]!.gmv += gmv;
+    velocity[index]!.rake += rake;
+    grossVolume += gmv;
+    platformRake += rake;
+
+    const name = p.task.category ?? "Uncategorized";
+    const totals = categoryTotals.get(name) ?? { contracts: 0, gmv: 0 };
+    categoryTotals.set(name, { contracts: totals.contracts + 1, gmv: totals.gmv + gmv });
   }
 
-  const categories = Object.entries(categoryMap).map(([name, val]) => ({
-    name,
-    category: name,
-    activeContracts: val.count,
-    activeTasks: val.count,
-    totalVolume: val.gmv,
-    gmv: val.gmv,
-    avgBudget: val.count > 0 ? Math.round(val.gmv / val.count) : 0,
-    growthRate: (totalCatBudget > 0 ? Math.round((val.gmv / totalCatBudget) * 100) : 0) + "%",
-    percentage: totalCatBudget > 0 ? Math.round((val.gmv / totalCatBudget) * 100) : 100
-  }));
-
-  const totalVolume = velocity.reduce((sum, v) => sum + v.gmv, 0);
-  const totalRake = velocity.reduce((sum, v) => sum + v.rake, 0);
-  const avgBudget = tasks.length > 0 ? Math.round(totalCatBudget / tasks.length) : 1250;
-
-  // Dynamically compute repeat client engagement rate from task distributions
-  const clientTaskCounts = await prisma.task.groupBy({
-    by: ["clientId"],
-    _count: { taskId: true }
-  });
-  const totalClientsWithTasks = clientTaskCounts.length;
-  const repeatClients = clientTaskCounts.filter(c => c._count.taskId > 1).length;
-  const repeatClientRate = totalClientsWithTasks > 0
-    ? Math.round((repeatClients / totalClientsWithTasks) * 100) + "%"
-    : "68.4%";
+  const contractCount = [...categoryTotals.values()].reduce((sum, c) => sum + c.contracts, 0);
+  const peak = velocity.reduce<(typeof velocity)[number] | null>(
+    (best, v) => (v.gmv > 0 && (!best || v.gmv > best.gmv) ? v : best),
+    null,
+  );
+  const repeatClients = tasksPerClient.filter((c) => c._count.taskId > 1).length;
 
   return {
-    timeRange: _timeRange,
-    kpis: {
-      ...kpis,
-      grossMerchandiseVolume: totalVolume,
-      platformRevenue: totalRake,
-      avgBudget
-    },
-    grossVolume: totalVolume,
-    platformRake: totalRake,
-    avgContractBudget: avgBudget,
-    repeatClientRate,
+    timeRange: range,
+    grossVolume,
+    platformRake,
+    avgContractValue: contractCount > 0 ? Math.round(grossVolume / contractCount) : null,
+    repeatClientRate: tasksPerClient.length > 0 ? round1((repeatClients / tasksPerClient.length) * 100) : null,
     velocity,
-    categories: categories.length > 0 ? categories : [
-      { name: "Software Development", category: "Software Development", activeContracts: tasks.length, activeTasks: tasks.length, totalVolume: totalCatBudget, gmv: totalCatBudget, avgBudget, growthRate: "100%", percentage: 100 }
-    ]
+    peak: peak && { date: peak.date, gmv: peak.gmv },
+    categories: [...categoryTotals.entries()]
+      .sort((a, b) => b[1].gmv - a[1].gmv)
+      .map(([category, c]) => ({
+        category,
+        contracts: c.contracts,
+        totalVolume: c.gmv,
+        avgContractValue: Math.round(c.gmv / c.contracts),
+        marketShare: round1((c.gmv / grossVolume) * 100),
+      })),
   };
 }
 
 // ---- Admin Staff & Invitations -------------------------------------------
 
-export const ADMIN_TIER_DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  OWNER: ["*"],
-  SUPER_ADMIN: [
-    "users:read", "users:ban", "payments:read", "payments:refund",
-    "payments:release", "disputes:resolve", "reviews:moderate",
-    "settings:manage", "admins:invite"
-  ],
-  FINANCIAL_ADMIN: ["users:read", "payments:read", "payments:release", "payments:refund", "projects:read"],
-  SUPPORT_ADMIN: ["users:read", "projects:read", "disputes:resolve", "reviews:moderate"],
-  CONTENT_MODERATOR: ["reviews:moderate", "users:read"],
-  AUDITOR: ["users:read", "payments:read", "projects:read", "audit:read"]
+/**
+ * Starting permission set for each tier. The invite form pre-fills from the same
+ * table, then an inviter can narrow it, and the result is stored on the account.
+ * OWNER isn't offered here: that seat is assigned once by the migration.
+ */
+export const TIER_DEFAULT_PERMISSIONS: Record<CreateAdminInvitationDto["role"], AdminPermission[]> = {
+  SUPER_ADMIN: ["users:read", "users:ban", "payments:read", "payments:refund", "payments:release", "disputes:resolve", "reviews:moderate", "settings:manage", "admins:invite"],
+  FINANCIAL_ADMIN: ["users:read", "payments:read", "payments:refund", "payments:release"],
+  SUPPORT_ADMIN: ["users:read", "disputes:resolve", "reviews:moderate"],
+  CONTENT_MODERATOR: ["users:read", "reviews:moderate"],
+  AUDITOR: ["users:read", "payments:read"],
 };
 
-interface AdminMetadata {
-  tier: string;
-  permissions: string[];
-}
-const adminMetadataRegistry = new Map<number, AdminMetadata>();
-
-// List admin users. Invited admins are provisioned as real rows at invite time, so they appear here too.
+/** The staff roster, from the persisted tier and permission columns. */
 export async function listAdminStaff() {
   const admins = await prisma.user.findMany({ where: { role: "admin" }, orderBy: { userId: "asc" } });
-  return admins.map((a, idx) => {
-    const meta = adminMetadataRegistry.get(a.userId);
-    const assignedTier = idx === 0 ? "OWNER" : (meta?.tier || (a.email.toLowerCase().includes("auditor") ? "AUDITOR" : a.email.toLowerCase().includes("finance") ? "FINANCIAL_ADMIN" : a.email.toLowerCase().includes("support") ? "SUPPORT_ADMIN" : "SUPER_ADMIN"));
-    const permissions = idx === 0 ? ["*"] : (meta?.permissions || ADMIN_TIER_DEFAULT_PERMISSIONS[assignedTier] || ["*"]);
-    return {
-      id: "adm-" + a.userId,
-      name: a.name,
-      email: a.email,
-      role: assignedTier,
-      permissions,
-      isTwoFactorEnabled: !!a.twoFactorEnabled,
-      createdAt: a.createdAt,
-      lastLogin: "Active Today",
-      status: a.status || "ACTIVE"
-    };
-  });
+  return admins.map((a) => ({
+    id: "adm-" + a.userId,
+    name: a.name,
+    email: a.email,
+    role: a.adminTier,
+    permissions: a.adminPermissions,
+    isTwoFactorEnabled: a.twoFactorEnabled,
+    createdAt: a.createdAt,
+    status: a.status,
+  }));
 }
 
 const ADMIN_INVITE_TTL = "48h";
-const adminInviteEmail = z.string().trim().toLowerCase().email().max(100);
 
 /**
- * Provision an admin seat. The User row is created immediately with a random
- * one-time password (so the invite survives restarts and lives in the DB),
- * and a signed 48h link is returned for the admin to share out-of-band.
- * Nothing is emailed — there are no external services in this phase.
+ * Provision an INVITED admin seat and return a signed 48h link plus a one-time
+ * password. Sharing them over separate channels means neither one alone activates
+ * the seat. INVITED accounts can't log in or pass authGuard until activated.
+ * Nobody can grant a permission they don't hold themselves.
  */
-export async function createAdminInvitation(rawEmail: unknown, role: string, customPermissions?: string[]) {
-  const parsed = adminInviteEmail.safeParse(rawEmail);
-  if (!parsed.success) throw badRequest("A valid email is required");
-  const email = parsed.data;
-
+export async function createAdminInvitation(dto: CreateAdminInvitationDto, actorPermissions: string[]) {
+  const { email, role } = dto;
   const existing = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
   if (existing) throw conflict("An account with this email already exists");
+
+  const permissions = dto.permissions?.length ? dto.permissions : TIER_DEFAULT_PERMISSIONS[role];
+  if (!actorPermissions.includes("*")) {
+    const excess = permissions.filter((p) => !actorPermissions.includes(p));
+    if (excess.length > 0) throw forbidden("You cannot grant permissions you don't hold: " + excess.join(", "));
+  }
 
   const assignedPassword = randomBytes(9).toString("base64url");
   const user = await prisma.user.create({
     data: {
-      name: (email.split("@")[0] || "Admin").replace(/[^a-zA-Z]/g, " ").trim() || "Admin",
+      name: (email.split("@")[0] ?? "").replace(/[^a-zA-Z]/g, " ").trim() || "Admin",
       email,
       hashPassword: await hashPassword(assignedPassword),
       role: "admin",
-      status: "ACTIVE"
+      status: "INVITED",
+      adminTier: role,
+      adminPermissions: permissions,
     },
-  });
-
-  const grantedPermissions = Array.isArray(customPermissions) && customPermissions.length > 0
-    ? customPermissions
-    : (ADMIN_TIER_DEFAULT_PERMISSIONS[role] || ["*"]);
-
-  adminMetadataRegistry.set(user.userId, {
-    tier: role,
-    permissions: grantedPermissions
   });
 
   const token = signInviteToken("admin_invite", { ref: user.userId, email, role }, ADMIN_INVITE_TTL);
   const expiresAt = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
   const inviteLink = `${env.appUrl}/?admin_invite=1&token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&role=${encodeURIComponent(role)}`;
-  recordAuditLog("INVITE_ADMIN", "Super Admin", "Provisioned admin seat for " + email + " with role " + role);
 
   return { email, role, assignedPassword, inviteLink, token, expiresAt };
 }
 
 /**
- * Activate an invited admin seat: requires the signed invite token AND the
- * one-time assigned password, and optionally sets a new personal password.
- * Never creates accounts — seats only come from createAdminInvitation.
+ * Activate an invited seat. Needs the signed token and the one-time password,
+ * and always replaces that password, so whoever issued the invite never knows
+ * the final credential. The status check is a conditional update, so a link
+ * can't be used twice even by two simultaneous requests.
  */
-export async function acceptAdminInvitation(token: unknown, email: unknown, password: unknown, newPassword: unknown) {
-  const claims = typeof token === "string" && token ? verifyInviteToken("admin_invite", token) : null;
-  if (!claims || typeof email !== "string" || claims.email.toLowerCase() !== email.trim().toLowerCase()) {
+export async function acceptAdminInvitation(dto: AcceptAdminInvitationDto, ip: string | null) {
+  const claims = verifyInviteToken("admin_invite", dto.token);
+  if (!claims || claims.email.toLowerCase() !== dto.email.trim().toLowerCase()) {
     throw unauthorized("This invitation link is invalid or has expired.");
-  }
-  if (typeof password !== "string" || !password) {
-    throw unauthorized("Invalid activation password.");
   }
 
   const user = await prisma.user.findUnique({ where: { userId: claims.ref }, omit: { hashPassword: false } });
-  if (!user || user.role !== "admin" || !(await comparePassword(password, user.hashPassword))) {
+  if (!user || user.role !== "admin" || !(await comparePassword(dto.password, user.hashPassword))) {
     throw unauthorized("Invalid activation password.");
   }
 
-  if (typeof newPassword === "string" && newPassword) {
-    if (newPassword.length < 8 || newPassword.length > 72) {
-      throw badRequest("New password must be 8-72 characters");
-    }
-    await prisma.user.update({ where: { userId: user.userId }, data: { hashPassword: await hashPassword(newPassword) } });
-  }
+  const activated = await prisma.user.updateMany({
+    where: { userId: user.userId, status: "INVITED" },
+    data: { status: "ACTIVE", hashPassword: await hashPassword(dto.newPassword) },
+  });
+  if (activated.count !== 1) throw conflict("This invitation has already been used.");
 
-  const meta = adminMetadataRegistry.get(user.userId);
-  const assignedTier = (claims as any)?.role || meta?.tier || "SUPER_ADMIN";
-  const permissions = meta?.permissions || ADMIN_TIER_DEFAULT_PERMISSIONS[assignedTier] || ["*"];
+  await writeAudit({
+    actorUserId: user.userId,
+    actorEmail: user.email,
+    action: "ADMIN_INVITE_ACCEPTED",
+    target: "/invitations/accept",
+    details: null,
+    ipAddress: ip,
+  });
 
   return {
     success: true,
-    token: signToken({ userId: user.userId, role: "admin" }),
+    token: signToken({ userId: user.userId, role: "admin", tv: user.tokenVersion }),
     user: {
       userId: user.userId,
       email: user.email,
       name: user.name,
       role: "admin",
-      adminTier: assignedTier,
-      permissions
+      adminTier: user.adminTier,
+      permissions: user.adminPermissions,
     },
   };
 }
 
 // ---- Disputes & Arbitration ----------------------------------------------
 
+/**
+ * The docket list. SLA time is derived from createdAt on every read, so the
+ * countdown really counts down and goes negative once breached. It is null for
+ * closed cases. evidenceUrls defaults to [] because the column is nullable in
+ * older databases and the UI maps over it. escrowHeld tells the arbitrator
+ * whether a ruling can execute at all.
+ */
 export async function listDisputes() {
-  const disputes = await (prisma as any).dispute.findMany({
+  const disputes = await prisma.dispute.findMany({
     include: {
-      task: {
-        include: {
-          client: { include: { user: true } },
-          assignments: { include: { gigProfile: { include: { user: true } } } },
-          payments: true
-        }
-      },
+      task: { include: { payments: { where: { status: "held" } } } },
       filedByUser: true,
-      againstUser: true
+      againstUser: true,
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
   });
+  const now = Date.now();
 
-  return disputes.map((d: any) => ({
-    id: "disp-" + d.disputeId,
-    disputeId: d.disputeId,
-    taskId: "tsk-" + d.taskId,
-    taskTitle: d.task?.title || ("Task #" + d.taskId),
-    filedByName: d.filedByUser?.name || "Filer",
-    filedByRole: d.filedByUser?.role === "client" ? "CLIENT" : "GIG_PROFESSIONAL",
-    againstName: d.againstUser?.name || "Opposing Party",
-    disputeAmount: Number(d.disputeAmount),
-    reason: d.reason,
-    description: d.description,
-    evidenceUrls: d.evidenceUrls || [],
-    status: d.status,
-    slaHoursLeft: d.slaHoursLeft,
-    resolutionNotes: d.resolutionNotes || "",
-    settlementType: d.settlementType || "",
-    createdAt: d.createdAt.toISOString().split("T")[0]
-  }));
+  return disputes.map((d) => {
+    const isOpen = d.status === "OPEN" || d.status === "UNDER_REVIEW";
+    const deadline = d.createdAt.getTime() + d.slaHoursLeft * 3600 * 1000;
+    return {
+      id: "disp-" + d.disputeId,
+      disputeId: d.disputeId,
+      taskId: "tsk-" + d.taskId,
+      taskTitle: d.task.title,
+      filedByName: d.filedByUser.name,
+      filedByRole: d.filedByUser.role.toUpperCase(),
+      againstName: d.againstUser.name,
+      disputeAmount: Number(d.disputeAmount),
+      escrowHeld: d.task.payments.reduce((sum, p) => sum + Number(p.amount) + Number(p.platformFee), 0),
+      reason: d.reason,
+      description: d.description,
+      evidenceUrls: d.evidenceUrls ?? [],
+      status: d.status,
+      slaHoursLeft: isOpen ? Math.ceil((deadline - now) / (3600 * 1000)) : null,
+      resolutionNotes: d.resolutionNotes,
+      settlementType: d.settlementType,
+      splitPercent: d.splitPercent,
+      createdAt: dateOnly(d.createdAt),
+    };
+  });
 }
 
-export async function settleDispute(
-  disputeId: string | number,
-  settlementType: string,
-  resolutionNotes: string,
-  splitClientPercent?: number
-) {
-  const numId = Number(String(disputeId).replace(/\D/g, ""));
-  const dispute = await (prisma as any).dispute.update({
-    where: { disputeId: numId },
-    data: {
-      status: "RESOLVED",
-      settlementType,
-      resolutionNotes,
-      splitPercent: splitClientPercent !== undefined ? splitClientPercent : 50
-    },
-    include: { task: true }
-  });
-
-  recordAuditLog(
-    "RESOLVE_DISPUTE",
-    "Super Admin",
-    "Arbitrated dispute #" + numId + " with ruling: " + settlementType + (splitClientPercent ? " (" + splitClientPercent + "% client split)" : "") + ". Notes: " + resolutionNotes
+/** Execute a binding ruling: moves the escrow and closes the docket atomically (see settleDisputedEscrow). */
+export async function settleDispute(rawDisputeId: string, dto: SettleDisputeDto) {
+  const disputeId = numericId(rawDisputeId);
+  const dispute = await prisma.dispute.findUnique({ where: { disputeId } });
+  if (!dispute) throw notFound("Dispute not found");
+  const outcome = await settleDisputedEscrow(
+    disputeId,
+    dispute.taskId,
+    dto.settlementType,
+    dto.splitClientPercent ?? 0,
+    dto.resolutionNotes,
   );
-
-  return {
-    success: true,
-    disputeId: "disp-" + numId,
-    settlementType,
-    resolutionNotes,
-    status: "RESOLVED"
-  };
-}
-
-export async function resolveDispute(
-  disputeId: string | number,
-  resolution: string,
-  refundRatio: number
-) {
-  return settleDispute(disputeId, resolution, "Administrative ruling executed", Math.round(refundRatio * 100));
+  return { success: true, disputeId: "disp-" + disputeId, status: "RESOLVED", settlementType: dto.settlementType, ...outcome };
 }
 
 // ---- Audit Logs ----------------------------------------------------------
 
-// List recent admin actions from the in-memory audit log, seeding it with the 5 most recent user signups the first time it's read if nothing's been logged yet.
+/**
+ * The most recent 500 audit rows, newest first. The table itself is append-only,
+ * enforced by a database trigger.
+ *
+ * ponytail: fixed window, add cursor pagination when compliance needs full history in the UI.
+ */
 export async function listAuditLogs() {
-  if (auditLogs.length === 0) {
-    const users = await prisma.user.findMany({ take: 5, orderBy: { createdAt: "desc" } });
-    for (const u of users) {
-      auditLogs.push({
-        id: "aud-" + u.userId,
-        action: "USER_REGISTERED",
-        actor: u.name,
-        details: "Registered account as " + u.role,
-        timestamp: u.createdAt.toISOString()
-      });
-    }
-  }
-  return auditLogs;
+  const rows = await prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 500 });
+  return rows.map((r) => ({
+    id: "aud-" + r.auditId,
+    adminEmail: r.actorEmail,
+    action: r.action,
+    target: r.target,
+    details: r.details,
+    ipAddress: r.ipAddress,
+    createdAt: r.createdAt.toISOString(),
+  }));
 }
 
-// ---- Platform Settings ---------------------------------------------------
+// ---- Account Governance ---------------------------------------------------
 
-// Read the in-memory platform config (commission rake, min task budget, escrow hold period, etc.) — not persisted to the DB, resets on server restart.
-export async function getPlatformSettings() {
-  return platformConfig;
-}
-
-// Merge a partial patch into the in-memory platform config and audit-log it.
-export async function updatePlatformSettings(patch: UpdatePlatformSettingsDto) {
-  // patch is schema-validated (known keys only), so this can't add junk or touch the prototype.
-  for (const [key, value] of Object.entries(patch)) {
-    if (value !== undefined) Object.assign(platformConfig, { [key]: value });
-  }
-  recordAuditLog("UPDATE_SETTINGS", "Super Admin", "Updated platform commission rake and security limits");
-  return platformConfig;
-}
-
-// ---- Direct Admin Mutation Handlers ----------------------------------------
-
+/**
+ * Maps a prefixed UI id to its USERS row. A prefixed id that matches nothing is
+ * a 404: it must never fall through and be treated as a bare user id, which
+ * would suspend an unrelated person.
+ */
 export async function resolveToUserId(targetId: string | number): Promise<number> {
-  const str = String(targetId).trim();
-  const num = Number(str.replace(/\D/g, ""));
-  if (str.startsWith("cli-")) {
-    const client = await prisma.client.findUnique({ where: { clientId: num } });
-    if (client) return client.userId;
-  } else if (str.startsWith("gig-")) {
-    const pro = await prisma.gigProfessionalProfile.findUnique({ where: { gigProfileId: num } });
-    if (pro) return pro.userId;
-  } else if (str.startsWith("mgr-")) {
-    const mgr = await prisma.manager.findFirst({ where: { managerId: num } });
-    if (mgr) return mgr.userId;
-  }
-  return num;
+  const raw = String(targetId).trim().toLowerCase();
+  const id = numericId(raw);
+  const owner = raw.startsWith("cli-")
+    ? await prisma.client.findUnique({ where: { clientId: id }, select: { userId: true } })
+    : raw.startsWith("gig-")
+      ? await prisma.gigProfessionalProfile.findUnique({ where: { gigProfileId: id }, select: { userId: true } })
+      : raw.startsWith("mgr-")
+        ? await prisma.manager.findUnique({ where: { managerId: id }, select: { userId: true } })
+        : { userId: id };
+  if (!owner) throw notFound("Account not found");
+  return owner.userId;
 }
 
-export async function verifyClientKYC(clientId: number | string) {
-  const numId = Number(String(clientId).replace(/\D/g, ""));
-  const client = await prisma.client.update({
-    where: { clientId: numId },
-    data: { kycStatus: "VERIFIED" }
+/** KYC decision: PENDING -> VERIFIED or REJECTED. Re-deciding is allowed, since a later review can overturn one. */
+export async function decideClientKyc(rawClientId: string, status: "VERIFIED" | "REJECTED") {
+  const clientId = numericId(rawClientId);
+  await prisma.client.update({ where: { clientId }, data: { kycStatus: status } });
+  return { success: true, clientId, kycStatus: status, isVerified: status === "VERIFIED" };
+}
+
+/** Award or clear a gig professional's badge. The value is limited by the DTO enum. */
+export async function updateGigProBadge(rawGigProfileId: string, badge: "NONE" | "VERIFIED_PRO" | "TOP_RATED") {
+  const gigProfileId = numericId(rawGigProfileId);
+  await prisma.gigProfessionalProfile.update({
+    where: { gigProfileId },
+    data: { badge: badge === "NONE" ? null : badge },
   });
-  recordAuditLog("VERIFY_KYC", "Super Admin", "Approved KYC compliance for client #" + numId);
-  return { success: true, clientId: numId, isVerified: true, kycStatus: "VERIFIED" };
+  return { success: true, gigProfileId, badge };
 }
 
-export async function updateGigProBadge(gigProfileId: number | string, badge: string) {
-  const numId = Number(String(gigProfileId).replace(/\D/g, ""));
-  const pro = await prisma.gigProfessionalProfile.update({
-    where: { gigProfileId: numId },
-    data: { badge }
-  });
-  recordAuditLog("UPDATE_BADGE", "Super Admin", "Awarded " + badge + " badge to freelancer profile #" + numId);
-  return { success: true, gigProfileId: numId, badge };
-}
-
-export async function updateUserStatus(targetId: number | string, status: string, reason?: string) {
+/**
+ * Suspend or reactivate an account. authGuard checks status on every request, so
+ * this takes effect on the user's very next call. Your own account and the OWNER
+ * are refused so a mistake can't lock everyone out, and suspending another admin
+ * also needs admins:invite, matching deleteUser.
+ */
+export async function updateUserStatus(targetId: string, status: "ACTIVE" | "SUSPENDED", actorUserId: number, actorCanManageAdmins: boolean) {
   const userId = await resolveToUserId(targetId);
-  const cleanStatus = String(status || "SUSPENDED").toUpperCase();
-  const user = await prisma.user.update({
-    where: { userId },
-    data: { status: cleanStatus }
+  if (userId === actorUserId) throw conflict("You cannot change your own account status");
+  const target = await prisma.user.findUniqueOrThrow({ where: { userId } });
+  if (target.role === "admin" && !actorCanManageAdmins) throw forbidden("Requires permission: admins:invite");
+  if (target.adminTier === "OWNER") throw conflict("The platform owner account cannot be suspended");
+  if (target.status === "INVITED") throw conflict("This seat has not been activated yet. Revoke the invitation instead.");
+  await prisma.user.update({ where: { userId }, data: { status } });
+  return { success: true, userId, status };
+}
+
+/**
+ * End every session for an account by incrementing its tokenVersion. Doing this
+ * to yourself returns a fresh token, so "sign out my other devices" keeps the
+ * current one alive. Doing it to someone else needs admins:invite, and the OWNER
+ * can only do it to themselves.
+ */
+export async function revokeSessions(rawStaffId: string, actorUserId: number, actorCanManageAdmins: boolean) {
+  const userId = numericId(rawStaffId);
+  const isSelf = userId === actorUserId;
+  if (!isSelf && !actorCanManageAdmins) throw forbidden("Requires permission: admins:invite");
+  const target = await prisma.user.findUnique({ where: { userId } });
+  if (!target || target.role !== "admin") throw notFound("Admin not found");
+  if (!isSelf && target.adminTier === "OWNER") throw conflict("Only the platform owner can end the owner's sessions");
+  const updated = await prisma.user.update({ where: { userId }, data: { tokenVersion: { increment: 1 } } });
+  return {
+    success: true,
+    ...(isSelf ? { token: signToken({ userId, role: "admin", tv: updated.tokenVersion }) } : {}),
+  };
+}
+
+/**
+ * Publish, flag or hide a review. Hidden reviews stay in the table as evidence
+ * but drop out of every rating average on the next read.
+ */
+export async function moderateReview(rawReviewId: string, dto: ModerateReviewDto) {
+  const reviewId = numericId(rawReviewId);
+  await prisma.review.update({
+    where: { reviewId },
+    data: { status: dto.status, ...(dto.moderatorNotes !== undefined ? { moderatorNotes: dto.moderatorNotes } : {}) },
   });
-  recordAuditLog("UPDATE_USER_STATUS", "Super Admin", "Updated user #" + userId + " status to " + cleanStatus + (reason ? " (" + reason + ")" : ""));
-  return { success: true, userId, status: cleanStatus, reason };
+  return { success: true, reviewId, status: dto.status };
 }
 
-export async function revokeAdminSession(staffId: string) {
-  recordAuditLog("REVOKE_SESSION", "Super Admin", "Invalidated active sessions for admin #" + staffId);
-  return { success: true, staffId, message: "Administrative sessions revoked successfully." };
-}
-
-export async function moderateReview(reviewId: number | string, status: string, moderatorNotes?: string) {
-  const numId = Number(String(reviewId).replace(/\D/g, ""));
-  const cleanStatus = String(status || "HIDDEN").toUpperCase();
-  const review = await prisma.review.update({
-    where: { reviewId: numId },
-    data: {
-      status: cleanStatus,
-      ...(moderatorNotes !== undefined ? { moderatorNotes } : {})
-    }
-  });
-  recordAuditLog("MODERATE_REVIEW", "Super Admin", "Moderated review #" + numId + " to " + cleanStatus);
-  return { success: true, reviewId: numId, status: cleanStatus, moderatorNotes };
-}
-
-/** Change the signed-in admin's own password after verifying the current one. */
-export async function updateProfilePassword(userId: number, currentPassword: unknown, newPassword: unknown) {
-  if (typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 72) {
-    throw badRequest("New password must be 8-72 characters");
-  }
+/**
+ * Change your own password after re-checking the current one. Other devices are
+ * signed out (a stolen session shouldn't survive a password change) and a fresh
+ * token keeps this one signed in.
+ */
+export async function updateProfilePassword(userId: number, currentPassword: string, newPassword: string) {
   const user = await prisma.user.findUnique({ where: { userId }, omit: { hashPassword: false } });
-  if (!user || typeof currentPassword !== "string" || !(await comparePassword(currentPassword, user.hashPassword))) {
+  if (!user || !(await comparePassword(currentPassword, user.hashPassword))) {
     throw badRequest("Current password is incorrect");
   }
-  await prisma.user.update({ where: { userId }, data: { hashPassword: await hashPassword(newPassword) } });
-  recordAuditLog("UPDATE_PASSWORD", user.name, "Changed own admin password");
-  return { success: true, message: "Password updated successfully" };
-}
-
-export async function toggleProfile2FA(emailOrUserId: string | number, isEnabled: boolean) {
-  let user;
-  if (typeof emailOrUserId === "number" || /^\d+$/.test(String(emailOrUserId))) {
-    user = await prisma.user.update({
-      where: { userId: Number(emailOrUserId) },
-      data: { twoFactorEnabled: isEnabled }
-    });
-  } else {
-    user = await prisma.user.update({
-      where: { email: String(emailOrUserId) },
-      data: { twoFactorEnabled: isEnabled }
-    });
-  }
-  recordAuditLog("TOGGLE_2FA", user.name, (isEnabled ? "Enabled" : "Disabled") + " 2FA authentication.");
-  return { success: true, twoFactorEnabled: user.twoFactorEnabled };
-}
-
-export async function getProfile(userId: number) {
-  const user = await prisma.user.findUnique({
+  const updated = await prisma.user.update({
     where: { userId },
-    select: {
-      userId: true,
-      name: true,
-      email: true,
-      role: true,
-      status: true,
-      twoFactorEnabled: true,
-      createdAt: true
-    }
+    data: { hashPassword: await hashPassword(newPassword), tokenVersion: { increment: 1 } },
   });
+  return { success: true, token: signToken({ userId, role: "admin", tv: updated.tokenVersion }) };
+}
+
+/**
+ * Step 1 of 2FA enrollment: store a new secret while 2FA is still off and hand it
+ * to the admin once. Nothing changes at login until step 2 proves their app can
+ * generate valid codes, so a mistyped key can't lock anyone out. Self-service
+ * only: the target is always the signed-in admin, never a value from the request.
+ */
+export async function enrollTwoFactor(userId: number) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { userId } });
+  if (user.twoFactorEnabled) throw conflict("Two-factor authentication is already enabled");
+  const secret = newTotpSecret();
+  await prisma.user.update({ where: { userId }, data: { totpSecret: encryptSecret(secret) } });
+  const label = encodeURIComponent(`GigsForGigs:${user.email}`);
+  return { secret, otpauthUri: `otpauth://totp/${label}?secret=${secret}&issuer=GigsForGigs` };
+}
+
+/** Step 2 of enrollment, and also turning 2FA off. Both need a valid code, so a hijacked session can't disable it. */
+export async function setTwoFactor(userId: number, code: string, enabled: boolean) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { userId }, omit: { totpSecret: false } });
+  if (!user.totpSecret) throw conflict("Start enrollment first");
+  if (!verifyTotp(decryptSecret(user.totpSecret), code)) throw badRequest("Invalid authentication code");
+  await prisma.user.update({
+    where: { userId },
+    data: { twoFactorEnabled: enabled, ...(enabled ? {} : { totpSecret: null }) },
+  });
+  return { success: true, twoFactorEnabled: enabled };
+}
+
+/** The signed-in admin's own profile. Tier, permissions and 2FA state are read fresh from the DB. */
+export async function getProfile(userId: number) {
+  const user = await prisma.user.findUnique({ where: { userId } });
   if (!user) throw notFound("Admin profile not found");
-  const meta = adminMetadataRegistry.get(user.userId);
-  const assignedTier = user.userId === 1 ? "OWNER" : (meta?.tier || (user.email.toLowerCase().includes("auditor") ? "AUDITOR" : user.email.toLowerCase().includes("finance") ? "FINANCIAL_ADMIN" : user.email.toLowerCase().includes("support") ? "SUPPORT_ADMIN" : "SUPER_ADMIN"));
-  const permissions = user.userId === 1 ? ["*"] : (meta?.permissions || ADMIN_TIER_DEFAULT_PERMISSIONS[assignedTier] || ["*"]);
   return {
     userId: user.userId,
     name: user.name,
     email: user.email,
-    adminTier: assignedTier,
-    permissions,
-    isTwoFactorEnabled: !!user.twoFactorEnabled,
-    status: user.status || "ACTIVE",
-    createdAt: user.createdAt
+    adminTier: user.adminTier,
+    permissions: user.adminPermissions,
+    isTwoFactorEnabled: user.twoFactorEnabled,
+    status: user.status,
+    createdAt: user.createdAt,
   };
 }

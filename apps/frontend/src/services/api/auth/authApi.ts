@@ -19,6 +19,9 @@ export interface AuthUser {
   createdAt?: string;
   twoFactorEnabled?: boolean;
   status?: string;
+  /** Admins only. */
+  adminTier?: string;
+  permissions?: string[];
 }
 
 /** Response of login/signup/accept-invite: the user plus their JWT. */
@@ -34,8 +37,8 @@ export const authApi = {
     apiFetch<AuthResponse>('/auth/signup', { method: 'POST', body: { name, email, password, role } }),
 
   /** Log in any role with email + password. */
-  login: (email: string, password: string) =>
-    apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } }),
+  login: (email: string, password: string, totpCode?: string) =>
+    apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, password, ...(totpCode ? { totpCode } : {}) } }),
 
   /** Manager-specific login endpoint (AuthContext uses the shared `login` instead). */
   managerLogin: (email: string, password: string) =>

@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ShieldIcon } from '../../../components/super-admin/Icons';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
+import { getToken, setToken } from '../../../services/api/httpClient';
+import { decodeJwtPayload } from '../../../utils/helpers/jwt';
 
 /**
  * @file AdminProfile.tsx
  * @description
  * Super Admin personal profile & security management.
- * Features 2FA enrollment, session revocation, and security audit metrics.
- *
- * Wired directly to the backend Express REST endpoints for master credential rotation,
- * 2FA status toggling, and device session revocation.
+ * Password change, real TOTP enrollment (a code from the app is checked by the
+ * server before 2FA turns on), and revocation of all other sessions through a
+ * tokenVersion bump. Everything shown is read from the database or the JWT.
  */
 
 export const AdminProfile: React.FC = () => {
@@ -33,6 +34,8 @@ export const AdminProfile: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [enrollment, setEnrollment] = useState<{ secret: string; otpauthUri: string } | null>(null);
+  const [totpInput, setTotpInput] = useState('');
 
   // Load authoritative profile data from the PostgreSQL database
   useEffect(() => {
@@ -45,66 +48,19 @@ export const AdminProfile: React.FC = () => {
           setIs2FAEnabled(res.isTwoFactorEnabled);
         }
       })
-      .catch(() => {
-        // Fallback gracefully if API is temporarily unavailable
-      });
+      .catch((err) => toast.error('Profile Unavailable', err?.message || 'Could not load your profile.'));
     return () => {
       mounted = false;
     };
-  }, [user?.userId]);
+  }, [user?.userId, toast]);
 
-  const env = useMemo(() => {
-    if (typeof window === 'undefined') return { browser: 'Google Chrome on Windows 11', ip: '127.0.0.1' };
-    const ua = navigator.userAgent;
-    let b = 'Google Chrome';
-    if (ua.includes('Edg/')) b = 'Microsoft Edge';
-    else if (ua.includes('Firefox/')) b = 'Mozilla Firefox';
-    else if (ua.includes('Safari/') && !ua.includes('Chrome')) b = 'Apple Safari';
+  const provisionedDate = dbProfile?.createdAt
+    ? new Date(dbProfile.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '—';
 
-    let o = 'Windows 11';
-    if (ua.includes('Macintosh') || ua.includes('Mac OS')) o = 'macOS Sonoma';
-    else if (ua.includes('Linux')) o = 'Linux (Ubuntu)';
-
-    return {
-      browser: `${b} on ${o}`,
-      ip: window.location.hostname === 'localhost' ? '127.0.0.1 (Localhost)' : window.location.hostname
-    };
-  }, []);
-
-  const [activeSessions, setActiveSessions] = useState([
-    { id: 'sess-current', device: `${env.browser} (This Device)`, isCurrent: true, ip: env.ip, lastActive: 'Active Now' }
-  ]);
-
-  useEffect(() => {
-    setActiveSessions((prev) =>
-      prev.map((s) => (s.isCurrent ? { ...s, device: `${env.browser} (This Device)`, ip: env.ip } : s))
-    );
-  }, [env]);
-
-  // Authentically derive provisioned date from PostgreSQL user creation timestamp
-  const provisionedDate = useMemo(() => {
-    const raw = dbProfile?.createdAt || (user as any)?.createdAt;
-    if (!raw) return 'October 22, 2026';
-    try {
-      const d = new Date(raw);
-      if (isNaN(d.getTime())) return 'October 22, 2026';
-      return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    } catch {
-      return 'October 22, 2026';
-    }
-  }, [dbProfile?.createdAt, (user as any)?.createdAt]);
-
-  // Cryptographically deterministic ed25519 key ID derived from user identity and ID
-  const cryptographicKeyId = useMemo(() => {
-    const seed = `${user?.email || 'admin'}:${user?.userId || 1}`;
-    let hash = 0x811c9dc5;
-    for (let i = 0; i < seed.length; i++) {
-      hash ^= seed.charCodeAt(i);
-      hash = Math.imul(hash, 0x01000193);
-    }
-    const hex = (hash >>> 0).toString(16).padStart(8, '0');
-    return `ed25519-rsa-0x${hex}`;
-  }, [user?.email, user?.userId]);
+  // When this browser's session token was issued, read from the JWT itself.
+  const issuedAtSeconds = decodeJwtPayload<{ iat?: number }>(getToken('admin') ?? '')?.iat;
+  const sessionIssuedAt = issuedAtSeconds ? new Date(issuedAtSeconds * 1000).toLocaleString() : '—';
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,55 +77,58 @@ export const AdminProfile: React.FC = () => {
       return;
     }
     try {
-      await adminApi.updateAdminPassword(currentPassword, newPassword);
+      const res = await adminApi.updateAdminPassword(currentPassword, newPassword);
+      setToken('admin', res.token); // other devices were signed out; keep this one
     } catch (err: any) {
       setMessage({ text: err?.message || 'Could not update password.', type: 'error' });
       return;
     }
     setMessage({ text: 'Password updated.', type: 'success' });
-    toast.success('Password Updated', 'Your admin password was changed.');
+    toast.success('Password Updated', 'Your other devices have been signed out.');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
   };
 
-  const handleToggle2FA = async () => {
-    const nextState = !is2FAEnabled;
+  /** Step 1: fetch a secret to add to an authenticator app. 2FA stays off until step 2 succeeds. */
+  const handleStartEnrollment = async () => {
     try {
-      await adminApi.toggleAdmin2FA(adminEmail, nextState);
-      setIs2FAEnabled(nextState);
-      toast.success(
-        '2FA Security Updated',
-        nextState ? 'Two-factor authentication is now active.' : 'Two-factor authentication has been disabled.'
-      );
+      setEnrollment(await adminApi.enrollAdmin2FA());
+      setTotpInput('');
     } catch (err: any) {
-      toast.error('2FA Update Failed', err?.message || 'Could not update two-factor authentication.');
+      toast.error('Enrollment Failed', err?.message || 'Could not start 2FA enrollment.');
     }
   };
 
-  const handleRevokeSessions = async (sessionId?: string) => {
+  /** Step 2 of enrollment, or turning 2FA off. Either way the server checks a live code. */
+  const handleSubmitCode = async () => {
     try {
-      const staffId = user?.userId ? `adm-${user.userId}` : 'adm-01';
-      await adminApi.revokeAdminSession(staffId);
+      if (is2FAEnabled) await adminApi.disableAdmin2FA(totpInput);
+      else await adminApi.confirmAdmin2FA(totpInput);
+      setIs2FAEnabled(!is2FAEnabled);
+      setEnrollment(null);
+      setTotpInput('');
+      toast.success('2FA Updated', is2FAEnabled ? 'Two-factor authentication is off.' : 'You will be asked for a code at your next login.');
     } catch (err: any) {
-      toast.error('Revocation Failed', err?.message || 'Could not revoke session.');
-      return;
+      toast.error('Invalid Code', err?.message || 'That code was not accepted.');
     }
-    if (sessionId) {
-      setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      toast.warning('Session Terminated', `Device session ${sessionId} has been invalidated.`);
-    } else {
-      setActiveSessions((prev) => prev.filter((s) => s.isCurrent));
-      toast.success(
-        'All Sessions Revoked',
-        'All other active JWT browser sessions have been invalidated via tokenVersion increment.'
-      );
+  };
+
+  /** Bumps tokenVersion, ending every session, then stores the fresh token so this browser stays in. */
+  const handleRevokeSessions = async () => {
+    if (!user?.userId) return;
+    try {
+      const res = await adminApi.revokeAdminSession(`adm-${user.userId}`);
+      if (res.token) setToken('admin', res.token);
+      toast.success('Other Sessions Ended', 'Every other device must sign in again.');
+    } catch (err: any) {
+      toast.error('Revocation Failed', err?.message || 'Could not revoke sessions.');
     }
   };
 
   const adminName = user?.name || 'Admin';
   const adminEmail = user?.email || '';
-  const effectiveTier = dbProfile?.adminTier || user?.adminTier || 'OWNER';
+  const effectiveTier = dbProfile?.adminTier || user?.adminTier || '—';
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))', gap: 'var(--spacing-xl)' }}>
@@ -212,16 +171,14 @@ export const AdminProfile: React.FC = () => {
               {effectiveTier === 'AUDITOR' ? 'Auditor Compliance (Read-Only Inspection)' :
                effectiveTier === 'FINANCIAL_ADMIN' ? 'Financial Administration & Escrow Authority' :
                effectiveTier === 'SUPPORT_ADMIN' ? 'Support & Arbitration Authority' :
-               'Platform Root Authority (All RBAC Bitmasks)'}
+               effectiveTier === 'CONTENT_MODERATOR' ? 'Content Moderation Authority' :
+               effectiveTier === 'SUPER_ADMIN' ? 'Full Governance Authority' :
+               effectiveTier === 'OWNER' ? 'Platform Owner (All Permissions)' : '—'}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
             <span style={{ color: 'var(--color-text-muted)' }}>Account Provisioned</span>
             <span style={{ fontWeight: 600 }}>{provisionedDate}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)' }}>
-            <span style={{ color: 'var(--color-text-muted)' }}>Cryptographic Key ID</span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-text-dark)' }}>{cryptographicKeyId}</span>
           </div>
         </div>
 
@@ -292,7 +249,7 @@ export const AdminProfile: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ShieldIcon size={20} color="var(--color-primary-dark)" />
               <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
-                Hardware & TOTP Two-Factor Authentication
+                Two-Factor Authentication (TOTP)
               </h3>
             </div>
             <span
@@ -305,90 +262,88 @@ export const AdminProfile: React.FC = () => {
                 borderRadius: 'var(--radius-pill)'
               }}
             >
-              {is2FAEnabled ? '✓ Enforced (TOTP)' : 'Disabled'}
+              {is2FAEnabled ? '✓ Enabled' : 'Disabled'}
             </span>
           </div>
 
           <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
-            Super Admin access mandates hardware security keys (FIDO2 / YubiKey) or time-based one-time password (TOTP) authenticator apps.
+            When enabled, login needs a 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password) as well as your password.
           </p>
 
-          <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-            <button
-              onClick={handleToggle2FA}
-              className={`admin-btn ${is2FAEnabled ? 'admin-btn-secondary' : 'admin-btn-primary'}`}
-              style={{ fontSize: 'var(--font-size-xs)' }}
-            >
-              {is2FAEnabled ? 'Reconfigure Authenticator App' : 'Enroll 2FA Authenticator'}
-            </button>
-          </div>
+          {!is2FAEnabled && !enrollment && (
+            <div>
+              <button onClick={handleStartEnrollment} className="admin-btn admin-btn-primary" style={{ fontSize: 'var(--font-size-xs)' }}>
+                Enroll Authenticator App
+              </button>
+            </div>
+          )}
+
+          {enrollment && (
+            <div style={{ fontSize: 'var(--font-size-xs)', backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-sm)', borderRadius: 'var(--radius-md)' }}>
+              <div>1. In your app, add an account using this setup key:</div>
+              <code style={{ display: 'block', margin: '6px 0', fontWeight: 700, wordBreak: 'break-all' }}>{enrollment.secret}</code>
+              <div>
+                On a phone, you can <a href={enrollment.otpauthUri}>open it directly</a>. 2. Enter the code it shows below.
+              </div>
+            </div>
+          )}
+
+          {(is2FAEnabled || enrollment) && (
+            <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+              <input
+                className="admin-input"
+                aria-label="Authenticator code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="123456"
+                value={totpInput}
+                onChange={(e) => setTotpInput(e.target.value.replace(/\D/g, ''))}
+                style={{ maxWidth: '120px' }}
+              />
+              <button
+                onClick={handleSubmitCode}
+                disabled={totpInput.length !== 6}
+                className={`admin-btn ${is2FAEnabled ? 'admin-btn-danger' : 'admin-btn-primary'}`}
+                style={{ fontSize: 'var(--font-size-xs)' }}
+              >
+                {is2FAEnabled ? 'Disable 2FA' : 'Confirm & Enable'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Active Browser & API Sessions */}
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
-              Active Sessions & Device Tokens
+              Sessions
             </h3>
             <button
-              onClick={() => handleRevokeSessions()}
+              onClick={handleRevokeSessions}
               className="admin-btn admin-btn-danger"
               style={{ padding: '4px 8px', fontSize: '11px' }}
             >
-              Revoke All Other Sessions
+              Sign Out All Other Devices
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {activeSessions.map((session) => (
-              <div
-                key={session.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 12px',
-                  backgroundColor: session.isCurrent ? 'rgba(8, 75, 131, 0.05)' : 'var(--color-bg-light)',
-                  border: session.isCurrent ? '1px solid var(--color-primary-dark)' : '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-xs)'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: session.isCurrent ? 700 : 500, color: 'var(--color-text-dark)' }}>
-                    {session.device} {session.isCurrent && <span style={{ color: 'var(--color-primary-dark)', fontSize: '10px' }}>(This Session)</span>}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>IP: {session.ip} • Last active: {session.lastActive}</div>
-                </div>
-                {session.isCurrent ? (
-                  <span className="admin-badge badge-success" style={{ fontSize: '10px' }}>Active</span>
-                ) : (
-                  <button
-                    onClick={() => handleRevokeSessions(session.id)}
-                    style={{ background: 'none', border: 'none', color: 'var(--color-danger-text)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    Kill Session
-                  </button>
-                )}
-              </div>
-            ))}
-
-            {activeSessions.filter((s) => !s.isCurrent).length === 0 && (
-              <div
-                style={{
-                  padding: '8px 12px',
-                  fontSize: 'var(--font-size-xs)',
-                  color: 'var(--color-text-muted)',
-                  fontStyle: 'italic',
-                  backgroundColor: 'var(--color-bg-light)',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px dashed var(--color-border)'
-                }}
-              >
-                🔒 Zero secondary sessions active. Authenticated JWT tokens are currently bound exclusively to this active device.
-              </div>
-            )}
+          <div
+            style={{
+              padding: '8px 12px',
+              backgroundColor: 'rgba(8, 75, 131, 0.05)',
+              border: '1px solid var(--color-primary-dark)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--font-size-xs)'
+            }}
+          >
+            <div style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>This browser</div>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Session issued: {sessionIssuedAt}</div>
           </div>
+
+          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: 0 }}>
+            Sessions are stateless tokens, so the server keeps no per-device list. Signing out other devices invalidates every token issued before now.
+          </p>
         </div>
       </div>
     </div>

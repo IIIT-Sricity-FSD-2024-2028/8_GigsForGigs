@@ -79,32 +79,26 @@ function backendRoleToFrontend(role: TokenPayload['role']): FrontendRole {
   }
 }
 
-/** What each admin tier may do. '*' means everything. */
+/**
+ * The starting permission set for each tier, used to pre-fill the invite form.
+ * The API enforces whatever is stored on the account; this table only drives the UI.
+ */
 export const TIER_PERMISSIONS: Record<AdminTier, string[]> = {
   OWNER: ['*'],
-  SUPER_ADMIN: ['*'],
-  FINANCIAL_ADMIN: ['users:read', 'payments:read', 'payments:release', 'payments:refund', 'projects:read'],
-  SUPPORT_ADMIN: ['users:read', 'projects:read', 'disputes:resolve', 'reviews:moderate'],
-  CONTENT_MODERATOR: ['reviews:moderate', 'users:read'],
-  AUDITOR: ['users:read', 'payments:read', 'projects:read', 'audit:read']
+  SUPER_ADMIN: ['users:read', 'users:ban', 'payments:read', 'payments:refund', 'payments:release', 'disputes:resolve', 'reviews:moderate', 'settings:manage', 'admins:invite'],
+  FINANCIAL_ADMIN: ['users:read', 'payments:read', 'payments:refund', 'payments:release'],
+  SUPPORT_ADMIN: ['users:read', 'disputes:resolve', 'reviews:moderate'],
+  CONTENT_MODERATOR: ['users:read', 'reviews:moderate'],
+  AUDITOR: ['users:read', 'payments:read']
 };
-
-/** Guess an admin's tier from keywords in their email (e.g. finance@... -> FINANCIAL_ADMIN). */
-function determineAdminTier(email: string): AdminTier {
-  const clean = email.toLowerCase();
-  if (clean.includes('auditor')) return 'AUDITOR';
-  if (clean.includes('finance')) return 'FINANCIAL_ADMIN';
-  if (clean.includes('support')) return 'SUPPORT_ADMIN';
-  if (clean.includes('moderator') || clean.includes('mod')) return 'CONTENT_MODERATOR';
-  return 'OWNER';
-}
 
 /** Build a UserSession from a login/signup response, reading role ids from the JWT. */
 function sessionFromAuthResponse(user: AuthUser, token: string): UserSession {
   const payload = decodeJwtPayload<TokenPayload>(token);
   const role = backendRoleToFrontend(payload?.role ?? user.role);
-  const adminTier = ((user as any).adminTier as AdminTier) || (role === 'SUPER_ADMIN' ? determineAdminTier(user.email) : undefined);
-  const permissions = (user as any).permissions || (adminTier && adminTier in TIER_PERMISSIONS ? TIER_PERMISSIONS[adminTier] : undefined);
+  // Tier and permissions come from the server. They are never inferred on the client.
+  const adminTier = user.adminTier as AdminTier | undefined;
+  const permissions = user.permissions;
 
   return {
     userId: user.userId,
@@ -178,7 +172,9 @@ interface AuthContextType {
   /** Last login/signup error message, shown by the auth forms. */
   authError: string | null;
   signup: (name: string, email: string, password: string, role: 'CLIENT' | 'GIG_PROFESSIONAL') => Promise<boolean>;
-  login: (email: string, password: string, roleHint?: string) => Promise<boolean>;
+  login: (email: string, password: string, totpCode?: string) => Promise<boolean>;
+  /** True once the server says this account needs a code from an authenticator app. */
+  twoFactorRequired: boolean;
   loginManager: (email: string, password: string) => Promise<boolean>;
   acceptManagerInvite: (token: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -194,6 +190,7 @@ const AuthContextInstance = createContext<AuthContextType | undefined>(undefined
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const [user, setUser] = useState<UserSession | null>(restoreSession);
 
   // Keep sessionStorage in sync with the current user.
@@ -246,12 +243,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   /** Log in with email + password (any role; the backend decides which). Returns true on success. */
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, totpCode?: string): Promise<boolean> => {
     setLoading(true);
     setAuthError(null);
 
     try {
-      const res = await authApi.login(email.trim(), password);
+      const res = await authApi.login(email.trim(), password, totpCode);
       if (!res || !res.token || !res.user || !res.user.role) {
         throw new Error('Invalid authentication response from server.');
       }
@@ -260,8 +257,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ALL_ACTORS.forEach(clearToken);
       setToken(roleToActor(session.role), res.token);
       setUser(session);
+      setTwoFactorRequired(false);
       return true;
     } catch (err) {
+      if (err instanceof ApiError && (err.errors as { twoFactorRequired?: boolean } | undefined)?.twoFactorRequired) {
+        setTwoFactorRequired(true);
+      }
       setAuthError(errorMessage(err, 'Authentication failed. Please verify your credentials.'));
       return false;
     } finally {
@@ -323,7 +324,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!user) return false;
       if (user.role !== 'SUPER_ADMIN') return false;
 
-      const userPermissions = user.permissions || (user.adminTier ? TIER_PERMISSIONS[user.adminTier] : ['*']);
+      // Fail closed: an old session with no permission list gets no controls.
+      const userPermissions = user.permissions ?? [];
 
       if (userPermissions.includes('*')) return true;
       return userPermissions.includes(permission);
@@ -341,6 +343,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authError,
         signup,
         login,
+        twoFactorRequired,
         loginManager,
         acceptManagerInvite,
         logout,

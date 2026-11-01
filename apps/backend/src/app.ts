@@ -14,6 +14,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { globalLimiter, authLimiter, paymentLimiter } from "./middleware/rateLimit.middleware.js";
 import { rejectUnsafeInput } from "./lib/validation.js";
+import { maintenanceGuard } from "./middleware/adminGuard.js";
 
 export const app = express();
 
@@ -50,6 +51,7 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/api", globalLimiter);
+app.use("/api", maintenanceGuard);
 
 // IMPORTANT: clientRouter is mounted at bare "/api" and applies
 // `roleGuard("client")` unconditionally via `.use()` with no path — that guard
@@ -57,6 +59,8 @@ app.use("/api", globalLimiter);
 // specific routers handle their own routes first; only requests none of them
 // matched fall through to clientRouter.
 app.use("/api/auth", authLimiter, authRouter);
+// Public, because invitees have no session yet, so it gets the login-grade limiter.
+app.use("/api/admin/invitations/accept", authLimiter);
 app.use("/api/admin", adminRouter);
 app.use("/api/payments", paymentLimiter, paymentRouter);
 app.use("/api/gig", gigRouter);

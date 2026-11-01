@@ -24,12 +24,6 @@ export const adminApi = {
     return apiFetch<any>(`/admin/analytics?timeRange=${timeRange}`, { actor });
   },
 
-  /** GET dashboard stats. */
-
-  async getDashboard() {
-    return apiFetch<any>('/admin/dashboard/stats', { actor });
-  },
-
   // Master Directories
   /** GET every user. */
   async getUsers() {
@@ -42,11 +36,11 @@ export const adminApi = {
     return apiFetch<any[]>('/admin/clients', { actor });
   },
 
-  /** Mark a client's KYC as verified. */
-
-  async verifyClientKYC(clientId: string) {
+  /** Record a KYC decision for a client. */
+  async decideClientKYC(clientId: string, status: 'VERIFIED' | 'REJECTED') {
     return apiFetch(`/admin/clients/${clientId}/kyc`, {
       method: 'PATCH',
+      body: { status },
       actor,
     });
   },
@@ -79,18 +73,12 @@ export const adminApi = {
     return apiFetch<any[]>('/admin/projects', { actor });
   },
 
-  /** GET tasks. */
-
-  async getTasks() {
-    return apiFetch<any[]>('/admin/tasks', { actor });
-  },
-
   /** Force a project/task into a status (sent lowercase). */
 
   async overrideProjectStatus(projectId: string, status: string) {
     // Strip "tsk-" prefix if present
     const id = projectId.replace(/\D/g, '');
-    return apiFetch(`/admin/projects/${id}/status`, {
+    return apiFetch(`/admin/tasks/${id}`, {
       method: 'PATCH',
       body: { status: status.toLowerCase() },
       actor,
@@ -153,12 +141,12 @@ export const adminApi = {
     });
   },
 
-  /** Activate an admin invite (optionally setting a new password). */
+  /** Activate an admin invite. The one-time password is always replaced. */
 
-  async acceptAdminInvitation(token: string, email: string, password: string, newPassword?: string) {
+  async acceptAdminInvitation(token: string, email: string, password: string, newPassword: string) {
     return apiFetch<any>('/admin/invitations/accept', {
       method: 'POST',
-      body: { token, email, password, ...(newPassword ? { newPassword } : {}) },
+      body: { token, email, password, newPassword },
       actor,
     });
   },
@@ -169,10 +157,12 @@ export const adminApi = {
     return apiFetch(`/admin/users/${staffId.replace(/\D/g, '')}`, { method: 'DELETE', actor });
   },
 
-  /** Force-logout an admin. */
-
+  /**
+   * End every session for an admin by bumping their tokenVersion. Revoking your
+   * own also returns a fresh token, which the caller must store to stay signed in.
+   */
   async revokeAdminSession(staffId: string) {
-    return apiFetch(`/admin/sessions/${staffId}/revoke`, {
+    return apiFetch<{ success: boolean; token?: string }>(`/admin/sessions/${staffId}/revoke`, {
       method: 'POST',
       actor,
     });
@@ -181,7 +171,7 @@ export const adminApi = {
   /** Resolve a dispute (optionally splitting funds by percentage). */
 
   async settleDispute(disputeId: string, settlementType: string, resolutionNotes: string, splitClientPercent?: number) {
-    return apiFetch(`/admin/disputes/${disputeId}/settle`, {
+    return apiFetch<{ refundToClient: number; payoutToPro: number; platformFee: number }>(`/admin/disputes/${disputeId}/settle`, {
       method: 'POST',
       body: { settlementType, resolutionNotes, splitClientPercent },
       actor,
@@ -190,7 +180,7 @@ export const adminApi = {
 
   /** Manually release or refund an escrow payment. */
 
-  async overrideEscrow(paymentId: string, action: 'RELEASE' | 'REFUND', auditReason: string) {
+  async overrideEscrow(paymentId: string | number, action: 'RELEASE' | 'REFUND', auditReason: string) {
     return apiFetch(`/admin/payments/${paymentId}/override`, {
       method: 'PATCH',
       body: { action, auditReason },
@@ -218,8 +208,6 @@ export const adminApi = {
     });
   },
 
-  /** Change the logged-in admin's password. */
-
     /** Fetch the logged-in admin profile details. */
   async getAdminProfile() {
     return apiFetch<{
@@ -231,25 +219,31 @@ export const adminApi = {
       isTwoFactorEnabled: boolean;
       status: string;
       createdAt: string;
-    }>("/admin/profile", { actor });
+    }>('/admin/profile', { actor });
   },
 
-async updateAdminPassword(currentPassword: string, newPassword: string) {
-    return apiFetch('/admin/profile/password', {
+  /** Change your own password. Returns a fresh token because other sessions are ended. */
+  async updateAdminPassword(currentPassword: string, newPassword: string) {
+    return apiFetch<{ success: boolean; token: string }>('/admin/profile/password', {
       method: 'POST',
       body: { currentPassword, newPassword },
       actor,
     });
   },
 
-  /** Turn 2FA on/off. */
+  /** Step 1 of 2FA enrollment: get a new secret for the authenticator app. */
+  async enrollAdmin2FA() {
+    return apiFetch<{ secret: string; otpauthUri: string }>('/admin/profile/2fa/enroll', { method: 'POST', actor });
+  },
 
-  async toggleAdmin2FA(email: string, isEnabled: boolean) {
-    return apiFetch('/admin/profile/2fa', {
-      method: 'POST',
-      body: { email, isEnabled },
-      actor,
-    });
+  /** Step 2 of enrollment: a valid code from the app turns 2FA on. */
+  async confirmAdmin2FA(code: string) {
+    return apiFetch('/admin/profile/2fa/confirm', { method: 'POST', body: { code }, actor });
+  },
+
+  /** Turn 2FA off. Also needs a valid code. */
+  async disableAdmin2FA(code: string) {
+    return apiFetch('/admin/profile/2fa/disable', { method: 'POST', body: { code }, actor });
   }
 };
 

@@ -7,9 +7,10 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignup }) => {
-  const { login, loading, authError } = useAuth();
+  const { login, loading, authError, twoFactorRequired } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -20,10 +21,9 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
       setErrorMsg('Please enter your email and password.');
       return;
     }
-    const success = await login(email, password);
-    if (!success) {
-      setErrorMsg(authError || 'Invalid email or password. Please verify your credentials.');
-    }
+    const success = await login(email, password, totpCode.trim() || undefined);
+    // The failure reason arrives via authError on the next render; this closure still sees the old value.
+    if (success) setErrorMsg(null);
   };
 
   return (
@@ -136,7 +136,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
             </p>
           </div>
 
-          {errorMsg && (
+          {(errorMsg || authError) && (
             <div
               style={{
                 backgroundColor: '#FDE8E8',
@@ -148,7 +148,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                 fontWeight: 600
               }}
             >
-              {errorMsg}
+              {errorMsg || authError}
             </div>
           )}
 
@@ -204,6 +204,25 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                 }}
               />
             </div>
+
+            {twoFactorRequired && (
+              <div>
+                <label htmlFor="totp-code" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
+                  Authenticator code
+                </label>
+                <input
+                  id="totp-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  autoFocus
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '8px', border: '1px solid #D3DCE2', fontSize: '15px', color: '#2D3748', backgroundColor: '#EFF6FC', outline: 'none', boxSizing: 'border-box', letterSpacing: '0.2em' }}
+                />
+              </div>
+            )}
 
             {/* Options line: Remember me & Forgot Password */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px' }}>

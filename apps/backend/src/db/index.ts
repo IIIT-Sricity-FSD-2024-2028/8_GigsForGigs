@@ -43,11 +43,11 @@ const pool = new pg.Pool({
 
 const adapter = new PrismaPg(pool);
 
-// Global omit: hashPassword must never leave the process over the wire,
+// Global omit: hashPassword and totpSecret must never leave the process over the wire,
 // no matter which module/service pulls in a related User row.
 export const prisma = new PrismaClient({
   adapter,
-  omit: { user: { hashPassword: true } },
+  omit: { user: { hashPassword: true, totpSecret: true } },
 });
 
 export * from "./generated/prisma/client.js";

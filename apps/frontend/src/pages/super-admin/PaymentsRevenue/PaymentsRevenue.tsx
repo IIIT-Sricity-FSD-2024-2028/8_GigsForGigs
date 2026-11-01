@@ -8,17 +8,18 @@ import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
 export interface EscrowPayment {
-  paymentId: string;
+  id: string;
+  paymentId: number;
   taskId: string;
   taskTitle: string;
   clientName: string;
   gigProName: string;
-  gigAmount: number;
+  amount: number;
   platformFee: number;
   totalAmount: number;
-  grossAmount?: number;
-  status: 'AWAITING_FUNDING' | 'ESCROWED' | 'RELEASED' | 'REFUNDED';
-  createdAt?: string;
+  status: 'AWAITING_FUNDING' | 'HELD_IN_ESCROW' | 'RELEASED' | 'REFUNDED' | 'FAILED';
+  createdAt: string;
+  settledAt: string | null;
 }
 
 export const PaymentsRevenue: React.FC = () => {
@@ -39,36 +40,7 @@ export const PaymentsRevenue: React.FC = () => {
       try {
         setLoading(true);
         const data = await adminApi.getPayments();
-
-        if (isMounted) {
-          const normalizeStatus = (raw: string): EscrowPayment['status'] => {
-            const s = (raw || '').toUpperCase();
-            if (s.includes('RELEASED')) return 'RELEASED';
-            if (s.includes('REFUND')) return 'REFUNDED';
-            if (s.includes('ESCROW')) return 'ESCROWED';
-            return 'AWAITING_FUNDING';
-          };
-
-          const list: EscrowPayment[] = Array.isArray(data) ? data.map((p: any) => {
-            const gigAmount = Number(p.amount);
-            const platformFee = Number(p.platformFee);
-            const totalAmount = gigAmount + platformFee;
-            return {
-              paymentId: p.paymentId || p.id || `PAY-${p.taskId || '1'}`,
-              taskId: p.taskId || 'tsk-01',
-              taskTitle: p.taskTitle || 'Task Engagement',
-              clientName: p.clientName || 'Client',
-              gigProName: p.gigProName || 'Gig Professional',
-              gigAmount,
-              platformFee,
-              totalAmount,
-              status: normalizeStatus(p.status || p.escrowStatus || ''),
-              createdAt: p.createdAt || new Date().toISOString().split('T')[0]
-            };
-          }) : [];
-
-          setPayments(list);
-        }
+        if (isMounted) setPayments(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to load admin payments:', err);
         if (isMounted) {
@@ -83,21 +55,21 @@ export const PaymentsRevenue: React.FC = () => {
     return () => { isMounted = false; };
   }, [toast]);
 
+  /**
+   * Ledger totals for this page. Volume counts only committed money (held or
+   * released), so unfunded, refunded and failed rows don't inflate it.
+   */
   const metrics = useMemo(() => {
-    const totalVolume = payments.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
-    const totalEscrowFunds = payments.filter(p => p.status === 'ESCROWED').reduce((sum, p) => sum + (p.gigAmount || 0), 0);
-    const platformFeesPendingRelease = payments.filter(p => p.status === 'ESCROWED').reduce((sum, p) => sum + (p.platformFee || 0), 0);
-    const totalGigPayouts = payments.filter(p => p.status === 'RELEASED').reduce((sum, p) => sum + (p.gigAmount || 0), 0);
-    const totalPlatformRevenue = payments.filter(p => p.status === 'RELEASED').reduce((sum, p) => sum + (p.platformFee || 0), 0);
-    const completedCount = payments.filter(p => p.status === 'RELEASED').length;
-
+    const sum = (status: EscrowPayment['status'], pick: (p: EscrowPayment) => number) =>
+      payments.filter((p) => p.status === status).reduce((total, p) => total + pick(p), 0);
+    const total = (p: EscrowPayment) => p.totalAmount;
     return {
-      totalVolume,
-      totalEscrowFunds,
-      platformFeesPendingRelease,
-      totalGigPayouts,
-      totalPlatformRevenue,
-      completedCount
+      totalVolume: sum('RELEASED', total) + sum('HELD_IN_ESCROW', total),
+      totalEscrowFunds: sum('HELD_IN_ESCROW', total),
+      totalRefunded: sum('REFUNDED', total),
+      totalGigPayouts: sum('RELEASED', (p) => p.amount),
+      totalPlatformRevenue: sum('RELEASED', (p) => p.platformFee),
+      completedCount: payments.filter((p) => p.status === 'RELEASED').length
     };
   }, [payments]);
 
@@ -115,8 +87,6 @@ export const PaymentsRevenue: React.FC = () => {
     if (statusFilter === 'ALL') return true;
     return p.status === statusFilter;
   });
-
-  const totalClientPayments = safePayments.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
 
   const handleOpenOverride = (payment: EscrowPayment, action: 'RELEASE' | 'REFUND') => {
     setSelectedPayment(payment);
@@ -143,7 +113,7 @@ export const PaymentsRevenue: React.FC = () => {
     setIsOverrideModalOpen(false);
     toast.success(
       `Payment ${overrideAction === 'RELEASE' ? 'Released' : 'Refunded'}`,
-      `Successfully processed ${selectedPayment.paymentId} (${formatCurrency(selectedPayment.totalAmount)})`
+      `Processed ${selectedPayment.id} (${formatCurrency(selectedPayment.totalAmount)})`
     );
   };
 
@@ -153,7 +123,7 @@ export const PaymentsRevenue: React.FC = () => {
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.taskTitle}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{row.paymentId}</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{row.id}</span>
         </div>
       )
     },
@@ -167,10 +137,10 @@ export const PaymentsRevenue: React.FC = () => {
     },
     {
       header: 'Gig Amount',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{formatCurrency(row.gigAmount)}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{formatCurrency(row.amount)}</span>
     },
     {
-      header: 'Platform Profit (10%)',
+      header: 'Platform Fee',
       cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-success-text)' }}>+{formatCurrency(row.platformFee)}</span>
     },
     {
@@ -185,10 +155,10 @@ export const PaymentsRevenue: React.FC = () => {
           borderRadius: '999px',
           fontSize: '11px',
           fontWeight: 700,
-          backgroundColor: row.status === 'RELEASED' ? '#e6f4ea' : row.status === 'ESCROWED' ? '#e8f0fe' : row.status === 'AWAITING_FUNDING' ? '#fef7e0' : '#fce8e6',
-          color: row.status === 'RELEASED' ? '#137333' : row.status === 'ESCROWED' ? '#1a73e8' : row.status === 'AWAITING_FUNDING' ? '#b06000' : '#c5221f'
+          backgroundColor: row.status === 'RELEASED' ? '#e6f4ea' : row.status === 'HELD_IN_ESCROW' ? '#e8f0fe' : row.status === 'AWAITING_FUNDING' ? '#fef7e0' : '#fce8e6',
+          color: row.status === 'RELEASED' ? '#137333' : row.status === 'HELD_IN_ESCROW' ? '#1a73e8' : row.status === 'AWAITING_FUNDING' ? '#b06000' : '#c5221f'
         }}>
-          {row.status === 'ESCROWED' ? 'Held in Escrow' : row.status === 'AWAITING_FUNDING' ? 'Awaiting Funding' : row.status}
+          {row.status.replace(/_/g, ' ')}
         </span>
       )
     },
@@ -196,27 +166,23 @@ export const PaymentsRevenue: React.FC = () => {
       header: 'Actions',
       cell: (row) => (
         <div style={{ display: 'flex', gap: '6px' }}>
-          {row.status === 'ESCROWED' && (
-            hasPermission('payments:release') ? (
-              <>
-                <button
-                  onClick={() => handleOpenOverride(row, 'RELEASE')}
-                  className="admin-btn admin-btn-primary"
-                  style={{ padding: '4px 8px', fontSize: '11px' }}
-                >
-                  Release Payment
-                </button>
-                <button
-                  onClick={() => handleOpenOverride(row, 'REFUND')}
-                  className="admin-btn admin-btn-danger"
-                  style={{ padding: '4px 8px', fontSize: '11px' }}
-                >
-                  Refund Client
-                </button>
-              </>
-            ) : (
-              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Read Only (Auditor)</span>
-            )
+          {row.status === 'HELD_IN_ESCROW' && hasPermission('payments:release') && (
+            <button
+              onClick={() => handleOpenOverride(row, 'RELEASE')}
+              className="admin-btn admin-btn-primary"
+              style={{ padding: '4px 8px', fontSize: '11px' }}
+            >
+              Release Payment
+            </button>
+          )}
+          {row.status === 'HELD_IN_ESCROW' && hasPermission('payments:refund') && (
+            <button
+              onClick={() => handleOpenOverride(row, 'REFUND')}
+              className="admin-btn admin-btn-danger"
+              style={{ padding: '4px 8px', fontSize: '11px' }}
+            >
+              Refund Client
+            </button>
           )}
         </div>
       )
@@ -232,47 +198,37 @@ export const PaymentsRevenue: React.FC = () => {
       {/* Super Admin Financial Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
-          title="Total Client Payments"
-          value={formatCurrency(totalClientPayments)}
-          deltaText={`${payments.length} Transactions`}
-          isPositive={true}
-          subtitle="Cumulative platform volume"
+          title="Committed Volume"
+          value={formatCurrency(metrics.totalVolume)}
+          subtitle="Held in escrow plus released"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-blue)"
         />
         <KPICard
-          title="Payments Secured"
+          title="Held in Escrow"
           value={formatCurrency(metrics.totalEscrowFunds)}
-          deltaText="Active Project Payments"
-          isPositive={true}
-          subtitle="Secured project payments"
+          subtitle="Gig amount and fee, awaiting release"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-secondary)"
         />
         <KPICard
-          title="Pending Approval"
-          value={formatCurrency(metrics.platformFeesPendingRelease + (metrics.totalEscrowFunds / 2))}
-          deltaText="Work Submitted"
-          isPositive={true}
-          subtitle="Awaiting client work approval"
+          title="Refunded to Clients"
+          value={formatCurrency(metrics.totalRefunded)}
+          subtitle="Returned from escrow"
           icon={<PaymentIcon size={20} />}
           accentColor="#519e8a"
         />
         <KPICard
           title="Released to Gig Professionals"
           value={formatCurrency(metrics.totalGigPayouts)}
-          deltaText={`${metrics.completedCount} Payouts Completed`}
-          isPositive={true}
-          subtitle="Total released earnings"
+          subtitle={`${metrics.completedCount} payouts completed`}
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-success-text)"
         />
         <KPICard
-          title="Platform Profit (10% Fee)"
+          title="Platform Fee Revenue"
           value={formatCurrency(metrics.totalPlatformRevenue)}
-          deltaText={`${metrics.completedCount} Fees Retained`}
-          isPositive={true}
-          subtitle="Total profit earned for Super Admin"
+          subtitle="Fees on released payments"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-dark)"
         />
@@ -294,9 +250,10 @@ export const PaymentsRevenue: React.FC = () => {
             >
               <option value="ALL">All Transactions</option>
               <option value="AWAITING_FUNDING">Awaiting Funding</option>
-              <option value="ESCROWED">Held in Escrow</option>
+              <option value="HELD_IN_ESCROW">Held in Escrow</option>
               <option value="RELEASED">Released</option>
               <option value="REFUNDED">Refunded</option>
+              <option value="FAILED">Failed</option>
             </select>
           </div>
         </div>
@@ -323,7 +280,7 @@ export const PaymentsRevenue: React.FC = () => {
               <div><strong>Client:</strong> {selectedPayment.clientName}</div>
               <div><strong>Gig Professional:</strong> {selectedPayment.gigProName}</div>
               <div style={{ marginTop: '8px', borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
-                <div><strong>Gig Payout:</strong> {formatCurrency(selectedPayment.gigAmount)}</div>
+                <div><strong>Gig Payout:</strong> {formatCurrency(selectedPayment.amount)}</div>
                 <div><strong>Platform Fee:</strong> {formatCurrency(selectedPayment.platformFee)}</div>
                 <div><strong>Total Client Payment:</strong> {formatCurrency(selectedPayment.totalAmount)}</div>
               </div>
@@ -355,7 +312,7 @@ export const PaymentsRevenue: React.FC = () => {
                 type="submit"
                 className={`admin-btn ${overrideAction === 'RELEASE' ? 'admin-btn-primary' : 'admin-btn-danger'}`}
               >
-                Confirm {overrideAction === 'RELEASE' ? `Release ${formatCurrency(selectedPayment.gigAmount)}` : `Refund ${formatCurrency(selectedPayment.totalAmount)}`}
+                Confirm {overrideAction === 'RELEASE' ? `Release ${formatCurrency(selectedPayment.amount)}` : `Refund ${formatCurrency(selectedPayment.totalAmount)}`}
               </button>
             </div>
           </form>

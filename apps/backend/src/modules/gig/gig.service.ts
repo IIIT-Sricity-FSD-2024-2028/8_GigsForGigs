@@ -1,4 +1,5 @@
 import { prisma } from "db";
+import { initialReviewStatus } from "../../lib/textQuality.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
 import { SERVICE_HIRE_SKILL, isServiceHireTask } from "../../lib/taskRules.js";
 import { findServiceRequestForTask, startContract } from "../client/client.service.js";
@@ -364,6 +365,7 @@ export async function createReview(gigProfileId: number, dto: CreateReviewDto) {
       taskId: dto.taskId,
       reviewerId: gigProfile.userId,
       revieweeId: task.client.userId,
+      status: initialReviewStatus(dto.comment),
       rating: dto.rating,
       ...(dto.comment !== undefined ? { comment: dto.comment } : {}),
     },

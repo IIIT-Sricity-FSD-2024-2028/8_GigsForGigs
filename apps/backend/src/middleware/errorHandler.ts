@@ -69,6 +69,11 @@ export function errorHandler(
     return;
   }
 
+  if (status === 503) {
+    res.status(503).json({ success: false, message: (err as Error).message });
+    return;
+  }
+
   // eslint-disable-next-line no-console
   console.error(err);
   res.status(500).json({ success: false, message: "Internal server error" });

@@ -9,10 +9,8 @@ export interface ManagerDetail {
   id: string;
   name: string;
   email: string;
-  department: string;
   linkedClients: string[];
   activeSupervisedTasks: number;
-  permissionsLevel: string;
   status: 'ACTIVE' | 'SUSPENDED';
 }
 
@@ -79,7 +77,6 @@ export const ManagersManagement: React.FC = () => {
         </div>
       )
     },
-    { header: 'Department', accessorKey: 'department' },
     {
       header: 'Client Organizations',
       cell: (row) => (
@@ -105,11 +102,7 @@ export const ManagersManagement: React.FC = () => {
     },
     {
       header: 'Supervised Tasks',
-      cell: (row) => <span style={{ fontWeight: 700 }}>{row.activeSupervisedTasks} Active</span>
-    },
-    {
-      header: 'Permission Tier',
-      cell: (row) => <StatusBadge status={row.permissionsLevel} />
+      cell: (row) => <span style={{ fontWeight: 700 }}>{row.activeSupervisedTasks} In Progress</span>
     },
     {
       header: 'Status',
@@ -165,7 +158,7 @@ export const ManagersManagement: React.FC = () => {
                 <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>{selectedManager.name}</span>
                 <StatusBadge status={selectedManager.status} />
               </div>
-              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{selectedManager.department} • {selectedManager.email}</span>
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{selectedManager.email} • {selectedManager.activeSupervisedTasks} tasks in progress stay assigned if suspended, and the client can reassign them</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
