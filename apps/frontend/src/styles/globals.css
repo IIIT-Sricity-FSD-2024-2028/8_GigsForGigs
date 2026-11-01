@@ -149,6 +149,28 @@ button, a, input, select, textarea, summary, [role="button"] {
   transition: background-color var(--duration) var(--ease), border-color var(--duration) var(--ease), color var(--duration) var(--ease), box-shadow var(--duration) var(--ease), filter var(--duration) var(--ease), transform var(--duration) var(--ease), opacity var(--duration) var(--ease);
 }
 button:not(:disabled):not([class*="ui-"]):not([class*="admin-btn"]):not([class*="nav-item"]):not([class*="dashboard-shell__"]):hover { filter: brightness(.95); }
+
+.admin-shell {
+  --sidebar-width: 260px;
+  --header-height: 70px;
+}
+.admin-shell__sidebar {
+  width: var(--sidebar-width) !important;
+}
+.admin-shell__workspace {
+  margin-left: var(--sidebar-width) !important;
+}
+.admin-shell__nav {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+.admin-shell__nav-item {
+  width: 100% !important;
+  flex-shrink: 0 !important;
+}
 .admin-shell__nav-item:hover { box-shadow: inset 0 0 0 999px rgba(255, 255, 255, .07); }
 button:not(:disabled):active { transform: translateY(1px); }
 .ui-button--outline:hover:not(:disabled), .ui-icon-button:hover:not(:disabled) { border-color: var(--color-primary-light); }
@@ -164,7 +186,7 @@ button:disabled:not(.ui-button) { opacity: .6; }
 button { max-width: 100%; }
 [style*="flex: 1"] { min-width: 0; }
 [style*="display: grid"] > * { min-width: 0; }
-[style*="display: flex"]:has(> button + button), [style*="display: flex"]:has(> .ui-button + .ui-button) { flex-wrap: wrap; }
+[style*="display: flex"]:not([style*="column"]):has(> button + button), [style*="display: flex"]:not([style*="column"]):has(> .ui-button + .ui-button) { flex-wrap: wrap; }
 .ui-page-header__row, .ui-page-header__actions, .ui-form-actions, .ui-confirm-dialog__actions, .component-card__header, .dashboard-section__header { flex-wrap: wrap; }
 .ui-page-header__row > :first-child, .component-card__header > :first-child, .dashboard-section__header > :first-child { flex: 1 1 260px; min-width: 0; }
 :where(div, section):has(> table) { max-width: 100%; overflow-x: auto; }

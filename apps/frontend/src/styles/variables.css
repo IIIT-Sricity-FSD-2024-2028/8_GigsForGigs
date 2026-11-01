@@ -74,6 +74,8 @@
   --color-border-input: #D3DCE2;
   --color-border-secondary: #D8D8D8;
   --radius-card: 12px;
+  --sidebar-width: 260px;
+  --header-height: 70px;
 
   --color-progress-track: #DCE3E8;
   --color-progress-fill: #0D568D;

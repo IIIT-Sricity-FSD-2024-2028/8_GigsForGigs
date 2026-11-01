@@ -177,7 +177,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </div>
 
         {/* Navigation Items List */}
-        <nav className="admin-shell__nav" style={{ flex: 1, padding: 'var(--spacing-md) var(--spacing-sm)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <nav className="admin-shell__nav" style={{ flex: 1, padding: 'var(--spacing-md) var(--spacing-sm)', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', flexWrap: 'nowrap', gap: '2px' }}>
           {filteredNavItems.map((item) => {
             const isActive = currentView === item.id;
             return (
