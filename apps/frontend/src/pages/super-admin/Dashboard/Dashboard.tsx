@@ -41,6 +41,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [managers, setManagers] = useState<any[]>([]);
   const [adminStaff, setAdminStaff] = useState<any[]>([]);
   const [velocity, setVelocity] = useState<{ date: string; gmv: number; rake: number }[]>([]);
+  const [velocityRange, setVelocityRange] = useState<'7d' | '30d' | '90d'>('7d');
+  const [isVelocityLoading, setIsVelocityLoading] = useState(false);
+
+  const handleRangeChange = async (range: '7d' | '30d' | '90d') => {
+    setVelocityRange(range);
+    try {
+      setIsVelocityLoading(true);
+      const res = await adminApi.getAnalytics(range);
+      if (res?.velocity) setVelocity(res.velocity);
+    } catch (err) {
+      console.warn('Failed to load velocity for range', range, err);
+    } finally {
+      setIsVelocityLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -210,8 +225,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <KPICard
           title="Gross Merchandise Volume"
           value={`₹${kpis.grossMerchandiseVolume.toLocaleString('en-IN')}`}
-          deltaText="+18.4% vs last mo"
-          isPositive={true}
           subtitle="Total platform contract flow"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-blue)"
@@ -219,33 +232,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <KPICard
           title="Platform Take Revenue"
           value={`₹${kpis.platformRevenue.toLocaleString('en-IN')}`}
-          deltaText="+10.0% standard rake"
-          isPositive={true}
-          subtitle="Direct platform commission"
+          subtitle="Direct platform commission (10% rake)"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-dark)"
         />
         <KPICard
           title="Active Projects & Tasks"
           value={kpis.activeTasks}
-          deltaText="+12 this week"
-          isPositive={true}
-          subtitle="In-flight milestones & review"
+          subtitle="In-flight milestones & open bidding"
           icon={<ProjectIcon size={20} />}
           accentColor="var(--color-secondary)"
         />
         <KPICard
           title="Platform Users"
           value={kpis.totalUsers.toLocaleString()}
-          deltaText="+148 new registrations"
-          isPositive={true}
           subtitle="Clients, Pros & Managers"
           icon={<UsersIcon size={20} />}
           accentColor="var(--color-text-dark)"
         />
       </div>
 
-      {/* Analytics Charts Grid (100% Fed from DB) */}
+      {/* Analytics Charts Grid (100% Fed from DB with Analytical Explanations) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -255,6 +262,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>From DB tasks</span>
           </div>
           <DonutChart data={taskDistribution} />
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
+            💡 <strong>Operational Flow:</strong> Tracks task pipeline balance across Open Bidding, Active Milestones, and Final Completion to anticipate payout velocity and prevent escrow lockups.
+          </div>
         </div>
 
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
@@ -265,24 +275,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>From DB users</span>
           </div>
           <HorizontalBarChart data={userDemographics} />
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
+            💡 <strong>Roster Liquidity:</strong> Proportions between Freelancer talent supply and Client/Manager hiring demand. Healthy ratio ensures rapid task matching without talent starvation.
+          </div>
         </div>
 
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-              Weekly GMV vs Rake Velocity
-            </h3>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Last 7 days</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+            <div>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+                GMV vs Rake Velocity
+              </h3>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Live Escrow Flow ({velocityRange.toUpperCase()})</span>
+            </div>
+            <div style={{ display: 'flex', backgroundColor: 'var(--color-bg-light)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '2px' }}>
+              {(['7d', '30d', '90d'] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  disabled={isVelocityLoading}
+                  onClick={() => handleRangeChange(r)}
+                  style={{
+                    padding: '3px 8px',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: velocityRange === r ? 'var(--color-primary-dark)' : 'transparent',
+                    color: velocityRange === r ? '#ffffff' : 'var(--color-text-dark)',
+                    fontWeight: 700,
+                    fontSize: '10px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {r.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
-          <RevenueAreaChart data={velocity.length > 0 ? velocity : [
-            { date: 'Mon', gmv: 2500, rake: 250 },
-            { date: 'Tue', gmv: 3400, rake: 340 },
-            { date: 'Wed', gmv: 2900, rake: 290 },
-            { date: 'Thu', gmv: 4000, rake: 400 },
-            { date: 'Fri', gmv: 4400, rake: 440 },
-            { date: 'Sat', gmv: 3800, rake: 380 },
-            { date: 'Sun', gmv: 4200, rake: 420 }
-          ]} />
+          <RevenueAreaChart data={velocity} />
+          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
+            💡 <strong>Financial Velocity:</strong> Real-time dual series comparing Gross Merchandise Volume (GMV) against realized platform commission (10% rake) dynamically sliced for {velocityRange.toUpperCase()}.
+          </div>
         </div>
       </div>
 

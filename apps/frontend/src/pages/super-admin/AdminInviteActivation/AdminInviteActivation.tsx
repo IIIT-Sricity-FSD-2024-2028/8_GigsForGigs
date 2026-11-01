@@ -33,15 +33,19 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
       const params = new URLSearchParams(window.location.search);
       const urlToken = params.get('token') || initialToken || '';
       const urlEmail = params.get('email') || initialEmail || '';
+      const urlRole = params.get('role');
 
       if (urlToken) setToken(urlToken);
-      if (urlEmail) {
+      if (urlRole) {
+        setAssignedRole(urlRole);
+      } else if (urlEmail) {
         setEmail(urlEmail);
         if (urlEmail.toLowerCase().includes('auditor')) setAssignedRole('AUDITOR');
         else if (urlEmail.toLowerCase().includes('finance')) setAssignedRole('FINANCIAL_ADMIN');
         else if (urlEmail.toLowerCase().includes('support')) setAssignedRole('SUPPORT_ADMIN');
         else setAssignedRole('SUPER_ADMIN');
       }
+      if (urlEmail) setEmail(urlEmail);
 
       if (urlToken && urlToken.length > 6) {
         setIsTokenVerified(true);
@@ -67,7 +71,6 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
     setLoading(true);
     try {
       const res = await adminApi.acceptAdminInvitation(token, email, tempPassword.trim(), newPassword || undefined);
-      sessionStorage.setItem('g4g_admin_token', res.token);
       
       const permissionsMap: Record<string, string[]> = {
         AUDITOR: ['users:read', 'payments:read', 'projects:read', 'audit:read'],
@@ -77,16 +80,22 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
         OWNER: ['*']
       };
 
+      const roleTier = res?.user?.adminTier || assignedRole;
+      const permissions = res?.user?.permissions || permissionsMap[roleTier] || ['users:read'];
+
       const userSession = {
         userId: res.user.userId,
         role: 'SUPER_ADMIN' as const,
         name: res.user.name,
         email: res.user.email,
-        adminTier: (res?.user?.adminTier || assignedRole) as any,
-        permissions: permissionsMap[assignedRole] || ['*'],
+        adminTier: roleTier as any,
+        permissions,
         appliedTaskIds: []
       };
 
+      // Completely clear out any old owner or staff sessions in this browser
+      sessionStorage.clear();
+      sessionStorage.setItem('g4g_admin_token', res.token);
       sessionStorage.setItem('gfg_active_user', JSON.stringify(userSession));
       updateUserSession(userSession);
 

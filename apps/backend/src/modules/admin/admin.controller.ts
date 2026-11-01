@@ -118,7 +118,9 @@ export async function createTask(_req: Request, res: Response): Promise<void> {
 }
 export async function updateTask(req: Request, res: Response): Promise<void> {
   const dto = getValidated<UpdateTaskDto>(res, "body");
-  res.status(200).json(await adminService.updateTask(Number(req.params.taskId), dto));
+  // Ids may arrive as "TSK-18" / "tsk-18"; the DB key is the numeric ID
+  const taskId = Number(String(req.params.taskId).replace(/\D/g, ""));
+  res.status(200).json(await adminService.updateTask(taskId, dto));
 }
 export async function deleteTask(req: Request, res: Response): Promise<void> {
   await adminService.deleteTask(Number(req.params.taskId));
@@ -277,8 +279,8 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
 // ---- Admin Invitations ---------------------------------------------------
 
 export async function createAdminInvitation(req: Request, res: Response): Promise<void> {
-  const { email, role } = getValidated<CreateAdminInvitationDto>(res, "body");
-  res.status(201).json(await adminService.createAdminInvitation(email, role));
+  const { email, role, permissions } = getValidated<CreateAdminInvitationDto>(res, "body");
+  res.status(201).json(await adminService.createAdminInvitation(email, role, permissions));
 }
 
 export async function acceptAdminInvitation(req: Request, res: Response): Promise<void> {
@@ -322,3 +324,7 @@ export async function updateProfile2FA(req: Request, res: Response): Promise<voi
   res.status(200).json(await adminService.toggleProfile2FA(String(email || ''), Boolean(isEnabled)));
 }
 
+
+export async function getProfile(req: Request, res: Response): Promise<void> {
+  res.status(200).json(await adminService.getProfile(req.user!.userId));
+}

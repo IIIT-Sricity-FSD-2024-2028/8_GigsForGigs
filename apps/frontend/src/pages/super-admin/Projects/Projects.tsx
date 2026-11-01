@@ -21,6 +21,7 @@ export interface ProjectTask {
 export const Projects: React.FC = () => {
   const toast = useToast();
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,14 +130,34 @@ export const Projects: React.FC = () => {
     );
   }
 
+  const filteredTasks = tasks.filter((t) => {
+    if (statusFilter === 'ALL') return true;
+    return (t.status || '').toUpperCase() === statusFilter;
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
+      {/* Status Filter Navigation Pills */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {(['ALL', 'OPEN', 'IN_PROGRESS', 'REVIEWING', 'COMPLETED', 'CANCELLED'] as const).map((st) => (
+          <button
+            key={st}
+            type="button"
+            onClick={() => setStatusFilter(st)}
+            className={`admin-btn ${statusFilter === st ? 'admin-btn-primary' : 'admin-btn-secondary'}`}
+            style={{ padding: '5px 14px', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}
+          >
+            {st.replace('_', ' ')}
+          </button>
+        ))}
+      </div>
+
       <DataTable
         title="Global Project & Task Monitor"
         columns={columns}
-        data={tasks}
+        data={filteredTasks}
         pageSize={6}
-        searchPlaceholder="Search tasks by title or client..."
+        searchPlaceholder="Search tasks by title, client, or category..."
         onRowClick={handleOpenDrawer}
       />
 
@@ -232,9 +253,7 @@ export const Projects: React.FC = () => {
             >
               <option value="OPEN">Open (Re-open for Bidding)</option>
               <option value="IN_PROGRESS">In Progress</option>
-              <option value="REVIEWING">Under Review</option>
               <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
         </form>

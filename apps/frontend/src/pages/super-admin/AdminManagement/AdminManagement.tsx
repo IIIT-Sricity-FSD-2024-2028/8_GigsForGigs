@@ -53,7 +53,11 @@ export const AdminManagement: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'SUPER_ADMIN' | 'FINANCIAL_ADMIN' | 'SUPPORT_ADMIN' | 'CONTENT_MODERATOR' | 'AUDITOR'>('SUPER_ADMIN');
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(['users:read', 'payments:read']);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([
+    'users:read', 'users:ban', 'payments:read', 'payments:refund',
+    'payments:release', 'disputes:resolve', 'reviews:moderate',
+    'settings:manage', 'admins:invite'
+  ]);
 
   // Generated Link Modal State
   const [generatedInvite, setGeneratedInvite] = useState<GeneratedInvite | null>(null);
@@ -450,7 +454,18 @@ export const AdminManagement: React.FC = () => {
             <select
               className="admin-select"
               value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as any)}
+              onChange={(e) => {
+                const newRole = e.target.value as any;
+                setInviteRole(newRole);
+                const roleDefaults: Record<string, string[]> = {
+                  SUPER_ADMIN: availablePermissions.map((p) => p.key),
+                  FINANCIAL_ADMIN: ['users:read', 'payments:read', 'payments:refund', 'payments:release'],
+                  SUPPORT_ADMIN: ['users:read', 'disputes:resolve', 'reviews:moderate'],
+                  CONTENT_MODERATOR: ['users:read', 'reviews:moderate'],
+                  AUDITOR: ['users:read', 'payments:read']
+                };
+                setSelectedPermissions(roleDefaults[newRole] || ['users:read']);
+              }}
             >
               <option value="SUPER_ADMIN">👑 Super Admin (Full Governance)</option>
               <option value="FINANCIAL_ADMIN">💳 Financial Admin (Escrow & Ledgers)</option>

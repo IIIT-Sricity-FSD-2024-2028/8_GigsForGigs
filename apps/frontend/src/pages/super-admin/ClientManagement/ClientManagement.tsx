@@ -81,6 +81,21 @@ export const ClientManagement: React.FC = () => {
     toast.warning('Client Suspended', `Account for ${selectedClient.companyName} paused.`);
   };
 
+  const handleReactivateClient = async () => {
+    if (!selectedClient) return;
+    try {
+      await adminApi.updateUserStatus(selectedClient.id, 'ACTIVE', 'Reactivated by Admin');
+      const updated = clients.map((c) =>
+        c.id === selectedClient.id ? { ...c, status: 'ACTIVE' as const } : c
+      );
+      setClients(updated);
+      setSelectedClient({ ...selectedClient, status: 'ACTIVE' });
+      toast.success('Client Reactivated', `Account for ${selectedClient.companyName} restored to Active.`);
+    } catch (err: any) {
+      toast.error('Reactivation Failed', err?.message || 'Could not reactivate client.');
+    }
+  };
+
   const columns: ColumnDef<ClientDetail>[] = [
     {
       header: 'Client & Company',
@@ -201,12 +216,19 @@ export const ClientManagement: React.FC = () => {
                   ✓ Approve KYC Credentials
                 </button>
               )}
-              {selectedClient.status !== 'SUSPENDED' && (
+              {selectedClient.status !== 'SUSPENDED' ? (
                 <button
                   onClick={() => setIsSuspendDialogOpen(true)}
                   className="admin-btn admin-btn-danger"
                 >
                   Suspend Account
+                </button>
+              ) : (
+                <button
+                  onClick={handleReactivateClient}
+                  className="admin-btn admin-btn-primary"
+                >
+                  Reactivate Account
                 </button>
               )}
             </div>

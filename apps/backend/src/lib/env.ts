@@ -30,7 +30,8 @@ export const env = {
   isProduction,
   databaseUrl: required("DATABASE_URL", "postgresql://postgres@127.0.0.1:5433/gigsforge"),
   jwtSecret,
-  port: Number(process.env.PORT),
+  // FIXED: Restore port 5000 fallback removed in commit d53234e to prevent NaN when PORT is unset
+  port: Number(process.env.PORT ?? 5000),
   /** Public frontend origin, used to build invite links. */
   appUrl,
   /** Browser origins allowed by CORS. Defaults to APP_URL. */

@@ -1,12 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { SearchIcon } from './Icons';
 
 /**
  * @file DataTable.tsx
  * @description
- * Generic, production-grade tabular data grid with client-side filtering,
- * search indexing, and pagination. Adheres to strict TypeScript generic patterns.
+ * Generic, production-grade tabular data grid with deep recursive search,
+ * client-side filtering, and automatic pagination resets. Adheres to strict TypeScript generic patterns.
  */
+
+function matchesDeep(val: any, query: string): boolean {
+  if (val === null || val === undefined) return false;
+  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+    return String(val).toLowerCase().includes(query);
+  }
+  if (Array.isArray(val)) {
+    return val.some((sub) => matchesDeep(sub, query));
+  }
+  if (typeof val === 'object') {
+    return Object.values(val).some((sub) => matchesDeep(sub, query));
+  }
+  return false;
+}
 
 export interface ColumnDef<T> {
   header: string;
@@ -42,19 +56,21 @@ export function DataTable<T extends Record<string, any>>({
 
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
-  // Filter dataset by search term
+  // Reset pagination to first page whenever search query or source dataset changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, data]);
+
+  // Deep recursive filter dataset by search term
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return safeData;
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
 
     return safeData.filter((item) => {
       if (searchableKey) {
-        const val = item[searchableKey];
-        return String(val ?? '').toLowerCase().includes(query);
+        return matchesDeep(item[searchableKey], query);
       }
-      return Object.values(item).some((val) =>
-        String(val ?? '').toLowerCase().includes(query)
-      );
+      return matchesDeep(item, query);
     });
   }, [safeData, searchQuery, searchableKey]);
 

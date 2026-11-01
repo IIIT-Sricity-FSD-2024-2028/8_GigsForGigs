@@ -164,7 +164,7 @@ export const DisputesReports: React.FC = () => {
                 Evidence Documents & Artifact Logs
               </span>
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                {selectedDispute.evidenceUrls.map((url, i) => (
+                {(selectedDispute.evidenceUrls ?? []).map((url, i) => (
                   <a
                     key={i}
                     href={safeHttpUrl(url)}

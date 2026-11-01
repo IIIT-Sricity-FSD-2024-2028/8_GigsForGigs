@@ -32,8 +32,13 @@ export const PlatformSettings: React.FC = () => {
     async function loadSettings() {
       const data = await adminApi.getPlatformSettings();
       if (isMounted && data) {
+        // FIXED: Map backend Zod DTO fields (commissionRakePercent, minimumTaskBudget, escrowHoldPeriodDays) to local UI state (regression introduced in commit d53234e)
         setConfig({
-          ...data,
+          platformRakePercentage: (data as any).commissionRakePercent ?? (data as any).platformRakePercentage ?? 10.0,
+          minimumGigBudget: (data as any).minimumTaskBudget ?? (data as any).minimumGigBudget ?? 50,
+          escrowHoldingDays: (data as any).escrowHoldPeriodDays ?? (data as any).escrowHoldingDays ?? 14,
+          maxFileUploadMb: (data as any).maxFileUploadMb ?? 100,
+          isMaintenanceMode: (data as any).maintenanceMode ?? (data as any).isMaintenanceMode ?? false,
           allowedCategories: Array.isArray(data.allowedCategories) ? data.allowedCategories : [
             'Software Development', 'Design & Creative', 'AI & Data Science', '3D & Spatial Computing'
           ]
@@ -70,7 +75,15 @@ export const PlatformSettings: React.FC = () => {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaved(true);
-    await adminApi.updatePlatformSettings(config);
+    // FIXED: Map frontend keys to backend Zod .strict() schema (commissionRakePercent, minimumTaskBudget, escrowHoldPeriodDays) introduced in commit d53234e
+    const backendPayload = {
+      commissionRakePercent: config.platformRakePercentage,
+      minimumTaskBudget: config.minimumGigBudget,
+      escrowHoldPeriodDays: config.escrowHoldingDays,
+      allowedCategories: config.allowedCategories,
+      maintenanceMode: config.isMaintenanceMode
+    };
+    await adminApi.updatePlatformSettings(backendPayload);
     toast.success('Platform Settings Saved', `Platform commission set to ${config.platformRakePercentage}% and parameters updated.`);
     setTimeout(() => setIsSaved(false), 2500);
   };
@@ -82,7 +95,7 @@ export const PlatformSettings: React.FC = () => {
           className="admin-badge badge-success"
           style={{ width: '100%', padding: '12px', justifyContent: 'center', fontSize: 'var(--font-size-sm)' }}
         >
-          ✓ Platform settings updated successfully and cached in Redis.
+          ✓ Platform settings updated successfully.
         </div>
       )}
 
@@ -116,7 +129,7 @@ export const PlatformSettings: React.FC = () => {
 
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
-              Minimum Gig Budget Floor ($ USD)
+              Minimum Gig Budget Floor (₹ INR)
             </label>
             <input
               type="number"

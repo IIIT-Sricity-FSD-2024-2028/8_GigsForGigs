@@ -82,6 +82,21 @@ export const GigProfessionalManagement: React.FC = () => {
     toast.warning('Freelancer Suspended', `Account for ${selectedPro.name} paused.`);
   };
 
+  const handleReactivatePro = async () => {
+    if (!selectedPro) return;
+    try {
+      await adminApi.updateUserStatus(selectedPro.id, 'ACTIVE', 'Reactivated by Admin');
+      const updated = gigPros.map((p) =>
+        p.id === selectedPro.id ? { ...p, status: 'ACTIVE' as const } : p
+      );
+      setGigPros(updated);
+      setSelectedPro({ ...selectedPro, status: 'ACTIVE' });
+      toast.success('Freelancer Reactivated', `Account for ${selectedPro.name} restored to Active.`);
+    } catch (err: any) {
+      toast.error('Reactivation Failed', err?.message || 'Could not reactivate freelancer.');
+    }
+  };
+
   const columns: ColumnDef<GigProDetail>[] = [
     {
       header: 'Freelancer',
@@ -222,12 +237,19 @@ export const GigProfessionalManagement: React.FC = () => {
 
             {/* Moderation Controls */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
-              {selectedPro.status !== 'SUSPENDED' && (
+              {selectedPro.status !== 'SUSPENDED' ? (
                 <button
                   onClick={() => setIsSuspendDialogOpen(true)}
                   className="admin-btn admin-btn-danger"
                 >
                   Suspend Freelancer
+                </button>
+              ) : (
+                <button
+                  onClick={handleReactivatePro}
+                  className="admin-btn admin-btn-primary"
+                >
+                  Reactivate Freelancer
                 </button>
               )}
             </div>

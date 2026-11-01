@@ -56,13 +56,17 @@ export const ManagersManagement: React.FC = () => {
   const handleToggleStatus = async () => {
     if (!selectedManager) return;
     const newStatus: 'ACTIVE' | 'SUSPENDED' = selectedManager.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    await adminApi.updateUserStatus(selectedManager.id, newStatus, 'Manager status updated');
-    const updated = managers.map((m) =>
-      m.id === selectedManager.id ? { ...m, status: newStatus } : m
-    );
-    setManagers(updated);
-    setSelectedManager({ ...selectedManager, status: newStatus });
-    toast.info('Status Updated', `Manager ${selectedManager.name} is now ${newStatus}.`);
+    try {
+      await adminApi.updateUserStatus(selectedManager.id, newStatus, 'Manager status updated');
+      const updated = managers.map((m) =>
+        m.id === selectedManager.id ? { ...m, status: newStatus } : m
+      );
+      setManagers(updated);
+      setSelectedManager({ ...selectedManager, status: newStatus });
+      toast.success('Status Updated', `Manager seat for ${selectedManager.name} is now ${newStatus}.`);
+    } catch (err: any) {
+      toast.error('Update Failed', err?.message || 'Could not update manager status.');
+    }
   };
 
   const columns: ColumnDef<ManagerDetail>[] = [

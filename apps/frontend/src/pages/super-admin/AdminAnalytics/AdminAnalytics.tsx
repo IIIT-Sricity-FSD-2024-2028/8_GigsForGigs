@@ -56,10 +56,10 @@ export const AdminAnalytics: React.FC = () => {
       cell: (row) => <span>₹{Number(row.avgBudget || 0).toLocaleString('en-IN')}</span>
     },
     {
-      header: 'Velocity YoY',
+      header: 'Market Share (% GMV)',
       cell: (row) => (
-        <span style={{ color: 'var(--color-success-text)', fontWeight: 700 }}>
-          {row.growthRate || '+18%'}
+        <span style={{ color: 'var(--color-primary-dark)', fontWeight: 700 }}>
+          {row.growthRate || '0%'}
         </span>
       )
     }
@@ -81,31 +81,18 @@ export const AdminAnalytics: React.FC = () => {
   };
 
   const rawVelocity = analyticsData?.velocity;
-  const velocity = Array.isArray(rawVelocity) && rawVelocity.length > 0 ? rawVelocity : [
-    { date: 'Mon', gmv: 42000, rake: 4200 },
-    { date: 'Tue', gmv: 58000, rake: 5800 },
-    { date: 'Wed', gmv: 51000, rake: 5100 },
-    { date: 'Thu', gmv: 69000, rake: 6900 },
-    { date: 'Fri', gmv: 74000, rake: 7400 },
-    { date: 'Sat', gmv: 62000, rake: 6200 },
-    { date: 'Sun', gmv: 72900, rake: 7290 }
-  ];
+  const velocity = Array.isArray(rawVelocity) ? rawVelocity : [];
 
   const rawCategories = analyticsData?.categories;
-  const categories: CategoryDemand[] = Array.isArray(rawCategories) && rawCategories.length > 0
+  const categories: CategoryDemand[] = Array.isArray(rawCategories)
     ? rawCategories.map((c: any) => ({
         category: c.category || c.name || 'Category',
-        activeContracts: Number(c.activeContracts || c.activeTasks || 4),
-        totalVolume: Number(c.totalVolume || c.gmv || 45000),
-        avgBudget: Number(c.avgBudget || (c.gmv && c.activeTasks ? Math.round(c.gmv / c.activeTasks) : 1050)),
-        growthRate: String(c.growthRate || (c.percentage ? `+${c.percentage}%` : '+22%'))
+        activeContracts: Number(c.activeContracts || c.activeTasks || 0),
+        totalVolume: Number(c.totalVolume || c.gmv || 0),
+        avgBudget: Number(c.avgBudget || (c.gmv && c.activeTasks ? Math.round(c.gmv / c.activeTasks) : 0)),
+        growthRate: String(c.growthRate || (c.percentage ? `+${c.percentage}%` : '+0%'))
       }))
-    : [
-        { category: 'Software Development', activeContracts: 184, totalVolume: 198400, avgBudget: 1078, growthRate: '+24%' },
-        { category: 'Design & Creative', activeContracts: 96, totalVolume: 78900, avgBudget: 821, growthRate: '+14%' },
-        { category: 'AI & Data Science', activeContracts: 64, totalVolume: 84200, avgBudget: 1315, growthRate: '+42%' },
-        { category: '3D & Spatial Computing', activeContracts: 38, totalVolume: 41200, avgBudget: 1084, growthRate: '+31%' }
-      ];
+    : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
@@ -155,38 +142,38 @@ export const AdminAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Analytics KPI Metric Tiles */}
+      {/* Analytics KPI Metric Tiles (100% Dynamically Fed from DB & Time Range) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Gross Volume Velocity"
-          value="₹4,28,900"
-          deltaText="+18.4% YoY"
+          value={`₹${Number(analyticsData?.grossVolume || 0).toLocaleString('en-IN')}`}
+          deltaText={`${timeRange.toUpperCase()} Interval`}
           isPositive={true}
-          subtitle={`Aggregated platform GMV (${timeRange})`}
+          subtitle={`Aggregated platform GMV (${timeRange.toUpperCase()})`}
           accentColor="var(--color-primary-blue)"
         />
         <KPICard
           title="Platform Take Rate"
-          value="10.0%"
-          deltaText="Locked by System"
+          value={analyticsData?.grossVolume && analyticsData?.platformRake ? `${((analyticsData.platformRake / analyticsData.grossVolume) * 100).toFixed(1)}%` : "10.0%"}
+          deltaText="Standard Commission"
           isPositive={true}
           subtitle="Net platform commission rake"
           accentColor="var(--color-primary-dark)"
         />
         <KPICard
           title="Avg Contract Budget"
-          value="₹1,254"
-          deltaText="+₹112 vs last qtr"
+          value={`₹${Number(analyticsData?.avgContractBudget || 0).toLocaleString('en-IN')}`}
+          deltaText="Real-time AOV"
           isPositive={true}
-          subtitle="AOV across all closed tasks"
+          subtitle="Average across all closed tasks"
           accentColor="var(--color-secondary)"
         />
         <KPICard
           title="Repeat Client Rate"
-          value="68.2%"
-          deltaText="+4.1% retention"
+          value={analyticsData?.repeatClientRate || "0%"}
+          deltaText="Retention Health"
           isPositive={true}
-          subtitle="Clients with $\ge 2$ task postings"
+          subtitle="Clients with multiple task contracts"
           accentColor="var(--color-text-dark)"
         />
       </div>
@@ -202,9 +189,12 @@ export const AdminAnalytics: React.FC = () => {
               Comparison of total marketplace money-in versus retained transaction rake.
             </p>
           </div>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Normalized USD</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Live Escrow Volumes (INR ₹)</span>
         </div>
         <RevenueAreaChart data={velocity} />
+        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
+          💡 <strong>Financial Insight:</strong> Tracks gross transaction throughput (GMV) against retained platform commissions (10% rake) dynamically queried for {timeRange.toUpperCase()}. A tight correlation indicates healthy take rate realization with zero uncollected fees or unallocated escrow.
+        </div>
       </div>
 
       {/* Category Performance & Order Breakdown */}
@@ -221,6 +211,9 @@ export const AdminAnalytics: React.FC = () => {
           pageSize={5}
           searchPlaceholder="Filter marketplace categories..."
         />
+        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', marginTop: '12px', lineHeight: 1.4 }}>
+          💡 <strong>Marketplace Taxonomy:</strong> Summarizes task allocation, total contract spend, and average order value per skill category. High AOV categories yield maximum commission density.
+        </div>
       </div>
     </div>
   );

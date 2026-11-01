@@ -88,7 +88,9 @@ export const adminApi = {
   /** Force a project/task into a status (sent lowercase). */
 
   async overrideProjectStatus(projectId: string, status: string) {
-    return apiFetch(`/admin/projects/${projectId}/status`, {
+    // Strip "tsk-" prefix if present
+    const id = projectId.replace(/\D/g, '');
+    return apiFetch(`/admin/projects/${id}/status`, {
       method: 'PATCH',
       body: { status: status.toLowerCase() },
       actor,
@@ -218,7 +220,21 @@ export const adminApi = {
 
   /** Change the logged-in admin's password. */
 
-  async updateAdminPassword(currentPassword: string, newPassword: string) {
+    /** Fetch the logged-in admin profile details. */
+  async getAdminProfile() {
+    return apiFetch<{
+      userId: number;
+      name: string;
+      email: string;
+      adminTier: string;
+      permissions: string[];
+      isTwoFactorEnabled: boolean;
+      status: string;
+      createdAt: string;
+    }>("/admin/profile", { actor });
+  },
+
+async updateAdminPassword(currentPassword: string, newPassword: string) {
     return apiFetch('/admin/profile/password', {
       method: 'POST',
       body: { currentPassword, newPassword },

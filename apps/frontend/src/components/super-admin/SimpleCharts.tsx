@@ -113,59 +113,120 @@ export interface RevenuePoint {
   rake: number;
 }
 
-export const RevenueAreaChart: React.FC<{ data?: RevenuePoint[]; height?: number }> = ({ data = [], height = 160 }) => {
-  const safeData = Array.isArray(data) && data.length > 0 ? data : [
-    { date: 'Mon', gmv: 42000, rake: 4200 },
-    { date: 'Tue', gmv: 58000, rake: 5800 },
-    { date: 'Wed', gmv: 51000, rake: 5100 },
-    { date: 'Thu', gmv: 69000, rake: 6900 },
-    { date: 'Fri', gmv: 74000, rake: 7400 },
-    { date: 'Sat', gmv: 62000, rake: 6200 },
-    { date: 'Sun', gmv: 72900, rake: 7290 }
-  ];
+export const RevenueAreaChart: React.FC<{ data?: RevenuePoint[]; height?: number }> = ({ data = [], height = 180 }) => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return (
+      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-bg-light)', borderRadius: 'var(--radius-md)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
+        No transaction records found for this time window.
+      </div>
+    );
+  }
 
-  const max = Math.max(1, ...safeData.map((d) => Number(d.gmv) || 1));
+  const safeData = data;
+
+  const max = Math.max(1, ...safeData.map((d) => Math.max(Number(d.gmv) || 0, Number(d.rake) || 0)));
   const divisor = Math.max(1, safeData.length - 1);
-  const points = safeData.map((d, i) => {
+
+  const pointsGmv = safeData.map((d, i) => {
     const x = (i / divisor) * 360;
     const gmv = Number(d.gmv) || 0;
-    const y = height - (gmv / max) * (height - 30) - 15;
+    const y = height - (gmv / max) * (height - 40) - 20;
     return `${Number.isFinite(x) ? x : 0},${Number.isFinite(y) ? y : height / 2}`;
-  }).join(' ');
+  }).join(" ");
 
-  const areaPoints = `0,${height} ${points} 360,${height}`;
+  const areaPointsGmv = `0,${height} ${pointsGmv} 360,${height}`;
+
+  const pointsRake = safeData.map((d, i) => {
+    const x = (i / divisor) * 360;
+    const rake = Number(d.rake) || 0;
+    const y = height - (rake / max) * (height - 40) - 20;
+    return `${Number.isFinite(x) ? x : 0},${Number.isFinite(y) ? y : height / 2}`;
+  }).join(" ");
+
+  const areaPointsRake = `0,${height} ${pointsRake} 360,${height}`;
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-      <svg viewBox={`0 0 360 ${height}`} style={{ width: '100%', overflow: 'visible' }}>
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "var(--spacing-md)" }}>
+      {/* Chart Legend */}
+      <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", fontSize: "var(--font-size-xs)", fontWeight: 600 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#D97706" }} />
+          <span style={{ color: "var(--color-text-dark)" }}>Gross Merchandise Volume (GMV)</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#0F527E" }} />
+          <span style={{ color: "var(--color-text-dark)" }}>Net Platform Take Rate (10% Rake)</span>
+        </div>
+      </div>
+
+      <svg viewBox={`0 0 360 ${height}`} style={{ width: "100%", overflow: "visible" }}>
         <defs>
-          <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#9A5100" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#9A5100" stopOpacity="0.0" />
+          <linearGradient id="gmvGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#D97706" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#D97706" stopOpacity="0.02" />
+          </linearGradient>
+          <linearGradient id="rakeGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0F527E" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#0F527E" stopOpacity="0.0" />
           </linearGradient>
         </defs>
-        <polygon points={areaPoints} fill="url(#revenueGrad)" />
-        <polyline fill="none" stroke="#9A5100" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={points} />
+
+        {/* Horizontal Scale Reference Gridlines & Dynamic Scale Tag */}
+        <line x1="0" y1="20" x2="360" y2="20" stroke="rgba(0,0,0,0.06)" strokeDasharray="3 3" />
+        <line x1="0" y1={height / 2} x2="360" y2={height / 2} stroke="rgba(0,0,0,0.06)" strokeDasharray="3 3" />
+        <line x1="0" y1={height - 20} x2="360" y2={height - 20} stroke="rgba(0,0,0,0.12)" />
+        <text x="4" y="16" fill="var(--color-text-muted)" fontSize="9" fontWeight="600">
+          Peak Velocity: ₹{Math.round(max).toLocaleString("en-IN")}
+        </text>
+
+        {/* GMV Area & Line */}
+        <polygon points={areaPointsGmv} fill="url(#gmvGrad)" />
+        <polyline fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={pointsGmv} />
         {safeData.map((d, i) => {
           const x = (i / divisor) * 360;
           const gmv = Number(d.gmv) || 0;
-          const y = height - (gmv / max) * (height - 30) - 15;
+          const y = height - (gmv / max) * (height - 40) - 20;
           return (
             <circle
-              key={i}
+              key={"gmv-" + i}
               cx={Number.isFinite(x) ? x : 0}
               cy={Number.isFinite(y) ? y : height / 2}
               r="4"
               fill="#ffffff"
-              stroke="#9A5100"
-              strokeWidth="2.5"
+              stroke="#D97706"
+              strokeWidth="2"
+            />
+          );
+        })}
+
+        {/* Platform Rake Area & Line */}
+        <polygon points={areaPointsRake} fill="url(#rakeGrad)" />
+        <polyline fill="none" stroke="#0F527E" strokeWidth="2" strokeDasharray="4 2" strokeLinecap="round" strokeLinejoin="round" points={pointsRake} />
+        {safeData.map((d, i) => {
+          const x = (i / divisor) * 360;
+          const rake = Number(d.rake) || 0;
+          const y = height - (rake / max) * (height - 40) - 20;
+          return (
+            <circle
+              key={"rake-" + i}
+              cx={Number.isFinite(x) ? x : 0}
+              cy={Number.isFinite(y) ? y : height / 2}
+              r="3.5"
+              fill="#ffffff"
+              stroke="#0F527E"
+              strokeWidth="2"
             />
           );
         })}
       </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+
+      {/* Date & Volume Axis Labels */}
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-size-xs)", color: "var(--color-text-muted)", borderTop: "1px solid var(--color-border)", paddingTop: "6px" }}>
         {safeData.map((d, i) => (
-          <span key={i}>{d.date}</span>
+          <div key={i} style={{ textAlign: "center", display: "flex", flexDirection: "column" }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-dark)" }}>{d.date}</span>
+            <span style={{ fontSize: "10px", color: "#D97706", fontWeight: 700 }}>₹{Math.round(d.gmv).toLocaleString("en-IN")}</span>
+          </div>
         ))}
       </div>
     </div>

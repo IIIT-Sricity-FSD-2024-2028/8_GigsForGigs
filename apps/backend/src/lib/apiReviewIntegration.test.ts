@@ -15,6 +15,49 @@ let baseUrl: string;
 const TEST_TASK_ID = 94;
 
 before(async () => {
+  // Ensure Task 94 exists with clean assignment and deliverable for integration test
+  let t94 = await prisma.task.findUnique({ where: { taskId: TEST_TASK_ID } });
+  if (!t94) {
+    const client = await prisma.client.findFirst();
+    const gig = await prisma.gigProfessionalProfile.findFirst();
+    if (client && gig) {
+      await prisma.task.create({
+        data: {
+          taskId: TEST_TASK_ID,
+          clientId: client.clientId,
+          title: "Integration Test Task 94",
+          budget: 5000,
+          status: "completed",
+        }
+      });
+      await prisma.application.create({
+        data: {
+          taskId: TEST_TASK_ID,
+          gigProfileId: gig.gigProfileId,
+          status: "accepted",
+        }
+      });
+      await prisma.gigManagerAssignment.create({
+        data: {
+          taskId: TEST_TASK_ID,
+          gigProfileId: gig.gigProfileId,
+        }
+      });
+      await prisma.deliverable.create({
+        data: {
+          taskId: TEST_TASK_ID,
+          deliverableNo: 1,
+          gigProfileId: gig.gigProfileId,
+          description: "Integration test deliverable",
+          submissionPath: "https://example.com/submission",
+          status: "submitted",
+        }
+      });
+    }
+  } else {
+    await prisma.task.update({ where: { taskId: TEST_TASK_ID }, data: { status: "completed" } });
+  }
+  
   // Clean up any lingering test reviews on TEST_TASK_ID
   await prisma.review.deleteMany({
     where: { taskId: TEST_TASK_ID },

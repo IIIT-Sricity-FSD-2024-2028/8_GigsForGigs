@@ -30,6 +30,9 @@ export interface UserSession {
   appliedTaskIds: string[];
   /** True right after signup/invite activation — pages use it to show onboarding. */
   isNewAccount?: boolean;
+  createdAt?: string;
+  twoFactorEnabled?: boolean;
+  status?: string;
   // Present only for the roles whose JWT payload carries them — see lib/jwt.ts on the backend.
   clientId?: number;
   managerId?: number;
@@ -100,8 +103,8 @@ function determineAdminTier(email: string): AdminTier {
 function sessionFromAuthResponse(user: AuthUser, token: string): UserSession {
   const payload = decodeJwtPayload<TokenPayload>(token);
   const role = backendRoleToFrontend(payload?.role ?? user.role);
-  const adminTier = role === 'SUPER_ADMIN' ? determineAdminTier(user.email) : undefined;
-  const permissions = adminTier ? TIER_PERMISSIONS[adminTier] : undefined;
+  const adminTier = ((user as any).adminTier as AdminTier) || (role === 'SUPER_ADMIN' ? determineAdminTier(user.email) : undefined);
+  const permissions = (user as any).permissions || (adminTier && adminTier in TIER_PERMISSIONS ? TIER_PERMISSIONS[adminTier] : undefined);
 
   return {
     userId: user.userId,
@@ -111,6 +114,9 @@ function sessionFromAuthResponse(user: AuthUser, token: string): UserSession {
     adminTier,
     permissions,
     appliedTaskIds: [],
+    createdAt: user.createdAt,
+    twoFactorEnabled: user.twoFactorEnabled,
+    status: user.status,
     // Only copy the ids that are actually in the token.
     ...(payload?.clientId !== undefined ? { clientId: payload.clientId } : {}),
     ...(payload?.managerId !== undefined ? { managerId: payload.managerId } : {}),
@@ -307,7 +313,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const updateUserSession = useCallback((patch: Partial<UserSession>) => {
-    setUser((prev) => (prev ? { ...prev, ...patch } : null));
+    // FIXED: Support initial session hydration for invited delegate admins when prev is null (e.g. from AdminInviteActivation after commit 2e241d8)
+    setUser((prev) => (prev ? { ...prev, ...patch } : (patch as UserSession)));
   }, []);
 
   // Granular Multi-Tier Admin RBAC evaluation
