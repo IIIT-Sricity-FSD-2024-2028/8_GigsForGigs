@@ -57,6 +57,7 @@ export interface InviteTokenPayload {
   email: string;
   /** ManagerInvite.inviteId or the provisioned admin User.userId. */
   ref: number;
+  role?: string;
 }
 
 export function signInviteToken(purpose: InvitePurpose, payload: InviteTokenPayload, expiresIn: `${number}d` | `${number}h`): string {

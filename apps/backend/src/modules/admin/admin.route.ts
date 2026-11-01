@@ -182,6 +182,7 @@ adminRouter.post("/sessions/:staffId/revoke", adminController.revokeAdminSession
 adminRouter.delete("/sessions/:staffId", adminController.revokeAdminSession);
 adminRouter.patch("/reviews/:reviewId/moderate", adminController.moderateReview);
 adminRouter.post("/reviews/:reviewId/moderate", adminController.moderateReview);
+adminRouter.get("/profile", adminController.getProfile);
 adminRouter.post("/profile/password", adminController.updateProfilePassword);
 adminRouter.patch("/profile/password", adminController.updateProfilePassword);
 adminRouter.post("/profile/2fa", adminController.updateProfile2FA);

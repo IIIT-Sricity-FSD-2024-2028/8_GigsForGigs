@@ -16,6 +16,9 @@ export interface AuthUser {
   name: string;
   email: string;
   role: BackendRole;
+  createdAt?: string;
+  twoFactorEnabled?: boolean;
+  status?: string;
 }
 
 /** Response of login/signup/accept-invite: the user plus their JWT. */

@@ -7,7 +7,15 @@ import { badRequest, conflict, notFound, unauthorized } from "../../lib/httpErro
 import type { AcceptManagerInviteDto, LoginDto, SignupDto } from "./auth.dto.js";
 
 function sanitizeUser(user: User) {
-  return { userId: user.userId, name: user.name, email: user.email, role: user.role };
+  return {
+    userId: user.userId,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    twoFactorEnabled: user.twoFactorEnabled,
+    createdAt: user.createdAt
+  };
 }
 
 /** Builds the role-specific JWT payload by looking up the side profile the role implies. */
