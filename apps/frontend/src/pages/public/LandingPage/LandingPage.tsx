@@ -7,13 +7,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onNavigateToSignup }) => {
   const handleJoinClick = onNavigateToSignup || onNavigateToLogin;
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'hiring' | 'work'>('hiring');
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onNavigateToLogin();
-  };
 
   return (
     <div style={{ fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#1B2A36', backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
@@ -92,41 +86,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           Whether you are a client building a team or a professional growing your career, GigsForGigs helps both sides connect, collaborate, and succeed.
         </p>
 
-        {/* Search Input Box */}
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', maxWidth: '600px', margin: '0 auto', border: '1px solid #E2E8F0', borderRadius: '50px', padding: '6px 8px 6px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', backgroundColor: '#FFFFFF' }}>
-          <span style={{ fontSize: '18px', color: '#6B7885', marginRight: '12px' }}>🔍</span>
-          <input maxLength={100}
-            type="text"
-            placeholder="Try UI/UX, Web Dev..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: '16px', color: '#2D3748' }}
-          />
-          <button
-            type="submit"
-            style={{
-              border: 'none',
-              backgroundColor: 'transparent',
-              color: '#5E6E7A',
-              fontSize: '15px',
-              fontWeight: 600,
-              padding: '10px 20px',
-              cursor: 'pointer'
-            }}
-          >
-            Search
-          </button>
-        </form>
-
-        {/* Popular Tags */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginTop: '28px', fontSize: '14px', color: '#6B7885' }}>
-          <span>Popular:</span>
-          {['Web', 'UI', 'Design', 'Marketing'].map((tag) => (
-            <span key={tag} style={{ color: '#5E6E7A', fontWeight: 500, cursor: 'pointer' }} onClick={onNavigateToLogin}>
-              {tag}
-            </span>
-          ))}
-        </div>
       </section>
 
       {/* 3. Trusted By Top Companies Section */}

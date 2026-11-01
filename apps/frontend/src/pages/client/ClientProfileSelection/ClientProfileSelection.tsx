@@ -4,7 +4,7 @@ import { useClient, type ManagerInvite } from '../../../context/ClientContext';
 import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
 
 export interface ClientProfileSelectionProps {
-  onNavigate: (viewId: string) => void;
+  onNavigate: (viewId: string, params?: Record<string, string>) => void;
 }
 
 export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ onNavigate }) => {
@@ -92,7 +92,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
           Team Profile Switcher & Manager Supervision
         </h1>
         <p style={{ color: '#475764', fontSize: '1.05rem', marginBottom: '40px', textAlign: 'center', maxWidth: '600px' }}>
-          Select a manager profile to switch to their workspace dashboard, or manage team manager seats below.
+          Select a manager to view their profile, or manage team manager seats below.
         </p>
         
         {managers.length === 0 && (
@@ -138,9 +138,12 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 position: 'relative'
               }}
             >
-              <div
+              <button
+                type="button"
+                aria-label={`View ${mgr.name}'s manager profile`}
+                onClick={() => onNavigate('manager-profile', { managerId: mgr.invite_id })}
                 className="profile-avatar-btn"
-                style={{ padding: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                style={{ padding: 0, width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
               >
                 <div
                   className="avatar-square"
@@ -170,7 +173,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                     {mgr.email}
                   </span>
                 </div>
-              </div>
+              </button>
 
               {/* Action Buttons: Edit & Delete */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>

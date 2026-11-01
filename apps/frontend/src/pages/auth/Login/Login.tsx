@@ -138,6 +138,8 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
 
           {(errorMsg || authError) && (
             <div
+              role="alert"
+              aria-live="assertive"
               style={{
                 backgroundColor: '#FDE8E8',
                 color: '#9B1C1C',
@@ -265,41 +267,6 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               {loading ? 'Signing in...' : 'Login'}
             </button>
           </form>
-
-          {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '28px 0' }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
-            <span style={{ fontSize: '13px', color: '#6B7885' }}>or continue with</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
-          </div>
-
-          {/* Google SSO Button */}
-          <button
-            onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
-            style={{
-              width: '100%',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #D3DCE2',
-              padding: '12px',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '15px',
-              color: '#2C3E50',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              cursor: 'pointer'
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill="#4285F4" d="M17.64 9.2c0-.74-.06-1.28-.19-1.84H9v3.34h4.96c-.1.83-.64 2.08-1.84 2.92l2.84 2.2c1.7-1.57 2.68-3.88 2.68-6.62z" />
-              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.4-1.57-5.12-3.74L.97 13.04C2.45 15.98 5.48 18 9 18z" />
-              <path fill="#FBBC05" d="M3.88 10.78A5.54 5.54 0 0 1 3.58 9c0-.62.11-1.22.3-1.78L.97 4.96A8.98 8.98 0 0 0 0 9c0 1.45.35 2.82.97 4.04l2.91-2.26z" />
-              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.45 2.02.97 4.96l2.91 2.26C4.6 5.05 6.62 3.58 9 3.58z" />
-            </svg>
-            Google
-          </button>
 
           {/* Footer prompt */}
           <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '14px', color: '#1B2A36' }}>

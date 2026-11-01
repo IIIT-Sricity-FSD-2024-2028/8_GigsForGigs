@@ -111,17 +111,23 @@ export const PostService: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
+            <label htmlFor="service-delivery" style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Estimated Delivery Time *
             </label>
-            <input maxLength={100}
-              type="text"
+            <select
+              id="service-delivery"
               className="admin-input"
-              placeholder="e.g. 5 Days, 2 Weeks"
               value={delivery}
               onChange={(e) => setDelivery(e.target.value)}
               required
-            />
+            >
+              <option value="" disabled>Select expected duration</option>
+              <option value="one-time">One-time project</option>
+              <option value="less-month">Less than 1 month</option>
+              <option value="1-3-months">1 to 3 months</option>
+              <option value="3-6-months">3 to 6 months</option>
+              <option value="ongoing">Ongoing</option>
+            </select>
           </div>
         </div>
 
