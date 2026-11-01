@@ -9,6 +9,7 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../../services/api/auth/authApi';
+import { adminApi } from '../../services/api/admin/adminApi';
 import type { AuthUser } from '../../services/api/auth/authApi';
 import { ApiError, getToken, setToken, clearToken, UNAUTHORIZED_EVENT, ALL_ACTORS, type ActorRole } from '../../services/api/httpClient';
 import { decodeJwtPayload } from '../../utils/helpers/jwt';
@@ -201,6 +202,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem(ACTIVE_USER_KEY);
     }
   }, [user]);
+
+  // Proactively sync live admin tier & permissions to prevent stale sessionStorage or auditor fallback
+  useEffect(() => {
+    if (user?.role === 'SUPER_ADMIN' && (!user.adminTier || !user.permissions || user.adminTier === 'AUDITOR')) {
+      adminApi.getAdminProfile().then((profile) => {
+        if (profile?.adminTier) {
+          setUser((prev) => prev ? {
+            ...prev,
+            adminTier: profile.adminTier as AdminTier,
+            permissions: profile.permissions,
+            twoFactorEnabled: profile.isTwoFactorEnabled,
+            status: profile.status,
+            createdAt: profile.createdAt,
+          } : null);
+        }
+      }).catch(() => {
+        // Silently ignore if token is missing or network failure
+      });
+    }
+  }, [user?.role, user?.adminTier, user?.permissions]);
 
   // A 401 from any request for the current actor means the token expired or
   // was revoked server-side — drop the session so the app falls back to login.

@@ -54,11 +54,11 @@ export const AdminAnalytics: React.FC = () => {
     },
     {
       header: 'Total Volume',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>₹{row.totalVolume.toLocaleString('en-IN')}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>₹{Number(row.totalVolume ?? 0).toLocaleString('en-IN')}</span>
     },
     {
       header: 'Average Order Value',
-      cell: (row) => <span>₹{row.avgContractValue.toLocaleString('en-IN')}</span>
+      cell: (row) => <span>₹{Number(row.avgContractValue ?? 0).toLocaleString('en-IN')}</span>
     },
     {
       header: 'Market Share (% GMV)',
