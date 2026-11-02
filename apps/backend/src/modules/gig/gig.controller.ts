@@ -102,6 +102,7 @@ function toServiceResponse(service: Row) {
     description: service.description ?? "",
     price: Number(service.price),
     tags: (service.tags ?? []).map((t: Row) => t.tag),
+    ...(service.category ? { category: service.category } : {}),
     ...(service.thumbnail ? { thumbnail: service.thumbnail } : {}),
     createdAt: service.createdAt.toISOString(),
   };

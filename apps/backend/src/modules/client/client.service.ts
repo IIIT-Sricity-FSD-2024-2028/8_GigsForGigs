@@ -491,11 +491,22 @@ export async function reviewDeliverable(
 // ---- Services (browse + request) -------------------------------------------
 
 // Browse every active service listing offered by gig professionals.
-export function listServices() {
-  return prisma.service.findMany({
+export async function listServices() {
+  const services = await prisma.service.findMany({
     where: { status: "active" },
     include: { tags: true, profile: { include: { user: true } } },
     orderBy: { createdAt: "desc" },
+  });
+  // Each pro's average published review rating (null until they have one).
+  const averages = await prisma.review.groupBy({
+    by: ["revieweeId"],
+    where: { revieweeId: { in: [...new Set(services.map((s) => s.profile.userId))] }, status: "PUBLISHED" },
+    _avg: { rating: true },
+  });
+  const ratingByUser = new Map(averages.map((a) => [a.revieweeId, a._avg.rating]));
+  return services.map((s) => {
+    const rating = ratingByUser.get(s.profile.userId);
+    return { ...s, rating: rating == null ? null : Math.round(rating * 10) / 10 };
   });
 }
 

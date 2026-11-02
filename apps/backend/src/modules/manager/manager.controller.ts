@@ -149,6 +149,7 @@ export function toTalentResponse(profile: Row) {
     name: profile.user.name,
     bio: profile.bio,
     ...(firstServicePrice !== undefined ? { price: Number(firstServicePrice) } : {}),
+    ...(profile.rating != null ? { rating: Math.round(profile.rating * 10) / 10 } : {}),
     skills: (profile.skills ?? []).map((s: Row) => s.skill),
     tools: (profile.tools ?? []).map((t: Row) => t.tool),
     portfolio: (profile.portfolio ?? []).map((p: Row) => p.url),

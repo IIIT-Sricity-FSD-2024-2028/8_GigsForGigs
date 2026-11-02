@@ -223,14 +223,15 @@ export function closeDeliverable(taskId: number, deliverableNo: number) {
 }
 
 // Search gig professionals by name or skill (up to 50), for a manager assigning work.
-export function searchGigProfessionals(query?: string) {
-  return prisma.gigProfessionalProfile.findMany({
+export async function searchGigProfessionals(query?: string) {
+  const profiles = await prisma.gigProfessionalProfile.findMany({
     ...(query
       ? {
           where: {
             OR: [
               { user: { name: { contains: query, mode: "insensitive" } } },
               { skills: { some: { skill: { contains: query, mode: "insensitive" } } } },
+              { services: { some: { title: { contains: query, mode: "insensitive" } } } },
             ],
           },
         }
@@ -238,4 +239,12 @@ export function searchGigProfessionals(query?: string) {
     include: { user: true, skills: true, tools: true, portfolio: true, services: { take: 1 } },
     take: 50,
   });
+  // Average of published reviews received; null when the professional has none yet.
+  const averages = await prisma.review.groupBy({
+    by: ["revieweeId"],
+    where: { revieweeId: { in: profiles.map((p) => p.userId) }, status: "PUBLISHED" },
+    _avg: { rating: true },
+  });
+  const ratingByUser = new Map(averages.map((a) => [a.revieweeId, a._avg.rating]));
+  return profiles.map((p) => ({ ...p, rating: ratingByUser.get(p.userId) ?? null }));
 }

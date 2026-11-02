@@ -330,6 +330,7 @@ export function createService(gigProfileId: number, dto: CreateServiceDto) {
       ...(dto.description !== undefined ? { description: dto.description } : {}),
       price: dto.price,
       ...(dto.thumbnail !== undefined ? { thumbnail: dto.thumbnail } : {}),
+      ...(dto.category !== undefined ? { category: dto.category } : {}),
       tags: { create: dto.tags.map((tag) => ({ tag })) },
     },
     include: { tags: true },

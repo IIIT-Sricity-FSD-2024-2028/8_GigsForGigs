@@ -39,6 +39,7 @@ export const createServiceSchema = z.object({
   description: text(5000).optional(),
   price: money(MONEY_10_2),
   tags: tagList(20, 100).default([]),
+  category: z.enum(["design", "dev", "writing", "marketing"]).optional(),
   thumbnail: httpUrl().optional(),
 });
 export type CreateServiceDto = z.infer<typeof createServiceSchema>;

@@ -253,6 +253,7 @@ model Service {
   description  String?
   price        Decimal                @db.Decimal(10, 2)
   thumbnail    String?                @db.VarChar(500)
+  category     String?                @db.VarChar(50)
   status       ServiceStatus          @default(active)
   createdAt    DateTime               @default(now()) @map("created_at")
   profile      GigProfessionalProfile @relation(fields: [gigProfileId], references: [gigProfileId], onDelete: Cascade)
