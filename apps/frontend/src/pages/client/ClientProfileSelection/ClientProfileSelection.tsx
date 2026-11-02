@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useClient, type ManagerInvite } from '../../../context/ClientContext';
-import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
+import { shareInviteLink } from '../../../utils/shareInviteLink';
 import { Button, ConfirmDialog, Input, useToast } from '../../../components/common';
 
 export interface ClientProfileSelectionProps {

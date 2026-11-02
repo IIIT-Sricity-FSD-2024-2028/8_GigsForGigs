@@ -5,7 +5,7 @@ import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
 import { getToken, setToken } from '../../../services/api/httpClient';
-import { decodeJwtPayload } from '../../../utils/helpers/jwt';
+import { decodeJwtPayload } from '../../../utils/jwt';
 
 /**
  * @file AdminProfile.tsx

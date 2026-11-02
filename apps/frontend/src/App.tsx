@@ -1,5 +1,5 @@
 /** Application route tree and role-aware portal layouts. */
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import {
   Navigate,
   Outlet,
@@ -247,10 +247,31 @@ function ManagerPortal() {
 
 function ManagerTaskRoute({ onBack }: { onBack: () => void }) {
   const { taskId } = useParams();
-  const { selectTask } = useManager();
+  const { selectTask, selectedTask, error } = useManager();
+  const numericTaskId = Number(taskId);
+  const [loadState, setLoadState] = useState<{ taskId: number; status: 'loading' | 'ready' | 'failed' } | null>(null);
   useEffect(() => {
-    if (taskId) void selectTask(Number(taskId));
-  }, [taskId, selectTask]);
+    if (!Number.isSafeInteger(numericTaskId) || numericTaskId <= 0) return;
+    let active = true;
+    setLoadState({ taskId: numericTaskId, status: 'loading' });
+    void selectTask(numericTaskId).then(found => {
+      if (active) setLoadState({ taskId: numericTaskId, status: found ? 'ready' : 'failed' });
+    });
+    return () => { active = false; };
+  }, [numericTaskId, selectTask]);
+  if (!Number.isSafeInteger(numericTaskId) || numericTaskId <= 0) {
+    return <div role="alert">Invalid task ID.</div>;
+  }
+  const currentLoadState = loadState?.taskId === numericTaskId ? loadState.status : 'loading';
+  if (currentLoadState === 'loading') {
+    return <div role="status" style={{ padding: '32px', color: '#475764' }}>Loading task details...</div>;
+  }
+  if (currentLoadState === 'failed' || selectedTask?.taskId !== numericTaskId) {
+    return <div role="alert" style={{ padding: '24px', color: '#9B1C1C' }}>
+      <p>{error || 'Task details could not be loaded. It may have been deleted or reassigned.'}</p>
+      <button type="button" onClick={onBack}>Back to Active Tasks</button>
+    </div>;
+  }
   return <ManagerReviewDeliverables onBack={onBack} />;
 }
 

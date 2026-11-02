@@ -2,7 +2,7 @@ import React from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
 import { Button } from '../../../components/common/Button';
-import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../utils/safeUrl';
 
 interface ManagerDashboardProps {
   onNavigateToTask: (taskId: number) => void;

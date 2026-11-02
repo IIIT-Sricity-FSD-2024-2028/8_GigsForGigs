@@ -5,7 +5,7 @@ import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { useToast } from '../../../components/super-admin/Toast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
-import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../utils/safeUrl';
 
 export interface DisputeCase {
   id: string;

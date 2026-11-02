@@ -5,7 +5,7 @@ import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
 import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
-import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../utils/safeUrl';
 import { ClientReviewModal, TaskReviewsModal } from '../../../components/client';
 import { Button, TextArea, useToast } from '../../../components/common';
 

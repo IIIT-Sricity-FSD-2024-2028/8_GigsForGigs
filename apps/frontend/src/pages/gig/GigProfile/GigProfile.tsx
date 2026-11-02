@@ -10,7 +10,7 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigProfile as IGigProfile, GigService } from '../../../types/gig';
-import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../utils/safeUrl';
 import { Button, useToast } from '../../../components/common';
 
 export const GigProfile: React.FC = () => {

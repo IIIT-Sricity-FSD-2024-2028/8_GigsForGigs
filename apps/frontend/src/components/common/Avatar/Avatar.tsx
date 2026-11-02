@@ -1,5 +1,5 @@
 import React from 'react';
-import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../utils/safeUrl';
 
 export interface AvatarProps {
   name?: string;

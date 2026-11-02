@@ -12,7 +12,7 @@ import { authApi } from '../../services/api/auth/authApi';
 import { adminApi } from '../../services/api/admin/adminApi';
 import type { AuthUser } from '../../services/api/auth/authApi';
 import { ApiError, getToken, setToken, clearToken, UNAUTHORIZED_EVENT, ALL_ACTORS, type ActorRole } from '../../services/api/httpClient';
-import { decodeJwtPayload } from '../../utils/helpers/jwt';
+import { decodeJwtPayload } from '../../utils/jwt';
 
 /** Role names used throughout the UI (the backend uses lowercase names, see ActorRole). */
 export type FrontendRole = 'CLIENT' | 'GIG_PROFESSIONAL' | 'MANAGER' | 'SUPER_ADMIN';

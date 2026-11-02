@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useClient, type Contract, type PaymentStatus } from '../../../context/ClientContext';
-import { PAYMENT_STATUS_UI } from '../../../utils/helpers/paymentStatus';
+import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { Button, ConfirmDialog, IconButton, Input, PageHeader, Select, useToast } from '../../../components/common';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
