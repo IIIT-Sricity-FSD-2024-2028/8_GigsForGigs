@@ -312,7 +312,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   <span
                     className={`status-badge ${
                       contract.status === 'COMPLETED' ? 'status-completed' :
-                      contract.status === 'REVIEWING' ? 'status-review-needed' : 'status-in-progress'
+                      'status-in-progress'
                     }`}
                   >
                     {contract.status.replace('_', ' ')}

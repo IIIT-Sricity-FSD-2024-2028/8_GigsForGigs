@@ -28,10 +28,8 @@ const GIG_PAGE_TITLES: Partial<Record<GigViewTab, string>> = {
 
 export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
-  const { activeTab, setActiveTab, refreshTrigger } = useGig();
+  const { activeTab, setActiveTab, refreshTrigger, taskSearch, setTaskSearch } = useGig();
   const [pendingCount, setPendingCount] = useState(0);
-  // Note: the header search box is display-only for now; nothing reads this value.
-  const [globalSearch, setGlobalSearch] = useState('');
 
   // Re-count pending requests whenever the page changes or something triggers a refresh.
   // `mounted` stops a late response from updating state after unmount.
@@ -65,7 +63,8 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
       onLogout={logout}
       headerTitle={GIG_PAGE_TITLES[activeTab] || 'Gig Portal'}
       headerActions={<>
-        <SearchBar aria-label="Search tasks, projects, skills" placeholder="Search tasks, projects, skills..." value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} />
+        {/* Only the Explore page has something to search; elsewhere the box would do nothing. */}
+        {activeTab === 'explore' && <SearchBar aria-label="Search marketplace tasks" placeholder="Search by keyword, client, or topic..." value={taskSearch} onChange={(event) => setTaskSearch(event.target.value)} />}
         <Button size="sm" onClick={() => setActiveTab('post-service')}>＋ Post Service</Button>
       </>}
     >

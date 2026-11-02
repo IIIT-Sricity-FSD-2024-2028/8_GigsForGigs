@@ -147,6 +147,7 @@ export interface GigService {
   description: string;
   price: number;
   tags: string[];
+  category?: string;
   thumbnail?: string;
   createdAt?: string;
 }
@@ -173,6 +174,7 @@ export interface CreateServiceDto {
   description: string;
   price: number;
   tags: string[];
+  category?: string;
   thumbnail?: string;
 }
 

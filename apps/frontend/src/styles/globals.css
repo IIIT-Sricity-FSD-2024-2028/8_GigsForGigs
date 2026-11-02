@@ -292,3 +292,16 @@ button { max-width: 100%; }
 
 html { scroll-behavior: smooth; }
 section[id] { scroll-margin-top: 88px; }
+
+/* TalentCard (shared by both Search Talent pages) */
+.ui-talent-card { display: flex; flex-direction: column; overflow: hidden; background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); transition: box-shadow .2s, transform .2s; }
+.ui-talent-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.ui-talent-card__badge { position: absolute; top: 12px; right: 12px; padding: 3px 10px; border-radius: 9999px; background: var(--color-bg-light); color: var(--color-secondary); font-size: .65rem; font-weight: 600; }
+.ui-talent-card__body { position: relative; display: flex; flex: 1; flex-direction: column; gap: 6px; padding: var(--spacing-lg); }
+.ui-talent-card__avatar { border-radius: 50%; }
+.ui-talent-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.ui-talent-card__header strong { font-size: 1.0625rem; }.ui-talent-card__price { font-weight: 700; white-space: nowrap; }
+.ui-talent-card__title, .ui-talent-card__rating { font-size: .8125rem; color: var(--color-text-muted); }.ui-talent-card__rating span { color: #f59e0b; }
+.ui-talent-card__skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.ui-talent-card__description { margin: 0; font-size: .875rem; color: var(--color-text-muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ui-talent-card__actions { display: flex; gap: var(--spacing-sm); margin-top: auto; padding-top: var(--spacing-sm); }.ui-talent-card__actions > * { flex: 1; }

@@ -29,6 +29,9 @@ export type GigViewTab =
 interface GigContextType {
   activeTab: GigViewTab;
   setActiveTab: (tab: GigViewTab) => void;
+  /** Text typed in the header search box; ExploreTasks filters the marketplace by it. */
+  taskSearch: string;
+  setTaskSearch: (text: string) => void;
   /** Task opened on the detail / submit pages. */
   selectedTaskId: string | null;
   navigateToTaskDetail: (taskId: string) => void;
@@ -47,6 +50,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const location = useLocation();
   const navigate = useNavigate();
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [taskSearch, setTaskSearch] = useState('');
   const pathname = location.pathname;
   const activeTab: GigViewTab = pathname.includes('/tasks/explore') ? 'explore'
     : pathname.includes('/tasks/active') ? 'active-tasks'
@@ -95,6 +99,8 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         activeTab,
         setActiveTab,
+        taskSearch,
+        setTaskSearch,
         selectedTaskId,
         navigateToTaskDetail,
         navigateToSubmitDeliverable,

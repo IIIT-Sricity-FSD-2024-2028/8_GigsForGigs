@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useClient, type Service } from '../../../context/ClientContext';
-import { Button, Select, useToast } from '../../../components/common';
+import { Button, SearchBar, Select, TalentCard, useToast } from '../../../components/common';
 
 export interface SearchTalentProps {
   onNavigate: (viewId: string) => void;
@@ -11,6 +11,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
   const { services, requestService, requestedServices } = useClient();
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [rateFilter, setRateFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [localRequested, setLocalRequested] = useState<Set<string>>(new Set());
   const [selectedProfile, setSelectedProfile] = useState<Service | null>(null);
 
@@ -28,29 +29,29 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
   };
 
   // Filter logic
+  const query = searchTerm.trim().toLowerCase();
   const filteredServices = allServices.filter(service => {
-    // Keyword-based category matching
-    if (categoryFilter !== 'all') {
-      const titleLower = service.title.toLowerCase();
-      if (categoryFilter === 'design' && !titleLower.includes('design') && !titleLower.includes('configurator')) return false;
-      if (categoryFilter === 'dev' && !titleLower.includes('dashboard') && !titleLower.includes('developer') && !titleLower.includes('api')) return false;
-      if (categoryFilter === 'writing' && !titleLower.includes('copywriting') && !titleLower.includes('content')) return false;
+    if (query) {
+      const haystack = [service.title, service.user?.name, ...service.skills].join(' ').toLowerCase();
+      if (!haystack.includes(query)) return false;
     }
+
+    if (categoryFilter !== 'all' && service.category !== categoryFilter) return false;
 
     if (rateFilter !== 'all') {
       const price = service.price;
-      if (rateFilter === 'low' && price > 1000) return false;
+      if (rateFilter === 'low' && price >= 1000) return false;
       if (rateFilter === 'mid' && (price < 1000 || price > 5000)) return false;
-      if (rateFilter === 'high' && price < 5000) return false;
+      if (rateFilter === 'high' && price <= 5000) return false;
     }
 
     return true;
   });
 
-  const getBannerClass = (serviceId: string) => {
-    if (serviceId.includes('101') || serviceId === 'srv-1') return 'talent-banner-blue';
-    if (serviceId.includes('102') || serviceId === 'srv-2') return 'talent-banner-gold';
-    return 'talent-banner-pink';
+  const getBannerVariant = (serviceId: string) => {
+    if (serviceId.includes('101') || serviceId === 'srv-1') return 'blue';
+    if (serviceId.includes('102') || serviceId === 'srv-2') return 'gold';
+    return 'pink';
   };
 
   const getInitials = (nameStr?: string) => {
@@ -73,11 +74,16 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
         <span className="filter-label" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
           Filter By:
         </span>
+        <div style={{ flex: 2 }}><SearchBar aria-label="Search talent" placeholder="Search by name, skill or service..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+
+        <div className="filter-divider" style={{ width: '1px', height: '24px', backgroundColor: 'var(--color-border)' }}></div>
+
         <Select className="filter-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Category" style={{ flex: 1 }}>
           <option value="all">All Categories</option>
           <option value="design">Design &amp; Creative</option>
           <option value="dev">Software Development</option>
           <option value="writing">Writing &amp; Translation</option>
+          <option value="marketing">Digital Marketing</option>
         </Select>
 
         <div className="filter-divider" style={{ width: '1px', height: '24px', backgroundColor: 'var(--color-border)' }}></div>
@@ -94,58 +100,26 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
       <div className="talent-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)' }}>
         {filteredServices.length === 0 ? (
           <p style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xxl)' }}>
-            No talent listings match the selected filters.
+            No talent listings match your search or filters.
           </p>
         ) : (
           filteredServices.map(service => {
             const isRequested = localRequested.has(service.service_id) || requestedServices.has(service.service_id);
             return (
-              <article key={service.service_id} className="talent-card" style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-white)' }}>
-                <div className={`talent-banner ${getBannerClass(service.service_id)}`} style={{ height: '80px', position: 'relative' }}>
-                  <span className="talent-vetted-badge" style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: 'rgba(255, 255, 255, 0.9)', color: 'var(--color-secondary)', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.65rem', fontWeight: 600 }}>
-                    ★ Active
-                  </span>
-                </div>
-                <div className="talent-body" style={{ padding: 'var(--spacing-lg)', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div className="talent-photo" style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-border)', overflow: 'hidden', marginTop: '-48px', border: '3px solid var(--color-white)' }}>
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, backgroundColor: '#c4d6e4', color: 'var(--color-primary-dark)' }}>
-                      {getInitials(service.user?.name)}
-                    </div>
-                  </div>
-                  <div className="talent-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 'var(--spacing-sm)' }}>
-                    <span className="talent-name" style={{ fontSize: '1.0625rem', fontWeight: 700 }}>
-                      {service.user?.name || 'Gig Professional'}
-                    </span>
-                    <span className="talent-rate" style={{ fontSize: '1rem', fontWeight: 700 }}>
-                      {formatCurrency(service.price)}
-                    </span>
-                  </div>
-                  <div className="talent-title" style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-xs)' }}>
-                    {service.title}
-                  </div>
-                  <div className="talent-rating" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8125rem', marginBottom: 'var(--spacing-md)' }}>
-                    <span className="star" style={{ color: '#f59e0b' }}>★</span> 4.9 <span className="review-count" style={{ color: 'var(--color-text-muted)' }}>(vetted)</span>
-                  </div>
-                  <div className="talent-skills" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: 'var(--spacing-lg)' }}>
-                    {service.skills.map((skill: string, idx: number) => (
-                      <span key={idx} className="skill-chip">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                    {service.description}
-                  </p>
-                  <div className="talent-actions" style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'auto' }}>
-                    <Button variant="outline" size="sm" type="button" onClick={() => setSelectedProfile(service)} style={{ flex: 1 }}>
-                      View Profile
-                    </Button>
-                    <Button variant="outline" size="sm" type="button" disabled={isRequested} onClick={() => handleHireClick(service.service_id)} style={{ flex: 1 }}>
-                      {isRequested ? 'Requested' : 'Request / Hire'}
-                    </Button>
-                  </div>
-                </div>
-              </article>
+              <TalentCard
+                key={service.service_id}
+                name={service.user?.name || 'Gig Professional'}
+                title={service.title}
+                price={service.price}
+                rating={service.rating}
+                skills={service.skills}
+                description={service.description}
+                badge="★ Active"
+                actions={<>
+                  <Button variant="outline" size="sm" type="button" onClick={() => setSelectedProfile(service)}>View Profile</Button>
+                  <Button variant="outline" size="sm" type="button" disabled={isRequested} onClick={() => handleHireClick(service.service_id)}>{isRequested ? 'Requested' : 'Request / Hire'}</Button>
+                </>}
+              />
             );
           })
         )}
@@ -181,7 +155,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
           >
             {/* Header Banner */}
             <div
-              className={`talent-banner ${getBannerClass(selectedProfile.service_id)}`}
+              className={`talent-banner talent-banner-${getBannerVariant(selectedProfile.service_id)}`}
               style={{
                 height: '110px',
                 position: 'relative',
@@ -272,7 +246,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
               >
                 <div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>Rating</div>
-                  <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.95rem' }}>★ 4.9 / 5.0</div>
+                  <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.95rem' }}>{selectedProfile.rating !== undefined ? `★ ${selectedProfile.rating.toFixed(1)} / 5.0` : 'No reviews yet'}</div>
                 </div>
                 <div style={{ width: '1px', backgroundColor: 'var(--color-border)' }}></div>
                 <div>

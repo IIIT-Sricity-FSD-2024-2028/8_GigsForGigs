@@ -28,7 +28,7 @@ export interface Task {
   title: string;
   description: string;
   budget: number;
-  status: 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'REVIEWING' | 'COMPLETED' | 'CANCELLED';
+  status: 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   createdAt: string;
   dueDate?: string | null;
   skills?: string[];
@@ -64,6 +64,10 @@ export interface Service {
   price: number;
   description: string;
   skills: string[];
+  /** design | dev | writing | marketing; missing on services posted before categories existed. */
+  category?: string;
+  /** Average review rating of the professional; missing until they have reviews. */
+  rating?: number;
   user?: { name: string; email: string };
   gig_profile_id: string;
 }
@@ -87,7 +91,7 @@ export interface Contract {
   task_id: string;
   task_title: string;
   gig_pro_name: string;
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'SCHEDULED' | 'REVIEWING';
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'SCHEDULED';
   progress: number;
   budget: number;
   payment_id: number | null;
@@ -247,6 +251,8 @@ interface RawService {
   description: string | null;
   price: string;
   thumbnail?: string | null;
+  category?: string | null;
+  rating?: number | null;
   status: string;
   createdAt: string;
   tags?: RawServiceTag[];
@@ -428,6 +434,8 @@ function mapService(raw: RawService): Service {
     price: Number(raw.price),
     description: raw.description ?? '',
     skills: (raw.tags ?? []).map((t) => t.tag),
+    category: raw.category ?? undefined,
+    rating: raw.rating ?? undefined,
     gig_profile_id: String(raw.gigProfileId),
     user: raw.profile?.user ? { name: raw.profile.user.name, email: raw.profile.user.email } : undefined,
   };

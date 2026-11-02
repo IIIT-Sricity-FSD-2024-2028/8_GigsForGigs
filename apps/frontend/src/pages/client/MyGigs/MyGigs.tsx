@@ -16,7 +16,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_PROGRESS' | 'REVIEWING' | 'SCHEDULED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_PROGRESS' | 'SCHEDULED'>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<'ALL' | PaymentStatus>('ALL');
 
   // Filter out any completed contracts — completed projects appear exclusively on Completed Projects
@@ -130,7 +130,6 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                 <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={{ width: '100%' }}>
                   <option value="ALL">All Active Statuses</option>
                   <option value="IN_PROGRESS">In Progress</option>
-                  <option value="REVIEWING">Reviewing</option>
                   <option value="SCHEDULED">Scheduled</option>
                 </Select>
               </div>
@@ -210,7 +209,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <span className={`status-badge ${
-                          c.status === 'REVIEWING' ? 'status-review-needed' : 'status-in-progress'
+                          c.status === 'SCHEDULED' ? 'status-scheduled' : 'status-in-progress'
                         }`}>
                           {c.status.replace('_', ' ')}
                         </span>

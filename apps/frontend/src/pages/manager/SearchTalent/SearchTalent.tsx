@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { apiFetch } from '../../../services/api/httpClient';
-import { Button, Input, Select, useToast } from '../../../components/common';
+import { Button, Input, Select, TalentCard, useToast } from '../../../components/common';
 
 export const SearchTalent: React.FC = () => {
   const { talents, searchTalent } = useManager();
@@ -10,10 +10,33 @@ export const SearchTalent: React.FC = () => {
   const toast = useToast();
   useEffect(() => { if (hiredMsg) toast.success(hiredMsg); }, [hiredMsg]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSkillFilter(e.target.value);
-    searchTalent(e.target.value);
-  };
+  const [budgetFilter, setBudgetFilter] = useState('any');
+  const [ratingFilter, setRatingFilter] = useState('any');
+  const [sortBy, setSortBy] = useState('relevance');
+
+  // Ask the server only after the user pauses typing (the context already loads everyone on mount).
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    const timer = window.setTimeout(() => { void searchTalent(skillFilter.trim() || undefined); }, 350);
+    return () => window.clearTimeout(timer);
+  }, [skillFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Budget, rating and sort are applied here on the results the server returned.
+  const visibleTalents = useMemo(() => {
+    const minRating = ratingFilter === 'any' ? 0 : Number(ratingFilter);
+    const list = talents.filter(t => {
+      const price = t.price;
+      if (budgetFilter === 'low' && !(price !== undefined && price < 10000)) return false;
+      if (budgetFilter === 'mid' && !(price !== undefined && price >= 10000 && price <= 25000)) return false;
+      if (budgetFilter === 'high' && !(price !== undefined && price > 25000)) return false;
+      if (minRating && !((t.rating ?? 0) >= minRating)) return false;
+      return true;
+    });
+    if (sortBy === 'price-asc') list.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+    if (sortBy === 'price-desc') list.sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
+    return list;
+  }, [talents, budgetFilter, ratingFilter, sortBy]);
 
   const handleHireClick = async (talent: any) => {
     try {
@@ -64,112 +87,47 @@ export const SearchTalent: React.FC = () => {
         <span style={{ fontSize: '14px', fontWeight: 600, color: '#475764' }}>Filters:</span>
 
         {/* Skill Search Input */}
-        <Input maxLength={100} type="text" placeholder="Search by Skill or Title..." value={skillFilter} onChange={handleSearchChange} style={{ width: '220px' }} />
+        <Input maxLength={100} type="text" placeholder="Search by name, skill or service title..." value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)} style={{ width: '220px' }} />
 
-        <Select>
-          <option>Budget: Any</option>
-          <option>Under ₹10,000</option>
-          <option>₹10,000 - ₹25,000</option>
-          <option>Above ₹25,000</option>
+        <Select aria-label="Budget" value={budgetFilter} onChange={(e) => setBudgetFilter(e.target.value)}>
+          <option value="any">Budget: Any</option>
+          <option value="low">Under ₹10,000</option>
+          <option value="mid">₹10,000 - ₹25,000</option>
+          <option value="high">Above ₹25,000</option>
         </Select>
 
-        <Select>
-          <option>Rating: Any</option>
-          <option>4.5 & above</option>
-          <option>4.0 & above</option>
+        <Select aria-label="Rating" value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)}>
+          <option value="any">Rating: Any</option>
+          <option value="4.5">4.5 & above</option>
+          <option value="4">4.0 & above</option>
         </Select>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '14px', color: '#475764' }}>Sort by:</span>
-          <Select>
-            <option>Relevance</option>
-            <option>Price: Low to High</option>
-            <option>Price: High to Low</option>
+          <Select aria-label="Sort by" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="relevance">Relevance</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
           </Select>
         </div>
       </div>
 
       {/* Talent Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-        {talents.map(talent => (
-          <div
+        {visibleTalents.length === 0 && (
+          <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#475764', padding: '40px 0' }}>No talent matches your search or filters.</p>
+        )}
+        {visibleTalents.map(talent => (
+          <TalentCard
             key={talent.gigProfileId}
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              border: '1px solid #DCE3E8',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}
-          >
-            {/* Top Light Blue Banner */}
-            <div style={{ backgroundColor: '#E4EEF5', padding: '12px 16px', display: 'flex', justifyContent: 'flex-end' }}>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#2E6E62',
-                  backgroundColor: '#FFFFFF',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                }}
-              >
-                ✓ ACTIVE
-              </span>
-            </div>
-
-            {/* Card Body */}
-            <div style={{ padding: '20px 20px 24px 20px', display: 'flex', flexDirection: 'column', gap: '14px', flex: 1 }}>
-              {/* Title & Price */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1B2A36', margin: 0, lineHeight: 1.3 }}>
-                  {talent.name}
-                </h3>
-                <span style={{ fontSize: '16px', fontWeight: 700, color: '#1B2A36', whiteSpace: 'nowrap' }}>
-                  ₹{talent.price?.toLocaleString()}
-                </span>
-              </div>
-
-              {/* Author */}
-              <div style={{ fontSize: '13px', color: '#475764' }}>
-                ★ {talent.name.split(' ')[0]} Specialist
-              </div>
-
-              {/* Skill Tags */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {talent.skills.map(skill => (
-                  <span
-                    key={skill}
-                    style={{
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      color: '#475764',
-                      backgroundColor: '#F4F3EC',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      letterSpacing: '0.5px'
-                    }}
-                  >
-                    {skill.toUpperCase()}
-                  </span>
-                ))}
-              </div>
-
-              {/* Description */}
-              <p style={{ fontSize: '13px', color: '#475764', margin: 0, lineHeight: 1.5, flex: 1 }}>
-                {talent.bio}
-              </p>
-
-              {/* Request / Hire Button */}
-              <Button onClick={() => handleHireClick(talent)} style={{ width: '100%', marginTop: '8px' }}>
-                Request / Hire
-              </Button>
-            </div>
-          </div>
+            name={talent.name}
+            price={talent.price}
+            rating={talent.rating}
+            skills={talent.skills}
+            description={talent.bio}
+            badge="✓ Active"
+            actions={<Button onClick={() => handleHireClick(talent)}>Request / Hire</Button>}
+          />
         ))}
       </div>
     </div>

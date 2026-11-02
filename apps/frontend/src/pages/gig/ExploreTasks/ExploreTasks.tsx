@@ -8,10 +8,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
-import { SearchBar } from '../../../components/common/SearchBar';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
@@ -22,7 +22,7 @@ export const ExploreTasks: React.FC = () => {
   const { user, updateUserSession } = useAuth();
   const [tasks, setTasks] = useState<GigTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const { taskSearch: searchQuery } = useGig();
   const [applyingId, setApplyingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
@@ -90,8 +90,7 @@ export const ExploreTasks: React.FC = () => {
       {error && <ErrorState title="Marketplace update" message={error} />}
 
       {/* Search Header */}
-      <PageHeader title="Explore Marketplace Tasks" description="Discover open client tasks, submit competitive proposals, and expand your engagement portfolio."
-        actions={<div style={{ width: 'min(400px, 100%)' }}><SearchBar aria-label="Search marketplace tasks" placeholder="Search by keyword, client, or topic..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></div>} />
+      <PageHeader title="Explore Marketplace Tasks" description="Discover open client tasks, submit competitive proposals, and expand your engagement portfolio. Use the search box in the top bar to filter." />
 
       {/* Task Grid */}
       {filteredTasks.length === 0 ? (

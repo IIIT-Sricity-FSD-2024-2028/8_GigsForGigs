@@ -11,6 +11,14 @@ import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import { Button, Input, Select, TextArea, useToast } from '../../../components/common';
 
+/** Same keys as task categories (PostGig) so client-side category filters line up. */
+const SERVICE_CATEGORIES = [
+  { value: 'design', label: 'Design & Creative' },
+  { value: 'dev', label: 'Software Development' },
+  { value: 'writing', label: 'Writing & Translation' },
+  { value: 'marketing', label: 'Digital Marketing' }
+];
+
 export const PostService: React.FC = () => {
   const { setActiveTab, triggerRefresh } = useGig();
   const [title, setTitle] = useState('');
@@ -34,12 +42,14 @@ export const PostService: React.FC = () => {
     setSubmitting(true);
     setError(null);
     try {
-      const tags = [category, delivery].filter(Boolean);
+      const categoryLabel = SERVICE_CATEGORIES.find(c => c.value === category)?.label;
+      const tags = [categoryLabel, delivery].filter((t): t is string => !!t);
       await gigApi.postService({
         title: title.trim(),
         description: description.trim(),
         price: Number(price),
         tags: tags.length ? tags : ['Web Development'],
+        category,
         thumbnail: thumbnail.trim() || undefined
       });
       triggerRefresh();
@@ -96,7 +106,10 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Category / Domain *
             </label>
-            <Input className="admin-input" maxLength={50} type="text" placeholder="e.g. Frontend Development, UI/UX" value={category} onChange={(e) => setCategory(e.target.value)} required />
+            <Select className="admin-input" value={category} onChange={(e) => setCategory(e.target.value)} required>
+              <option value="" disabled>Select a category</option>
+              {SERVICE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </Select>
           </div>
 
           <div>
@@ -105,11 +118,9 @@ export const PostService: React.FC = () => {
             </label>
             <Select className="admin-input" id="service-delivery" value={delivery} onChange={(e) => setDelivery(e.target.value)} required>
               <option value="" disabled>Select expected duration</option>
-              <option value="one-time">One-time project</option>
               <option value="less-month">Less than 1 month</option>
               <option value="1-3-months">1 to 3 months</option>
               <option value="3-6-months">3 to 6 months</option>
-              <option value="ongoing">Ongoing</option>
             </Select>
           </div>
         </div>

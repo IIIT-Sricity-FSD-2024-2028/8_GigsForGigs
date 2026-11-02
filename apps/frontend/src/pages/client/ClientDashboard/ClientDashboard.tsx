@@ -37,7 +37,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   const getStatusClass = (status: string) => {
     switch (status) {
       case 'IN_PROGRESS': return 'status-in-progress';
-      case 'REVIEWING': return 'status-review-needed';
       case 'COMPLETED': return 'status-completed';
       default: return 'status-scheduled';
     }

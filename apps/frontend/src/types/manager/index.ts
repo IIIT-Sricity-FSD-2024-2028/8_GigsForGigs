@@ -87,6 +87,8 @@ export interface TalentProfile {
   name: string;
   bio?: string;
   price?: number;
+  /** Average of published reviews (1-5); missing when the professional has no reviews yet. */
+  rating?: number;
   skills: string[];
   tools?: string[];
   portfolio?: string[];
