@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
+import { badRequest } from "../../lib/httpError.js";
 import type { ClientTokenPayload, ManagerTokenPayload } from "../../lib/jwt.js";
+import * as clientService from "../client/client.service.js";
+import type { CreateTaskDeliverableDefinitionDto, UpdateTaskDeliverableDefinitionDto } from "../client/client.dto.js";
 import * as managerService from "./manager.service.js";
 import type {
   ReviewDeliverableDto,
@@ -200,8 +203,8 @@ export async function updateOwnProfile(req: Request, res: Response): Promise<voi
 }
 
 export async function listAssignedTasks(req: Request, res: Response): Promise<void> {
-  const { managerId } = requireManager(req);
-  const tasks = await managerService.listAssignedTasks(managerId);
+  const { managerId, clientId } = requireManager(req);
+  const tasks = await managerService.listAssignedTasks(managerId, clientId);
   res.status(200).json(tasks.map(toTaskResponse));
 }
 
@@ -230,6 +233,37 @@ export async function listTaskDeliverables(req: Request, res: Response): Promise
   const taskId = Number(req.params.taskId);
   const deliverables = await managerService.listTaskDeliverables(taskId);
   res.status(200).json(deliverables.map(toDeliverableResponse));
+}
+
+/** Client-defined scope items for an assigned task. taskAccessGuard verifies the manager assignment. */
+export async function listTaskDeliverableDefinitions(req: Request, res: Response): Promise<void> {
+  const { clientId } = requireManager(req);
+  const definitions = await clientService.listTaskDeliverableDefinitions(Number(req.params.taskId), clientId);
+  res.status(200).json(definitions);
+}
+
+export async function createTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const { clientId } = requireManager(req);
+  const dto = getValidated<CreateTaskDeliverableDefinitionDto>(res, "body");
+  const definition = await clientService.createTaskDeliverableDefinition(Number(req.params.taskId), clientId, dto);
+  res.status(201).json(definition);
+}
+
+export async function updateTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const { clientId } = requireManager(req);
+  const definitionId = Number(req.params.definitionId);
+  if (!Number.isSafeInteger(definitionId) || definitionId <= 0) throw badRequest("Invalid task deliverable id");
+  const dto = getValidated<UpdateTaskDeliverableDefinitionDto>(res, "body");
+  const definition = await clientService.updateTaskDeliverableDefinition(Number(req.params.taskId), definitionId, clientId, dto);
+  res.status(200).json(definition);
+}
+
+export async function deleteTaskDeliverableDefinition(req: Request, res: Response): Promise<void> {
+  const { clientId } = requireManager(req);
+  const definitionId = Number(req.params.definitionId);
+  if (!Number.isSafeInteger(definitionId) || definitionId <= 0) throw badRequest("Invalid task deliverable id");
+  await clientService.deleteTaskDeliverableDefinition(Number(req.params.taskId), definitionId, clientId);
+  res.status(204).send();
 }
 
 export async function getDeliverable(req: Request, res: Response): Promise<void> {

@@ -100,9 +100,11 @@ export async function updateOwnProfile(managerId: number, dto: UpdateManagerProf
 }
 
 // List only the tasks the client has assigned to this manager.
-export function listAssignedTasks(managerId: number) {
+export function listAssignedTasks(managerId: number, clientId: number) {
   return prisma.task.findMany({
-    where: { assignments: { some: { managerId } } },
+    // Match the same tenant boundary enforced by taskAccessGuard. Legacy data
+    // may contain manager assignments whose manager belongs to another client.
+    where: { clientId, assignments: { some: { managerId } } },
     include: taskInclude,
     orderBy: { createdAt: "desc" },
   });
