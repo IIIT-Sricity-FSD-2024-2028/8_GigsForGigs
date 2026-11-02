@@ -1,7 +1,6 @@
 export * from './cards/FundTaskCard';
 export * from './cards/GigCard';
 export * from './cards/ManagerCard';
-export * from './cards/TalentCard';
 export * from './forms/ClientProfileForm';
 export * from './forms/ManagerInviteForm';
 export * from './forms/PostGigForm';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
-import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
+import { shareInviteLink } from '../../../utils/shareInviteLink';
 import { Button, Input, useToast } from '../../../components/common';
 
 export interface AddManagerProps {

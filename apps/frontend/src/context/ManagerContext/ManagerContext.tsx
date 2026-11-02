@@ -3,7 +3,7 @@
  * @description Data + actions for the Manager portal: profile, supervised tasks,
  * the currently opened task (with its deliverables and applications), and talent search.
  */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { managerApi } from '../../services/api/manager';
 import type {
   ManagerProfile,
@@ -36,7 +36,7 @@ interface ManagerContextType {
   error: string | null;
   refreshProfile: () => Promise<void>;
   refreshTasks: () => Promise<void>;
-  selectTask: (taskId: number) => Promise<void>;
+  selectTask: (taskId: number) => Promise<boolean>;
   shortlistApplication: (taskId: number, applicationId: number, dto: ShortlistApplicationDto) => Promise<boolean>;
   reviewDeliverable: (taskId: number, deliverableNo: number, dto: ReviewDeliverableDto) => Promise<boolean>;
   closeDeliverable: (taskId: number, deliverableNo: number) => Promise<boolean>;
@@ -57,6 +57,7 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [talents, setTalents] = useState<TalentProfile[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const taskRequestId = useRef(0);
 
   // ---- Loaders ----
 
@@ -79,23 +80,34 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   /** Open a task: load it, then its deliverables and applications in parallel. */
-  const selectTask = useCallback(async (taskId: number) => {
+  const selectTask = useCallback(async (taskId: number): Promise<boolean> => {
+    const requestId = ++taskRequestId.current;
+    setSelectedTask(null);
+    setDeliverables([]);
+    setApplications([]);
+    setError(null);
     setLoading(true);
     try {
       const task = await managerApi.getTaskById(taskId);
-      setSelectedTask(task);
-      if (task) {
-        const [dels, apps] = await Promise.all([
-          managerApi.getTaskDeliverables(taskId),
-          managerApi.getTaskApplications(taskId),
-        ]);
-        setDeliverables(dels);
-        setApplications(apps);
+      if (requestId !== taskRequestId.current) return false;
+      if (!task) {
+        setError('Task not found or it is no longer assigned to this manager.');
+        return false;
       }
+      setSelectedTask(task);
+      const [dels, apps] = await Promise.all([
+        managerApi.getTaskDeliverables(taskId),
+        managerApi.getTaskApplications(taskId),
+      ]);
+      if (requestId !== taskRequestId.current) return false;
+      setDeliverables(dels);
+      setApplications(apps);
+      return true;
     } catch (err) {
-      setError(errorText(err, 'Failed to load task details'));
+      if (requestId === taskRequestId.current) setError(errorText(err, 'Failed to load task details'));
+      return false;
     } finally {
-      setLoading(false);
+      if (requestId === taskRequestId.current) setLoading(false);
     }
   }, []);
 

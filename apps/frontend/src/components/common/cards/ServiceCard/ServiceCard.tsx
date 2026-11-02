@@ -1,7 +1,7 @@
 import React from 'react';
 import { BaseCard } from '../BaseCard/BaseCard';
 import { Badge } from '../../Badge/Badge';
-import { safeHttpUrl } from '../../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../../utils/safeUrl';
 
 export interface ServiceCardProps extends React.HTMLAttributes<HTMLDivElement> {
   title: string;

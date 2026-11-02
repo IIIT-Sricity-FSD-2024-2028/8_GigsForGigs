@@ -6,7 +6,7 @@ import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ReviewIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
-import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../utils/safeUrl';
 
 export interface GigProDetail {
   id: string;

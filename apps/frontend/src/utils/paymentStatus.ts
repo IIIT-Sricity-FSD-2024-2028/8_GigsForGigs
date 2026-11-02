@@ -1,4 +1,4 @@
-import type { PaymentStatus } from '../../context/ClientContext';
+import type { PaymentStatus } from '../context/ClientContext';
 
 /** Label + badge colours (background / text) for each payment status, shared by client pages. */
 export const PAYMENT_STATUS_UI: Record<PaymentStatus, { label: string; bg: string; fg: string }> = {

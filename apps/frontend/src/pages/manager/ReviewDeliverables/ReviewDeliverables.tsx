@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
-import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { safeHttpUrl } from '../../../utils/safeUrl';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
 import { managerApi } from '../../../services/api/manager/managerApi';
 import { Button, Input, Select } from '../../../components/common';
@@ -22,7 +22,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
       <div style={{ backgroundColor: '#FFFFFF', padding: '40px', borderRadius: '12px', textAlign: 'center' }}>
         <p style={{ color: '#475764' }}>No task selected.</p>
         <Button onClick={onBack} style={{ marginTop: '12px' }}>
-          Back to Assigned Tasks
+          Back to Active Tasks
         </Button>
       </div>
     );
@@ -47,7 +47,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
       {/* Top Navigation */}
       <div>
         <Button variant="ghost" onClick={onBack}>
-          ← Back to Assigned Tasks
+          ← Back to Active Tasks
         </Button>
       </div>
 
@@ -64,7 +64,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#475764', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Assigned Task #{selectedTask.taskId}
+              Active Task #{selectedTask.taskId}
             </span>
             <h1 style={{ fontSize: '24px', color: '#0D568D', margin: '4px 0 8px 0', fontWeight: 700 }}>
               {selectedTask.title}
@@ -176,10 +176,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
         </div>
       )}
 
-      {/* Scope items the professional delivers against — same editor the client uses. */}
-      {selectedTask.status !== 'open' && (
-        <TaskDeliverablesManager key={selectedTask.taskId} taskId={selectedTask.taskId} readOnly={selectedTask.status !== 'in_progress'} api={managerApi} />
-      )}
+      {/* Show scope items for every task; managers may add/edit only while active. */}
+      <TaskDeliverablesManager key={selectedTask.taskId} taskId={selectedTask.taskId} readOnly={selectedTask.status !== 'in_progress'} api={managerApi} />
 
       {/* Deliverables Section Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

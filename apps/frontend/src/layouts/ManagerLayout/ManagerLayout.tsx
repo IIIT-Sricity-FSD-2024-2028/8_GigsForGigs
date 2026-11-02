@@ -19,8 +19,8 @@ export interface ManagerLayoutProps {
 const navItems: DashboardNavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
   { id: 'talent', label: 'Search Talent', icon: <SearchIcon size={18} /> },
-  // The task-detail page counts as "Assigned Tasks" in the sidebar.
-  { id: 'tasks', label: 'Assigned Tasks', icon: <ProjectIcon size={18} />, aliases: ['task-detail'] },
+  // The task-detail page counts as "Active Tasks" in the sidebar.
+  { id: 'tasks', label: 'Active Tasks', icon: <ProjectIcon size={18} />, aliases: ['task-detail'] },
   { id: 'profile', label: 'My Profile', icon: <UsersIcon size={18} /> }
 ];
 
