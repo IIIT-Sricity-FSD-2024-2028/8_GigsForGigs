@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ArrowRightIcon } from '../../../components/super-admin/Icons';
@@ -133,7 +134,7 @@ export const Projects: React.FC = () => {
   ];
 
   if (loading) {
-    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading tasks…</div>;
+    return <Loader label="Loading tasks..." />;
   }
 
   if (error) {

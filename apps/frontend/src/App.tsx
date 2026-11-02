@@ -16,6 +16,7 @@ import { ManagerProvider, useManager } from './context/ManagerContext/ManagerCon
 import { GigProvider } from './context/GigContext/GigContext';
 import { ToastProvider } from './components/super-admin/Toast';
 import { ToastProvider as AppToastProvider } from './components/common/Toast';
+import { Loader } from './components/common/Loader';
 import { AdminLayout } from './layouts/AdminLayout';
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
 import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
@@ -46,7 +47,7 @@ import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
 import { GigDashboard } from './pages/gig/GigDashboard/GigDashboard';
 import { ExploreTasks } from './pages/gig/ExploreTasks/ExploreTasks';
 import { ActiveTasks } from './pages/gig/ActiveTasks/ActiveTasks';
-import { PendingRequests } from './pages/gig/PendingRequests/PendingRequests';
+import { ServiceRequests } from './pages/gig/ServiceRequests/ServiceRequests';
 import { CompletedProjects } from './pages/gig/CompletedProjects/CompletedProjects';
 import { TotalEarnings } from './pages/gig/TotalEarnings/TotalEarnings';
 import { SubmitDeliverables } from './pages/gig/SubmitDeliverables/SubmitDeliverables';
@@ -264,7 +265,7 @@ function ManagerTaskRoute({ onBack }: { onBack: () => void }) {
   }
   const currentLoadState = loadState?.taskId === numericTaskId ? loadState.status : 'loading';
   if (currentLoadState === 'loading') {
-    return <div role="status" style={{ padding: '32px', color: '#475764' }}>Loading task details...</div>;
+    return <Loader label="Loading task details..." />;
   }
   if (currentLoadState === 'failed' || selectedTask?.taskId !== numericTaskId) {
     return <div role="alert" style={{ padding: '24px', color: '#9B1C1C' }}>
@@ -289,7 +290,7 @@ function GigPortal() {
         <Route path="services" element={<MyServices />} />
         <Route path="services/new" element={<PostService />} />
         <Route path="services/published" element={<ServicePublished />} />
-        <Route path="requests" element={<PendingRequests />} />
+        <Route path="services/:serviceId/requests" element={<ServiceRequests />} />
         <Route path="projects/completed" element={<CompletedProjects />} />
         <Route path="earnings" element={<TotalEarnings />} />
         <Route path="profile" element={<GigProfile />} />
@@ -316,7 +317,7 @@ function AdminPortal() {
 
   return (
     <AdminLayout currentView={currentView} onNavigate={go} pageTitle={metadata.title} pageSubtitle={metadata.subtitle}>
-      <Suspense fallback={<div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading…</div>}>
+      <Suspense fallback={<Loader label="Loading..." />}>
         <Routes>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard onNavigate={go} />} />

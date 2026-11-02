@@ -15,7 +15,7 @@ export type GigViewTab =
   | 'explore'
   | 'my-services'
   | 'active-tasks'
-  | 'pending-requests'
+  | 'service-requests'
   | 'completed-projects'
   | 'earnings'
   | 'submit-deliverables'
@@ -36,6 +36,9 @@ interface GigContextType {
   selectedTaskId: string | null;
   navigateToTaskDetail: (taskId: string) => void;
   navigateToSubmitDeliverable: (taskId: string) => void;
+  /** Service whose incoming requests page is open. */
+  selectedServiceId: string | null;
+  navigateToServiceRequests: (serviceId: string) => void;
   /** A counter pages can put in effect deps; bump it with triggerRefresh() to make them re-fetch. */
   refreshTrigger: number;
   triggerRefresh: () => void;
@@ -57,9 +60,9 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       : pathname.includes('/tasks/') && pathname.endsWith('/submit') ? 'submit-deliverables'
         : pathname.includes('/tasks/') && pathname.endsWith('/submitted') ? 'submission-success'
           : pathname.includes('/tasks/') ? 'project-detail'
-            : pathname.includes('/requests') ? 'pending-requests'
-              : pathname.includes('/services/new') ? 'post-service'
-                : pathname.includes('/services/published') ? 'service-published'
+            : pathname.includes('/services/new') ? 'post-service'
+              : pathname.includes('/services/published') ? 'service-published'
+                : pathname.includes('/services/') && pathname.endsWith('/requests') ? 'service-requests'
                   : pathname.includes('/services') ? 'my-services'
                     : pathname.includes('/projects/completed') ? 'completed-projects'
                       : pathname.includes('/earnings') ? 'earnings'
@@ -67,9 +70,11 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                           : pathname.includes('/profile') ? 'profile' : 'dashboard';
   const setActiveTab = (tab: GigViewTab) => {
     const id = selectedTaskId;
+    const serviceId = selectedServiceId;
     const paths: Record<GigViewTab, string> = {
       dashboard: '/gig/dashboard', explore: '/gig/tasks/explore', 'my-services': '/gig/services',
-      'active-tasks': '/gig/tasks/active', 'pending-requests': '/gig/requests',
+      'active-tasks': '/gig/tasks/active',
+      'service-requests': serviceId ? `/gig/services/${serviceId}/requests` : '/gig/services',
       'completed-projects': '/gig/projects/completed', earnings: '/gig/earnings',
       'submit-deliverables': id ? `/gig/tasks/${id}/submit` : '/gig/tasks/active',
       'submission-success': id ? `/gig/tasks/${id}/submitted` : '/gig/tasks/active',
@@ -80,6 +85,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     navigate(paths[tab]);
   };
   const selectedTaskId = pathname.match(/\/tasks\/(\d+)(?:\/|$)/)?.[1] || null;
+  const selectedServiceId = pathname.match(/\/services\/(\d+)\/requests$/)?.[1] || null;
 
   // Shortcuts: remember the task, then switch page.
   const navigateToTaskDetail = (taskId: string) => {
@@ -88,6 +94,10 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const navigateToSubmitDeliverable = (taskId: string) => {
     navigate(`/gig/tasks/${taskId}/submit`);
+  };
+
+  const navigateToServiceRequests = (serviceId: string) => {
+    navigate(`/gig/services/${serviceId}/requests`);
   };
 
   const triggerRefresh = () => {
@@ -104,6 +114,8 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedTaskId,
         navigateToTaskDetail,
         navigateToSubmitDeliverable,
+        selectedServiceId,
+        navigateToServiceRequests,
         refreshTrigger,
         triggerRefresh
       }}

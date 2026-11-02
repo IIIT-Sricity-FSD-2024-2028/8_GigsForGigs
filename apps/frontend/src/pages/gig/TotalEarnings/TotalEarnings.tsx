@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { EarningsSummary } from '../../../types/gig';
+import { Loader } from '../../../components/common/Loader';
 import { Button, useToast } from '../../../components/common';
 
 export const TotalEarnings: React.FC = () => {
@@ -55,11 +56,7 @@ export const TotalEarnings: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Earnings...
-      </div>
-    );
+    return <Loader label="Loading Earnings..." />;
   }
 
   return (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { Card } from '../../../components/common/Card';
+import { Loader } from '../../../components/common/Loader';
 import { ManagerProfileFields } from '../../manager/ManagerProfile/ManagerProfile';
 import type { UpdateManagerProfileDto } from '../../../types/manager';
 import { Button } from '../../../components/common';
@@ -31,7 +32,7 @@ export const ManagerProfileView: React.FC<ManagerProfileViewProps> = ({ managerI
           ← Back to Supervise Manager
         </Button>
 
-        {loading && !manager ? <p role="status">Loading manager profile…</p> : !manager ? (
+        {loading && !manager ? <Loader label="Loading manager profile..." /> : !manager ? (
           <Card padding="lg">
             <h1 style={{ color: '#0D568D', marginTop: 0 }}>Manager not found</h1>
             <p style={{ color: '#475764' }}>This manager may have been removed from your team.</p>

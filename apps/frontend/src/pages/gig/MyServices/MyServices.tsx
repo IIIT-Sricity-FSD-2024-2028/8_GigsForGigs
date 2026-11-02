@@ -2,13 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import type { GigService } from '../../../types/gig';
-import { Button, useToast } from '../../../components/common';
+import { Loader } from '../../../components/common/Loader';
+import { Button, ConfirmDialog, useToast } from '../../../components/common';
 
 export const MyServices: React.FC = () => {
   const toast = useToast();
-  const { setActiveTab, refreshTrigger } = useGig();
+  const { setActiveTab, navigateToServiceRequests, refreshTrigger, triggerRefresh } = useGig();
   const [services, setServices] = useState<GigService[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [serviceToRemove, setServiceToRemove] = useState<GigService | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -42,12 +45,25 @@ export const MyServices: React.FC = () => {
     return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  const confirmRemove = async () => {
+    if (!serviceToRemove) return;
+    const service = serviceToRemove;
+    setRemovingId(service.serviceId);
+    try {
+      await gigApi.removeService(service.serviceId);
+      toast.success(`Removed "${service.title}".`);
+      triggerRefresh();
+    } catch (err) {
+      console.error('Failed to remove service:', err);
+      toast.error('Failed to remove service.');
+    } finally {
+      setRemovingId(null);
+      setServiceToRemove(null);
+    }
+  };
+
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading your posted services...
-      </div>
-    );
+    return <Loader label="Loading your posted services..." />;
   }
 
   return (
@@ -146,7 +162,7 @@ export const MyServices: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>Proposed Price</span>
                 <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0D568D' }}>
@@ -154,11 +170,19 @@ export const MyServices: React.FC = () => {
                 </span>
               </div>
 
-              <div style={{ display: 'flex', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <Button variant="outline" size="sm" onClick={() => toast.info(`Editing service "${srv.title}"...`)}>
                   Edit
                 </Button>
-                <Button size="sm" onClick={() => setActiveTab('pending-requests')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={removingId === srv.serviceId}
+                  onClick={() => setServiceToRemove(srv)}
+                >
+                  Remove
+                </Button>
+                <Button size="sm" onClick={() => navigateToServiceRequests(String(srv.serviceId))}>
                   Client Requests
                 </Button>
               </div>
@@ -166,6 +190,17 @@ export const MyServices: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={serviceToRemove !== null}
+        title="Remove this service?"
+        message={serviceToRemove && `"${serviceToRemove.title}" will no longer be visible to clients, who won't be able to find or hire it.`}
+        confirmLabel="Remove"
+        danger
+        loading={removingId === serviceToRemove?.serviceId}
+        onConfirm={confirmRemove}
+        onCancel={() => setServiceToRemove(null)}
+      />
     </div>
   );
 };

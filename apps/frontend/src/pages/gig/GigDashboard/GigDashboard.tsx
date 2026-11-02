@@ -12,6 +12,7 @@ import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask, PendingRequest, CompletedProject, EarningsSummary } from '../../../types/gig';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
+import { Loader } from '../../../components/common/Loader';
 import { Button } from '../../../components/common/Button';
 
 export const GigDashboard: React.FC = () => {
@@ -80,11 +81,7 @@ export const GigDashboard: React.FC = () => {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Gig Dashboard...
-      </div>
-    );
+    return <Loader label="Loading Gig Dashboard..." />;
   }
 
   return (
@@ -134,7 +131,7 @@ export const GigDashboard: React.FC = () => {
         </div>
 
         {/* Pending Requests Card */}
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('pending-requests')}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', cursor: 'pointer' }} onClick={() => setActiveTab('my-services')}>
           <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Pending Requests
           </div>
@@ -194,7 +191,7 @@ export const GigDashboard: React.FC = () => {
             <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
               Pending Client Requests
             </h2>
-            <Button variant="outline" size="sm" onClick={() => setActiveTab('pending-requests')}>
+            <Button variant="outline" size="sm" onClick={() => setActiveTab('my-services')}>
               View All ({pendingRequests.length})
             </Button>
           </div>

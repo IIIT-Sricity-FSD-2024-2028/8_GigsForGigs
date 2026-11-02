@@ -106,7 +106,7 @@ export async function withdrawApplication(
     throw notFound("Application not found");
   }
   if (isServiceHireTask(application.task)) {
-    throw conflict("Service requests are declined from Pending Requests, not withdrawn");
+    throw conflict("Service requests are declined from the service's Client Requests page, not withdrawn");
   }
   if (application.status !== "pending" && application.status !== "shortlisted") {
     throw conflict(`This application has already been ${application.status}`);
@@ -312,13 +312,45 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
   }, { isolationLevel: "Serializable" });
 }
 
-// List services the gig professional has posted.
+// List services the gig professional has posted (removed/archived ones excluded).
 export function listMyServices(gigProfileId: number) {
   return prisma.service.findMany({
-    where: { gigProfileId },
+    where: { gigProfileId, status: { not: "archived" } },
     include: { tags: true },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/**
+ * Pending requests for one specific posted service. Matched the same way
+ * findServiceRequestForTask does (no serviceId FK on Task/Application): by
+ * owner + title, since a service-hire task is created with the service's title.
+ */
+export async function listRequestsForService(gigProfileId: number, serviceId: number) {
+  const service = await prisma.service.findUnique({ where: { serviceId } });
+  if (!service || service.gigProfileId !== gigProfileId) {
+    throw notFound("Service not found");
+  }
+
+  return prisma.application.findMany({
+    where: {
+      gigProfileId,
+      status: "pending",
+      task: { status: "open", skills: { has: SERVICE_HIRE_SKILL }, title: service.title },
+    },
+    include: { task: { include: { client: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+// Remove a posted service. Soft-deleted (archived) rather than hard-deleted
+// since ServiceRequest history references it.
+export async function removeService(gigProfileId: number, serviceId: number): Promise<void> {
+  const service = await prisma.service.findUnique({ where: { serviceId } });
+  if (!service || service.gigProfileId !== gigProfileId) {
+    throw notFound("Service not found");
+  }
+  await prisma.service.update({ where: { serviceId }, data: { status: "archived" } });
 }
 
 // Post a new service listing.

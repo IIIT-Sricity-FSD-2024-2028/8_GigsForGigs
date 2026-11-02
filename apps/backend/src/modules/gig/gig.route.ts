@@ -74,6 +74,10 @@ gigRouter.post(
 gigRouter.get("/services/mine", gigOnly, gigController.listMyServices);
 // Post a new service listing.
 gigRouter.post("/services", gigOnly, validate(createServiceSchema), gigController.createService);
+// List pending client requests for one specific posted service.
+gigRouter.get("/services/:serviceId/requests", gigOnly, gigController.listRequestsForService);
+// Remove (archive) a posted service.
+gigRouter.delete("/services/:id", gigOnly, gigController.removeService);
 
 // Leave a review for a client on a completed task.
 gigRouter.post("/reviews", gigOnly, validate(createReviewSchema), gigController.createReview);

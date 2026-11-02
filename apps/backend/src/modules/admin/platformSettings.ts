@@ -21,7 +21,7 @@ export interface PlatformSettingsValue {
 export const DEFAULT_SETTINGS: PlatformSettingsValue = {
   commissionRakePercent: 10,
   minimumTaskBudget: 50,
-  maxEscrowThreshold: 1_000_000,
+  maxEscrowThreshold: 10_000_000,
   allowedCategories: [
     "Software Development",
     "AI & Data Science",

@@ -13,6 +13,12 @@ interface AttachedFile {
   size: number;
 }
 
+// ponytail: mirrors the backend's default platformSettings.maxEscrowThreshold (₹1 crore) and
+// 10% platform fee; the server is the source of truth and rejects funding above it regardless,
+// this just stops the obvious case before the user hits that error at payment time.
+const MAX_ESCROW_THRESHOLD = 10_000_000;
+const MAX_TASK_BUDGET = Math.floor(MAX_ESCROW_THRESHOLD / 1.1);
+
 export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
   const toast = useToast();
   const { addTask, updateTask, tasks } = useClient();
@@ -105,6 +111,10 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
     e.preventDefault();
     if (!title || !description || !budget || Number(budget) <= 0) {
       toast.warning('Please fill out all required fields with valid values');
+      return;
+    }
+    if (Number(budget) > MAX_TASK_BUDGET) {
+      toast.warning(`Budget is too high: with the platform fee this would exceed the maximum escrow of ₹${MAX_ESCROW_THRESHOLD.toLocaleString('en-IN')}. Maximum allowed budget is ₹${MAX_TASK_BUDGET.toLocaleString('en-IN')}.`);
       return;
     }
 
@@ -200,7 +210,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="budget">Budget (₹)</label>
-            <Input max="99999999.99" type="number" id="budget" placeholder="0.00" min="5" step="1" value={budget} onChange={(e) => setBudget(e.target.value === '' ? '' : Number(e.target.value))} required />
+            <Input max={MAX_TASK_BUDGET} type="number" id="budget" placeholder="0.00" min="5" step="1" value={budget} onChange={(e) => setBudget(e.target.value === '' ? '' : Number(e.target.value))} required />
           </div>
         </div>
 

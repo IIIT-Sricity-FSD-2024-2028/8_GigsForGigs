@@ -12,6 +12,7 @@ import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { CompletedProject } from '../../../types/gig';
 import { GigReviewModal } from '../../../components/gig/modals/GigReviewModal';
+import { Loader } from '../../../components/common/Loader';
 import { Button, useToast } from '../../../components/common';
 
 export const CompletedProjects: React.FC = () => {
@@ -58,11 +59,7 @@ export const CompletedProjects: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Completed Projects...
-      </div>
-    );
+    return <Loader label="Loading Completed Projects..." />;
   }
 
   return (

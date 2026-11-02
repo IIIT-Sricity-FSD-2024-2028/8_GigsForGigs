@@ -65,7 +65,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
   return (
     <div>
       <div className="page-header" style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <h1 className="page-title">Search Talent &amp; Marketplace Services ({allServices.length})</h1>
+        <h1 className="page-title">Search Gigs ({allServices.length})</h1>
         <p className="page-subtitle">Browse vetted professionals and premium services posted by Gig Professionals available for immediate hire.</p>
       </div>
 
@@ -96,34 +96,62 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
         </Select>
       </div>
 
-      {/* Talent Grid */}
-      <div className="talent-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)' }}>
-        {filteredServices.length === 0 ? (
-          <p style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xxl)' }}>
-            No talent listings match your search or filters.
-          </p>
-        ) : (
-          filteredServices.map(service => {
-            const isRequested = localRequested.has(service.service_id) || requestedServices.has(service.service_id);
-            return (
-              <TalentCard
-                key={service.service_id}
-                name={service.user?.name || 'Gig Professional'}
-                title={service.title}
-                price={service.price}
-                rating={service.rating}
-                skills={service.skills}
-                description={service.description}
-                badge="★ Active"
-                actions={<>
-                  <Button variant="outline" size="sm" type="button" onClick={() => setSelectedProfile(service)}>View Profile</Button>
-                  <Button variant="outline" size="sm" type="button" disabled={isRequested} onClick={() => handleHireClick(service.service_id)}>{isRequested ? 'Requested' : 'Request / Hire'}</Button>
-                </>}
-              />
-            );
-          })
-        )}
-      </div>
+      {(() => {
+        const isRequested = (service: Service) => localRequested.has(service.service_id) || requestedServices.has(service.service_id);
+        const availableServices = filteredServices.filter(s => !isRequested(s));
+        const requestedServicesList = filteredServices.filter(isRequested);
+
+        const renderCard = (service: Service) => (
+          <TalentCard
+            key={service.service_id}
+            name={service.user?.name || 'Gig Professional'}
+            title={service.title}
+            price={service.price}
+            rating={service.rating}
+            skills={service.skills}
+            description={service.description}
+            badge="★ Active"
+            actions={<>
+              <Button variant="outline" size="sm" type="button" onClick={() => setSelectedProfile(service)}>View Profile</Button>
+              <Button variant="outline" size="sm" type="button" disabled={isRequested(service)} onClick={() => handleHireClick(service.service_id)}>{isRequested(service) ? 'Requested' : 'Request / Hire'}</Button>
+            </>}
+          />
+        );
+
+        if (filteredServices.length === 0) {
+          return (
+            <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xxl)' }}>
+              No talent listings match your search or filters.
+            </p>
+          );
+        }
+
+        return (
+          <>
+            {/* Talent Grid */}
+            <div className="talent-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)' }}>
+              {availableServices.length === 0 ? (
+                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xxl)' }}>
+                  No available talent listings match your search or filters.
+                </p>
+              ) : (
+                availableServices.map(renderCard)
+              )}
+            </div>
+
+            {requestedServicesList.length > 0 && (
+              <div className="requested-talent-section">
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-md)' }}>
+                  Already Requested ({requestedServicesList.length})
+                </h2>
+                <div className="talent-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-xl)' }}>
+                  {requestedServicesList.map(renderCard)}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Gig Professional Profile Modal */}
       {selectedProfile && (

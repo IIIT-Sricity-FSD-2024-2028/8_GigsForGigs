@@ -20,9 +20,9 @@ export interface ClientLayoutProps {
 // Sidebar entries. `aliases` = other page ids that should highlight the same entry.
 const navItems: DashboardNavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
-  { id: 'search-talent', label: 'Search Talent', icon: <SearchIcon size={18} /> },
-  { id: 'my-gigs', label: 'Active Task/Contracts', icon: <ProjectIcon size={18} />, aliases: ['review-deliverables'] },
-  { id: 'review-shortlist', label: 'Pending Requests/Approvals', icon: <CheckIcon size={18} />, aliases: ['pending-requests', 'pending-approvals'] },
+  { id: 'search-talent', label: 'Search Gigs', icon: <SearchIcon size={18} /> },
+  { id: 'review-shortlist', label: 'Pending Tasks', icon: <CheckIcon size={18} />, aliases: ['pending-requests', 'pending-approvals'] },
+  { id: 'my-gigs', label: 'Active Task', icon: <ProjectIcon size={18} />, aliases: ['review-deliverables'] },
   { id: 'completed-projects', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },
   { id: 'total-spent', label: 'Total Spent', icon: <PaymentIcon size={18} /> },
   { id: 'client-profile', label: 'Client Profile', icon: <UsersIcon size={18} /> },
@@ -47,6 +47,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ currentView, onNavig
       navItems={navItems}
       onNavigate={onNavigate}
       onLogout={logout}
+      onBrandClick={() => onNavigate('dashboard')}
       headerTitle="Client Workspace"
       headerActions={
         <Button size="sm" onClick={() => onNavigate('post-gig')}>＋ Post a Task</Button>

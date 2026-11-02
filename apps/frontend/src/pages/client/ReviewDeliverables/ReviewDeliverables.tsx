@@ -190,9 +190,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
         <div className="page-header">
           <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginBottom: 'var(--spacing-sm)' }}>
-            ← Back to Active Task/Contracts
+            ← Back to Active Task
           </Button>
-          <h1 className="page-title">Active Task / Contract Details</h1>
+          <h1 className="page-title">Active Task Details</h1>
         </div>
         <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: 'var(--radius-lg)' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-sm)' }}>
@@ -202,7 +202,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             The requested contract or deliverable record could not be found among your active engagements.
           </p>
           <Button onClick={() => onNavigate('my-gigs')}>
-            Return to Active Task/Contracts
+            Return to Active Task
           </Button>
         </div>
       </div>
@@ -214,7 +214,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
       {/* Page Header */}
       <div className="page-header" style={{ width: '100%', minWidth: 0 }}>
         <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginBottom: 'var(--spacing-sm)' }}>
-          ← Back to Active Task/Contracts
+          ← Back to Active Task
         </Button>
         <h1 className="page-title" style={{ wordBreak: 'break-word' }}>Review Submitted Deliverables</h1>
         <p className="page-subtitle" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
@@ -237,7 +237,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             <strong>{contract.gig_pro_name}</strong> is currently working on <strong>{contract.task_title}</strong>. Once they submit work details or artifact links, they will appear here for your review and approval.
           </p>
           <Button onClick={() => onNavigate('my-gigs')}>
-            Return to Active Task/Contracts
+            Return to Active Task
           </Button>
         </div>
       ) : (
@@ -254,7 +254,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
                 return (
                   <Button size="sm" variant={selectedDeliverableIndex === idx ? 'primary' : 'outline'} key={del.deliverableNo} type="button" onClick={() => setSelectedDeliverableIndex(idx)}>
-                    <span>Version #{del.deliverableNo}</span>
+                    <span>Deliverable {del.deliverableNo}</span>
                     <span style={{ fontSize: '10px', opacity: 0.85 }}>({versionBadge})</span>
                   </Button>
                 );
@@ -658,7 +658,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 )}
 
                 <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginTop: '12px', width: '100%' }}>
-                  Return to Active Task/Contracts
+                  Return to Active Task
                 </Button>
               </div>
             </div>

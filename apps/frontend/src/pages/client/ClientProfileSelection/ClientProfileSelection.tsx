@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useClient, type ManagerInvite } from '../../../context/ClientContext';
-import { shareInviteLink } from '../../../utils/shareInviteLink';
+import { InviteLinkModal } from '../../../components/client';
 import { Button, ConfirmDialog, Input, useToast } from '../../../components/common';
 
 export interface ClientProfileSelectionProps {
@@ -16,6 +16,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
   const [editingManager, setEditingManager] = useState<ManagerInvite | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   // There is no backend concept of a client "becoming" a manager without
   // that manager's own credentials, so selecting the client's own avatar
@@ -30,7 +31,11 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
     e.preventDefault();
     if (mgr.kind !== 'manager') {
       // Pending invite: re-share its activation link instead of editing.
-      shareInviteLink(mgr.invite_link, toast.info);
+      if (mgr.invite_link) {
+        setInviteLink(mgr.invite_link);
+      } else {
+        toast.info('Invite created. Open your manager list to copy the activation link.');
+      }
       return;
     }
     setEditingManager(mgr);
@@ -65,6 +70,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
     try {
       if (isInvite) await revokeManagerInvite(mgr.invite_id);
       else await deleteManager(mgr.invite_id);
+      toast.success(isInvite ? 'Invite revoked successfully.' : 'Manager removed successfully.');
     } catch (err) {
       if (!isInvite) console.error('Delete manager failed:', err);
       toast.error(err instanceof Error && err.message ? err.message : isInvite ? 'Failed to revoke this invite.' : 'Failed to remove this manager. Please try again.');
@@ -123,13 +129,16 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '12px',
-                width: '160px',
+                width: '180px',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
                 backgroundColor: '#FFFFFF',
                 padding: '16px 12px',
                 borderRadius: '16px',
                 border: '1px solid #DCE3E8',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-                position: 'relative'
+                position: 'relative',
+                overflow: 'hidden'
               }}
             >
               <Button variant="ghost" className="profile-avatar-btn" type="button" aria-label={`View ${mgr.name}'s manager profile`} onClick={() => onNavigate('manager-profile', { managerId: mgr.invite_id })} style={{ width: '100%', flexDirection: 'column' }}>
@@ -157,14 +166,11 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                   <span className="avatar-role" style={{ fontSize: '0.78rem', color: '#475764', fontWeight: 600, marginTop: '2px' }}>
                     {mgr.kind === 'manager' ? 'Manager' : 'Manager (Invite Pending)'}
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: '#6B7885', marginTop: '2px' }}>
-                    {mgr.email}
-                  </span>
                 </div>
               </Button>
 
               {/* Action Buttons: Edit & Delete */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '8px', width: '100%' }}>
                 <Button variant="outline" size="sm" onClick={(e) => handleStartEdit(e, mgr)} title="Update manager details" type="button">
                   ✏️ Edit
                 </Button>
@@ -240,6 +246,8 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
           </div>
         </div>
       )}
+
+      {inviteLink && <InviteLinkModal link={inviteLink} onClose={() => setInviteLink(null)} />}
 
       <ConfirmDialog
         open={pendingRemoval !== null}

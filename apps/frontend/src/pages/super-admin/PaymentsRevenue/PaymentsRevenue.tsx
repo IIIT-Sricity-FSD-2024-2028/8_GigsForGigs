@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { KPICard } from '../../../components/super-admin/KPICard';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
@@ -207,7 +208,7 @@ export const PaymentsRevenue: React.FC = () => {
   ];
 
   if (loading) {
-    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading financial ledger…</div>;
+    return <Loader label="Loading financial ledger..." />;
   }
 
   return (

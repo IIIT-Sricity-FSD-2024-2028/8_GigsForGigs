@@ -10,3 +10,4 @@ export * from './sections/SpendingSummary';
 export * from './sections/TaskDeliverablesManager';
 export * from './modals/ClientReviewModal';
 export * from './modals/TaskReviewsModal';
+export * from './modals/InviteLinkModal';

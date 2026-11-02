@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, CloseIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
+import { Loader } from '../../../components/common/Loader';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
@@ -51,7 +52,7 @@ export const PlatformSettings: React.FC = () => {
     );
   }
   if (!config) {
-    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading settings…</div>;
+    return <Loader label="Loading settings..." />;
   }
 
   const handleAddCategory = (e: React.FormEvent) => {

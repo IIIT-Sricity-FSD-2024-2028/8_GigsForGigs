@@ -233,6 +233,22 @@ export async function createService(req: Request, res: Response): Promise<void> 
   res.status(201).json(toServiceResponse(service));
 }
 
+export async function listRequestsForService(req: Request, res: Response): Promise<void> {
+  const gigProfileId = requireGigProfileId(req);
+  const serviceId = Number(req.params.serviceId);
+  if (!Number.isInteger(serviceId) || serviceId <= 0) throw badRequest("Invalid service id");
+  const requests = await gigService.listRequestsForService(gigProfileId, serviceId);
+  res.status(200).json(requests.map(toApplicationResponse));
+}
+
+export async function removeService(req: Request, res: Response): Promise<void> {
+  const gigProfileId = requireGigProfileId(req);
+  const serviceId = Number(req.params.id);
+  if (!Number.isInteger(serviceId) || serviceId <= 0) throw badRequest("Invalid service id");
+  await gigService.removeService(gigProfileId, serviceId);
+  res.status(204).send();
+}
+
 export async function createReview(req: Request, res: Response): Promise<void> {
   const gigProfileId = requireGigProfileId(req);
   const dto = getValidated<CreateReviewDto>(res, "body");

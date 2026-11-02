@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useClient, type Task } from '../../../context/ClientContext';
 import { useAuth } from '../../../context/AuthContext';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
+import { Loader } from '../../../components/common/Loader';
 import { Button } from '../../../components/common';
 
 export interface ClientDashboardProps {
@@ -50,7 +51,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
         </div>
       )}
       {loading && tasks.length === 0 && (
-        <p style={{ color: 'var(--color-text-muted)' }}>Loading your workspace…</p>
+        <Loader label="Loading your workspace..." />
       )}
 
       {/* Welcome hero banner */}
@@ -73,7 +74,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             </div>
             <span className="metric-badge metric-badge-up">+2 this week</span>
           </div>
-          <div className="metric-label">Active Task/Contracts</div>
+          <div className="metric-label">Active Task</div>
           <div className="metric-value" id="client-active-tasks">{activeCount}</div>
           <div className="metric-description">Approved &amp; in progress</div>
         </div>

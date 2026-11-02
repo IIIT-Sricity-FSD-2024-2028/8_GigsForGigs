@@ -11,6 +11,7 @@ import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigProfile as IGigProfile, GigService } from '../../../types/gig';
 import { safeHttpUrl } from '../../../utils/safeUrl';
+import { Loader } from '../../../components/common/Loader';
 import { Button, useToast } from '../../../components/common';
 
 export const GigProfile: React.FC = () => {
@@ -53,11 +54,7 @@ export const GigProfile: React.FC = () => {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Gig Profile...
-      </div>
-    );
+    return <Loader label="Loading Gig Profile..." />;
   }
 
   if (!profile) {

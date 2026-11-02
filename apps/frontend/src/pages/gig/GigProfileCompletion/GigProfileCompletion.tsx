@@ -9,6 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
+import { Loader } from '../../../components/common/Loader';
 import { Button, Input, TextArea, useToast } from '../../../components/common';
 
 export const GigProfileCompletion: React.FC = () => {
@@ -67,11 +68,7 @@ export const GigProfileCompletion: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Profile Editor...
-      </div>
-    );
+    return <Loader label="Loading Profile Editor..." />;
   }
 
   return (

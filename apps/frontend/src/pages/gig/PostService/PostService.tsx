@@ -19,6 +19,12 @@ const SERVICE_CATEGORIES = [
   { value: 'marketing', label: 'Digital Marketing' }
 ];
 
+// ponytail: mirrors the backend's default platformSettings.maxEscrowThreshold (₹1 crore) and
+// 10% platform fee; the server is the source of truth and rejects funding above it regardless,
+// this just stops the obvious case before a client hits that error when hiring this service.
+const MAX_ESCROW_THRESHOLD = 10_000_000;
+const MAX_SERVICE_PRICE = Math.floor(MAX_ESCROW_THRESHOLD / 1.1);
+
 export const PostService: React.FC = () => {
   const { setActiveTab, triggerRefresh } = useGig();
   const [title, setTitle] = useState('');
@@ -36,6 +42,10 @@ export const PostService: React.FC = () => {
     e.preventDefault();
     if (!title.trim() || !description.trim() || !price || Number(price) <= 0) {
       setError('Please fill out all required service fields.');
+      return;
+    }
+    if (Number(price) > MAX_SERVICE_PRICE) {
+      setError(`Price is too high: with the platform fee this would exceed the maximum escrow of ₹${MAX_ESCROW_THRESHOLD.toLocaleString('en-IN')}. Maximum allowed price is ₹${MAX_SERVICE_PRICE.toLocaleString('en-IN')}.`);
       return;
     }
 
@@ -130,7 +140,7 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Fixed Price (INR ₹) *
             </label>
-            <Input className="admin-input" max="99999999.99" step="0.01" type="number" placeholder="1200" value={price} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : '')} min={10} required />
+            <Input className="admin-input" max={MAX_SERVICE_PRICE} step="0.01" type="number" placeholder="1200" value={price} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : '')} min={10} required />
           </div>
 
           <div>

@@ -38,6 +38,7 @@ export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTa
       navItems={navItems}
       onNavigate={(view) => setActiveTab(view as ManagerLayoutProps['activeTab'])}
       onLogout={logoutManager}
+      onBrandClick={() => setActiveTab('dashboard')}
       headerTitle="Manager Workspace"
       sidebarContent={
         <div className="dashboard-shell__context">

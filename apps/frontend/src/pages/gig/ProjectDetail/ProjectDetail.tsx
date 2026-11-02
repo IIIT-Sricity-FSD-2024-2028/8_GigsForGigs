@@ -12,6 +12,7 @@ import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
 import type { TaskDeliverableDefinition } from '../../../types/gig';
 import { Badge } from '../../../components/common/Badge';
+import { Loader } from '../../../components/common/Loader';
 import { Button } from '../../../components/common';
 
 export const ProjectDetail: React.FC = () => {
@@ -61,11 +62,7 @@ export const ProjectDetail: React.FC = () => {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Task Specifications...
-      </div>
-    );
+    return <Loader label="Loading Task Specifications..." />;
   }
 
   if (!task) {

@@ -76,7 +76,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
 
   return (
     <div style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <PageHeader title="Active Task/Contracts" description="Track ongoing work, view deliverables, and manage project payments." />
+      <PageHeader title="Active Task" description="Track ongoing work, view deliverables, and manage project payments." />
 
       {activeContracts.filter(c => c.payment_status === 'pending').map(c => (
         // After funding, open the task so the client decides who manages it.
@@ -87,7 +87,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
         <div className="activity-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h2 className="activity-title" style={{ margin: 0 }}>
-              All Active Task/Contracts
+              All Active Task
               <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: '8px' }}>
                 ({filteredContracts.length}{filteredContracts.length !== activeContracts.length ? ` of ${activeContracts.length}` : ''})
               </span>

@@ -3,6 +3,7 @@ import { Badge } from '../../../common/Badge';
 import { Button } from '../../../common/Button';
 import { Card } from '../../../common/Card';
 import { EmptyState } from '../../../common/EmptyState';
+import { Loader } from '../../../common/Loader';
 import { Input } from '../../../common/Input';
 import { TextArea } from '../../../common/TextArea';
 import { ApiError } from '../../../../services/api/httpClient';
@@ -123,7 +124,7 @@ export const TaskDeliverablesManager: React.FC<TaskDeliverablesManagerProps> = (
     </form>}
 
     <div className="task-deliverables-manager__list" aria-live="polite">
-      {loading ? <p className="ui-helper">Loading deliverables…</p> : definitions.length === 0 ?
+      {loading ? <Loader label="Loading deliverables..." /> : definitions.length === 0 ?
         <EmptyState title="No deliverables defined" description={readOnly ? 'No work items were defined for this task.' : 'Add the work items your professional should complete for this task.'} /> :
         definitions.map(definition => {
           const submitted = definition.submissions.length > 0;

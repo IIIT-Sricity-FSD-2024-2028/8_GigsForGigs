@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
-import { shareInviteLink } from '../../../utils/shareInviteLink';
+import { InviteLinkModal } from '../../../components/client';
 import { Button, Input, useToast } from '../../../components/common';
 
 export interface AddManagerFlowProps {
@@ -11,6 +11,7 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
   const toast = useToast();
   const { inviteManager, managers } = useClient();
   const [email, setEmail] = useState('');
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,13 +29,21 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
         .join(' ') || 'Manager';
       const link = await inviteManager(name, email);
-      shareInviteLink(link, toast.info);
-      onNavigate('profile-selection');
+      if (link) {
+        setInviteLink(link);
+      } else {
+        toast.success('Invite created. Open your manager list to copy the activation link.');
+        onNavigate('profile-selection');
+      }
     } catch (err) {
       console.error('Invite manager failed:', err);
       toast.error(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
     }
   };
+
+  if (inviteLink) {
+    return <InviteLinkModal link={inviteLink} onClose={() => { setInviteLink(null); onNavigate('profile-selection'); }} />;
+  }
 
   return (
     <div className="profile-chooser" style={{ minHeight: '100vh', width: '100%', position: 'relative' }}>
@@ -144,7 +153,6 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
           </form>
         </div>
       </div>
-
     </div>
   );
 };

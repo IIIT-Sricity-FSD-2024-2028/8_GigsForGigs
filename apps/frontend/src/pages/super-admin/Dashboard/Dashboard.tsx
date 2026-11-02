@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { KPICard } from '../../../components/super-admin/KPICard';
 import { DonutChart, HorizontalBarChart, RevenueAreaChart } from '../../../components/super-admin/SimpleCharts';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
@@ -164,7 +165,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   ];
 
   if (loading) {
-    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading dashboard…</div>;
+    return <Loader label="Loading dashboard..." />;
   }
 
   if (error) {

@@ -108,6 +108,18 @@ export const gigApi = {
     return apiFetch<GigService>('/gig/services', { method: 'POST', body: dto, actor });
   },
 
+  /** GET pending client requests for one specific posted service. */
+
+  getServiceRequests: async (serviceId: number): Promise<PendingRequest[]> => {
+    return apiFetch<PendingRequest[]>(`/gig/services/${serviceId}/requests`, { actor });
+  },
+
+  /** DELETE (remove) a posted service. */
+
+  removeService: async (serviceId: number): Promise<void> => {
+    return apiFetch<void>(`/gig/services/${serviceId}`, { method: 'DELETE', actor });
+  },
+
   /** POST work for a task; `definitionIds` = which expected deliverables it covers. */
 
   submitDeliverable: async (dto: SubmitDeliverableDto): Promise<GigDeliverable> => {

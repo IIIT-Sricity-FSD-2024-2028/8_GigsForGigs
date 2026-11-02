@@ -1,6 +1,7 @@
 import React from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { Button } from '../../../components/common';
+import { Loader } from '../../../components/common/Loader';
 import { DashboardSection } from '../../../components/common/dashboard/DashboardSection/DashboardSection';
 import { SummaryGrid } from '../../../components/common/dashboard/SummaryGrid/SummaryGrid';
 import { TaskCard } from '../../../components/common/cards/TaskCard/TaskCard';
@@ -16,7 +17,7 @@ export const ManagerTasks: React.FC<ManagerTasksProps> = ({ onSelectTask }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#475764' }}>Loading active tasks...</div>
+        <Loader label="Loading active tasks..." />
       ) : tasks.length === 0 ? (
         <DashboardSection title="Active tasks" description="No active tasks have been assigned to you yet.">
           <p style={{ color: '#475764', fontSize: '14px' }}>Tasks shared with you by your client will appear here.</p>

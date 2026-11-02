@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
@@ -283,7 +284,7 @@ export const AdminManagement: React.FC = () => {
   ];
 
   if (loading) {
-    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading admin staff…</div>;
+    return <Loader label="Loading admin staff..." />;
   }
 
   if (error) {

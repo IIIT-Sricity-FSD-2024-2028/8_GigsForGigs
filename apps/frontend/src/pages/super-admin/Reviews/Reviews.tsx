@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
@@ -150,7 +151,7 @@ export const Reviews: React.FC = () => {
   ];
 
   if (loading) {
-    return <div style={{ padding: 'var(--spacing-xl)', color: 'var(--color-text-muted)' }}>Loading reviews…</div>;
+    return <Loader label="Loading reviews..." />;
   }
 
   if (error) {

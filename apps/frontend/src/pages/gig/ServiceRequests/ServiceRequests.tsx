@@ -1,19 +1,24 @@
 /**
- * @file PendingRequests.tsx
+ * @file ServiceRequests.tsx
  * @description
- * Incoming client requests management view.
- * Enables Gig Professionals to accept or decline task invitations from clients and managers.
+ * Incoming client requests for one specific posted service. Reached from the
+ * "Client Requests" button on My Services. Accepting a request starts the
+ * contract, which is picked up by Active Task.
  */
 
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
-import type { PendingRequest } from '../../../types/gig';
+import type { GigService, PendingRequest } from '../../../types/gig';
+import { Loader } from '../../../components/common/Loader';
 import { Button, useToast } from '../../../components/common';
 
-export const PendingRequests: React.FC = () => {
+export const ServiceRequests: React.FC = () => {
+  const { serviceId } = useParams<{ serviceId: string }>();
   const { refreshTrigger, triggerRefresh, setActiveTab } = useGig();
+  const [service, setService] = useState<GigService | null>(null);
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
@@ -25,16 +30,21 @@ export const PendingRequests: React.FC = () => {
     let mounted = true;
 
     const load = async () => {
+      if (!serviceId) return;
       if (mounted) setError(null);
       try {
-        const res = await gigApi.getPendingRequests();
+        const [services, res] = await Promise.all([
+          gigApi.getServices(),
+          gigApi.getServiceRequests(Number(serviceId))
+        ]);
         if (mounted) {
+          setService(services.find((s) => s.serviceId === Number(serviceId)) || null);
           setRequests(res);
           setLoading(false);
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load pending requests.');
+          setError(err instanceof ApiError ? err.message : 'Failed to load requests.');
           setLoading(false);
         }
       }
@@ -45,7 +55,7 @@ export const PendingRequests: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [refreshTrigger]);
+  }, [refreshTrigger, serviceId]);
 
   const handleRespond = async (applicationId: number, action: 'accepted' | 'declined') => {
     setProcessingId(applicationId);
@@ -67,11 +77,7 @@ export const PendingRequests: React.FC = () => {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
   if (loading) {
-    return (
-      <div style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
-        Loading Pending Requests...
-      </div>
-    );
+    return <Loader label="Loading Client Requests..." />;
   }
 
   return (
@@ -92,18 +98,24 @@ export const PendingRequests: React.FC = () => {
       )}
 
       {/* Header Banner */}
-      <div className="admin-card" style={{ padding: 'var(--spacing-xl)' }}>
-        <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
-          Pending Client Invitations
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginTop: '4px' }}>
-          Review task offers directly submitted to your profile. Accept offers to begin active development.
-        </p>
+      <div className="admin-card" style={{ padding: 'var(--spacing-xl)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--spacing-md)' }}>
+        <div>
+          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
+            Client Requests
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginTop: '4px' }}>
+            {service ? <>For <strong>{service.title}</strong> — </> : null}
+            Review clients who want to hire this service. Accept to start the active task.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setActiveTab('my-services')}>
+          ← Back to My Services
+        </Button>
       </div>
 
       {requests.length === 0 ? (
         <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-          No pending client requests at this moment.
+          No pending client requests for this service.
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))', gap: 'var(--spacing-xl)' }}>
@@ -125,7 +137,7 @@ export const PendingRequests: React.FC = () => {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-xs)' }}>
                     <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-dark)' }}>
-                      {req.task?.title || 'Task Invitation'}
+                      {req.task?.title || 'Service Request'}
                     </h3>
                     <span className="admin-badge badge-warning">
                       {req.status.toUpperCase()}
@@ -164,4 +176,4 @@ export const PendingRequests: React.FC = () => {
   );
 };
 
-export default PendingRequests;
+export default ServiceRequests;

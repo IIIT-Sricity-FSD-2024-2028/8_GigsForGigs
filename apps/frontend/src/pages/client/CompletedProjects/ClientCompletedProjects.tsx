@@ -128,7 +128,7 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
             When tasks are completed and payments are released to gig professionals, they will appear here along with mutual ratings and reviews.
           </p>
           <Button size="sm" type="button" onClick={() => onNavigate('my-gigs')}>
-            View Active Task/Contracts
+            View Active Task
           </Button>
         </div>
       ) : (

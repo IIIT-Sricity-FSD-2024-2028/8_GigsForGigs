@@ -275,7 +275,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
             </div>
             <div className="spent-meta-block">
               <div className="label" style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                Active Task Contracts
+                Active Task
               </div>
               <div className="value" style={{ fontWeight: 700 }}>
                 {activeContractsCount} Tasks
@@ -452,7 +452,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                         You have not funded or initiated any tasks yet. Once you accept a proposal and fund escrow or complete a task, transactions will appear here.
                       </p>
                       <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginTop: '8px' }}>
-                        View Active Tasks &amp; Contracts
+                        View Active Tasks
                       </Button>
                     </div>
                   </td>
