@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
+import { Button, Input, useToast } from '../../../components/common';
 
 export interface AddManagerProps {
   onNavigate: (viewId: string) => void;
 }
 
 export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
+  const toast = useToast();
   const { inviteManager } = useClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -14,17 +16,17 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) {
-      alert('Name and email are required');
+      toast.warning('Name and email are required');
       return;
     }
 
     try {
       const link = await inviteManager(name, email);
-      shareInviteLink(link);
+      shareInviteLink(link, toast.info);
       onNavigate('profile-selection');
     } catch (err) {
       console.error('Invite manager failed:', err);
-      alert(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
     }
   };
 
@@ -54,38 +56,22 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
             <label className="form-label" htmlFor="manager-name" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
               Manager Name
             </label>
-            <input maxLength={100}
-              type="text"
-              id="manager-name"
-              className="form-input"
-              placeholder="e.g. David Vance"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <Input maxLength={100} type="text" id="manager-name" placeholder="e.g. David Vance" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
 
           <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)', marginBottom: 'var(--spacing-md)' }}>
             <label className="form-label" htmlFor="manager-email" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
               Manager Email Address
             </label>
-            <input maxLength={100}
-              type="email"
-              id="manager-email"
-              className="form-input"
-              placeholder="name@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <Input maxLength={100} type="email" id="manager-email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: 'var(--spacing-sm)', width: '100%', border: 'none' }}>
+          <Button type="submit" style={{ marginTop: 'var(--spacing-sm)', width: '100%' }}>
             Send Invite
             <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" style={{ marginLeft: '8px' }}>
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
-          </button>
+          </Button>
 
           <div style={{ marginTop: 'var(--spacing-xl)', display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'flex-start', color: 'var(--color-primary-blue)', fontSize: '0.8rem', backgroundColor: 'rgba(191, 105, 0, 0.05)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-sm)' }}>
             <svg width="16" height="16" style={{ flexShrink: 0, marginTop: '2px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -99,13 +85,9 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
         </form>
 
         <div style={{ marginTop: 'var(--spacing-lg)' }}>
-          <button
-            onClick={() => onNavigate('profile-selection')}
-            className="btn btn-outline btn-full btn-icon"
-            style={{ justifyContent: 'center', textDecoration: 'none', width: '100%' }}
-          >
+          <Button variant="ghost" onClick={() => onNavigate('profile-selection')} style={{ width: '100%' }}>
             Cancel
-          </button>
+          </Button>
         </div>
 
       </div>

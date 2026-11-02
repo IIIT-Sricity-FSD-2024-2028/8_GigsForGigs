@@ -10,6 +10,7 @@ import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { PendingRequest } from '../../../types/gig';
+import { Button, useToast } from '../../../components/common';
 
 export const PendingRequests: React.FC = () => {
   const { refreshTrigger, triggerRefresh, setActiveTab } = useGig();
@@ -17,6 +18,8 @@ export const PendingRequests: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -144,20 +147,12 @@ export const PendingRequests: React.FC = () => {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-                    <button
-                      className="admin-btn admin-btn-outline admin-btn-sm"
-                      disabled={isProcessing}
-                      onClick={() => handleRespond(req.applicationId, 'declined')}
-                    >
+                    <Button variant="outline" size="sm" disabled={isProcessing} onClick={() => handleRespond(req.applicationId, 'declined')}>
                       Decline
-                    </button>
-                    <button
-                      className="admin-btn admin-btn-primary admin-btn-sm"
-                      disabled={isProcessing}
-                      onClick={() => handleRespond(req.applicationId, 'accepted')}
-                    >
+                    </Button>
+                    <Button size="sm" disabled={isProcessing} onClick={() => handleRespond(req.applicationId, 'accepted')}>
                       Accept Offer
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

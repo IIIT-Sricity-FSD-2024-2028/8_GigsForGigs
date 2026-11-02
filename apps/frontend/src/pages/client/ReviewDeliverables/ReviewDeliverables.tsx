@@ -7,6 +7,7 @@ import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
 import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 import { ClientReviewModal, TaskReviewsModal } from '../../../components/client';
+import { Button, TextArea, useToast } from '../../../components/common';
 
 export interface ReviewDeliverablesProps {
   onNavigate: (viewId: string) => void;
@@ -42,6 +43,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   // Notifications & error states
   const [successNotification, setSuccessNotification] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (successNotification) { toast.success(successNotification); setSuccessNotification(null); } }, [successNotification]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (pageError) { toast.error(pageError); setPageError(null); } }, [pageError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Modals state
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -185,25 +189,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
         <div className="page-header">
-          <button
-            type="button"
-            onClick={() => onNavigate('my-gigs')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-primary-blue)',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: 0,
-              marginBottom: 'var(--spacing-sm)',
-            }}
-          >
+          <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginBottom: 'var(--spacing-sm)' }}>
             ← Back to Active Task/Contracts
-          </button>
+          </Button>
           <h1 className="page-title">Active Task / Contract Details</h1>
         </div>
         <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: 'var(--radius-lg)' }}>
@@ -213,9 +201,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', maxWidth: '520px', margin: '0 auto var(--spacing-lg) auto', lineHeight: 1.5 }}>
             The requested contract or deliverable record could not be found among your active engagements.
           </p>
-          <button className="admin-btn admin-btn-primary" onClick={() => onNavigate('my-gigs')}>
+          <Button onClick={() => onNavigate('my-gigs')}>
             Return to Active Task/Contracts
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -225,100 +213,14 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {/* Page Header */}
       <div className="page-header" style={{ width: '100%', minWidth: 0 }}>
-        <button
-          type="button"
-          onClick={() => onNavigate('my-gigs')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-primary-blue)',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            padding: 0,
-            marginBottom: 'var(--spacing-sm)',
-          }}
-        >
+        <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginBottom: 'var(--spacing-sm)' }}>
           ← Back to Active Task/Contracts
-        </button>
+        </Button>
         <h1 className="page-title" style={{ wordBreak: 'break-word' }}>Review Submitted Deliverables</h1>
         <p className="page-subtitle" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
           Inspect work deliverables submitted by <strong>{contract.gig_pro_name}</strong> for task <strong>{contract.task_title}</strong>.
         </p>
       </div>
-
-      {/* Success Notification Banner */}
-      {successNotification && (
-        <div
-          role="status"
-          style={{
-            backgroundColor: '#DEF7EC',
-            color: '#03543F',
-            border: '1px solid #BCF0DA',
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--font-size-sm)',
-            fontWeight: 600,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span>✓ {successNotification}</span>
-          <button
-            type="button"
-            onClick={() => setSuccessNotification(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#03543F',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '14px',
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Page Error Banner */}
-      {pageError && (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#FDE8E8',
-            color: '#9B1C1C',
-            border: '1px solid #F8B4B4',
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--font-size-sm)',
-            fontWeight: 600,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span>✕ {pageError}</span>
-          <button
-            type="button"
-            onClick={() => setPageError(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#9B1C1C',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '14px',
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {contract.payment_status === 'pending' && <FundTaskCard contract={contract} />}
 
@@ -334,9 +236,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', maxWidth: '520px', margin: '0 auto var(--spacing-lg) auto', lineHeight: 1.5 }}>
             <strong>{contract.gig_pro_name}</strong> is currently working on <strong>{contract.task_title}</strong>. Once they submit work details or artifact links, they will appear here for your review and approval.
           </p>
-          <button className="admin-btn admin-btn-primary" onClick={() => onNavigate('my-gigs')}>
+          <Button onClick={() => onNavigate('my-gigs')}>
             Return to Active Task/Contracts
-          </button>
+          </Button>
         </div>
       ) : (
         /* Deliverable Review Interface for the specific task */
@@ -351,16 +253,10 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   del.status === 'closed' ? 'Closed' : 'Awaiting Review';
 
                 return (
-                  <button
-                    key={del.deliverableNo}
-                    type="button"
-                    className={`admin-btn ${selectedDeliverableIndex === idx ? 'admin-btn-primary' : 'admin-btn-outline'} admin-btn-sm`}
-                    onClick={() => setSelectedDeliverableIndex(idx)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  >
+                  <Button size="sm" variant={selectedDeliverableIndex === idx ? 'primary' : 'outline'} key={del.deliverableNo} type="button" onClick={() => setSelectedDeliverableIndex(idx)}>
                     <span>Version #{del.deliverableNo}</span>
                     <span style={{ fontSize: '10px', opacity: 0.85 }}>({versionBadge})</span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -637,29 +533,19 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
                       Inspect the submitted work and link above. You can approve this deliverable or request specific revisions.
                     </p>
-                    <button
-                      type="button"
-                      className="admin-btn admin-btn-primary"
-                      style={{ padding: '12px', fontSize: '0.9rem', fontWeight: 700, backgroundColor: '#367D6F' }}
-                      onClick={() => {
+                    <Button type="button" onClick={() => {
                         setApproveApiError(null);
                         setIsApproveModalOpen(true);
-                      }}
-                    >
+                      }}>
                       Approve Deliverable
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-btn admin-btn-outline"
-                      style={{ padding: '10px', fontSize: '0.85rem' }}
-                      onClick={() => {
+                    </Button>
+                    <Button variant="outline" size="sm" type="button" onClick={() => {
                         setRevisionFieldError(null);
                         setRevisionApiError(null);
                         setIsChangesModalOpen(true);
-                      }}
-                    >
+                      }}>
                       Request Revision
-                    </button>
+                    </Button>
                   </div>
                 )}
 
@@ -693,15 +579,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      className="admin-btn admin-btn-primary"
-                      style={{ padding: '14px', fontSize: '1rem', fontWeight: 800, backgroundColor: '#B45F00', opacity: canRelease ? 1 : 0.5 }}
-                      disabled={!canRelease}
-                      onClick={() => setIsPaymentModalOpen(true)}
-                    >
+                    <Button type="button" disabled={!canRelease} onClick={() => setIsPaymentModalOpen(true)}>
                       Release {formatCurrency(gigAmount)} to {contract.gig_pro_name}
-                    </button>
+                    </Button>
                   </div>
                 )}
 
@@ -740,14 +620,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                         )}
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-outline"
-                        style={{ padding: '10px', fontSize: '0.85rem', fontWeight: 700, borderColor: '#0D568D', color: '#0D568D' }}
-                        onClick={() => setIsReviewModalOpen(true)}
-                      >
+                      <Button variant="outline" size="sm" type="button" onClick={() => setIsReviewModalOpen(true)}>
                         ★ Rate &amp; Review Gig Professional
-                      </button>
+                      </Button>
                     )}
 
                     {/* Gig Professional Review Section */}
@@ -775,26 +650,16 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     )}
 
                     {contract.reviews && contract.reviews.length > 0 && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-outline admin-btn-sm"
-                        style={{ fontSize: '0.8rem' }}
-                        onClick={() => setIsReviewsViewModalOpen(true)}
-                      >
+                      <Button variant="outline" size="sm" type="button" onClick={() => setIsReviewsViewModalOpen(true)}>
                         View Two-Sided Project Reviews ({contract.reviews.length})
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-outline admin-btn-sm"
-                  style={{ marginTop: '12px', width: '100%' }}
-                  onClick={() => onNavigate('my-gigs')}
-                >
+                <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginTop: '12px', width: '100%' }}>
                   Return to Active Task/Contracts
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -821,38 +686,17 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => {
+              <Button variant="outline" type="button" onClick={() => {
                   if (!isApprovingDeliverable) {
                     setIsApproveModalOpen(false);
                     setApproveApiError(null);
                   }
-                }}
-                disabled={isApprovingDeliverable}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: isApprovingDeliverable ? 'not-allowed' : 'pointer' }}
-              >
+                }} disabled={isApprovingDeliverable}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleApproveDeliverable}
-                disabled={isApprovingDeliverable}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#367D6F',
-                  color: '#FFFFFF',
-                  fontWeight: 700,
-                  cursor: isApprovingDeliverable ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
+              </Button>
+              <Button type="button" onClick={handleApproveDeliverable} disabled={isApprovingDeliverable}>
                 {isApprovingDeliverable ? 'Approving...' : 'Confirm Approval'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -892,25 +736,10 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                   {changesFeedback.length}/500
                 </span>
               </div>
-              <textarea
-                maxLength={500}
-                rows={4}
-                placeholder="Explain what revisions or improvements are required (e.g. Please update responsiveness and fix styling on mobile view)..."
-                value={changesFeedback}
-                onChange={(e) => {
+              <TextArea maxLength={500} rows={4} placeholder="Explain what revisions or improvements are required (e.g. Please update responsiveness and fix styling on mobile view)..." value={changesFeedback} onChange={(e) => {
                   setChangesFeedback(e.target.value);
                   if (revisionFieldError) setRevisionFieldError(null);
-                }}
-                disabled={isSubmittingRevision}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '6px',
-                  border: revisionFieldError ? '1px solid #c5221f' : '1px solid #D3DCE2',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              />
+                }} disabled={isSubmittingRevision} style={{ width: '100%' }} />
               {revisionFieldError && (
                 <div style={{ color: '#c5221f', fontSize: '12px', marginTop: '4px', fontWeight: 600 }}>
                   {revisionFieldError}
@@ -919,38 +748,18 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => {
+              <Button variant="outline" type="button" onClick={() => {
                   if (!isSubmittingRevision) {
                     setIsChangesModalOpen(false);
                     setRevisionFieldError(null);
                     setRevisionApiError(null);
                   }
-                }}
-                disabled={isSubmittingRevision}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: isSubmittingRevision ? 'not-allowed' : 'pointer' }}
-              >
+                }} disabled={isSubmittingRevision}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmittingRevision}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#B45F00',
-                  color: '#FFFFFF',
-                  fontWeight: 700,
-                  cursor: isSubmittingRevision ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
+              </Button>
+              <Button type="submit" disabled={isSubmittingRevision}>
                 {isSubmittingRevision ? 'Submitting...' : 'Request Revision'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -981,20 +790,12 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setIsPaymentModalOpen(false)}
-                style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: 'pointer' }}
-              >
+              <Button variant="outline" type="button" onClick={() => setIsPaymentModalOpen(false)}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleProcessPayment}
-                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#B45F00', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
-              >
+              </Button>
+              <Button type="button" onClick={handleProcessPayment}>
                 Release {formatCurrency(gigAmount)}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

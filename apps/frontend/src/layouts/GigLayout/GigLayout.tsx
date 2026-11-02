@@ -10,6 +10,7 @@ import gigApi from '../../services/api/gig/gigApi';
 import { DashboardLayout, type DashboardNavItem } from '../common/DashboardLayout/DashboardLayout';
 import { DashboardIcon, SearchIcon, ProjectIcon, UsersIcon, PaymentIcon, BellIcon } from '../../components/super-admin/Icons';
 import { SearchBar } from '../../components/common/SearchBar';
+import { Button } from '../../components/common';
 
 export type GigNavItem = DashboardNavItem;
 export interface GigLayoutProps { children: React.ReactNode; }
@@ -65,7 +66,7 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
       headerTitle={GIG_PAGE_TITLES[activeTab] || 'Gig Portal'}
       headerActions={<>
         <SearchBar aria-label="Search tasks, projects, skills" placeholder="Search tasks, projects, skills..." value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} />
-        <button type="button" className="ui-button ui-button--primary ui-button--sm" onClick={() => setActiveTab('post-service')}>＋ Post Service</button>
+        <Button size="sm" onClick={() => setActiveTab('post-service')}>＋ Post Service</Button>
       </>}
     >
       {children}

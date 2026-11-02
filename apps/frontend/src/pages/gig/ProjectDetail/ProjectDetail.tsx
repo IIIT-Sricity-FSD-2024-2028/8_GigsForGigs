@@ -12,6 +12,7 @@ import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
 import type { TaskDeliverableDefinition } from '../../../types/gig';
 import { Badge } from '../../../components/common/Badge';
+import { Button } from '../../../components/common';
 
 export const ProjectDetail: React.FC = () => {
   const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable } = useGig();
@@ -74,9 +75,9 @@ export const ProjectDetail: React.FC = () => {
         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-lg)' }}>
           {error || 'The requested task could not be found or is no longer active.'}
         </p>
-        <button className="admin-btn admin-btn-primary" onClick={() => setActiveTab('active-tasks')}>
+        <Button onClick={() => setActiveTab('active-tasks')}>
           Back to Active Task/Contracts
-        </button>
+        </Button>
       </div>
     );
   }
@@ -87,24 +88,9 @@ export const ProjectDetail: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)', maxWidth: '960px', margin: '0 auto', width: '100%' }}>
       {/* Return Path to Active Task/Contracts */}
       <div>
-        <button
-          type="button"
-          onClick={() => setActiveTab('active-tasks')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-primary-blue)',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            padding: 0,
-          }}
-        >
+        <Button variant="ghost" size="sm" type="button" onClick={() => setActiveTab('active-tasks')}>
           ← Back to Active Task/Contracts
-        </button>
+        </Button>
       </div>
 
       {error && <div role="alert" className="deliverable-feedback deliverable-feedback--error">{error}</div>}
@@ -136,12 +122,9 @@ export const ProjectDetail: React.FC = () => {
           <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-secondary)' }}>
             {formatCurrency(task.budget)}
           </span>
-          <button
-            className="admin-btn admin-btn-primary"
-            onClick={() => navigateToSubmitDeliverable(String(task.taskId))}
-          >
+          <Button onClick={() => navigateToSubmitDeliverable(String(task.taskId))}>
             Submit Deliverable
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -271,14 +254,9 @@ export const ProjectDetail: React.FC = () => {
 
                     {del.status === 'revision_requested' && (
                       <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          className="admin-btn admin-btn-primary admin-btn-sm"
-                          style={{ fontSize: '12px', padding: '6px 12px' }}
-                          onClick={() => navigateToSubmitDeliverable(String(task.taskId))}
-                        >
+                        <Button size="sm" type="button" onClick={() => navigateToSubmitDeliverable(String(task.taskId))}>
                           Submit Updated Work
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </div>

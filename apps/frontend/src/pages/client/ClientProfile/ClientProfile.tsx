@@ -115,13 +115,9 @@ export const ClientProfile: React.FC<ClientProfileProps> = () => {
           }}
         >
           <span>{msg.type === 'success' ? '✓ ' : '✕ '}{msg.text}</span>
-          <button
-            type="button"
-            onClick={() => setMsg(null)}
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 700 }}
-          >
+          <Button variant="ghost" type="button" onClick={() => setMsg(null)}>
             ✕
-          </button>
+          </Button>
         </div>
       )}
 

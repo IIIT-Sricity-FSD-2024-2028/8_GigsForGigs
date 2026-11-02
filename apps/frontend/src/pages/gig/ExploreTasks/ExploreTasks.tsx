@@ -16,6 +16,7 @@ import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
 import { ErrorState } from '../../../components/common/ErrorState';
+import { Button, useToast } from '../../../components/common';
 
 export const ExploreTasks: React.FC = () => {
   const { user, updateUserSession } = useAuth();
@@ -24,6 +25,8 @@ export const ExploreTasks: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [applyingId, setApplyingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -132,13 +135,9 @@ export const ExploreTasks: React.FC = () => {
                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                     Status: <strong style={{ color: 'var(--color-primary-dark)' }}>{task.status.toUpperCase()}</strong>
                   </span>
-                  <button
-                    className={`admin-btn ${isApplied ? 'admin-btn-outline' : 'admin-btn-primary'}`}
-                    disabled={isApplied || isSubmitting}
-                    onClick={() => handleApply(task.taskId)}
-                  >
+                  <Button variant={isApplied ? 'outline' : 'primary'} disabled={isApplied || isSubmitting} onClick={() => handleApply(task.taskId)}>
                     {isApplied ? 'Applied ✓' : isSubmitting ? 'Submitting...' : 'Apply Now'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             );

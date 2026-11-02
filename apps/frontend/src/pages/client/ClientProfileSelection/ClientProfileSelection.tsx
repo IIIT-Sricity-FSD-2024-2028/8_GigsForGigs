@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useClient, type ManagerInvite } from '../../../context/ClientContext';
 import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
+import { Button, ConfirmDialog, Input, useToast } from '../../../components/common';
 
 export interface ClientProfileSelectionProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
 }
 
 export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ onNavigate }) => {
+  const toast = useToast();
   const { user } = useAuth();
   const { managers, updateManager, deleteManager, revokeManagerInvite } = useClient();
 
@@ -28,7 +30,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
     e.preventDefault();
     if (mgr.kind !== 'manager') {
       // Pending invite: re-share its activation link instead of editing.
-      shareInviteLink(mgr.invite_link);
+      shareInviteLink(mgr.invite_link, toast.info);
       return;
     }
     setEditingManager(mgr);
@@ -44,31 +46,28 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
         setEditingManager(null);
       } catch (err) {
         console.error('Update manager failed:', err);
-        alert(err instanceof Error && err.message ? err.message : 'Failed to update this manager. Please try again.');
+        toast.error(err instanceof Error && err.message ? err.message : 'Failed to update this manager. Please try again.');
       }
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, mgr: ManagerInvite) => {
+  const [pendingRemoval, setPendingRemoval] = useState<ManagerInvite | null>(null);
+  const handleDelete = (e: React.MouseEvent, mgr: ManagerInvite) => {
     e.stopPropagation();
     e.preventDefault();
-    if (mgr.kind !== 'manager') {
-      if (window.confirm(`Revoke the pending invite for ${mgr.email}? Its link will stop working.`)) {
-        try {
-          await revokeManagerInvite(mgr.invite_id);
-        } catch (err) {
-          alert(err instanceof Error && err.message ? err.message : 'Failed to revoke this invite.');
-        }
-      }
-      return;
-    }
-    if (window.confirm(`Are you sure you want to remove ${mgr.name} from your team?`)) {
-      try {
-        await deleteManager(mgr.invite_id);
-      } catch (err) {
-        console.error('Delete manager failed:', err);
-        alert(err instanceof Error && err.message ? err.message : 'Failed to remove this manager. Please try again.');
-      }
+    setPendingRemoval(mgr);
+  };
+  const confirmRemoval = async () => {
+    const mgr = pendingRemoval;
+    setPendingRemoval(null);
+    if (!mgr) return;
+    const isInvite = mgr.kind !== 'manager';
+    try {
+      if (isInvite) await revokeManagerInvite(mgr.invite_id);
+      else await deleteManager(mgr.invite_id);
+    } catch (err) {
+      if (!isInvite) console.error('Delete manager failed:', err);
+      toast.error(err instanceof Error && err.message ? err.message : isInvite ? 'Failed to revoke this invite.' : 'Failed to remove this manager. Please try again.');
     }
   };
 
@@ -104,12 +103,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
         <div className="profile-grid" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start' }}>
           
           {/* Admin Profile */}
-          <button
-            onClick={handleProfileSelect}
-            className="profile-avatar-btn"
-            type="button"
-            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
-          >
+          <Button variant="ghost" className="profile-avatar-btn" onClick={handleProfileSelect} type="button">
             <div className="avatar-square" style={{ width: '120px', height: '120px', borderRadius: '16px', backgroundColor: '#0D568D', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 800, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
               {(user?.name || '?').charAt(0).toUpperCase()}
             </div>
@@ -117,7 +111,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
               <span className="avatar-name" style={{ fontSize: '1.125rem', color: '#1A202C', fontWeight: 700 }}>{user?.name || 'You'}</span>
               <span className="avatar-role" style={{ fontSize: '0.85rem', color: '#475764', fontWeight: 600 }}>Client Owner</span>
             </div>
-          </button>
+          </Button>
 
           {/* Managers List */}
           {managers.map(mgr => (
@@ -138,13 +132,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 position: 'relative'
               }}
             >
-              <button
-                type="button"
-                aria-label={`View ${mgr.name}'s manager profile`}
-                onClick={() => onNavigate('manager-profile', { managerId: mgr.invite_id })}
-                className="profile-avatar-btn"
-                style={{ padding: 0, width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-              >
+              <Button variant="ghost" className="profile-avatar-btn" type="button" aria-label={`View ${mgr.name}'s manager profile`} onClick={() => onNavigate('manager-profile', { managerId: mgr.invite_id })} style={{ width: '100%', flexDirection: 'column' }}>
                 <div
                   className="avatar-square"
                   style={{
@@ -173,61 +161,22 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                     {mgr.email}
                   </span>
                 </div>
-              </button>
+              </Button>
 
               {/* Action Buttons: Edit & Delete */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
-                <button
-                  onClick={(e) => handleStartEdit(e, mgr)}
-                  title="Update manager details"
-                  type="button"
-                  style={{
-                    border: 'none',
-                    backgroundColor: '#EFF6FC',
-                    color: '#0D568D',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
+                <Button variant="outline" size="sm" onClick={(e) => handleStartEdit(e, mgr)} title="Update manager details" type="button">
                   ✏️ Edit
-                </button>
-                <button
-                  onClick={(e) => handleDelete(e, mgr)}
-                  title="Remove manager"
-                  type="button"
-                  style={{
-                    border: 'none',
-                    backgroundColor: '#FDE8E8',
-                    color: '#C94C4C',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
+                </Button>
+                <Button variant="outline" size="sm" onClick={(e) => handleDelete(e, mgr)} title="Remove manager" type="button">
                   🗑️ Delete
-                </button>
+                </Button>
               </div>
             </div>
           ))}
 
           {/* Add Manager Button */}
-          <button
-            onClick={() => onNavigate('add-manager')}
-            className="profile-avatar-btn add-profile-btn"
-            type="button"
-            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
-          >
+          <Button variant="ghost" className="profile-avatar-btn add-profile-btn" onClick={() => onNavigate('add-manager')} type="button">
             <div
               className="avatar-square"
               style={{
@@ -251,7 +200,7 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
               </span>
               <span style={{ fontSize: '0.8rem', color: '#475764' }}>Invite Team Member</span>
             </div>
-          </button>
+          </Button>
 
         </div>
       </main>
@@ -269,48 +218,38 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                   Manager Name *
                 </label>
-                <input maxLength={100}
-                  type="text"
-                  required
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D3DCE2', fontSize: '14px', boxSizing: 'border-box' }}
-                />
+                <Input maxLength={100} type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%' }} />
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                   Manager Email *
                 </label>
-                <input maxLength={100}
-                  type="email"
-                  required
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D3DCE2', fontSize: '14px', boxSizing: 'border-box' }}
-                />
+                <Input maxLength={100} type="email" required value={editEmail} onChange={(e) => setEditEmail(e.target.value)} style={{ width: '100%' }} />
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setEditingManager(null)}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #D3DCE2', backgroundColor: '#FFFFFF', color: '#4A5568', fontWeight: 600, cursor: 'pointer' }}
-                >
+                <Button variant="outline" type="button" onClick={() => setEditingManager(null)} style={{ flex: 1 }}>
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#0D568D', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
-                >
+                </Button>
+                <Button type="submit" style={{ flex: 1 }}>
                   Save Changes
-                </button>
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      <ConfirmDialog
+        open={pendingRemoval !== null}
+        danger
+        title={pendingRemoval?.kind === 'manager' ? 'Remove manager' : 'Revoke invite'}
+        message={pendingRemoval?.kind === 'manager' ? `Are you sure you want to remove ${pendingRemoval.name} from your team?` : `Revoke the pending invite for ${pendingRemoval?.email}? Its link will stop working.`}
+        confirmLabel={pendingRemoval?.kind === 'manager' ? 'Remove' : 'Revoke'}
+        onConfirm={confirmRemoval}
+        onCancel={() => setPendingRemoval(null)}
+      />
       <footer style={{ textAlign: 'center', padding: '20px', fontSize: '0.85rem', color: '#475764' }}>
         © 2026 GigsForGigs. All Rights Reserved.
       </footer>

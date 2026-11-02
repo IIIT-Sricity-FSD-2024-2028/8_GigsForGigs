@@ -12,6 +12,7 @@ import { useClient, type Contract } from '../../../context/ClientContext';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { ClientReviewModal } from '../../../components/client/modals/ClientReviewModal';
 import { TaskReviewsModal } from '../../../components/client/modals/TaskReviewsModal';
+import { Button } from '../../../components/common';
 
 export interface ClientCompletedProjectsProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -126,14 +127,9 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
           <p style={{ fontSize: '0.875rem', maxWidth: '440px', margin: '0 auto var(--spacing-lg) auto' }}>
             When tasks are completed and payments are released to gig professionals, they will appear here along with mutual ratings and reviews.
           </p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ padding: '8px 18px', fontSize: '0.875rem' }}
-            onClick={() => onNavigate('my-gigs')}
-          >
+          <Button size="sm" type="button" onClick={() => onNavigate('my-gigs')}>
             View Active Task/Contracts
-          </button>
+          </Button>
         </div>
       ) : (
         <div
@@ -276,33 +272,18 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
 
                 {/* Actions Footer */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                    onClick={() => onNavigate('review-deliverables', { taskId: contract.task_id })}
-                  >
+                  <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-deliverables', { taskId: contract.task_id })}>
                     View Deliverables
-                  </button>
+                  </Button>
 
                   {!clientReview ? (
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ padding: '6px 14px', fontSize: '0.8rem', backgroundColor: '#B45F00', border: 'none', color: '#FFFFFF', fontWeight: 700 }}
-                      onClick={() => setReviewingContract(contract)}
-                    >
+                    <Button size="sm" type="button" onClick={() => setReviewingContract(contract)}>
                       ★ Rate &amp; Review
-                    </button>
+                    </Button>
                   ) : (
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      style={{ padding: '6px 12px', fontSize: '0.8rem', color: '#0D568D', borderColor: '#0D568D' }}
-                      onClick={() => setViewReviewsContract(contract)}
-                    >
+                    <Button variant="outline" size="sm" type="button" onClick={() => setViewReviewsContract(contract)}>
                       Reviews ({reviews.length})
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

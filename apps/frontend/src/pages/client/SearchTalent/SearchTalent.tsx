@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useClient, type Service } from '../../../context/ClientContext';
+import { Button, Select, useToast } from '../../../components/common';
 
 export interface SearchTalentProps {
   onNavigate: (viewId: string) => void;
 }
 
 export const SearchTalent: React.FC<SearchTalentProps> = () => {
+  const toast = useToast();
   const { services, requestService, requestedServices } = useClient();
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [rateFilter, setRateFilter] = useState('all');
@@ -18,10 +20,10 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
     try {
       await requestService(serviceId);
       setLocalRequested((prev) => new Set(prev).add(serviceId));
-      alert('Hiring request sent! Once the Gig Professional accepts, you will be asked to pay the escrow amount (service price + 10% platform fee) to start work.');
+      toast.success('Hiring request sent! Once the Gig Professional accepts, you will be asked to pay the escrow amount (service price + 10% platform fee) to start work.');
     } catch (err) {
       console.error('Request service failed:', err);
-      alert(err instanceof Error && err.message ? err.message : 'Failed to send hiring request. Please try again.');
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to send hiring request. Please try again.');
     }
   };
 
@@ -71,33 +73,21 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
         <span className="filter-label" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
           Filter By:
         </span>
-        <select
-          className="filter-select"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          aria-label="Category"
-          style={{ flex: 1, padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', fontSize: '0.875rem' }}
-        >
+        <Select className="filter-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Category" style={{ flex: 1 }}>
           <option value="all">All Categories</option>
           <option value="design">Design &amp; Creative</option>
           <option value="dev">Software Development</option>
           <option value="writing">Writing &amp; Translation</option>
-        </select>
+        </Select>
 
         <div className="filter-divider" style={{ width: '1px', height: '24px', backgroundColor: 'var(--color-border)' }}></div>
 
-        <select
-          className="filter-select"
-          value={rateFilter}
-          onChange={(e) => setRateFilter(e.target.value)}
-          aria-label="Rate Range"
-          style={{ flex: 1, padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', fontSize: '0.875rem' }}
-        >
+        <Select className="filter-select" value={rateFilter} onChange={(e) => setRateFilter(e.target.value)} aria-label="Rate Range" style={{ flex: 1 }}>
           <option value="all">All Rates</option>
           <option value="low">Under ₹1,000</option>
           <option value="mid">₹1,000 - ₹5,000</option>
           <option value="high">Over ₹5,000</option>
-        </select>
+        </Select>
       </div>
 
       {/* Talent Grid */}
@@ -147,23 +137,12 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
                     {service.description}
                   </p>
                   <div className="talent-actions" style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'auto' }}>
-                    <button
-                      type="button"
-                      className="btn-view-profile"
-                      style={{ flex: 1, padding: '8px 14px', fontSize: '0.8125rem', border: '1px solid var(--color-primary-dark)', background: 'transparent', color: 'var(--color-primary-dark)', cursor: 'pointer', borderRadius: '4px' }}
-                      onClick={() => setSelectedProfile(service)}
-                    >
+                    <Button variant="outline" size="sm" type="button" onClick={() => setSelectedProfile(service)} style={{ flex: 1 }}>
                       View Profile
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-hire"
-                      style={{ flex: 1, padding: '8px 14px', fontSize: '0.8125rem', border: 'none', cursor: isRequested ? 'not-allowed' : 'pointer', borderRadius: '4px' }}
-                      disabled={isRequested}
-                      onClick={() => handleHireClick(service.service_id)}
-                    >
+                    </Button>
+                    <Button variant="outline" size="sm" type="button" disabled={isRequested} onClick={() => handleHireClick(service.service_id)} style={{ flex: 1 }}>
                       {isRequested ? 'Requested' : 'Request / Hire'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </article>
@@ -211,27 +190,9 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
                 padding: '12px 16px'
               }}
             >
-              <button
-                type="button"
-                onClick={() => setSelectedProfile(null)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.85)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  color: 'var(--color-text-dark)'
-                }}
-                title="Close profile"
-              >
+              <Button variant="outline" type="button" onClick={() => setSelectedProfile(null)} title="Close profile" style={{ width: '32px' }}>
                 ✕
-              </button>
+              </Button>
             </div>
 
             {/* Profile Content */}
@@ -362,39 +323,14 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
 
               {/* Modal Actions */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedProfile(null)}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-border)',
-                    backgroundColor: '#FFFFFF',
-                    color: 'var(--color-text-dark)',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
+                <Button variant="outline" type="button" onClick={() => setSelectedProfile(null)}>
                   Close
-                </button>
-                <button
-                  type="button"
-                  disabled={localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id)}
-                  onClick={() => {
+                </Button>
+                <Button variant="outline" type="button" disabled={localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id)} onClick={() => {
                     handleHireClick(selectedProfile.service_id);
-                  }}
-                  style={{
-                    padding: '10px 24px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id) ? '#9E9E9E' : '#B45F00',
-                    color: '#FFFFFF',
-                    fontWeight: 700,
-                    cursor: localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id) ? 'not-allowed' : 'pointer'
-                  }}
-                >
+                  }}>
                   {localRequested.has(selectedProfile.service_id) || requestedServices.has(selectedProfile.service_id) ? 'Request Already Sent' : 'Request / Hire Professional'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

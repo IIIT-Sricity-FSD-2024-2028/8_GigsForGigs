@@ -105,22 +105,9 @@ export const GigDashboard: React.FC = () => {
           }}
         >
           <span>{error}</span>
-          <button
-            type="button"
-            onClick={triggerRefresh}
-            style={{
-              padding: '6px 14px',
-              backgroundColor: '#9B1C1C',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
+          <Button variant="danger" size="sm" type="button" onClick={triggerRefresh}>
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
@@ -207,12 +194,9 @@ export const GigDashboard: React.FC = () => {
             <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
               Pending Client Requests
             </h2>
-            <button
-              className="admin-btn admin-btn-outline admin-btn-sm"
-              onClick={() => setActiveTab('pending-requests')}
-            >
+            <Button variant="outline" size="sm" onClick={() => setActiveTab('pending-requests')}>
               View All ({pendingRequests.length})
-            </button>
+            </Button>
           </div>
 
           {pendingRequests.length === 0 ? (
@@ -240,18 +224,12 @@ export const GigDashboard: React.FC = () => {
                       </td>
                       <td style={{ padding: '12px var(--spacing-sm)' }}>
                         <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
-                          <button
-                            className="admin-btn admin-btn-primary admin-btn-sm"
-                            onClick={() => handleRespondRequest(req.applicationId, 'accepted')}
-                          >
+                          <Button size="sm" onClick={() => handleRespondRequest(req.applicationId, 'accepted')}>
                             Accept
-                          </button>
-                          <button
-                            className="admin-btn admin-btn-outline admin-btn-sm"
-                            onClick={() => handleRespondRequest(req.applicationId, 'declined')}
-                          >
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleRespondRequest(req.applicationId, 'declined')}>
                             Decline
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -315,12 +293,9 @@ export const GigDashboard: React.FC = () => {
               <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
                 Active Task/Contracts Preview
               </h3>
-              <button
-                className="admin-btn admin-btn-outline admin-btn-sm"
-                onClick={() => setActiveTab('active-tasks')}
-              >
+              <Button variant="outline" size="sm" onClick={() => setActiveTab('active-tasks')}>
                 View All
-              </button>
+              </Button>
             </div>
 
             {activeTasks.length === 0 ? (

@@ -15,12 +15,15 @@ import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
 import { ErrorState } from '../../../components/common/ErrorState';
+import { Button, useToast } from '../../../components/common';
 
 export const ActiveTasks: React.FC = () => {
   const { navigateToTaskDetail, navigateToSubmitDeliverable, refreshTrigger } = useGig();
   const [activeTasks, setActiveTasks] = useState<GigTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -148,20 +151,12 @@ export const ActiveTasks: React.FC = () => {
                   <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0D568D' }}>
                     ₹{Number(task.budget).toLocaleString('en-IN')}
                   </div>
-                  <button
-                    className="admin-btn admin-btn-outline admin-btn-sm"
-                    style={{ width: '100%' }}
-                    onClick={() => navigateToTaskDetail(String(task.taskId))}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => navigateToTaskDetail(String(task.taskId))} style={{ width: '100%' }}>
                     View Details
-                  </button>
-                  <button
-                    className="admin-btn admin-btn-primary admin-btn-sm"
-                    style={{ width: '100%' }}
-                    onClick={() => navigateToSubmitDeliverable(String(task.taskId))}
-                  >
+                  </Button>
+                  <Button size="sm" onClick={() => navigateToSubmitDeliverable(String(task.taskId))} style={{ width: '100%' }}>
                     Submit Deliverable
-                  </button>
+                  </Button>
                 </div>
               </div>
             );

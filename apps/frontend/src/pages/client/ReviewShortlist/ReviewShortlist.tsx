@@ -2,6 +2,7 @@ import React from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Table } from '../../../components/common/Table';
+import { Button, useToast } from '../../../components/common';
 
 export interface ReviewShortlistProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -9,6 +10,7 @@ export interface ReviewShortlistProps {
 }
 
 export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, params }) => {
+  const toast = useToast();
   const { applications, tasks, hireCandidate, rejectCandidate } = useClient();
   const taskId = params?.taskId;
 
@@ -26,21 +28,21 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
   const handleApprove = async (appId: string) => {
     try {
       await hireCandidate(appId);
-      alert('Candidate hired! Pay the escrow amount (task budget + 10% platform fee) so they can start work.');
+      toast.success('Candidate hired! Pay the escrow amount (task budget + 10% platform fee) so they can start work.');
       onNavigate('my-gigs');
     } catch (err) {
       console.error('Approve hire failed:', err);
-      alert(errorMessage(err, 'Failed to approve this candidate. Please try again.'));
+      toast.error(errorMessage(err, 'Failed to approve this candidate. Please try again.'));
     }
   };
 
   const handleReject = async (appId: string) => {
     try {
       await rejectCandidate(appId);
-      alert('Candidate application discarded.');
+      toast.success('Candidate application discarded.');
     } catch (err) {
       console.error('Reject hire failed:', err);
-      alert(errorMessage(err, 'Failed to reject this candidate. Please try again.'));
+      toast.error(errorMessage(err, 'Failed to reject this candidate. Please try again.'));
     }
   };
 
@@ -80,14 +82,9 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
               Budget: {formatCurrency(filterTask.budget)} • Category: {filterTask.category || 'General'}
             </div>
           </div>
-          <button
-            type="button"
-            className="btn btn-outline"
-            style={{ fontSize: '0.8rem', padding: '6px 12px', backgroundColor: '#FFFFFF' }}
-            onClick={() => onNavigate('review-shortlist', {})}
-          >
+          <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-shortlist', {})}>
             Show All Pending Tasks
-          </button>
+          </Button>
         </div>
       )}
 
@@ -97,13 +94,9 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
             Candidates {currentApplications.length > 0 ? `(${currentApplications.length})` : ''}
           </h2>
           {taskId && !filterTask && (
-            <button
-              className="btn btn-outline"
-              style={{ fontSize: '0.875rem', padding: '6px 12px', background: 'transparent', cursor: 'pointer' }}
-              onClick={() => onNavigate('review-shortlist', {})}
-            >
+            <Button variant="outline" size="sm" onClick={() => onNavigate('review-shortlist', {})}>
               Show all tasks
-            </button>
+            </Button>
           )}
         </div>
 
@@ -132,22 +125,12 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                         No gig professionals have applied or been shortlisted for this task yet. It is currently open and visible on the marketplace.
                       </p>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          style={{ fontSize: '0.82rem', padding: '6px 14px' }}
-                          onClick={() => onNavigate('search-talent')}
-                        >
+                        <Button size="sm" type="button" onClick={() => onNavigate('search-talent')}>
                           Browse Talent &amp; Hire
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          style={{ fontSize: '0.82rem', padding: '6px 14px' }}
-                          onClick={() => onNavigate('review-shortlist', {})}
-                        >
+                        </Button>
+                        <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-shortlist', {})}>
                           Show All Tasks
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -159,14 +142,9 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
                         You have no candidates or shortlisted applicants awaiting hire approval right now.
                       </p>
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        style={{ fontSize: '0.82rem', padding: '6px 14px', marginTop: '8px' }}
-                        onClick={() => onNavigate('search-talent')}
-                      >
+                      <Button size="sm" type="button" onClick={() => onNavigate('search-talent')} style={{ marginTop: '8px' }}>
                         Search Talent
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </td>
@@ -197,20 +175,12 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                   </td>
                   <td>
                     <div className="actions-cell" style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        className="btn-hire"
-                        style={{ padding: '6px 12px', fontSize: '0.8rem', border: 'none', cursor: 'pointer' }}
-                        onClick={() => handleApprove(a.application_id)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleApprove(a.application_id)}>
                         Approve
-                      </button>
-                      <button
-                        className="btn-changes"
-                        style={{ padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'transparent' }}
-                        onClick={() => handleReject(a.application_id)}
-                      >
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleReject(a.application_id)}>
                         Reject
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

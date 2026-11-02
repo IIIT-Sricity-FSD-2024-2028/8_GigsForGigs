@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
+import { Button } from '../../../components/common';
 
 export const ServicePublished: React.FC = () => {
   const { setActiveTab } = useGig();
@@ -52,18 +53,12 @@ export const ServicePublished: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: 'var(--spacing-md)', width: '100%', justifyContent: 'center', marginTop: 'var(--spacing-md)' }}>
-          <button
-            className="admin-btn admin-btn-outline"
-            onClick={() => setActiveTab('profile')}
-          >
+          <Button variant="outline" onClick={() => setActiveTab('profile')}>
             View My Profile
-          </button>
-          <button
-            className="admin-btn admin-btn-primary"
-            onClick={() => setActiveTab('dashboard')}
-          >
+          </Button>
+          <Button onClick={() => setActiveTab('dashboard')}>
             Go to Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     </div>

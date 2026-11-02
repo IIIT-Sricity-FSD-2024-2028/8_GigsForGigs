@@ -1,9 +1,26 @@
 import React, { useState } from 'react';
+import { Button } from '../../../components/common';
 
 interface LandingPageProps {
   onNavigateToLogin: () => void;
   onNavigateToSignup?: () => void;
 }
+
+/** Header links -> section ids further down this page. */
+const NAV_LINKS = [
+  { label: 'Find Gigs', target: 'popular-services' },
+  { label: 'How it Works', target: 'how-it-works' },
+  { label: 'Why Us', target: 'about' },
+  { label: 'Success Stories', target: 'success-stories' }
+];
+
+/** Smooth-scrolls to a section instead of jumping; falls back to the plain #hash if the element is missing. */
+const goTo = (id: string) => (event: React.MouseEvent) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  event.preventDefault();
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onNavigateToSignup }) => {
   const handleJoinClick = onNavigateToSignup || onNavigateToLogin;
@@ -34,71 +51,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           </span>
         </div>
 
-        <nav className="landing-nav" style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <a href="#how-it-works" style={{ textDecoration: 'none', color: '#0D568D', fontWeight: 600, fontSize: '15px' }}>Find Work</a>
-          <a href="#popular-services" style={{ textDecoration: 'none', color: '#0D568D', fontWeight: 600, fontSize: '15px' }}>Find Gigs</a>
-          <a href="#how-it-works" style={{ textDecoration: 'none', color: '#0D568D', fontWeight: 600, fontSize: '15px' }}>How it Works</a>
-          <a href="#about" style={{ textDecoration: 'none', color: '#0D568D', fontWeight: 600, fontSize: '15px' }}>About Us</a>
+        <nav className="landing-nav" aria-label="Primary" style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+          {NAV_LINKS.map(({ label, target }) => (
+            <a key={label} href={`#${target}`} onClick={goTo(target)} style={{ textDecoration: 'none', color: '#0D568D', fontWeight: 600, fontSize: '15px' }}>{label}</a>
+          ))}
         </nav>
 
         <div className="landing-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <button
-            onClick={onNavigateToLogin}
-            style={{
-              padding: '10px 24px',
-              borderRadius: '8px',
-              border: '1px solid #0D568D',
-              backgroundColor: '#FFFFFF',
-              color: '#0D568D',
-              fontWeight: 600,
-              fontSize: '15px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
+          <Button variant="outline" onClick={onNavigateToLogin}>
             Login
-          </button>
-          <button
-            onClick={handleJoinClick}
-            style={{
-              padding: '10px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#B45F00',
-              color: '#FFFFFF',
-              fontWeight: 600,
-              fontSize: '15px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
+          </Button>
+          <Button onClick={handleJoinClick}>
             Join
-          </button>
+          </Button>
         </div>
       </header>
 
       {/* 2. Hero Section */}
-      <section className="landing-hero" style={{ textAlign: 'center', padding: '96px 24px 80px 24px', maxWidth: '900px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '56px', fontWeight: 800, color: '#0D568D', lineHeight: 1.15, margin: '0 0 24px 0', letterSpacing: '-1px' }}>
-          Find Great Work. Hire Great Talent.
-        </h1>
-        <p style={{ fontSize: '18px', color: '#5E6E7A', lineHeight: 1.6, margin: '0 auto 40px auto', maxWidth: '640px' }}>
-          Whether you are a client building a team or a professional growing your career, GigsForGigs helps both sides connect, collaborate, and succeed.
-        </p>
-
-      </section>
-
-      {/* 3. Trusted By Top Companies Section */}
-      <section style={{ padding: '48px 24px', textAlign: 'center', borderTop: '1px solid #F7FAFC' }}>
-        <p style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', color: '#6B7885', marginBottom: '32px' }}>
-          TRUSTED BY TOP COMPANIES
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '64px', flexWrap: 'wrap' }}>
-          {['Google', 'Amazon', 'Microsoft', 'TCS'].map((company) => (
-            <span key={company} style={{ fontSize: '26px', fontWeight: 700, color: '#828C96', letterSpacing: '-0.5px' }}>
-              {company}
-            </span>
-          ))}
+      <section className="landing-hero" style={{ background: 'linear-gradient(135deg, #0D568D 0%, #084875 100%)', padding: '96px 24px 88px 24px' }}>
+        <div style={{ textAlign: 'center', maxWidth: '900px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '56px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.15, margin: '0 0 24px 0', letterSpacing: '-1px' }}>
+            Find Great Work. Hire Great Talent.
+          </h1>
+          <p style={{ fontSize: '18px', color: '#D6E6F3', lineHeight: 1.6, margin: '0 auto 40px auto', maxWidth: '640px' }}>
+            Whether you are a client building a team or a professional growing your career, GigsForGigs helps both sides connect, collaborate, and succeed.
+          </p>
+          <div className="landing-wrap-row" style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <Button size="lg" onClick={handleJoinClick}>Hire Talent</Button>
+            <Button size="lg" variant="outline" onClick={handleJoinClick}>Find Work</Button>
+          </div>
         </div>
       </section>
 
@@ -165,45 +146,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
 
         {/* Tab Selection */}
         <div className="landing-wrap-row" style={{ display: 'flex', justifyContent: 'center', gap: '40px', marginBottom: '48px', fontSize: '15px' }}>
-          <button
-            onClick={() => setActiveTab('hiring')}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontWeight: 700,
-              color: activeTab === 'hiring' ? '#475764' : '#6B7885',
-              cursor: 'pointer',
-              paddingBottom: '4px',
-              borderBottom: activeTab === 'hiring' ? '2px solid #475764' : 'none'
-            }}
-          >
+          <Button variant={activeTab === 'hiring' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('hiring')}>
             For Hiring
-          </button>
-          <button
-            onClick={() => setActiveTab('work')}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontWeight: 700,
-              color: activeTab === 'work' ? '#475764' : '#6B7885',
-              cursor: 'pointer',
-              paddingBottom: '4px',
-              borderBottom: activeTab === 'work' ? '2px solid #475764' : 'none'
-            }}
-          >
+          </Button>
+          <Button variant={activeTab === 'work' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('work')}>
             For Finding Work
-          </button>
+          </Button>
         </div>
 
         {/* Steps List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', textAlign: 'left' }}>
-          {[
+          {(activeTab === 'hiring' ? [
             { num: 1, title: 'Create Account', desc: 'Sign up for a free account to get started.' },
             { num: 2, title: 'Post Task', desc: 'Describe what you need done in detail.' },
             { num: 3, title: 'Receive Proposals', desc: 'Get bids from qualified professionals.' },
             { num: 4, title: 'Hire Talent', desc: 'Select the best fit for your project.' },
             { num: 5, title: 'Complete Work', desc: 'Pay only when you are 100% satisfied.' }
-          ].map((step) => (
+          ] : [
+            { num: 1, title: 'Create Account', desc: 'Sign up for a free account to get started.' },
+            { num: 2, title: 'Build Profile', desc: 'Showcase your skills, portfolio, and experience.' },
+            { num: 3, title: 'Submit Proposals', desc: 'Bid on tasks that match your expertise.' },
+            { num: 4, title: 'Get Hired', desc: 'Get selected by clients looking for your skills.' },
+            { num: 5, title: 'Get Paid', desc: 'Deliver your work and receive payment securely.' }
+          ]).map((step) => (
             <div key={step.num} className="landing-step" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
               <div
                 style={{
@@ -236,7 +201,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       </section>
 
       {/* 6. Built for Professional Work Section */}
-      <section style={{ padding: '80px 24px', maxWidth: '840px', margin: '0 auto' }}>
+      <section id="about" style={{ padding: '80px 24px', maxWidth: '840px', margin: '0 auto' }}>
         <h2 className="landing-h2" style={{ fontSize: '36px', fontWeight: 800, color: '#0D568D', textAlign: 'center', marginBottom: '48px' }}>
           Built for Professional Work
         </h2>
@@ -291,7 +256,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       </section>
 
       {/* 7. Success Stories Section */}
-      <section style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto', textAlign: 'center' }}>
+      <section id="success-stories" style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto', textAlign: 'center' }}>
         <h2 className="landing-h2" style={{ fontSize: '36px', fontWeight: 800, color: '#0D568D', marginBottom: '48px' }}>
           Success Stories
         </h2>
@@ -353,34 +318,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
         </p>
 
         <div className="landing-wrap-row" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px' }}>
-          <button
-            onClick={onNavigateToLogin}
-            style={{
-              border: 'none',
-              background: 'none',
-              color: '#5E6E7A',
-              fontWeight: 600,
-              fontSize: '15px',
-              cursor: 'pointer'
-            }}
-          >
+          <Button variant="ghost" onClick={onNavigateToLogin}>
             Hire Professionals
-          </button>
-          <button
-            onClick={onNavigateToLogin}
-            style={{
-              padding: '12px 28px',
-              borderRadius: '8px',
-              border: '2px solid #B45F00',
-              backgroundColor: '#FFFFFF',
-              color: '#B45F00',
-              fontWeight: 700,
-              fontSize: '15px',
-              cursor: 'pointer'
-            }}
-          >
+          </Button>
+          <Button variant="outline" onClick={onNavigateToLogin}>
             Join as Professional
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -399,18 +342,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           <div>
             <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#475764', marginBottom: '16px' }}>Product</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#5E6E7A' }}>
-              <span style={{ cursor: 'pointer' }} onClick={onNavigateToLogin}>Explore Gigs</span>
-              <span style={{ cursor: 'pointer' }} onClick={onNavigateToLogin}>Find Work</span>
-              <span style={{ cursor: 'pointer' }} onClick={onNavigateToLogin}>How it Works</span>
+              <a href="#popular-services" onClick={goTo('popular-services')} style={{ color: 'inherit', textDecoration: 'none' }}>Explore Gigs</a>
+              <a href="#how-it-works" onClick={goTo('how-it-works')} style={{ color: 'inherit', textDecoration: 'none' }}>How it Works</a>
+              <a href="#success-stories" onClick={goTo('success-stories')} style={{ color: 'inherit', textDecoration: 'none' }}>Success Stories</a>
             </div>
           </div>
 
           <div>
             <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#475764', marginBottom: '16px' }}>Company</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#5E6E7A' }}>
-              <span style={{ cursor: 'pointer' }}>About Us</span>
-              <span style={{ cursor: 'pointer' }}>Careers</span>
-              <span style={{ cursor: 'pointer' }}>Press</span>
+              <a href="#about" onClick={goTo('about')} style={{ color: 'inherit', textDecoration: 'none' }}>Why GigsForGigs</a>
             </div>
           </div>
 
@@ -425,7 +366,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
         </div>
 
         <div className="landing-wrap-row" style={{ borderTop: '1px solid #F0F4F8', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#6B7885', maxWidth: '1200px', margin: '0 auto' }}>
-          <div>© 2024 GigsForGigs. All rights reserved.</div>
+          <div>© {new Date().getFullYear()} GigsForGigs. All rights reserved.</div>
           <div style={{ display: 'flex', gap: '20px', fontSize: '13px' }}>
             <span>in</span>
             <span>tw</span>

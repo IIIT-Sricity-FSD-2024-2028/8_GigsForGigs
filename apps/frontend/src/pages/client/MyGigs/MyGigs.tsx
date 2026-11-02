@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useClient, type Contract, type PaymentStatus } from '../../../context/ClientContext';
 import { PAYMENT_STATUS_UI } from '../../../utils/helpers/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
-import { PageHeader } from '../../../components/common/PageHeader';
+import { Button, ConfirmDialog, IconButton, Input, PageHeader, Select, useToast } from '../../../components/common';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
 
 export interface MyGigsProps {
@@ -10,6 +10,7 @@ export interface MyGigsProps {
 }
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
+  const toast = useToast();
   const { contracts, tasks, deleteTask, managers, assignTaskManager } = useClient();
   const [savingManager, setSavingManager] = useState(false);
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
@@ -51,15 +52,17 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
     return true;
   });
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (confirm('Are you sure you want to delete / cancel this contract task?')) {
-      try {
-        await deleteTask(taskId);
-        alert('Project contract deleted successfully!');
-      } catch (err) {
-        console.error('Delete task failed:', err);
-        alert(err instanceof Error && err.message ? err.message : 'Failed to delete this task. Please try again.');
-      }
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const handleDeleteTask = async () => {
+    const taskId = taskToDelete;
+    setTaskToDelete(null);
+    if (!taskId) return;
+    try {
+      await deleteTask(taskId);
+      toast.success('Project contract deleted successfully!');
+    } catch (err) {
+      console.error('Delete task failed:', err);
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to delete this task. Please try again.');
     }
   };
 
@@ -90,31 +93,15 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               </span>
             </h2>
           </div>
-          <button
-            type="button"
-            className="btn btn-outline"
-            style={{
-              fontSize: '0.875rem',
-              padding: '6px 14px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: isFilterOpen || activeFiltersCount > 0 ? '#0D568D' : 'transparent',
-              color: isFilterOpen || activeFiltersCount > 0 ? '#FFFFFF' : 'var(--color-primary-dark)',
-              borderColor: '#0D568D',
-              borderRadius: 'var(--radius-sm)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease-in-out'
-            }}
+          <Button
+            variant={isFilterOpen || activeFiltersCount > 0 ? 'secondary' : 'outline'}
+            size="sm"
+            leadingIcon={<svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>}
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             title="Toggle contract filter options"
           >
-            <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-            </svg>
             Filter{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
-          </button>
+          </Button>
         </div>
 
         {/* Expandable Filter Toolbar */}
@@ -136,85 +123,31 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
           >
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', flex: 1, minWidth: '240px' }}>
               <div style={{ minWidth: '180px', flex: '1 1 200px' }}>
-                <input
-                  type="text"
-                  placeholder="Search project or talent name..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    fontSize: '13px',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: '#FFFFFF',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
+                <Input type="text" placeholder="Search project or talent name..." value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} style={{ width: '100%' }} />
               </div>
 
               <div style={{ minWidth: '150px' }}>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    fontSize: '13px',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: '#FFFFFF',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box'
-                  }}
-                >
+                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={{ width: '100%' }}>
                   <option value="ALL">All Active Statuses</option>
                   <option value="IN_PROGRESS">In Progress</option>
                   <option value="REVIEWING">Reviewing</option>
                   <option value="SCHEDULED">Scheduled</option>
-                </select>
+                </Select>
               </div>
 
               <div style={{ minWidth: '160px' }}>
-                <select
-                  value={paymentFilter}
-                  onChange={(e) => setPaymentFilter(e.target.value as any)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    fontSize: '13px',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: '#FFFFFF',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box'
-                  }}
-                >
+                <Select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value as any)} style={{ width: '100%' }}>
                   <option value="ALL">All Payment Statuses</option>
                   <option value="pending">{PAYMENT_STATUS_UI.pending.label}</option>
                   <option value="held">{PAYMENT_STATUS_UI.held.label}</option>
-                </select>
+                </Select>
               </div>
             </div>
 
             {activeFiltersCount > 0 && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                style={{
-                  padding: '7px 14px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: '#c5221f',
-                  backgroundColor: '#FFF0F0',
-                  border: '1px solid #FFD0D0',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer'
-                }}
-              >
+              <Button variant="danger" size="sm" onClick={resetFilters}>
                 Clear Filters ({activeFiltersCount})
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -241,45 +174,18 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                         <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-dark)' }}>
                           No active tasks or contracts in progress.
                         </p>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={() => onNavigate('completed-projects')}
-                          style={{
-                            fontSize: '13px',
-                            color: '#0D568D',
-                            background: '#F2F6F8',
-                            border: '1px solid #0D568D',
-                            padding: '6px 14px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 600
-                          }}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => onNavigate('completed-projects')}>
                           View Completed Projects
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <div>
                         <p style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-dark)' }}>
                           No active contracts match your selected filters.
                         </p>
-                        <button
-                          type="button"
-                          onClick={resetFilters}
-                          style={{
-                            fontSize: '13px',
-                            color: '#0D568D',
-                            background: '#F2F6F8',
-                            border: '1px solid #0D568D',
-                            padding: '6px 14px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 600
-                          }}
-                        >
+                        <Button variant="outline" size="sm" onClick={resetFilters}>
                           Clear Filters
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </td>
@@ -321,31 +227,18 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <button
-                            className="btn-review-proposal"
-                            style={{ padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--color-primary-blue)', borderRadius: 'var(--radius-sm)', color: 'var(--color-primary-blue)', backgroundColor: 'transparent', cursor: 'pointer' }}
-                            onClick={() => setSelectedTaskPayment(c)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => setSelectedTaskPayment(c)}>
                             View Task
-                          </button>
-                          <button
-                            className="btn-review-proposal"
-                            style={{ padding: '6px 12px', fontSize: '0.8rem', border: 'none', borderRadius: 'var(--radius-sm)', color: '#FFFFFF', backgroundColor: '#0D568D', fontWeight: 600, cursor: 'pointer' }}
-                            onClick={() => onNavigate('review-deliverables', { taskId: c.task_id })}
-                          >
+                          </Button>
+                          <Button size="sm" onClick={() => onNavigate('review-deliverables', { taskId: c.task_id })}>
                             Deliverables
-                          </button>
-                          <button
-                            className="btn-icon-action"
-                            title="Delete task"
-                            style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                            onClick={() => handleDeleteTask(c.task_id)}
-                          >
+                          </Button>
+                          <IconButton label="Delete task" size="sm" onClick={() => setTaskToDelete(c.task_id)}>
                             <svg className="manager-delete-icon" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                               <polyline points="3 6 5 6 21 6"></polyline>
                               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                             </svg>
-                          </button>
+                          </IconButton>
                         </div>
                       </td>
                     </tr>
@@ -395,30 +288,23 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
             {selectedTaskPayment.payment_status === 'held' && selectedTaskPayment.status === 'IN_PROGRESS' && (
               <div style={{ marginBottom: '20px', fontSize: '13px', color: '#1B2A36' }}>
                 <label htmlFor="task-manager" style={{ display: 'block', fontWeight: 600, marginBottom: '4px' }}>Managed by:</label>
-                <select
-                  id="task-manager"
-                  className="form-input"
-                  disabled={savingManager}
-                  value={selectedTaskPayment.manager_id ?? ''}
-                  onChange={async (e) => {
+                <Select id="task-manager" disabled={savingManager} value={selectedTaskPayment.manager_id ?? ''} onChange={async (e) => {
                     const managerId = e.target.value ? Number(e.target.value) : null;
                     setSavingManager(true);
                     try {
                       await assignTaskManager(selectedTaskPayment.task_id, managerId);
                       setSelectedTaskPayment({ ...selectedTaskPayment, manager_id: managerId });
                     } catch (err) {
-                      alert(err instanceof Error && err.message ? err.message : 'Could not change the manager.');
+                      toast.error(err instanceof Error && err.message ? err.message : 'Could not change the manager.');
                     } finally {
                       setSavingManager(false);
                     }
-                  }}
-                  style={{ width: '100%' }}
-                >
+                  }} style={{ width: '100%' }}>
                   <option value="">Me (I'll manage this task)</option>
                   {managers.filter(m => m.kind === 'manager').map(m => (
                     <option key={m.invite_id} value={m.invite_id}>{m.name || m.email}</option>
                   ))}
-                </select>
+                </Select>
                 <p style={{ fontSize: '12px', color: '#475764', margin: '4px 0 0' }}>
                   The manager can define and review deliverables. Only you can release payment.
                 </p>
@@ -432,28 +318,23 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
             <TaskDeliverablesManager key={selectedTaskPayment.task_id} taskId={Number(selectedTaskPayment.task_id)} readOnly={selectedTaskPayment.status !== 'IN_PROGRESS'} />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setSelectedTaskPayment(null)}
-                style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #DCE3E8', backgroundColor: '#FFFFFF', color: '#1B2A36', fontWeight: 600, cursor: 'pointer' }}
-              >
+              <Button variant="outline" onClick={() => setSelectedTaskPayment(null)}>
                 Close
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 onClick={() => {
                   const tid = selectedTaskPayment.task_id;
                   setSelectedTaskPayment(null);
                   onNavigate('review-deliverables', { taskId: tid });
                 }}
-                style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#0D568D', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
               >
                 Review Deliverables &amp; Details
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
+      <ConfirmDialog open={taskToDelete !== null} danger title="Delete task" message="Are you sure you want to delete / cancel this contract task?" confirmLabel="Delete" onConfirm={handleDeleteTask} onCancel={() => setTaskToDelete(null)} />
     </div>
   );
 };

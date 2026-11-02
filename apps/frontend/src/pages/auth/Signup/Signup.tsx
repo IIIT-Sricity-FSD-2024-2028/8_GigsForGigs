@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useToast } from '../../../components/common';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { Button, Input, Select } from '../../../components/common';
 
 interface SignupProps {
   onBackToLanding?: () => void;
@@ -14,6 +16,9 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const toast = useToast();
+  // Server-side failures (wrong password, email taken, ...) also surface as a toast; the inline box stays for form validation.
+  useEffect(() => { if (authError) toast.error(authError); }, [authError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,25 +122,9 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
       >
         {/* Back Link to Landing */}
         {onBackToLanding && (
-          <button
-            onClick={onBackToLanding}
-            style={{
-              position: 'absolute',
-              top: '32px',
-              right: '48px',
-              background: 'none',
-              border: 'none',
-              color: '#5E6E7A',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
+          <Button variant="ghost" onClick={onBackToLanding} style={{ position: 'absolute', top: '32px', right: '48px' }}>
             ← Back to Home
-          </button>
+          </Button>
         )}
 
         <div style={{ maxWidth: '420px', width: '100%', margin: '0 auto' }}>
@@ -173,25 +162,11 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Sign up as
               </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as any)}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D3DCE2',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#FFFFFF',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              >
+              <Select value={role} onChange={(e) => setRole(e.target.value as any)} style={{ width: '100%' }}>
                 <option value="">Select your role</option>
                 <option value="CLIENT">Client</option>
                 <option value="GIG_PROFESSIONAL">Gig Professional</option>
-              </select>
+              </Select>
             </div>
 
             {/* Full Name */}
@@ -199,24 +174,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Full Name
               </label>
-              <input maxLength={100}
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D3DCE2',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#FFFFFF',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <Input maxLength={100} type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" style={{ width: '100%' }} />
             </div>
 
             {/* Email Address */}
@@ -224,24 +182,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Email address
               </label>
-              <input maxLength={100}
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D3DCE2',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#FFFFFF',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <Input maxLength={100} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" style={{ width: '100%' }} />
             </div>
 
             {/* Password */}
@@ -249,24 +190,7 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Password
               </label>
-              <input maxLength={72}
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D3DCE2',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#FFFFFF',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <Input maxLength={72} type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%' }} />
             </div>
 
             {/* Confirm Password */}
@@ -274,46 +198,13 @@ export const Signup: React.FC<SignupProps> = ({ onBackToLanding, onNavigateToLog
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                 Confirm Password
               </label>
-              <input maxLength={72}
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D3DCE2',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#FFFFFF',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <Input maxLength={72} type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%' }} />
             </div>
 
             {/* Submit Create Account Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                backgroundColor: '#084875',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '14px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '16px',
-                cursor: 'pointer',
-                marginTop: '8px',
-                transition: 'background-color 0.2s'
-              }}
-            >
+            <Button type="submit" disabled={loading} style={{ width: '100%', marginTop: '8px' }}>
               {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
+            </Button>
           </form>
 
           {/* Divider */}

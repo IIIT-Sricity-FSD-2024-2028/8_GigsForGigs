@@ -8,6 +8,7 @@ import '../../pages/client/client.css';
 import { useAuth } from '../../context/AuthContext';
 import { DashboardLayout, type DashboardNavItem } from '../common/DashboardLayout/DashboardLayout';
 import { DashboardIcon, SearchIcon, ProjectIcon, ManagerIcon, PaymentIcon, UsersIcon, CheckIcon } from '../../components/super-admin/Icons';
+import { Button } from '../../components/common';
 
 export interface ClientLayoutProps {
   /** Id of the page currently shown (highlights the matching nav item). */
@@ -48,7 +49,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ currentView, onNavig
       onLogout={logout}
       headerTitle="Client Workspace"
       headerActions={
-        <button type="button" className="ui-button ui-button--primary ui-button--sm" onClick={() => onNavigate('post-gig')}>＋ Post a Task</button>
+        <Button size="sm" onClick={() => onNavigate('post-gig')}>＋ Post a Task</Button>
       }
     >
       {children}

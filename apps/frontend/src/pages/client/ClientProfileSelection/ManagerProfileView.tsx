@@ -3,6 +3,7 @@ import { useClient } from '../../../context/ClientContext';
 import { Card } from '../../../components/common/Card';
 import { ManagerProfileFields } from '../../manager/ManagerProfile/ManagerProfile';
 import type { UpdateManagerProfileDto } from '../../../types/manager';
+import { Button } from '../../../components/common';
 
 interface ManagerProfileViewProps {
   managerId: string;
@@ -26,13 +27,9 @@ export const ManagerProfileView: React.FC<ManagerProfileViewProps> = ({ managerI
   return (
     <main style={{ minHeight: '100vh', padding: '32px 20px', backgroundColor: '#F2F6F8' }}>
       <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <button
-          type="button"
-          onClick={onBack}
-          style={{ border: 'none', background: 'none', color: '#0D568D', fontSize: '15px', fontWeight: 700, cursor: 'pointer', padding: '8px 0', alignSelf: 'flex-start' }}
-        >
+        <Button variant="ghost" type="button" onClick={onBack} style={{ alignSelf: 'flex-start' }}>
           ← Back to Supervise Manager
-        </button>
+        </Button>
 
         {loading && !manager ? <p role="status">Loading manager profile…</p> : !manager ? (
           <Card padding="lg">

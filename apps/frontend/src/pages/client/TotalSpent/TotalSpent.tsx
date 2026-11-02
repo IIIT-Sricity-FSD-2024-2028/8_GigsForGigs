@@ -3,6 +3,7 @@ import { useClient, type PaymentStatus } from '../../../context/ClientContext';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Table } from '../../../components/common/Table';
 import { Loader } from '../../../components/common/Loader';
+import { Button, Input, Select, useToast } from '../../../components/common';
 
 export interface TotalSpentProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -33,6 +34,7 @@ const LEDGER_STATUS: Record<PaymentStatus, LedgerStatus> = {
 };
 
 export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
+  const toast = useToast();
   const { contracts, tasks, loading, payTask } = useClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
@@ -126,9 +128,9 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     try {
       await payTask(payment.taskId);
       setPayingPayment(null);
-      alert(`Payment successful! ${formatCurrency(payment.totalAmount)} has been securely locked in escrow until work approval.`);
+      toast.success(`Payment successful! ${formatCurrency(payment.totalAmount)} has been securely locked in escrow until work approval.`);
     } catch (err) {
-      alert(err instanceof Error && err.message ? err.message : 'Failed to process payment. Please try again.');
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to process payment. Please try again.');
     }
   };
 
@@ -368,26 +370,12 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
             {/* Filter and Search controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               {/* Status Filter Dropdown */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: '#FFFFFF',
-                  fontSize: '0.82rem',
-                  color: 'var(--color-text-dark)',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-                aria-label="Filter by payment status"
-              >
+              <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)} aria-label="Filter by payment status">
                 <option value="ALL">All Statuses</option>
                 <option value="COMPLETED">Completed / Released</option>
                 <option value="ESCROWED">Funds Secured in Escrow</option>
                 <option value="PENDING">Payment Required</option>
-              </select>
+              </Select>
 
               {/* Text Search Input */}
               <div
@@ -402,61 +390,22 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                   alignItems: 'center'
                 }}
               >
-                <input
-                  maxLength={100}
-                  type="text"
-                  placeholder="Filter by title, pro, ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    border: 'none',
-                    outline: 'none',
-                    width: '100%',
-                    fontSize: '0.82rem',
-                    background: 'transparent'
-                  }}
-                  aria-label="Search payment records"
-                />
+                <Input maxLength={100} type="text" placeholder="Filter by title, pro, ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} aria-label="Search payment records" style={{ width: '100%' }} />
                 {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm('')}
-                    style={{
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: 'var(--color-text-muted)',
-                      padding: '0 2px'
-                    }}
-                    title="Clear search"
-                  >
+                  <Button variant="ghost" size="sm" type="button" onClick={() => setSearchTerm('')} title="Clear search">
                     ✕
-                  </button>
+                  </Button>
                 )}
               </div>
 
               {/* Clear / Reset Filters */}
               {(searchTerm || statusFilter !== 'ALL') && (
-                <button
-                  type="button"
-                  onClick={() => {
+                <Button variant="ghost" size="sm" type="button" onClick={() => {
                     setSearchTerm('');
                     setStatusFilter('ALL');
-                  }}
-                  style={{
-                    border: 'none',
-                    background: 'none',
-                    color: '#084875',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: '4px 6px'
-                  }}
-                >
+                  }}>
                   Reset
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -502,23 +451,9 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                       >
                         You have not funded or initiated any tasks yet. Once you accept a proposal and fund escrow or complete a task, transactions will appear here.
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => onNavigate('my-gigs')}
-                        style={{
-                          marginTop: '8px',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          border: '1px solid #084875',
-                          backgroundColor: '#FFFFFF',
-                          color: '#084875',
-                          fontWeight: 600,
-                          fontSize: '0.85rem',
-                          cursor: 'pointer'
-                        }}
-                      >
+                      <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginTop: '8px' }}>
                         View Active Tasks &amp; Contracts
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -543,26 +478,12 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                       <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', margin: 0 }}>
                         Try searching for a different keyword or resetting your status filter.
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => {
+                      <Button size="sm" type="button" onClick={() => {
                           setSearchTerm('');
                           setStatusFilter('ALL');
-                        }}
-                        style={{
-                          marginTop: '6px',
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          backgroundColor: '#084875',
-                          color: '#FFFFFF',
-                          fontWeight: 600,
-                          fontSize: '0.8rem',
-                          cursor: 'pointer'
-                        }}
-                      >
+                        }} style={{ marginTop: '6px' }}>
                         Reset Filters
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -648,41 +569,13 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                     {/* Action */}
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       {p.status === 'PENDING' ? (
-                        <button
-                          type="button"
-                          onClick={() => setPayingPayment(p)}
-                          style={{
-                            padding: '6px 14px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: '#B45F00',
-                            color: '#FFFFFF',
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
+                        <Button size="sm" type="button" onClick={() => setPayingPayment(p)} style={{ whiteSpace: 'nowrap' }}>
                           Pay {formatCurrency(p.totalAmount)}
-                        </button>
+                        </Button>
                       ) : p.status === 'ESCROWED' ? (
-                        <button
-                          type="button"
-                          onClick={() => onNavigate('review-deliverables', { taskId: p.taskId })}
-                          style={{
-                            padding: '6px 14px',
-                            borderRadius: '6px',
-                            border: '1px solid #0D568D',
-                            backgroundColor: '#FFFFFF',
-                            color: '#0D568D',
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
+                        <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-deliverables', { taskId: p.taskId })} style={{ whiteSpace: 'nowrap' }}>
                           Review &amp; Release
-                        </button>
+                        </Button>
                       ) : p.status === 'COMPLETED' ? (
                         <span
                           style={{
@@ -785,36 +678,12 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
               🛡️ Your payment will be securely held by the platform until the work is completed and approved.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setPayingPayment(null)}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #DCE3E8',
-                  backgroundColor: '#FFFFFF',
-                  color: '#1B2A36',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
+              <Button variant="outline" type="button" onClick={() => setPayingPayment(null)}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePayNow(payingPayment)}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#B45F00',
-                  color: '#FFFFFF',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
+              </Button>
+              <Button type="button" onClick={() => handlePayNow(payingPayment)}>
                 Pay {formatCurrency(payingPayment.totalAmount)}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

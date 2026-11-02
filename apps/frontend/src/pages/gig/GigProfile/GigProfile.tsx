@@ -11,6 +11,7 @@ import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { GigProfile as IGigProfile, GigService } from '../../../types/gig';
 import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
+import { Button, useToast } from '../../../components/common';
 
 export const GigProfile: React.FC = () => {
   const { setActiveTab, refreshTrigger } = useGig();
@@ -18,6 +19,8 @@ export const GigProfile: React.FC = () => {
   const [services, setServices] = useState<GigService[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -123,12 +126,9 @@ export const GigProfile: React.FC = () => {
           </div>
         </div>
 
-        <button
-          className="admin-btn admin-btn-outline"
-          onClick={() => setActiveTab('profile-completion')}
-        >
+        <Button variant="outline" onClick={() => setActiveTab('profile-completion')}>
           Edit Profile & Skills
-        </button>
+        </Button>
       </div>
 
       {/* Grid Layout (2 Columns) */}
@@ -151,12 +151,9 @@ export const GigProfile: React.FC = () => {
               <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
                 My Published Services ({services.length})
               </h2>
-              <button
-                className="admin-btn admin-btn-primary admin-btn-sm"
-                onClick={() => setActiveTab('post-service')}
-              >
+              <Button size="sm" onClick={() => setActiveTab('post-service')}>
                 + Post Service
-              </button>
+              </Button>
             </div>
 
             {services.length === 0 ? (

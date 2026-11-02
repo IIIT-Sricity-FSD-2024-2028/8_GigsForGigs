@@ -12,13 +12,17 @@ import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { CompletedProject } from '../../../types/gig';
 import { GigReviewModal } from '../../../components/gig/modals/GigReviewModal';
+import { Button, useToast } from '../../../components/common';
 
 export const CompletedProjects: React.FC = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<CompletedProject[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  useEffect(() => { if (successMessage) toast.success(successMessage); }, [successMessage]); // eslint-disable-line react-hooks/exhaustive-deps
   const [selectedProjectForReview, setSelectedProjectForReview] = useState<CompletedProject | null>(null);
 
   const loadProjects = useCallback(async () => {
@@ -94,20 +98,9 @@ export const CompletedProjects: React.FC = () => {
           }}
         >
           <span>✓ {successMessage}</span>
-          <button
-            type="button"
-            onClick={() => setSuccessMessage(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#03543F',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '14px',
-            }}
-          >
+          <Button variant="ghost" type="button" onClick={() => setSuccessMessage(null)}>
             ✕
-          </button>
+          </Button>
         </div>
       )}
 
@@ -275,38 +268,13 @@ export const CompletedProjects: React.FC = () => {
 
                     {/* Review Action */}
                     {hasReviewedClient ? (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-sm"
-                        style={{
-                          fontSize: '11px',
-                          padding: '4px 10px',
-                          backgroundColor: '#F3F4F6',
-                          color: '#6B7280',
-                          border: '1px solid #D1D5DB',
-                          cursor: 'not-allowed',
-                          fontWeight: 600,
-                        }}
-                        disabled
-                        title="You have already reviewed this client for this task"
-                      >
+                      <Button variant="outline" size="sm" type="button" disabled title="You have already reviewed this client for this task">
                         ✓ Review Submitted
-                      </button>
+                      </Button>
                     ) : payment ? (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-outline admin-btn-sm"
-                        style={{
-                          fontSize: '11px',
-                          padding: '4px 10px',
-                          fontWeight: 700,
-                          borderColor: 'var(--color-secondary)',
-                          color: 'var(--color-secondary)',
-                        }}
-                        onClick={() => setSelectedProjectForReview(proj)}
-                      >
+                      <Button variant="outline" size="sm" type="button" onClick={() => setSelectedProjectForReview(proj)}>
                         ★ Review Client
-                      </button>
+                      </Button>
                     ) : (
                       <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
                         Review available after payment

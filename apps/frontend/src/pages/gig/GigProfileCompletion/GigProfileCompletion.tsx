@@ -9,6 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
+import { Button, Input, TextArea, useToast } from '../../../components/common';
 
 export const GigProfileCompletion: React.FC = () => {
   const { setActiveTab, triggerRefresh } = useGig();
@@ -18,6 +19,8 @@ export const GigProfileCompletion: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -108,57 +111,30 @@ export const GigProfileCompletion: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Bio Summary *
           </label>
-          <textarea maxLength={5000}
-            className="admin-textarea"
-            rows={5}
-            placeholder="Write a concise overview of your background, experience level, and tech stack specialty..."
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            required
-          />
+          <TextArea className="admin-textarea" maxLength={5000} rows={5} placeholder="Write a concise overview of your background, experience level, and tech stack specialty..." value={bio} onChange={(e) => setBio(e.target.value)} required />
         </div>
 
         <div>
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Skills & Frameworks (Comma separated)
           </label>
-          <input maxLength={1000}
-            type="text"
-            className="admin-input"
-            placeholder="React, TypeScript, Node.js, PostgreSQL, GraphQL"
-            value={skills}
-            onChange={(e) => setSkills(e.target.value)}
-          />
+          <Input className="admin-input" maxLength={1000} type="text" placeholder="React, TypeScript, Node.js, PostgreSQL, GraphQL" value={skills} onChange={(e) => setSkills(e.target.value)} />
         </div>
 
         <div>
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Portfolio URLs (Comma separated)
           </label>
-          <input maxLength={2000}
-            type="text"
-            className="admin-input"
-            placeholder="https://github.com/my-repo, https://dribbble.com/my-design"
-            value={portfolio}
-            onChange={(e) => setPortfolio(e.target.value)}
-          />
+          <Input className="admin-input" maxLength={2000} type="text" placeholder="https://github.com/my-repo, https://dribbble.com/my-design" value={portfolio} onChange={(e) => setPortfolio(e.target.value)} />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
-          <button
-            type="button"
-            className="admin-btn admin-btn-outline"
-            onClick={() => setActiveTab('profile')}
-          >
+          <Button variant="outline" type="button" onClick={() => setActiveTab('profile')}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="admin-btn admin-btn-primary"
-            disabled={saving}
-          >
+          </Button>
+          <Button type="submit" disabled={saving}>
             {saving ? 'Saving...' : 'Save Profile Changes'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

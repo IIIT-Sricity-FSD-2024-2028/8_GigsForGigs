@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useClient } from '../../../context/ClientContext';
+import { Button, Input, Select, TextArea, useToast } from '../../../components/common';
 
 export interface PostGigProps {
   onNavigate: (viewId: string) => void;
@@ -13,6 +14,7 @@ interface AttachedFile {
 }
 
 export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
+  const toast = useToast();
   const { addTask, updateTask, tasks } = useClient();
   const editId = params?.editId;
 
@@ -102,22 +104,22 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description || !budget || Number(budget) <= 0) {
-      alert('Please fill out all required fields with valid values');
+      toast.warning('Please fill out all required fields with valid values');
       return;
     }
 
     try {
       if (editId) {
         await updateTask(editId, title, description, Number(budget), category, duration, skills);
-        alert('Task updated successfully!');
+        toast.success('Task updated successfully!');
       } else {
         await addTask(title, description, Number(budget), category, duration, skills);
-        alert('Task published successfully!');
+        toast.success('Task published successfully!');
       }
       onNavigate('dashboard');
     } catch (err) {
       console.error('Save task failed:', err);
-      alert(err instanceof Error && err.message ? err.message : 'Failed to save this task. Please try again.');
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to save this task. Please try again.');
     }
   };
 
@@ -139,64 +141,34 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
       <form onSubmit={handleSubmit} id="post-gig-form">
         <div className="form-group">
           <label className="form-label" htmlFor="gig-title">Gig Title</label>
-          <input
-            maxLength={255}
-            type="text"
-            id="gig-title"
-            className="form-input"
-            placeholder="e.g. Need a Senior React Developer for 3 months"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+          <Input maxLength={255} type="text" id="gig-title" placeholder="e.g. Need a Senior React Developer for 3 months" value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
 
         <div className="form-row">
           <div className="form-group">
             <label className="form-label" htmlFor="category">Category</label>
-            <select
-              id="category"
-              className="form-input"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              required
-            >
+            <Select id="category" value={category} onChange={(e) => setCategory(e.target.value)} required>
               <option value="design">Design &amp; Creative</option>
               <option value="dev">Software Development</option>
               <option value="writing">Writing &amp; Translation</option>
               <option value="marketing">Digital Marketing</option>
-            </select>
+            </Select>
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="duration">Expected Duration</label>
-            <select
-              id="duration"
-              className="form-input"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              required
-            >
+            <Select id="duration" value={duration} onChange={(e) => setDuration(e.target.value)} required>
               <option value="one-time">One-time project</option>
               <option value="less-month">Less than 1 month</option>
               <option value="1-3-months">1 to 3 months</option>
               <option value="3-6-months">3 to 6 months</option>
               <option value="ongoing">Ongoing</option>
-            </select>
+            </Select>
           </div>
         </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor="description">Detailed Description</label>
-          <textarea
-            maxLength={5000}
-            id="description"
-            className="form-input"
-            rows={6}
-            placeholder="Describe the project scope, required skills, and specific deliverables you expect..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          ></textarea>
+          <TextArea maxLength={5000} id="description" rows={6} placeholder="Describe the project scope, required skills, and specific deliverables you expect..." value={description} onChange={(e) => setDescription(e.target.value)} required></TextArea>
         </div>
 
         <div className="form-row">
@@ -228,32 +200,13 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="budget">Budget (₹)</label>
-            <input
-              max="99999999.99"
-              type="number"
-              id="budget"
-              className="form-input"
-              placeholder="0.00"
-              min="5"
-              step="1"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value === '' ? '' : Number(e.target.value))}
-              required
-            />
+            <Input max="99999999.99" type="number" id="budget" placeholder="0.00" min="5" step="1" value={budget} onChange={(e) => setBudget(e.target.value === '' ? '' : Number(e.target.value))} required />
           </div>
         </div>
 
         <div className="form-group">
           <label className="form-label">Required Skills (Comma separated)</label>
-          <input
-            maxLength={1000}
-            type="text"
-            id="skills"
-            className="form-input"
-            placeholder="e.g. React, Node.js, Typescript"
-            value={skills}
-            onChange={(e) => setSkills(e.target.value)}
-          />
+          <Input maxLength={1000} type="text" id="skills" placeholder="e.g. React, Node.js, Typescript" value={skills} onChange={(e) => setSkills(e.target.value)} />
         </div>
 
         {/* Attachments Upload Feature */}
@@ -326,22 +279,9 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
                       ({formatFileSize(file.size)})
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); removeFile(file.id); }}
-                    style={{
-                      border: 'none',
-                      background: 'none',
-                      color: '#d32f2f',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      padding: '2px 6px',
-                      fontSize: '14px'
-                    }}
-                    title="Remove file"
-                  >
+                  <Button variant="ghost" type="button" onClick={(e) => { e.stopPropagation(); removeFile(file.id); }} title="Remove file">
                     ✕
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -349,16 +289,12 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
         </div>
 
         <div className="form-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-xl)' }}>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => onNavigate('dashboard')}
-          >
+          <Button variant="outline" type="button" onClick={() => onNavigate('dashboard')}>
             Cancel
-          </button>
-          <button type="submit" className="btn btn-primary" style={{ border: 'none' }}>
+          </Button>
+          <Button type="submit">
             {editId ? 'Save Changes' : 'Publish Gig'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

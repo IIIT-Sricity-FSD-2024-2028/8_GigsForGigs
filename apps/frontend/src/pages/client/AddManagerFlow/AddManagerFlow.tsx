@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { shareInviteLink } from '../../../utils/helpers/shareInviteLink';
+import { Button, Input, useToast } from '../../../components/common';
 
 export interface AddManagerFlowProps {
   onNavigate: (viewId: string) => void;
 }
 
 export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) => {
+  const toast = useToast();
   const { inviteManager, managers } = useClient();
   const [email, setEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      alert('Email is required');
+      toast.warning('Email is required');
       return;
     }
 
@@ -26,11 +28,11 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
         .join(' ') || 'Manager';
       const link = await inviteManager(name, email);
-      shareInviteLink(link);
+      shareInviteLink(link, toast.info);
       onNavigate('profile-selection');
     } catch (err) {
       console.error('Invite manager failed:', err);
-      alert(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
     }
   };
 
@@ -51,28 +53,28 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
             Who's using this account?
           </h1>
           <div className="profile-grid" style={{ display: 'flex', gap: '2rem', justifyContent: 'center' }}>
-            <button className="profile-avatar-btn" type="button">
+            <Button className="profile-avatar-btn" type="button">
               <div className="avatar-square" style={{ width: '120px', height: '120px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
                 A
               </div>
               <div style={{ marginTop: 'var(--spacing-sm)' }}><span className="avatar-name" style={{ fontSize: '1.125rem', color: 'var(--color-text-dark)', fontWeight: 500 }}>Admin</span></div>
-            </button>
+            </Button>
             
             {managers.map(mgr => (
-              <button key={mgr.invite_id} className="profile-avatar-btn" type="button">
+              <Button className="profile-avatar-btn" key={mgr.invite_id} type="button">
                 <div className="avatar-square" style={{ width: '120px', height: '120px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-blue)', color: 'var(--color-white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 700 }}>
                   {mgr.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ marginTop: 'var(--spacing-sm)' }}><span className="avatar-name" style={{ fontSize: '1.125rem', color: 'var(--color-text-dark)', fontWeight: 500 }}>{mgr.name}</span></div>
-              </button>
+              </Button>
             ))}
 
-            <button className="profile-avatar-btn add-profile-btn" type="button">
+            <Button className="profile-avatar-btn add-profile-btn" type="button">
               <div className="avatar-square" style={{ width: '120px', height: '120px', borderRadius: 'var(--radius-md)', border: '2px dashed var(--color-primary-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: 'var(--color-primary-dark)' }}>
                 +
               </div>
               <div style={{ marginTop: 'var(--spacing-sm)' }}><span className="avatar-name" style={{ fontSize: '1.125rem', color: 'var(--color-text-dark)', fontWeight: 500 }}>Add Manager</span></div>
-            </button>
+            </Button>
           </div>
         </main>
       </div>
@@ -128,30 +130,16 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
               <label className="form-label" htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-dark)' }}>
                 Colleague's Email Address
               </label>
-              <input maxLength={100}
-                type="email"
-                id="email"
-                className="form-input"
-                placeholder="manager@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={{ width: '100%' }}
-              />
+              <Input maxLength={100} type="email" id="email" placeholder="manager@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%' }} />
             </div>
             
             <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-xl)' }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                style={{ flex: 1, textDecoration: 'none' }}
-                onClick={() => onNavigate('profile-selection')}
-              >
+              <Button variant="outline" type="button" onClick={() => onNavigate('profile-selection')} style={{ flex: 1 }}>
                 Cancel
-              </button>
-              <button type="submit" className="btn btn-primary" style={{ flex: 1, border: 'none' }}>
+              </Button>
+              <Button type="submit" style={{ flex: 1 }}>
                 Send Invite &rarr;
-              </button>
+              </Button>
             </div>
           </form>
         </div>

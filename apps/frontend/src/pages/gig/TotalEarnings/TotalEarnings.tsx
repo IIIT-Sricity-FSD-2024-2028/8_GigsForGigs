@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
 import type { EarningsSummary } from '../../../types/gig';
+import { Button, useToast } from '../../../components/common';
 
 export const TotalEarnings: React.FC = () => {
+  const toast = useToast();
   const [earnings, setEarnings] = useState<EarningsSummary>({ totalEarnings: 0, completedTasks: 0, payments: [] });
   const [loading, setLoading] = useState<boolean>(true);
   const [withdrawing, setWithdrawing] = useState<boolean>(false);
@@ -42,12 +44,12 @@ export const TotalEarnings: React.FC = () => {
 
   const handleWithdraw = () => {
     if (earnings.totalEarnings <= 0) {
-      alert('No cleared earnings available for withdrawal yet.');
+      toast.warning('No cleared earnings available for withdrawal yet.');
       return;
     }
     setWithdrawing(true);
     setTimeout(() => {
-      alert(`Successfully initiated payout withdrawal of ${formatCurrency(earnings.totalEarnings)} to your registered bank account!`);
+      toast.success(`Successfully initiated payout withdrawal of ${formatCurrency(earnings.totalEarnings)} to your registered bank account!`);
       setWithdrawing(false);
     }, 800);
   };
@@ -84,14 +86,9 @@ export const TotalEarnings: React.FC = () => {
             View your completed, pending, and failed project payments.
           </p>
         </div>
-        <button
-          className="admin-btn"
-          style={{ padding: '0.8rem 1.6rem', fontSize: 'var(--font-size-base)', backgroundColor: '#B45F00', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
-          disabled={withdrawing}
-          onClick={handleWithdraw}
-        >
+        <Button disabled={withdrawing} onClick={handleWithdraw}>
           {withdrawing ? 'Processing Withdrawal...' : `Withdraw ${formatCurrency(earnings.totalEarnings)} to Bank`}
-        </button>
+        </Button>
       </div>
 
       {/* Summary Metric Cards */}

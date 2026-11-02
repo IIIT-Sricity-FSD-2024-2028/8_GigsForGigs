@@ -3,6 +3,7 @@ import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { safeHttpUrl } from '../../../utils/helpers/safeUrl';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
 import { managerApi } from '../../../services/api/manager/managerApi';
+import { Button, Input, Select } from '../../../components/common';
 
 interface ReviewDeliverablesProps {
   onBack: () => void;
@@ -20,9 +21,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
     return (
       <div style={{ backgroundColor: '#FFFFFF', padding: '40px', borderRadius: '12px', textAlign: 'center' }}>
         <p style={{ color: '#475764' }}>No task selected.</p>
-        <button onClick={onBack} style={{ backgroundColor: '#0D568D', color: '#FFF', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', marginTop: '12px' }}>
+        <Button onClick={onBack} style={{ marginTop: '12px' }}>
           Back to Assigned Tasks
-        </button>
+        </Button>
       </div>
     );
   }
@@ -45,12 +46,9 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       {/* Top Navigation */}
       <div>
-        <button
-          onClick={onBack}
-          style={{ backgroundColor: 'transparent', border: 'none', color: '#0D568D', fontWeight: 600, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: 0 }}
-        >
+        <Button variant="ghost" onClick={onBack}>
           ← Back to Assigned Tasks
-        </button>
+        </Button>
       </div>
 
       {/* Task Summary Card */}
@@ -162,22 +160,13 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#2E6E62' }}>SHORTLISTED</span>
                   ) : (
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <select
-                        aria-label="Rating"
-                        value={ratings[app.applicationId] ?? ''}
-                        onChange={e => setRatings(prev => ({ ...prev, [app.applicationId]: Number(e.target.value) }))}
-                        style={{ padding: '6px', borderRadius: '4px', border: '1px solid #D3DCE2', fontSize: '12px' }}
-                      >
+                      <Select aria-label="Rating" value={ratings[app.applicationId] ?? ''} onChange={e => setRatings(prev => ({ ...prev, [app.applicationId]: Number(e.target.value) }))}>
                         <option value="">Rating (optional)</option>
                         {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} / 5</option>)}
-                      </select>
-                      <button
-                        disabled={loading}
-                        onClick={() => shortlistApplication(selectedTask.taskId, app.applicationId, ratings[app.applicationId] ? { rating: ratings[app.applicationId] } : {})}
-                        style={{ backgroundColor: '#0D568D', color: '#FFF', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                      >
+                      </Select>
+                      <Button size="sm" disabled={loading} onClick={() => shortlistApplication(selectedTask.taskId, app.applicationId, ratings[app.applicationId] ? { rating: ratings[app.applicationId] } : {})}>
                         Shortlist
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -270,72 +259,31 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
               <div style={{ display: 'flex', gap: '10px' }}>
                 {reviewingNo === del.deliverableNo ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '220px' }}>
-                    <select
-                      value={reviewStatus}
-                      onChange={e => setReviewStatus(e.target.value as any)}
-                      style={{ padding: '6px', borderRadius: '4px', border: '1px solid #D3DCE2', fontSize: '12px' }}
-                    >
+                    <Select value={reviewStatus} onChange={e => setReviewStatus(e.target.value as any)}>
                       <option value="approved">Approve</option>
                       <option value="revision_requested">Request Revision</option>
-                    </select>
-                    <input maxLength={500}
-                      type="text"
-                      placeholder="Optional feedback..."
-                      value={feedback}
-                      onChange={e => setFeedback(e.target.value)}
-                      style={{ padding: '6px', borderRadius: '4px', border: '1px solid #D3DCE2', fontSize: '12px' }}
-                    />
+                    </Select>
+                    <Input maxLength={500} type="text" placeholder="Optional feedback..." value={feedback} onChange={e => setFeedback(e.target.value)} />
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        onClick={() => handleReviewSubmit(del.deliverableNo)}
-                        style={{ backgroundColor: '#0D568D', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', flex: 1 }}
-                      >
+                      <Button size="sm" onClick={() => handleReviewSubmit(del.deliverableNo)} style={{ flex: 1 }}>
                         Submit
-                      </button>
-                      <button
-                        onClick={() => setReviewingNo(null)}
-                        style={{ backgroundColor: '#FFF', border: '1px solid #CCC', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
-                      >
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setReviewingNo(null)}>
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
                   <>
                     {del.status === 'submitted' && selectedTask.status === 'in_progress' && (
-                    <button
-                      onClick={() => setReviewingNo(del.deliverableNo)}
-                      style={{
-                        backgroundColor: '#0D568D',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        padding: '8px 14px',
-                        borderRadius: '6px',
-                        fontWeight: 600,
-                        fontSize: '13px',
-                        cursor: 'pointer'
-                      }}
-                    >
+                    <Button size="sm" onClick={() => setReviewingNo(del.deliverableNo)}>
                       Review
-                    </button>
+                    </Button>
                     )}
                     {(del.status === 'approved' || del.status === 'closed') && (
-                    <button
-                      onClick={() => closeDeliverable(selectedTask.taskId, del.deliverableNo)}
-                      disabled={del.status === 'closed' || selectedTask.status !== 'in_progress'}
-                      style={{
-                        backgroundColor: del.status === 'closed' ? '#DCE3E8' : '#367D6F',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        padding: '8px 14px',
-                        borderRadius: '6px',
-                        fontWeight: 600,
-                        fontSize: '13px',
-                        cursor: del.status === 'closed' ? 'not-allowed' : 'pointer'
-                      }}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => closeDeliverable(selectedTask.taskId, del.deliverableNo)} disabled={del.status === 'closed' || selectedTask.status !== 'in_progress'}>
                       {del.status === 'closed' ? 'Closed' : 'Close'}
-                    </button>
+                    </Button>
                     )}
                   </>
                 )}

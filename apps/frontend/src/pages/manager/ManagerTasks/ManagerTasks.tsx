@@ -1,5 +1,6 @@
 import React from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
+import { Button } from '../../../components/common';
 
 interface ManagerTasksProps {
   onSelectTask: (taskId: number) => void;
@@ -110,23 +111,9 @@ export const ManagerTasks: React.FC<ManagerTasksProps> = ({ onSelectTask }) => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onSelectTask(task.taskId)}
-                    style={{
-                      width: '100%',
-                      backgroundColor: '#0D568D',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      padding: '10px',
-                      borderRadius: '6px',
-                      fontWeight: 600,
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s'
-                    }}
-                  >
+                  <Button onClick={() => onSelectTask(task.taskId)} style={{ width: '100%' }}>
                     View Task & Deliverables
-                  </button>
+                  </Button>
                 </div>
               </div>
             );

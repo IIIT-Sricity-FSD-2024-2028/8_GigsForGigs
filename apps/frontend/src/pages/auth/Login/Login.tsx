@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useToast } from '../../../components/common';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { Button, Input } from '../../../components/common';
 
 interface LoginProps {
   onBackToLanding?: () => void;
@@ -13,6 +15,9 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
   const [totpCode, setTotpCode] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const toast = useToast();
+  // Server-side failures (wrong password, email taken, ...) also surface as a toast; the inline box stays for form validation.
+  useEffect(() => { if (authError) toast.error(authError); }, [authError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,25 +109,9 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
       >
         {/* Back Link to Landing */}
         {onBackToLanding && (
-          <button
-            onClick={onBackToLanding}
-            style={{
-              position: 'absolute',
-              top: '32px',
-              right: '48px',
-              background: 'none',
-              border: 'none',
-              color: '#5E6E7A',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
+          <Button variant="ghost" onClick={onBackToLanding} style={{ position: 'absolute', top: '32px', right: '48px' }}>
             ← Back to Home
-          </button>
+          </Button>
         )}
 
         <div style={{ maxWidth: '420px', width: '100%', margin: '0 auto' }}>
@@ -162,24 +151,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '8px' }}>
                 Email address
               </label>
-              <input maxLength={100}
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D3DCE2',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#EFF6FC',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <Input maxLength={100} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" style={{ width: '100%' }} />
             </div>
 
             {/* Password */}
@@ -187,24 +159,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '8px' }}>
                 Password
               </label>
-              <input maxLength={72}
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #D3DCE2',
-                  fontSize: '15px',
-                  color: '#2D3748',
-                  backgroundColor: '#EFF6FC',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <Input maxLength={72} type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ width: '100%' }} />
             </div>
 
             {twoFactorRequired && (
@@ -212,17 +167,7 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
                 <label htmlFor="totp-code" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '6px' }}>
                   Authenticator code
                 </label>
-                <input
-                  id="totp-code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  autoFocus
-                  value={totpCode}
-                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: '8px', border: '1px solid #D3DCE2', fontSize: '15px', color: '#2D3748', backgroundColor: '#EFF6FC', outline: 'none', boxSizing: 'border-box', letterSpacing: '0.2em' }}
-                />
+                <Input id="totp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))} placeholder="123456" style={{ width: '100%' }} />
               </div>
             )}
 
@@ -247,25 +192,9 @@ export const Login: React.FC<LoginProps> = ({ onBackToLanding, onNavigateToSignu
             </div>
 
             {/* Submit Login Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                backgroundColor: '#084875',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '14px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '16px',
-                cursor: 'pointer',
-                marginTop: '8px',
-                transition: 'background-color 0.2s'
-              }}
-            >
+            <Button type="submit" disabled={loading} style={{ width: '100%', marginTop: '8px' }}>
               {loading ? 'Signing in...' : 'Login'}
-            </button>
+            </Button>
           </form>
 
           {/* Footer prompt */}

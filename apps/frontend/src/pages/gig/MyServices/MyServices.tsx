@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import type { GigService } from '../../../types/gig';
+import { Button, useToast } from '../../../components/common';
 
 export const MyServices: React.FC = () => {
+  const toast = useToast();
   const { setActiveTab, refreshTrigger } = useGig();
   const [services, setServices] = useState<GigService[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -74,12 +76,9 @@ export const MyServices: React.FC = () => {
             Manage your active marketplace service offerings available for clients to discover and hire.
           </p>
         </div>
-        <button
-          className="admin-btn admin-btn-primary"
-          onClick={() => setActiveTab('post-service')}
-        >
+        <Button onClick={() => setActiveTab('post-service')}>
           + Post New Service
-        </button>
+        </Button>
       </div>
 
       {/* Services Grid */}
@@ -156,20 +155,12 @@ export const MyServices: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  className="admin-btn admin-btn-outline admin-btn-sm"
-                  onClick={() => alert(`Editing service "${srv.title}"...`)}
-                  style={{ fontSize: '12px' }}
-                >
+                <Button variant="outline" size="sm" onClick={() => toast.info(`Editing service "${srv.title}"...`)}>
                   Edit
-                </button>
-                <button
-                  className="admin-btn admin-btn-primary admin-btn-sm"
-                  onClick={() => setActiveTab('pending-requests')}
-                  style={{ fontSize: '12px' }}
-                >
+                </Button>
+                <Button size="sm" onClick={() => setActiveTab('pending-requests')}>
                   Client Requests
-                </button>
+                </Button>
               </div>
             </div>
           </div>

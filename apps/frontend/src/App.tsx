@@ -15,6 +15,7 @@ import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
 import { GigProvider } from './context/GigContext/GigContext';
 import { ToastProvider } from './components/super-admin/Toast';
+import { ToastProvider as AppToastProvider } from './components/common/Toast';
 import { AdminLayout } from './layouts/AdminLayout';
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
 import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
@@ -361,7 +362,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <BrowserRouter><RouteTree /></BrowserRouter>
+        <AppToastProvider><BrowserRouter><RouteTree /></BrowserRouter></AppToastProvider>
       </ToastProvider>
     </AuthProvider>
   );

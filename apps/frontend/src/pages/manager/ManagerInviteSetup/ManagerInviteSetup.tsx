@@ -2,24 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { authApi } from '../../../services/api/auth/authApi';
 import { ApiError } from '../../../services/api/httpClient';
+import { Button, Input } from '../../../components/common';
 
 export interface ManagerInviteSetupProps {
   token: string;
   /** Called after activation (signed in) or when the user leaves the flow. */
   onDone: () => void;
 }
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 14px',
-  borderRadius: '8px',
-  border: '1px solid #D3DCE2',
-  fontSize: '15px',
-  color: '#2D3748',
-  backgroundColor: '#EFF6FC',
-  outline: 'none',
-  boxSizing: 'border-box',
-};
 
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: 600, color: '#1B2A36', marginBottom: '8px' };
 
@@ -67,9 +56,9 @@ export const ManagerInviteSetup: React.FC<ManagerInviteSetupProps> = ({ token, o
         {loadError && (
           <>
             <p role="alert" style={{ color: '#9B1C1C', backgroundColor: '#FDE8E8', padding: '12px', borderRadius: '8px' }}>{loadError}</p>
-            <button type="button" onClick={onDone} className="btn btn-outline" style={{ marginTop: '16px', width: '100%' }}>
+            <Button variant="outline" type="button" onClick={onDone} style={{ marginTop: '16px', width: '100%' }}>
               Go to sign in
-            </button>
+            </Button>
           </>
         )}
 
@@ -80,18 +69,18 @@ export const ManagerInviteSetup: React.FC<ManagerInviteSetupProps> = ({ token, o
             </p>
             <div>
               <label style={labelStyle} htmlFor="mgr-password">Password</label>
-              <input id="mgr-password" type="password" required minLength={8} maxLength={72} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
+              <Input id="mgr-password" type="password" required minLength={8} maxLength={72} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <div>
               <label style={labelStyle} htmlFor="mgr-confirm">Confirm password</label>
-              <input maxLength={72} id="mgr-confirm" type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} style={inputStyle} />
+              <Input maxLength={72} id="mgr-confirm" type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </div>
             {(formError || authError) && (
               <p role="alert" style={{ color: '#9B1C1C', margin: 0 }}>{formError || authError}</p>
             )}
-            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', border: 'none' }}>
+            <Button type="submit" disabled={loading} style={{ width: '100%' }}>
               {loading ? 'Activating…' : 'Activate account'}
-            </button>
+            </Button>
           </form>
         )}
       </div>

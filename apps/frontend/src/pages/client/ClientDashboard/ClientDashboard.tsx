@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useClient, type Task } from '../../../context/ClientContext';
 import { useAuth } from '../../../context/AuthContext';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
+import { Button } from '../../../components/common';
 
 export interface ClientDashboardProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -159,30 +160,18 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                   </td>
                   <td>
                     <div className="actions-cell">
-                      <button
-                        className="btn-icon-action"
-                        title="View Task Details"
-                        onClick={() => setViewingTask(t)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                        aria-label={`View details of ${t.title}`}
-                      >
+                      <Button variant="ghost" title="View Task Details" onClick={() => setViewingTask(t)} aria-label={`View details of ${t.title}`}>
                         <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                           <circle cx="12" cy="12" r="3"></circle>
                         </svg>
-                      </button>
-                      <button
-                        className="btn-icon-action"
-                        title="Edit Task"
-                        onClick={() => onNavigate('post-gig', { editId: t.task_id })}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                        aria-label={`Edit ${t.title}`}
-                      >
+                      </Button>
+                      <Button variant="ghost" title="Edit Task" onClick={() => onNavigate('post-gig', { editId: t.task_id })} aria-label={`Edit ${t.title}`}>
                         <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                           <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -239,17 +228,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                     </td>
                     <td>
                       <div className="actions-cell">
-                        <button
-                          className="btn-icon-action"
-                          title="View deliverables"
-                          onClick={() => onNavigate('review-deliverables', { taskId: t.task_id })}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                        >
+                        <Button variant="ghost" title="View deliverables" onClick={() => onNavigate('review-deliverables', { taskId: t.task_id })}>
                           <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                           </svg>
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -315,19 +299,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                   {viewingTask.title}
                 </h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setViewingTask(null)}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  color: 'var(--color-text-muted)'
-                }}
-              >
+              <Button variant="ghost" type="button" onClick={() => setViewingTask(null)}>
                 ✕
-              </button>
+              </Button>
             </div>
 
             {/* Key Metrics */}
@@ -427,30 +401,20 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                     </div>
                   </div>
                   {taskApps.length > 0 ? (
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ fontSize: '12px', padding: '6px 14px' }}
-                      onClick={() => {
+                    <Button size="sm" type="button" onClick={() => {
                         const tId = viewingTask.task_id;
                         setViewingTask(null);
                         onNavigate('review-shortlist', { taskId: tId });
-                      }}
-                    >
+                      }}>
                       Review Candidates ({taskApps.length})
-                    </button>
+                    </Button>
                   ) : (
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      style={{ fontSize: '12px', padding: '6px 14px', backgroundColor: '#FFFFFF' }}
-                      onClick={() => {
+                    <Button variant="outline" size="sm" type="button" onClick={() => {
                         setViewingTask(null);
                         onNavigate('search-talent');
-                      }}
-                    >
+                      }}>
                       Browse Talent &amp; Invite
-                    </button>
+                    </Button>
                   )}
                 </div>
               );
@@ -458,26 +422,16 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
 
             {/* Modal Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                style={{ padding: '8px 16px', fontSize: '13px' }}
-                onClick={() => setViewingTask(null)}
-              >
+              <Button variant="outline" size="sm" type="button" onClick={() => setViewingTask(null)}>
                 Close
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ padding: '8px 18px', fontSize: '13px' }}
-                onClick={() => {
+              </Button>
+              <Button size="sm" type="button" onClick={() => {
                   const editId = viewingTask.task_id;
                   setViewingTask(null);
                   onNavigate('post-gig', { editId });
-                }}
-              >
+                }}>
                 Edit Task
-              </button>
+              </Button>
             </div>
           </div>
         </div>

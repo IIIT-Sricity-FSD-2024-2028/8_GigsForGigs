@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { apiFetch } from '../../../services/api/httpClient';
+import { Button, Input, Select, useToast } from '../../../components/common';
 
 export const SearchTalent: React.FC = () => {
   const { talents, searchTalent } = useManager();
   const [skillFilter, setSkillFilter] = useState('');
   const [hiredMsg, setHiredMsg] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (hiredMsg) toast.success(hiredMsg); }, [hiredMsg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSkillFilter(e.target.value);
@@ -61,40 +64,28 @@ export const SearchTalent: React.FC = () => {
         <span style={{ fontSize: '14px', fontWeight: 600, color: '#475764' }}>Filters:</span>
 
         {/* Skill Search Input */}
-        <input maxLength={100}
-          type="text"
-          placeholder="Search by Skill or Title..."
-          value={skillFilter}
-          onChange={handleSearchChange}
-          style={{
-            padding: '8px 14px',
-            borderRadius: '6px',
-            border: '1px solid #D3DCE2',
-            fontSize: '14px',
-            width: '220px'
-          }}
-        />
+        <Input maxLength={100} type="text" placeholder="Search by Skill or Title..." value={skillFilter} onChange={handleSearchChange} style={{ width: '220px' }} />
 
-        <select style={{ padding: '8px 14px', borderRadius: '6px', border: '1px solid #D3DCE2', fontSize: '14px', backgroundColor: '#FFF', color: '#1B2A36' }}>
+        <Select>
           <option>Budget: Any</option>
           <option>Under ₹10,000</option>
           <option>₹10,000 - ₹25,000</option>
           <option>Above ₹25,000</option>
-        </select>
+        </Select>
 
-        <select style={{ padding: '8px 14px', borderRadius: '6px', border: '1px solid #D3DCE2', fontSize: '14px', backgroundColor: '#FFF', color: '#1B2A36' }}>
+        <Select>
           <option>Rating: Any</option>
           <option>4.5 & above</option>
           <option>4.0 & above</option>
-        </select>
+        </Select>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '14px', color: '#475764' }}>Sort by:</span>
-          <select style={{ padding: '8px 14px', borderRadius: '6px', border: '1px solid #D3DCE2', fontSize: '14px', backgroundColor: '#FFF', color: '#1B2A36', fontWeight: 600 }}>
+          <Select>
             <option>Relevance</option>
             <option>Price: Low to High</option>
             <option>Price: High to Low</option>
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -174,24 +165,9 @@ export const SearchTalent: React.FC = () => {
               </p>
 
               {/* Request / Hire Button */}
-              <button
-                onClick={() => handleHireClick(talent)}
-                style={{
-                  width: '100%',
-                  backgroundColor: '#367D6F',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  marginTop: '8px',
-                  transition: 'background 0.2s'
-                }}
-              >
+              <Button onClick={() => handleHireClick(talent)} style={{ width: '100%', marginTop: '8px' }}>
                 Request / Hire
-              </button>
+              </Button>
             </div>
           </div>
         ))}

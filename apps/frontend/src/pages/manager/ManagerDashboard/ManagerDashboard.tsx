@@ -122,17 +122,12 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
                   <td className="budget-cell">{formatBudget(task.budget)}</td>
                   <td>
                     <div className="actions-cell">
-                      <button
-                        className="btn-icon-action"
-                        title="View task details"
-                        onClick={() => onNavigateToTask(task.taskId)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                      >
+                      <Button variant="ghost" title="View task details" onClick={() => onNavigateToTask(task.taskId)}>
                         <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                           <circle cx="12" cy="12" r="3"></circle>
                         </svg>
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -196,17 +191,12 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
                     <td className="budget-cell">{formatBudget(task.budget)}</td>
                     <td>
                       <div className="actions-cell">
-                        <button
-                          className="btn-icon-action"
-                          title="View task details & deliverables"
-                          onClick={() => onNavigateToTask(task.taskId)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                        >
+                        <Button variant="ghost" title="View task details & deliverables" onClick={() => onNavigateToTask(task.taskId)}>
                           <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                           </svg>
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -256,20 +246,12 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-                  <button
-                    className="btn btn-primary"
-                    style={{ padding: '6px 14px', fontSize: '0.8rem' }}
-                    onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'approved' })}
-                  >
+                  <Button size="sm" onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'approved' })}>
                     Approve
-                  </button>
-                  <button
-                    className="btn btn-outline"
-                    style={{ padding: '6px 14px', fontSize: '0.8rem' }}
-                    onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'revision_requested' })}
-                  >
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'revision_requested' })}>
                     Request revision
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

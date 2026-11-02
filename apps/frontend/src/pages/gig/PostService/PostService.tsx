@@ -5,10 +5,11 @@
  * Enables posting packaged gig services with pricing, category tags, delivery timeline, and descriptions.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
+import { Button, Input, Select, TextArea, useToast } from '../../../components/common';
 
 export const PostService: React.FC = () => {
   const { setActiveTab, triggerRefresh } = useGig();
@@ -20,6 +21,8 @@ export const PostService: React.FC = () => {
   const [thumbnail, setThumbnail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,14 +88,7 @@ export const PostService: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Service Title *
           </label>
-          <input maxLength={255}
-            type="text"
-            className="admin-input"
-            placeholder="e.g. Full-Stack React & Node.js Web App Development"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+          <Input className="admin-input" maxLength={255} type="text" placeholder="e.g. Full-Stack React & Node.js Web App Development" value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
@@ -100,34 +96,21 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Category / Domain *
             </label>
-            <input maxLength={50}
-              type="text"
-              className="admin-input"
-              placeholder="e.g. Frontend Development, UI/UX"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              required
-            />
+            <Input className="admin-input" maxLength={50} type="text" placeholder="e.g. Frontend Development, UI/UX" value={category} onChange={(e) => setCategory(e.target.value)} required />
           </div>
 
           <div>
             <label htmlFor="service-delivery" style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Estimated Delivery Time *
             </label>
-            <select
-              id="service-delivery"
-              className="admin-input"
-              value={delivery}
-              onChange={(e) => setDelivery(e.target.value)}
-              required
-            >
+            <Select className="admin-input" id="service-delivery" value={delivery} onChange={(e) => setDelivery(e.target.value)} required>
               <option value="" disabled>Select expected duration</option>
               <option value="one-time">One-time project</option>
               <option value="less-month">Less than 1 month</option>
               <option value="1-3-months">1 to 3 months</option>
               <option value="3-6-months">3 to 6 months</option>
               <option value="ongoing">Ongoing</option>
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -136,28 +119,14 @@ export const PostService: React.FC = () => {
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Fixed Price (INR ₹) *
             </label>
-            <input max="99999999.99" step="0.01"
-              type="number"
-              className="admin-input"
-              placeholder="1200"
-              value={price}
-              onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : '')}
-              min={10}
-              required
-            />
+            <Input className="admin-input" max="99999999.99" step="0.01" type="number" placeholder="1200" value={price} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : '')} min={10} required />
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
               Thumbnail Image URL (Optional)
             </label>
-            <input maxLength={500}
-              type="url"
-              className="admin-input"
-              placeholder="https://images.unsplash.com/..."
-              value={thumbnail}
-              onChange={(e) => setThumbnail(e.target.value)}
-            />
+            <Input className="admin-input" maxLength={500} type="url" placeholder="https://images.unsplash.com/..." value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} />
           </div>
         </div>
 
@@ -165,31 +134,16 @@ export const PostService: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Service Description & Deliverables Scope *
           </label>
-          <textarea maxLength={5000}
-            className="admin-textarea"
-            rows={5}
-            placeholder="Detailed description of what is included, milestone deliverables, technical stack used, and requirements from the client..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
+          <TextArea className="admin-textarea" maxLength={5000} rows={5} placeholder="Detailed description of what is included, milestone deliverables, technical stack used, and requirements from the client..." value={description} onChange={(e) => setDescription(e.target.value)} required />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
-          <button
-            type="button"
-            className="admin-btn admin-btn-outline"
-            onClick={() => setActiveTab('dashboard')}
-          >
+          <Button variant="outline" type="button" onClick={() => setActiveTab('dashboard')}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="admin-btn admin-btn-primary"
-            disabled={submitting}
-          >
+          </Button>
+          <Button type="submit" disabled={submitting}>
             {submitting ? 'Publishing...' : 'Publish Service'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

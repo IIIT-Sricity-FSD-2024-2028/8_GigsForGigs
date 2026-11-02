@@ -13,6 +13,7 @@ import { ApiError } from '../../../services/api/httpClient';
 import type { GigTask } from '../../../types/gig';
 import type { TaskDeliverableDefinition } from '../../../types/gig';
 import { Badge } from '../../../components/common/Badge';
+import { Button, Input, TextArea, useToast } from '../../../components/common';
 
 export const SubmitDeliverables: React.FC = () => {
   const { selectedTaskId, setActiveTab, triggerRefresh } = useGig();
@@ -25,6 +26,8 @@ export const SubmitDeliverables: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -114,9 +117,9 @@ export const SubmitDeliverables: React.FC = () => {
         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-lg)' }}>
           Please select an active task from Active Task/Contracts to submit work deliverables.
         </p>
-        <button className="admin-btn admin-btn-primary" onClick={() => setActiveTab('active-tasks')}>
+        <Button onClick={() => setActiveTab('active-tasks')}>
           Go to Active Task/Contracts
-        </button>
+        </Button>
       </div>
     );
   }
@@ -151,12 +154,9 @@ export const SubmitDeliverables: React.FC = () => {
             Client: <strong>{task.client?.clientName || 'Client'}</strong> • Budget: <strong style={{ color: 'var(--color-secondary)' }}>{formatCurrency(task.budget)}</strong>
           </p>
         </div>
-        <button
-          className="admin-btn admin-btn-outline admin-btn-sm"
-          onClick={() => setActiveTab('project-detail')}
-        >
+        <Button variant="outline" size="sm" onClick={() => setActiveTab('project-detail')}>
           View Full Spec
-        </button>
+        </Button>
       </div>
 
       {/* Existing Deliverables History */}
@@ -224,44 +224,23 @@ export const SubmitDeliverables: React.FC = () => {
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Submission Details / Pull Request Link *
           </label>
-          <textarea maxLength={500}
-            className="admin-textarea"
-            rows={5}
-            placeholder="Describe your completed work, paste GitHub Pull Request links, or add Figma prototype URLs..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            required
-          />
+          <TextArea className="admin-textarea" maxLength={500} rows={5} placeholder="Describe your completed work, paste GitHub Pull Request links, or add Figma prototype URLs..." value={content} onChange={(e) => setContent(e.target.value)} required />
         </div>
 
         <div>
           <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-dark)', marginBottom: 'var(--spacing-xs)' }}>
             Additional Notes for Client (Optional)
           </label>
-          <input maxLength={500}
-            type="text"
-            className="admin-input"
-            placeholder="e.g. Requires environment variable setup in staging..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
+          <Input className="admin-input" maxLength={500} type="text" placeholder="e.g. Requires environment variable setup in staging..." value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-md)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
-          <button
-            type="button"
-            className="admin-btn admin-btn-outline"
-            onClick={() => setActiveTab('active-tasks')}
-          >
+          <Button variant="outline" type="button" onClick={() => setActiveTab('active-tasks')}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="admin-btn admin-btn-primary"
-            disabled={submitting || !definitionsReady}
-          >
+          </Button>
+          <Button type="submit" disabled={submitting || !definitionsReady}>
             {submitting ? 'Submitting...' : 'Submit Deliverable for Review'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
