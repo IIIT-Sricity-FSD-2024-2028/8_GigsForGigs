@@ -54,12 +54,17 @@ export function DataTable<T extends Record<string, any>>({
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  // React-recommended pattern: Adjust state during render to avoid cascading useEffect renders
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+  const [prevData, setPrevData] = useState(data);
 
-  // Reset pagination to first page whenever search query or source dataset changes
-  useEffect(() => {
+  if (prevSearchQuery !== searchQuery || prevData !== data) {
+    setPrevSearchQuery(searchQuery);
+    setPrevData(data);
     setCurrentPage(1);
-  }, [searchQuery, data]);
+  }
+
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   // Deep recursive filter dataset by search term
   const filteredData = useMemo(() => {
