@@ -45,17 +45,36 @@ export function computeProgress(
 
 export const latestSubmissionInclude = {
   submissions: {
-    include: { submission: { select: { deliverableNo: true, status: true } } },
+    include: { submission: { select: { deliverableNo: true, status: true, gigProfileId: true } } },
     orderBy: { deliverableNo: "desc" },
   },
 } as const;
 
-/** True once every required deliverable is approved/closed (and there is at least one). */
-export async function isTaskWorkComplete(taskId: number): Promise<boolean> {
+/**
+ * A task can have several hired professionals sharing one set of definitions;
+ * each professional's progress counts only their own submissions.
+ */
+export function definitionsForProfessional<D extends { submissions: Array<{ submission: { gigProfileId: number; status: string } }> }>(
+  definitions: D[],
+  gigProfileId: number,
+): D[] {
+  return definitions.map((d) => ({ ...d, submissions: d.submissions.filter((s) => s.submission.gigProfileId === gigProfileId) }));
+}
+
+/** Each hire's lifecycle lives on its PAYMENT row: pending/held = active, completed/refunded = finished. */
+export const ACTIVE_PAYMENT_STATUSES = ["pending", "held"] as const;
+export const SETTLED_PAYMENT_STATUSES = ["completed", "refunded"] as const;
+
+export function hireStatus(paymentStatus: string | null | undefined): "in_progress" | "completed" {
+  return paymentStatus === "completed" || paymentStatus === "refunded" ? "completed" : "in_progress";
+}
+
+/** True once every required deliverable is approved/closed for this professional (and there is at least one). */
+export async function isTaskWorkComplete(taskId: number, gigProfileId: number): Promise<boolean> {
   const [definitions, deliverables] = await Promise.all([
     prisma.taskDeliverableDefinition.findMany({ where: { taskId }, include: latestSubmissionInclude }),
-    prisma.deliverable.findMany({ where: { taskId }, select: { status: true } }),
+    prisma.deliverable.findMany({ where: { taskId, gigProfileId }, select: { status: true } }),
   ]);
   if (definitions.length === 0 && deliverables.length === 0) return false;
-  return computeProgress(definitions, deliverables) === 100;
+  return computeProgress(definitionsForProfessional(definitions, gigProfileId), deliverables) === 100;
 }

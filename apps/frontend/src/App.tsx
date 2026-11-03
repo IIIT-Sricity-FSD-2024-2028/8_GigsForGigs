@@ -40,13 +40,13 @@ import { ClientCompletedProjects } from './pages/client/CompletedProjects/Client
 import { ClientProfile } from './pages/client/ClientProfile/ClientProfile';
 import { ManagerProfileView } from './pages/client/ClientProfileSelection/ManagerProfileView';
 import { ManagerDashboard } from './pages/manager/ManagerDashboard/ManagerDashboard';
-import { SearchTalent as ManagerSearchTalent } from './pages/manager/SearchTalent/SearchTalent';
 import { ManagerTasks } from './pages/manager/ManagerTasks/ManagerTasks';
 import { ReviewDeliverables as ManagerReviewDeliverables } from './pages/manager/ReviewDeliverables/ReviewDeliverables';
 import { ManagerProfile } from './pages/manager/ManagerProfile/ManagerProfile';
 import { GigDashboard } from './pages/gig/GigDashboard/GigDashboard';
 import { ExploreTasks } from './pages/gig/ExploreTasks/ExploreTasks';
 import { ActiveTasks } from './pages/gig/ActiveTasks/ActiveTasks';
+import { AppliedTasks } from './pages/gig/AppliedTasks/AppliedTasks';
 import { ServiceRequests } from './pages/gig/ServiceRequests/ServiceRequests';
 import { CompletedProjects } from './pages/gig/CompletedProjects/CompletedProjects';
 import { TotalEarnings } from './pages/gig/TotalEarnings/TotalEarnings';
@@ -169,7 +169,8 @@ function ClientPortal() {
       'client-profile': '/client/profile', 'profile-selection': '/client/manager',
       'manager-profile': `/client/manager/${params?.managerId || ''}`,
       'add-manager': '/client/manager/add', 'add-manager-flow': '/client/manager/setup',
-      'post-gig': '/client/gigs/new', 'review-deliverables': `/client/gigs/${params?.taskId || taskId || ''}/review`,
+      'post-gig': '/client/gigs/new',
+      'review-deliverables': `/client/gigs/${params?.taskId || taskId || ''}/review${params?.gigProfileId ? `?pro=${encodeURIComponent(params.gigProfileId)}` : ''}`,
       'review-shortlist': params?.taskId || taskId
         ? `/client/gigs/${params?.taskId || taskId}/shortlist`
         : '/client/gigs/shortlist',
@@ -206,7 +207,8 @@ function ClientPortal() {
 
 function ClientReviewRoute({ onNavigate }: { onNavigate: (viewId: string, params?: Record<string, string>) => void }) {
   const { taskId } = useParams();
-  return <ClientReviewDeliverables onNavigate={onNavigate} params={taskId ? { taskId } : undefined} />;
+  const gigProfileId = new URLSearchParams(useLocation().search).get('pro') ?? undefined;
+  return <ClientReviewDeliverables onNavigate={onNavigate} params={taskId ? { taskId, ...(gigProfileId ? { gigProfileId } : {}) } : undefined} />;
 }
 
 function ClientShortlistRoute({ onNavigate }: { onNavigate: (viewId: string, params?: Record<string, string>) => void }) {
@@ -223,13 +225,12 @@ function ClientManagerProfileRoute({ onNavigate }: { onNavigate: (viewId: string
 function ManagerPortal() {
   const navigate = useNavigate();
   const location = useLocation();
-  const activeTab = location.pathname.includes('/talent') ? 'talent'
-    : location.pathname === '/manager/tasks/completed' ? 'completed'
+  const activeTab = location.pathname === '/manager/tasks/completed' ? 'completed'
       : location.pathname.includes('/tasks/') ? 'task-detail'
       : location.pathname.includes('/tasks') ? 'tasks'
         : location.pathname.includes('/profile') ? 'profile' : 'dashboard';
 
-  const go = (view: string) => navigate(({ dashboard: '/manager/dashboard', talent: '/manager/talent', tasks: '/manager/tasks', completed: '/manager/tasks/completed', 'task-detail': '/manager/tasks', profile: '/manager/profile' } as Record<string, string>)[view] || '/manager/dashboard');
+  const go = (view: string) => navigate(({ dashboard: '/manager/dashboard', tasks: '/manager/tasks', completed: '/manager/tasks/completed', 'task-detail': '/manager/tasks', profile: '/manager/profile' } as Record<string, string>)[view] || '/manager/dashboard');
   const openTask = (id: number, from: 'tasks' | 'completed' = 'tasks') => navigate(`/manager/tasks/${id}`, { state: { from } });
 
   return (
@@ -237,7 +238,6 @@ function ManagerPortal() {
       <Routes>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<ManagerDashboard onNavigateToTask={openTask} onNavigateToQueue={() => go('tasks')} />} />
-        <Route path="talent" element={<ManagerSearchTalent />} />
         <Route path="tasks" element={<ManagerTasks onSelectTask={openTask} />} />
         <Route path="tasks/completed" element={<ManagerTasks showCompleted onSelectTask={id => openTask(id, 'completed')} />} />
         <Route path="tasks/:taskId" element={<ManagerTaskRoute onBack={() => go(location.state?.from === 'completed' ? 'completed' : 'tasks')} />} />
@@ -286,6 +286,7 @@ function GigPortal() {
         <Route path="dashboard" element={<GigDashboard />} />
         <Route path="tasks/explore" element={<ExploreTasks />} />
         <Route path="tasks/active" element={<ActiveTasks />} />
+        <Route path="tasks/applied" element={<AppliedTasks />} />
         <Route path="tasks/:taskId/submit" element={<GigTaskRoute page="submit" />} />
         <Route path="tasks/:taskId/submitted" element={<GigTaskRoute page="submitted" />} />
         <Route path="tasks/:taskId" element={<GigTaskRoute page="detail" />} />

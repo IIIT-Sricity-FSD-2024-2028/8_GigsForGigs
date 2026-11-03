@@ -7,7 +7,6 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useGig } from '../../../context/GigContext/GigContext';
 import gigApi from '../../../services/api/gig/gigApi';
 import { ApiError } from '../../../services/api/httpClient';
@@ -19,7 +18,6 @@ import { ErrorState } from '../../../components/common/ErrorState';
 import { Button, useToast } from '../../../components/common';
 
 export const ExploreTasks: React.FC = () => {
-  const { user, updateUserSession } = useAuth();
   const [tasks, setTasks] = useState<GigTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const { taskSearch: searchQuery } = useGig();
@@ -54,17 +52,13 @@ export const ExploreTasks: React.FC = () => {
     };
   }, []);
 
-  const appliedTaskIds = user?.appliedTaskIds || [];
-
   const handleApply = async (taskId: number) => {
-    const key = String(taskId);
-    if (appliedTaskIds.includes(key)) return;
     setApplyingId(taskId);
     setError(null);
     try {
       await gigApi.applyForTask(taskId);
-      const updated = Array.from(new Set([...appliedTaskIds, key]));
-      updateUserSession({ appliedTaskIds: updated });
+      setTasks((prev) => prev.filter((t) => t.taskId !== taskId)); // moves to Applied Tasks
+      toast.success('Applied! Track it under Applied Tasks.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to apply for task.');
     } finally {
@@ -98,7 +92,6 @@ export const ExploreTasks: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-xl)' }}>
           {filteredTasks.map((task) => {
-            const isApplied = appliedTaskIds.includes(String(task.taskId));
             const isSubmitting = applyingId === task.taskId;
 
             return (
@@ -134,8 +127,8 @@ export const ExploreTasks: React.FC = () => {
                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                     Status: <strong style={{ color: 'var(--color-primary-dark)' }}>{task.status.toUpperCase()}</strong>
                   </span>
-                  <Button variant={isApplied ? 'outline' : 'primary'} disabled={isApplied || isSubmitting} onClick={() => handleApply(task.taskId)}>
-                    {isApplied ? 'Applied ✓' : isSubmitting ? 'Submitting...' : 'Apply Now'}
+                  <Button variant="primary" disabled={isSubmitting} onClick={() => handleApply(task.taskId)}>
+                    {isSubmitting ? 'Submitting...' : 'Apply Now'}
                   </Button>
                 </div>
               </div>

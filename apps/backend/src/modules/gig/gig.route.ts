@@ -16,19 +16,6 @@ export const gigRouter = Router();
 
 gigRouter.use(authGuard);
 
-// Talent discovery endpoint accessible to Managers, Clients, and Admins
-gigRouter.get(
-  "/professionals",
-  roleGuard("manager", "client", "gig_professional", "admin"),
-  async (req, res) => {
-    const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) || undefined : undefined;
-    const { searchGigProfessionals } = await import("../manager/manager.service.js");
-    const { toTalentResponse } = await import("../manager/manager.controller.js");
-    const list = await searchGigProfessionals(query);
-    res.status(200).json(list.map(toTalentResponse));
-  },
-);
-
 const gigOnly = roleGuard("gig_professional");
 
 // Fetch the logged-in gig professional's own profile.
@@ -45,6 +32,8 @@ gigRouter.post(
   validate(createApplicationSchema),
   gigController.createApplication,
 );
+// List the gig professional's own applications with their status.
+gigRouter.get("/applications/mine", gigOnly, gigController.listMyApplications);
 // Withdraw a submitted application.
 gigRouter.delete("/applications/:id", gigOnly, gigController.withdrawApplication);
 

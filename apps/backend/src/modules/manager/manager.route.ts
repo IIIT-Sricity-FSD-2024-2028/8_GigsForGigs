@@ -106,9 +106,3 @@ managerRouter.get(definitionsPath, managerOnly, taskAccessGuard, managerControll
 managerRouter.post(definitionsPath, managerOnly, taskAccessGuard, validate(createTaskDeliverableDefinitionSchema), managerController.createTaskDeliverableDefinition);
 managerRouter.patch(`${definitionsPath}/:definitionId`, managerOnly, taskAccessGuard, validate(updateTaskDeliverableDefinitionSchema), managerController.updateTaskDeliverableDefinition);
 managerRouter.delete(`${definitionsPath}/:definitionId`, managerOnly, taskAccessGuard, managerController.deleteTaskDeliverableDefinition);
-
-// Search gig professionals available to assign to a task.
-// managerApi.ts calls this with a MANAGER token even though the path lives
-// under /gig — see app.ts. Handled here, not in the gig module, which
-// enforces roleGuard('gig_professional') for everything else it owns.
-managerRouter.get("/gig/professionals", managerOnly, managerController.searchGigProfessionals);

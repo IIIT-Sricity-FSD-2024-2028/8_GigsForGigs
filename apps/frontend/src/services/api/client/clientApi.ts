@@ -384,8 +384,8 @@ export const clientApi = {
     apiFetch<void>(`/manager-invites/${inviteId}`, { method: 'DELETE', actor }),
 
   /** Rate the professional who delivered a completed task. */
-  createReview: async (taskId: number, rating: number, comment?: string): Promise<unknown> =>
-    apiFetch<unknown>('/reviews', { method: 'POST', body: { taskId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) }, actor }),
+  createReview: async (taskId: number, gigProfileId: number, rating: number, comment?: string): Promise<unknown> =>
+    apiFetch<unknown>('/reviews', { method: 'POST', body: { taskId, gigProfileId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) }, actor }),
 };
 
 export default clientApi;

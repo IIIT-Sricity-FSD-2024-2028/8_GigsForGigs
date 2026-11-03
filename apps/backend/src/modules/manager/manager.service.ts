@@ -1,7 +1,7 @@
 import { prisma } from "db";
 import { hashPassword } from "../../lib/password.js";
 import { conflict, notFound } from "../../lib/httpError.js";
-import { isServiceHireTask } from "../../lib/taskRules.js";
+import { ACTIVE_PAYMENT_STATUSES, isServiceHireTask } from "../../lib/taskRules.js";
 import type {
   ReviewDeliverableDto,
   ShortlistApplicationDto,
@@ -9,14 +9,34 @@ import type {
   UpdateManagerProfileDto,
 } from "./manager.dto.js";
 
-const taskInclude = {
-  client: true,
-  assignments: { include: { gigProfile: { include: { user: true, skills: true } } } },
-  deliverables: true,
-  deliverableDefinitions: {
-    include: { submissions: { include: { submission: { select: { deliverableNo: true, status: true } } }, orderBy: { deliverableNo: "desc" } } },
-  },
-} as const;
+// A task can have several hires with different supervisors; a manager sees only the ones assigned to them.
+function taskIncludeFor(managerId: number) {
+  return {
+    client: true,
+    assignments: { where: { managerId }, include: { gigProfile: { include: { user: true, skills: true } } } },
+    deliverables: { where: { assignment: { managerId } } },
+    deliverableDefinitions: {
+      include: {
+        submissions: {
+          where: { submission: { assignment: { managerId } } },
+          include: { submission: { select: { deliverableNo: true, status: true } } },
+          orderBy: { deliverableNo: "desc" },
+        },
+      },
+    },
+    payments: { select: { gigProfileId: true, status: true } },
+  } as const;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function withManagedStatus(task: any) {
+  // The posting stays open while hires run, so the manager's view is driven by their own hires' escrow.
+  const mine = new Set(task.assignments.map((a: { gigProfileId: number }) => a.gigProfileId));
+  const active = task.payments.some(
+    (p: { gigProfileId: number; status: string }) => mine.has(p.gigProfileId) && ACTIVE_PAYMENT_STATUSES.some((s) => s === p.status),
+  );
+  return { ...task, status: active ? "in_progress" : "completed" };
+}
 
 // ---- Client-facing manager roster ------------------------------------
 // GET/DELETE/PATCH here are reached with a CLIENT token (see manager.route.ts) —
@@ -100,19 +120,20 @@ export async function updateOwnProfile(managerId: number, dto: UpdateManagerProf
 }
 
 // List only the tasks the client has assigned to this manager.
-export function listAssignedTasks(managerId: number, clientId: number) {
-  return prisma.task.findMany({
+export async function listAssignedTasks(managerId: number, clientId: number) {
+  const tasks = await prisma.task.findMany({
     // Match the same tenant boundary enforced by taskAccessGuard. Legacy data
     // may contain manager assignments whose manager belongs to another client.
     where: { clientId, assignments: { some: { managerId } } },
-    include: taskInclude,
+    include: taskIncludeFor(managerId),
     orderBy: { createdAt: "desc" },
   });
+  return tasks.map(withManagedStatus);
 }
 
 /** Fetch a single task with its client/assignments/deliverables. taskId access already verified by taskAccessGuard. */
-export function getAssignedTask(taskId: number) {
-  return prisma.task.findUniqueOrThrow({ where: { taskId }, include: taskInclude });
+export async function getAssignedTask(taskId: number, managerId: number) {
+  return withManagedStatus(await prisma.task.findUniqueOrThrow({ where: { taskId }, include: taskIncludeFor(managerId) }));
 }
 
 // List applications submitted for a task.
@@ -155,19 +176,19 @@ export async function shortlistApplication(
   });
 }
 
-// List deliverables submitted for a task, in submission order.
-export function listTaskDeliverables(taskId: number) {
+// List deliverables submitted for a task by the professionals this manager supervises, in submission order.
+export function listTaskDeliverables(taskId: number, managerId: number) {
   return prisma.deliverable.findMany({
-    where: { taskId },
+    where: { taskId, assignment: { managerId } },
     include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
     orderBy: { deliverableNo: "asc" },
   });
 }
 
-// Fetch one deliverable by its (taskId, deliverableNo) composite key.
-export async function getDeliverable(taskId: number, deliverableNo: number) {
-  const deliverable = await prisma.deliverable.findUnique({
-    where: { taskId_deliverableNo: { taskId, deliverableNo } },
+// Fetch one deliverable by its (taskId, deliverableNo) composite key, if it's from a professional this manager supervises.
+export async function getDeliverable(taskId: number, deliverableNo: number, managerId: number) {
+  const deliverable = await prisma.deliverable.findFirst({
+    where: { taskId, deliverableNo, assignment: { managerId } },
     include: { gigProfile: { include: { user: true } }, claimedDefinitions: { include: { definition: true } } },
   });
   if (!deliverable) {
@@ -186,12 +207,16 @@ const deliverableInclude = { gigProfile: { include: { user: true } }, claimedDef
 async function transitionDeliverable(
   taskId: number,
   deliverableNo: number,
+  managerId: number,
   from: "submitted" | "approved",
   data: { status: "approved" | "revision_requested" | "closed"; feedback?: string },
 ) {
-  const deliverable = await getDeliverable(taskId, deliverableNo);
-  const task = await prisma.task.findUniqueOrThrow({ where: { taskId }, select: { status: true } });
-  if (task.status !== "in_progress") {
+  const deliverable = await getDeliverable(taskId, deliverableNo, managerId);
+  const payment = await prisma.payment.findUnique({
+    where: { taskId_gigProfileId: { taskId, gigProfileId: deliverable.gigProfileId } },
+    select: { status: true },
+  });
+  if (payment?.status !== "held") {
     throw conflict("Deliverables can only be reviewed while the task is active");
   }
   const updated = await prisma.deliverable.updateMany({
@@ -212,41 +237,14 @@ async function transitionDeliverable(
 }
 
 // Approve/request-revision on a submission that is awaiting review.
-export function reviewDeliverable(taskId: number, deliverableNo: number, dto: ReviewDeliverableDto) {
-  return transitionDeliverable(taskId, deliverableNo, "submitted", {
+export function reviewDeliverable(taskId: number, deliverableNo: number, managerId: number, dto: ReviewDeliverableDto) {
+  return transitionDeliverable(taskId, deliverableNo, managerId, "submitted", {
     status: dto.status,
     ...(dto.feedback !== undefined ? { feedback: dto.feedback } : {}),
   });
 }
 
 // Mark an approved deliverable closed (finalised).
-export function closeDeliverable(taskId: number, deliverableNo: number) {
-  return transitionDeliverable(taskId, deliverableNo, "approved", { status: "closed" });
-}
-
-// Search gig professionals by name or skill (up to 50), for a manager assigning work.
-export async function searchGigProfessionals(query?: string) {
-  const profiles = await prisma.gigProfessionalProfile.findMany({
-    ...(query
-      ? {
-          where: {
-            OR: [
-              { user: { name: { contains: query, mode: "insensitive" } } },
-              { skills: { some: { skill: { contains: query, mode: "insensitive" } } } },
-              { services: { some: { title: { contains: query, mode: "insensitive" } } } },
-            ],
-          },
-        }
-      : {}),
-    include: { user: true, skills: true, tools: true, portfolio: true, services: { take: 1 } },
-    take: 50,
-  });
-  // Average of published reviews received; null when the professional has none yet.
-  const averages = await prisma.review.groupBy({
-    by: ["revieweeId"],
-    where: { revieweeId: { in: profiles.map((p) => p.userId) }, status: "PUBLISHED" },
-    _avg: { rating: true },
-  });
-  const ratingByUser = new Map(averages.map((a) => [a.revieweeId, a._avg.rating]));
-  return profiles.map((p) => ({ ...p, rating: ratingByUser.get(p.userId) ?? null }));
+export function closeDeliverable(taskId: number, deliverableNo: number, managerId: number) {
+  return transitionDeliverable(taskId, deliverableNo, managerId, "approved", { status: "closed" });
 }

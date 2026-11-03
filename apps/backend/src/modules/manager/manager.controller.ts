@@ -139,27 +139,6 @@ function toManagerProfileResponse(manager: Row) {
   };
 }
 
-/**
- * TalentProfile.status ('active'|'busy'|'offline') has no backing column —
- * there is no availability concept in the schema. Hardcoded 'active' until
- * that's modeled; documented as a known gap, not silently invented data.
- */
-export function toTalentResponse(profile: Row) {
-  const firstServicePrice = profile.services?.[0]?.price;
-  return {
-    gigProfileId: profile.gigProfileId,
-    userId: profile.userId,
-    name: profile.user.name,
-    bio: profile.bio,
-    ...(firstServicePrice !== undefined ? { price: Number(firstServicePrice) } : {}),
-    ...(profile.rating != null ? { rating: Math.round(profile.rating * 10) / 10 } : {}),
-    skills: (profile.skills ?? []).map((s: Row) => s.skill),
-    tools: (profile.tools ?? []).map((t: Row) => t.tool),
-    portfolio: (profile.portfolio ?? []).map((p: Row) => p.url),
-    status: "active" as const,
-  };
-}
-
 function requireManager(req: Request): ManagerTokenPayload {
   return req.user as ManagerTokenPayload;
 }
@@ -210,8 +189,9 @@ export async function listAssignedTasks(req: Request, res: Response): Promise<vo
 
 /** taskId access already verified by taskAccessGuard. */
 export async function getAssignedTask(req: Request, res: Response): Promise<void> {
+  const { managerId } = requireManager(req);
   const taskId = Number(req.params.taskId);
-  const task = await managerService.getAssignedTask(taskId);
+  const task = await managerService.getAssignedTask(taskId, managerId);
   res.status(200).json(toTaskResponse(task));
 }
 
@@ -230,8 +210,9 @@ export async function shortlistApplication(req: Request, res: Response): Promise
 }
 
 export async function listTaskDeliverables(req: Request, res: Response): Promise<void> {
+  const { managerId } = requireManager(req);
   const taskId = Number(req.params.taskId);
-  const deliverables = await managerService.listTaskDeliverables(taskId);
+  const deliverables = await managerService.listTaskDeliverables(taskId, managerId);
   res.status(200).json(deliverables.map(toDeliverableResponse));
 }
 
@@ -269,7 +250,7 @@ export async function deleteTaskDeliverableDefinition(req: Request, res: Respons
 export async function getDeliverable(req: Request, res: Response): Promise<void> {
   const taskId = Number(req.params.taskId);
   const deliverableNo = Number(req.params.deliverableNo);
-  const deliverable = await managerService.getDeliverable(taskId, deliverableNo);
+  const deliverable = await managerService.getDeliverable(taskId, deliverableNo, requireManager(req).managerId);
   res.status(200).json(toDeliverableResponse(deliverable));
 }
 
@@ -277,19 +258,13 @@ export async function reviewDeliverable(req: Request, res: Response): Promise<vo
   const taskId = Number(req.params.taskId);
   const deliverableNo = Number(req.params.deliverableNo);
   const dto = getValidated<ReviewDeliverableDto>(res, "body");
-  const deliverable = await managerService.reviewDeliverable(taskId, deliverableNo, dto);
+  const deliverable = await managerService.reviewDeliverable(taskId, deliverableNo, requireManager(req).managerId, dto);
   res.status(200).json(toDeliverableResponse(deliverable));
 }
 
 export async function closeDeliverable(req: Request, res: Response): Promise<void> {
   const taskId = Number(req.params.taskId);
   const deliverableNo = Number(req.params.deliverableNo);
-  const deliverable = await managerService.closeDeliverable(taskId, deliverableNo);
+  const deliverable = await managerService.closeDeliverable(taskId, deliverableNo, requireManager(req).managerId);
   res.status(200).json(toDeliverableResponse(deliverable));
-}
-
-export async function searchGigProfessionals(req: Request, res: Response): Promise<void> {
-  const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) || undefined : undefined;
-  const profiles = await managerService.searchGigProfessionals(query);
-  res.status(200).json(profiles.map(toTalentResponse));
 }

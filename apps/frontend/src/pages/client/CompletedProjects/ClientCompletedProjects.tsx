@@ -20,37 +20,12 @@ export interface ClientCompletedProjectsProps {
 
 export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { contracts, tasks } = useClient();
+  const { contracts } = useClient();
   const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
   const [viewReviewsContract, setViewReviewsContract] = useState<Contract | null>(null);
 
-  // Filter genuinely completed contracts based on actual backend status
-  const completedContracts = contracts.filter((c) => {
-    return c.status === 'COMPLETED' || tasks.find((t) => t.task_id === c.task_id)?.status === 'COMPLETED';
-  });
-
-  // Also include any completed tasks that don't have a matching contract row
-  const contractTaskIds = new Set(completedContracts.map((c) => String(c.task_id)));
-  const additionalCompleted: Contract[] = tasks
-    .filter((t) => t.status === 'COMPLETED' && !contractTaskIds.has(String(t.task_id)))
-    .map((t) => ({
-      contract_id: 'task-' + t.task_id,
-      task_id: String(t.task_id),
-      task_title: t.title,
-      gig_pro_name: 'Gig Professional',
-      status: 'COMPLETED' as const,
-      progress: 100,
-      budget: t.budget,
-      // No payment record exists for these tasks, so there is no fee to show.
-      payment_id: null,
-      payment_status: null,
-      platform_fee: 0,
-      total_amount: t.budget,
-      createdAt: t.createdAt,
-      reviews: []
-    }));
-
-  const allCompletedProjects: Contract[] = [...completedContracts, ...additionalCompleted];
+  // A task can have several hires; each one is completed once its own payment settles.
+  const allCompletedProjects: Contract[] = contracts.filter((c) => c.status === 'COMPLETED');
 
   const formatCurrency = (amt: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
@@ -272,7 +247,7 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
 
                 {/* Actions Footer */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
-                  <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-deliverables', { taskId: contract.task_id })}>
+                  <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-deliverables', { taskId: contract.task_id, gigProfileId: contract.gig_profile_id })}>
                     View Deliverables
                   </Button>
 
@@ -298,6 +273,7 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
           isOpen={Boolean(reviewingContract)}
           onClose={() => setReviewingContract(null)}
           taskId={Number(reviewingContract.task_id)}
+          gigProfileId={Number(reviewingContract.gig_profile_id)}
           taskTitle={reviewingContract.task_title}
           gigProName={reviewingContract.gig_pro_name}
         />
@@ -308,10 +284,10 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
         <TaskReviewsModal
           isOpen={Boolean(viewReviewsContract)}
           onClose={() => setViewReviewsContract(null)}
-          contract={contracts.find((c) => c.task_id === viewReviewsContract.task_id) || viewReviewsContract}
+          contract={contracts.find((c) => c.contract_id === viewReviewsContract.contract_id) || viewReviewsContract}
           currentUserId={user?.userId}
           onOpenRateReview={() => {
-            const current = contracts.find((c) => c.task_id === viewReviewsContract.task_id) || viewReviewsContract;
+            const current = contracts.find((c) => c.contract_id === viewReviewsContract.contract_id) || viewReviewsContract;
             setReviewingContract(current);
           }}
         />

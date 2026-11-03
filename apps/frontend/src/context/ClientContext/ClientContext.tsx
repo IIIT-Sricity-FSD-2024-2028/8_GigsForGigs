@@ -85,10 +85,11 @@ export interface ContractReview {
   createdAt: string;
 }
 
-/** A task that has a hired gig pro, with progress and payment info. */
+/** One hired gig pro on a task (a task can have several), with progress and payment info. */
 export interface Contract {
   contract_id: string;
   task_id: string;
+  gig_profile_id: string;
   task_title: string;
   gig_pro_name: string;
   status: 'IN_PROGRESS' | 'COMPLETED' | 'SCHEDULED';
@@ -155,15 +156,15 @@ interface ClientContextType {
   approveDeliverable: (taskId: string, deliverableNo: number) => Promise<void>;
   rejectDeliverable: (taskId: string, deliverableNo: number, feedback?: string) => Promise<void>;
   hireCandidate: (applicationId: string) => Promise<void>;
-  payTask: (taskId: string) => Promise<void>;
-  releasePayment: (taskId: string) => Promise<void>;
-  /** Pick the manager for a funded task; null keeps it with the client. */
-  assignTaskManager: (taskId: string, managerId: number | null) => Promise<void>;
+  payTask: (taskId: string, gigProfileId: string) => Promise<void>;
+  releasePayment: (taskId: string, gigProfileId: string) => Promise<void>;
+  /** Pick the manager for one funded hire; null keeps it with the client. */
+  assignTaskManager: (taskId: string, gigProfileId: string, managerId: number | null) => Promise<void>;
   rejectCandidate: (applicationId: string) => Promise<void>;
   requestService: (serviceId: string) => Promise<void>;
   requestedServices: Set<string>;
   refreshContracts: () => Promise<void>;
-  submitReview: (taskId: number, rating: number, comment?: string) => Promise<void>;
+  submitReview: (taskId: number, gigProfileId: number, rating: number, comment?: string) => Promise<void>;
 }
 
 const ClientContextInstance = createContext<ClientContextType | undefined>(undefined);
@@ -215,6 +216,7 @@ interface RawApplication {
 
 interface RawContract {
   taskId: number;
+  gigProfileId: number;
   taskTitle: string;
   gigProfessionalName: string;
   status: RawTaskStatus;
@@ -331,25 +333,19 @@ function mapTask(raw: RawTask): Task {
   };
 }
 
-/** API status -> contract status (an "open" task with a hire is shown as SCHEDULED). */
-function mapContractStatus(status: RawTaskStatus): Contract['status'] {
-  switch (status) {
-    case 'in_progress':
-      return 'IN_PROGRESS';
-    case 'completed':
-      return 'COMPLETED';
-    default:
-      return 'SCHEDULED';
-  }
+/** API hire status -> contract status. */
+function mapContractStatus(status: RawContract['status']): Contract['status'] {
+  return status === 'completed' ? 'COMPLETED' : 'IN_PROGRESS';
 }
 
 /** API contract -> UI Contract (money fields arrive as strings and are converted to numbers). */
 function mapContract(raw: RawContract): Contract {
   return {
     // CONTRACT has no surrogate id server-side — contracts are derived from
-    // accepted applications, keyed by taskId.
-    contract_id: String(raw.taskId),
+    // accepted applications, keyed by task + professional.
+    contract_id: `${raw.taskId}-${raw.gigProfileId}`,
     task_id: String(raw.taskId),
+    gig_profile_id: String(raw.gigProfileId),
     task_title: raw.taskTitle,
     gig_pro_name: raw.gigProfessionalName,
     status: mapContractStatus(raw.status),
@@ -807,10 +803,10 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Simulated escrow: the client pays gig amount + platform fee, or releases it once all work is approved.
-  const payTask = async (taskId: string) => {
+  const payTask = async (taskId: string, gigProfileId: string) => {
     setError(null);
     try {
-      await apiFetch('/payments/pay', { method: 'POST', actor: 'client', body: { taskId } });
+      await apiFetch('/payments/pay', { method: 'POST', actor: 'client', body: { taskId: Number(taskId), gigProfileId: Number(gigProfileId) } });
       await refreshContracts();
     } catch (err) {
       handleError(err);
@@ -818,21 +814,21 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   /** Release escrowed money to the gig pro once the work is approved. */
-  const releasePayment = async (taskId: string) => {
+  const releasePayment = async (taskId: string, gigProfileId: string) => {
     setError(null);
     try {
-      await apiFetch('/payments/release', { method: 'POST', actor: 'client', body: { taskId } });
+      await apiFetch('/payments/release', { method: 'POST', actor: 'client', body: { taskId: Number(taskId), gigProfileId: Number(gigProfileId) } });
       await Promise.all([refreshContracts(), refreshTasks()]);
     } catch (err) {
       handleError(err);
     }
   };
 
-  /** Hand a task to a manager (null = client supervises it). */
-  const assignTaskManager = async (taskId: string, managerId: number | null) => {
+  /** Hand one hire to a manager (null = client supervises it). */
+  const assignTaskManager = async (taskId: string, gigProfileId: string, managerId: number | null) => {
     setError(null);
     try {
-      await apiFetch(`/tasks/${Number(taskId)}/manager`, { method: 'PATCH', actor: 'client', body: { managerId } });
+      await apiFetch(`/tasks/${Number(taskId)}/manager`, { method: 'PATCH', actor: 'client', body: { gigProfileId: Number(gigProfileId), managerId } });
       await refreshContracts();
     } catch (err) {
       handleError(err);
@@ -873,13 +869,13 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   /** Rate the gig pro on a completed task. */
-  const submitReview = async (taskId: number, rating: number, comment?: string) => {
+  const submitReview = async (taskId: number, gigProfileId: number, rating: number, comment?: string) => {
     setError(null);
     try {
       await apiFetch('/reviews', {
         method: 'POST',
         actor: 'client',
-        body: { taskId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) },
+        body: { taskId, gigProfileId, rating, ...(comment?.trim() ? { comment: comment.trim() } : {}) },
       });
       await refreshContracts();
     } catch (err) {

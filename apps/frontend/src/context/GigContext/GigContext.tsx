@@ -15,6 +15,7 @@ export type GigViewTab =
   | 'explore'
   | 'my-services'
   | 'active-tasks'
+  | 'applied-tasks'
   | 'service-requests'
   | 'completed-projects'
   | 'earnings'
@@ -57,6 +58,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const pathname = location.pathname;
   const activeTab: GigViewTab = pathname.includes('/tasks/explore') ? 'explore'
     : pathname.includes('/tasks/active') ? 'active-tasks'
+      : pathname.includes('/tasks/applied') ? 'applied-tasks'
       : pathname.includes('/tasks/') && pathname.endsWith('/submit') ? 'submit-deliverables'
         : pathname.includes('/tasks/') && pathname.endsWith('/submitted') ? 'submission-success'
           : pathname.includes('/tasks/') ? 'project-detail'
@@ -73,7 +75,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const serviceId = selectedServiceId;
     const paths: Record<GigViewTab, string> = {
       dashboard: '/gig/dashboard', explore: '/gig/tasks/explore', 'my-services': '/gig/services',
-      'active-tasks': '/gig/tasks/active',
+      'active-tasks': '/gig/tasks/active', 'applied-tasks': '/gig/tasks/applied',
       'service-requests': serviceId ? `/gig/services/${serviceId}/requests` : '/gig/services',
       'completed-projects': '/gig/projects/completed', earnings: '/gig/earnings',
       'submit-deliverables': id ? `/gig/tasks/${id}/submit` : '/gig/tasks/active',

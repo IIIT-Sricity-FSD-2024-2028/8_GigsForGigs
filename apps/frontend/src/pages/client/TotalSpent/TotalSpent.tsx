@@ -16,6 +16,7 @@ type StatusFilterType = 'ALL' | 'COMPLETED' | 'ESCROWED' | 'PENDING';
 interface LedgerRow {
   paymentId: string;
   taskId: string;
+  gigProfileId: string;
   taskTitle: string;
   gigProName: string;
   gigAmount: number;
@@ -35,7 +36,7 @@ const LEDGER_STATUS: Record<PaymentStatus, LedgerStatus> = {
 
 export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { contracts, tasks, loading, payTask } = useClient();
+  const { contracts, loading, payTask } = useClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [payingPayment, setPayingPayment] = useState<LedgerRow | null>(null);
@@ -76,6 +77,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     .map((c) => ({
       paymentId: `PAY-${c.payment_id}`,
       taskId: c.task_id,
+      gigProfileId: c.gig_profile_id,
       taskTitle: c.task_title,
       gigProName: c.gig_pro_name,
       gigAmount: c.budget,
@@ -97,9 +99,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     .reduce((sum, p) => sum + p.totalAmount, 0);
 
   // Active task contracts count (excluding completed)
-  const activeContractsCount = contracts.filter(
-    (c) => c.status !== 'COMPLETED' && tasks.find((t) => t.task_id === c.task_id)?.status !== 'COMPLETED'
-  ).length;
+  const activeContractsCount = contracts.filter((c) => c.status !== 'COMPLETED').length;
 
   // Filtered Payments based on status dropdown and keyword search
   const filteredPayments = clientPayments.filter((p) => {
@@ -126,7 +126,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
 
   const handlePayNow = async (payment: LedgerRow) => {
     try {
-      await payTask(payment.taskId);
+      await payTask(payment.taskId, payment.gigProfileId);
       setPayingPayment(null);
       toast.success(`Payment successful! ${formatCurrency(payment.totalAmount)} has been securely locked in escrow until work approval.`);
     } catch (err) {
@@ -573,7 +573,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                           Pay {formatCurrency(p.totalAmount)}
                         </Button>
                       ) : p.status === 'ESCROWED' ? (
-                        <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-deliverables', { taskId: p.taskId })} style={{ whiteSpace: 'nowrap' }}>
+                        <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-deliverables', { taskId: p.taskId, gigProfileId: p.gigProfileId })} style={{ whiteSpace: 'nowrap' }}>
                           Review &amp; Release
                         </Button>
                       ) : p.status === 'COMPLETED' ? (

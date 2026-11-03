@@ -18,7 +18,7 @@ export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }>
     setPaying(true);
     setError('');
     try {
-      await payTask(contract.task_id);
+      await payTask(contract.task_id, contract.gig_profile_id);
       onPaid?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed. Please try again.');

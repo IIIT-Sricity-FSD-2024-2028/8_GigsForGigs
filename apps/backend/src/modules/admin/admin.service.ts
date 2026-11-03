@@ -248,7 +248,7 @@ export const listManagers = async () => {
     include: {
       user: true,
       client: true,
-      assignments: { include: { task: true } },
+      assignments: { include: { task: { include: { payments: { select: { gigProfileId: true, status: true } } } } } },
     },
     orderBy: { managerId: "asc" },
   });
@@ -262,7 +262,7 @@ export const listManagers = async () => {
     clientId: m.clientId,
     clientName: m.client.clientName,
     linkedClients: [m.client.clientName],
-    activeSupervisedTasks: m.assignments.filter((a) => a.task.status === "in_progress").length,
+    activeSupervisedTasks: m.assignments.filter((a) => a.task.payments.some((p) => p.gigProfileId === a.gigProfileId && p.status === "held")).length,
     status: m.user.status,
     createdAt: dateOnly(m.createdAt),
   }));
@@ -311,7 +311,7 @@ export const listGigProfiles = async () => {
       portfolioUrls: g.portfolio.map((p) => p.url),
       portfolioCount: g.portfolio.length,
       totalEarnings: g.payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + Number(p.amount), 0),
-      completedJobs: g.assignments.filter((a) => a.task.status === "completed").length,
+      completedJobs: g.payments.filter((p) => p.status === "completed" || p.status === "refunded").length,
       rating: ratings.length > 0 ? round1(ratings.reduce((a, b) => a + b, 0) / ratings.length) : null,
       reviewCount: ratings.length,
       badge: g.badge ?? "NONE",

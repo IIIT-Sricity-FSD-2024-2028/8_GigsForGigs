@@ -21,7 +21,7 @@ export interface ClientLayoutProps {
 const navItems: DashboardNavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
   { id: 'search-talent', label: 'Search Gigs', icon: <SearchIcon size={18} /> },
-  { id: 'review-shortlist', label: 'Pending Tasks', icon: <CheckIcon size={18} />, aliases: ['pending-requests', 'pending-approvals'] },
+  { id: 'review-shortlist', label: 'Posted Tasks', icon: <CheckIcon size={18} />, aliases: ['pending-requests', 'pending-approvals'] },
   { id: 'my-gigs', label: 'Active Task', icon: <ProjectIcon size={18} />, aliases: ['review-deliverables'] },
   { id: 'completed-projects', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },
   { id: 'total-spent', label: 'Total Spent', icon: <PaymentIcon size={18} /> },

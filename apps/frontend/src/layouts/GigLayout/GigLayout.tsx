@@ -17,7 +17,7 @@ export interface GigLayoutProps { children: React.ReactNode; }
 /** Header title for each gig page. */
 const GIG_PAGE_TITLES: Partial<Record<GigViewTab, string>> = {
   dashboard: 'Gig Dashboard', explore: 'Marketplace Tasks', 'my-services': 'My Posted Services',
-  'active-tasks': 'Active Task', 'service-requests': 'Service Requests',
+  'active-tasks': 'Active Task', 'applied-tasks': 'Applied Tasks', 'service-requests': 'Service Requests',
   'completed-projects': 'Completed Projects Portfolio', earnings: 'Financial Overview & Payouts',
   'submit-deliverables': 'Submit Task Deliverable', 'submission-success': 'Deliverable Submitted',
   'post-service': 'Publish Service Offering', 'service-published': 'Service Published',
@@ -32,6 +32,7 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
   const navItems: GigNavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
     { id: 'explore', label: 'Explore Tasks', icon: <SearchIcon size={18} /> },
+    { id: 'applied-tasks', label: 'Applied Tasks', icon: <ProjectIcon size={18} /> },
     { id: 'my-services', label: 'My Services', icon: <ProjectIcon size={18} /> },
     { id: 'active-tasks', label: 'Active Task', icon: <ProjectIcon size={18} /> },
     { id: 'completed-projects', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },

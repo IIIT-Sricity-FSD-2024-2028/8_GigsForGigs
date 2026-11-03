@@ -3,7 +3,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { useClient, type ContractReview } from '../../../context/ClientContext';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
-import { Badge } from '../../../components/common/Badge';
+import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
+import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { Loader } from '../../../components/common/Loader';
 import { safeHttpUrl } from '../../../utils/safeUrl';
 import { ClientReviewModal, TaskReviewsModal } from '../../../components/client';
@@ -18,17 +19,19 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const { user } = useAuth();
   const { contracts: clientContracts, tasks, approveDeliverable, rejectDeliverable, releasePayment, refreshContracts } = useClient();
   const taskId = params?.taskId;
+  const gigProfileId = params?.gigProfileId;
   const numericTaskId = Number(String(taskId).replace(/[^0-9]/g, '')) || 1;
 
   // Retrieve the specific dynamic contract for the clicked task
   const contract = useMemo(() => {
     if (!taskId) return null;
-    const foundInClient = clientContracts.find((c) => c.task_id === taskId || c.contract_id === taskId);
+    // A task can have several hires; without a professional in the URL, fall back to the first.
+    const foundInClient = clientContracts.find((c) => c.task_id === taskId && (!gigProfileId || c.gig_profile_id === gigProfileId));
     if (foundInClient) {
       return { ...foundInClient, reviews: foundInClient.reviews || ([] as ContractReview[]) };
     }
     return null;
-  }, [taskId, clientContracts]);
+  }, [taskId, gigProfileId, clientContracts]);
 
   // Lookup matching task info (for description, deadline, category)
   const taskInfo = useMemo(() => {
@@ -36,7 +39,12 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     return tasks.find((t) => t.task_id === taskId || String(t.task_id) === String(numericTaskId)) || null;
   }, [taskId, numericTaskId, tasks]);
 
-  const [deliverablesList, setDeliverablesList] = useState<RawDeliverable[]>([]);
+  const [allDeliverables, setDeliverablesList] = useState<RawDeliverable[]>([]);
+  // The task endpoint returns every hire's submissions; this page is for one professional.
+  const deliverablesList = useMemo(
+    () => (contract ? allDeliverables.filter((d) => String(d.gigProfileId) === contract.gig_profile_id) : allDeliverables),
+    [allDeliverables, contract],
+  );
   const [selectedDeliverableIndex, setSelectedDeliverableIndex] = useState<number>(0);
   const [loadingDeliverables, setLoadingDeliverables] = useState<boolean>(true);
 
@@ -174,7 +182,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const handleProcessPayment = async () => {
     if (!contract) return;
     try {
-      await releasePayment(contract.task_id);
+      await releasePayment(contract.task_id, contract.gig_profile_id);
       setIsPaymentModalOpen(false);
       setSuccessNotification(`Payment released! ${formatCurrency(gigAmount)} sent to ${contract.gig_pro_name}; ${formatCurrency(platformFee)} kept as platform fee.`);
       await refreshContracts();
@@ -216,375 +224,61 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginBottom: 'var(--spacing-sm)' }}>
           ← Back to Active Task
         </Button>
-        <h1 className="page-title" style={{ wordBreak: 'break-word' }}>Review Submitted Deliverables</h1>
-        <p className="page-subtitle" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-          Inspect work deliverables submitted by <strong>{contract.gig_pro_name}</strong> for task <strong>{contract.task_title}</strong>.
-        </p>
       </div>
 
       {contract.payment_status === 'pending' && <FundTaskCard contract={contract} />}
 
       {loadingDeliverables ? (
-        <Loader label="Loading deliverables from PostgreSQL..." />
-      ) : !hasDeliverables ? (
-        /* Empty State when Gig Pro has not yet submitted deliverables for this specific task */
-        <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: 'var(--radius-lg)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 'var(--spacing-md)' }}>⏳</div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: 'var(--spacing-sm)' }}>
-            No Deliverables Submitted Yet for this Task
-          </h2>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', maxWidth: '520px', margin: '0 auto var(--spacing-lg) auto', lineHeight: 1.5 }}>
-            <strong>{contract.gig_pro_name}</strong> is currently working on <strong>{contract.task_title}</strong>. Once they submit work details or artifact links, they will appear here for your review and approval.
-          </p>
-          <Button onClick={() => onNavigate('my-gigs')}>
-            Return to Active Task
-          </Button>
-        </div>
+        <Loader label="Loading deliverables..." />
       ) : (
-        /* Deliverable Review Interface for the specific task */
         <>
-          {/* Deliverable Versions Tab Header if multiple submissions exist */}
-          {deliverablesList.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--color-border)', paddingBottom: '8px', flexWrap: 'wrap', width: '100%', minWidth: 0 }}>
-              {deliverablesList.map((del, idx) => {
-                const versionBadge =
-                  del.status === 'approved' ? '✓ Approved' :
-                  del.status === 'revision_requested' ? '● Revision' :
-                  del.status === 'closed' ? 'Closed' : 'Awaiting Review';
-
-                return (
-                  <Button size="sm" variant={selectedDeliverableIndex === idx ? 'primary' : 'outline'} key={del.deliverableNo} type="button" onClick={() => setSelectedDeliverableIndex(idx)}>
-                    <span>Deliverable {del.deliverableNo}</span>
-                    <span style={{ fontSize: '10px', opacity: 0.85 }}>({versionBadge})</span>
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Main Review Layout Grid: Responsive Flex Stack */}
-          <div
-            className="review-deliverables-grid"
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 'var(--spacing-xl)',
-              width: '100%',
-              minWidth: 0,
-              boxSizing: 'border-box'
-            }}
-          >
-            {/* Left Column: Task Info, Submission Info, & Review Information */}
-            <div
-              style={{
-                flex: '1 1 500px',
-                minWidth: 0,
-                maxWidth: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 'var(--spacing-lg)',
-                boxSizing: 'border-box'
-              }}
-            >
-              {/* Section A: Task Information */}
-              <div
-                className="admin-card"
-                style={{
-                  padding: 'var(--spacing-xl)',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--color-border)',
-                  width: '100%',
-                  minWidth: 0,
-                  maxWidth: '100%',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: 'var(--spacing-sm)' }}>
-                  <div style={{ minWidth: 0, flex: '1 1 240px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Task Information
-                    </span>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary-dark)', margin: '4px 0 0 0', wordBreak: 'break-word' }}>
-                      {contract.task_title}
-                    </h2>
-                  </div>
-                  <span
-                    className={`status-badge ${
-                      contract.status === 'COMPLETED' ? 'status-completed' :
-                      'status-in-progress'
-                    }`}
-                  >
-                    {contract.status.replace('_', ' ')}
-                  </span>
-                </div>
-
-                {taskInfo?.description && (
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-dark)', lineHeight: 1.5, margin: '8px 0 12px 0', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                    {taskInfo.description}
-                  </p>
-                )}
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.8rem', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '10px' }}>
-                  <div>
-                    <strong>Assigned Professional:</strong> <span style={{ color: 'var(--color-text-dark)', wordBreak: 'break-word' }}>{contract.gig_pro_name}</span>
-                  </div>
-                  <div>
-                    <strong>Contract Value:</strong> <span style={{ color: '#0D568D', fontWeight: 700 }}>{formatCurrency(gigAmount)}</span>
-                  </div>
-                  {taskInfo?.dueDate && (
-                    <div>
-                      <strong>Deadline:</strong> <span style={{ color: 'var(--color-text-dark)' }}>{new Date(taskInfo.dueDate).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                </div>
+          {/* Task summary */}
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '28px', border: '1px solid #DCE3E8', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#475764', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Active Task #{contract.task_id}</span>
+                <h1 style={{ fontSize: '24px', color: '#0D568D', margin: '4px 0 8px 0', fontWeight: 700 }}>{contract.task_title}</h1>
               </div>
-
-              {/* Section B: Submission Information */}
-              <div
-                className="admin-card"
-                style={{
-                  padding: 'var(--spacing-xl)',
-                  backgroundColor: 'var(--color-white)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--color-border)',
-                  width: '100%',
-                  minWidth: 0,
-                  maxWidth: '100%',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: 'var(--spacing-md)' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Submission Information — Deliverable #{currentDeliverable?.deliverableNo}
-                    </span>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                      Submitted on {formatDate(currentDeliverable?.createdAt)}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: '999px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      backgroundColor:
-                        currentDeliverable?.status === 'approved' ? '#e6f4ea' :
-                        currentDeliverable?.status === 'revision_requested' ? '#fff0f0' :
-                        currentDeliverable?.status === 'closed' ? '#f1f3f4' : '#e8f0fe',
-                      color:
-                        currentDeliverable?.status === 'approved' ? '#137333' :
-                        currentDeliverable?.status === 'revision_requested' ? '#c5221f' :
-                        currentDeliverable?.status === 'closed' ? '#5f6368' : '#1a73e8'
-                    }}
-                  >
-                    {currentDeliverable?.status === 'submitted' && '● Awaiting Review'}
-                    {currentDeliverable?.status === 'revision_requested' && '● Revision Requested'}
-                    {currentDeliverable?.status === 'approved' && '✓ Approved'}
-                    {currentDeliverable?.status === 'closed' && '✓ Closed'}
-                  </span>
-                </div>
-
-                {/* Submission claimed deliverable definitions */}
-                {currentDeliverable?.claimedDefinitions && currentDeliverable.claimedDefinitions.length > 0 && (
-                  <div className="submission-definition__claims" style={{ marginBottom: 'var(--spacing-md)', width: '100%', minWidth: 0 }}>
-                    <strong style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-                      Claimed Deliverable Scope:
-                    </strong>
-                    <div className="submission-definition__claim-list" style={{ marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {currentDeliverable.claimedDefinitions.map(item => (
-                        <Badge key={item.definitionId} variant="info">{item.title}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Submission Description */}
-                <div style={{ marginBottom: 'var(--spacing-lg)', width: '100%', minWidth: 0 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
-                    Submission Description &amp; Notes:
-                  </div>
-                  <div style={{ backgroundColor: 'var(--color-bg-light)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.9rem', color: 'var(--color-text-dark)', lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                    {currentDeliverable?.description}
-                  </div>
-                </div>
-
-                {/* Submission Path / URL Artifact */}
-                <div style={{ backgroundColor: '#F2F6F8', padding: '16px', borderRadius: '8px', border: '1px solid #D3DCE2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-                  <div style={{ minWidth: 0, flex: '1 1 200px', maxWidth: '100%' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary-dark)', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Submitted Resource / Artifact URL:
-                    </div>
-                    {safeHttpUrl(currentDeliverable?.submissionPath) ? (
-                      <a
-                        href={safeHttpUrl(currentDeliverable?.submissionPath)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: '0.85rem', color: 'var(--color-primary-blue)', fontWeight: 600, textDecoration: 'underline', wordBreak: 'break-all', overflowWrap: 'anywhere', display: 'inline-block', maxWidth: '100%' }}
-                      >
-                        {currentDeliverable?.submissionPath}
-                      </a>
-                    ) : (
-                      <span style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{currentDeliverable?.submissionPath || 'No link provided'}</span>
-                    )}
-                  </div>
-                  {safeHttpUrl(currentDeliverable?.submissionPath) && (
-                    <a
-                      href={safeHttpUrl(currentDeliverable?.submissionPath)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="admin-btn admin-btn-outline admin-btn-sm"
-                      style={{ backgroundColor: '#FFFFFF', flexShrink: 0 }}
-                    >
-                      🔗 Open Deliverable Artifact
-                    </a>
-                  )}
-                </div>
-
-                {/* Section C: Review Information (Latest Feedback) */}
-                {currentDeliverable?.feedback && (
-                  <div
-                    style={{
-                      marginTop: 'var(--spacing-lg)',
-                      padding: '14px 16px',
-                      borderRadius: '8px',
-                      backgroundColor: currentDeliverable.status === 'revision_requested' ? '#FFF5F5' : '#F0F9FF',
-                      border: currentDeliverable.status === 'revision_requested' ? '1px solid #FED7D7' : '1px solid #BAE6FD',
-                      width: '100%',
-                      minWidth: 0,
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: currentDeliverable.status === 'revision_requested' ? '#C53030' : '#0369A1' }}>
-                        {currentDeliverable.status === 'revision_requested' ? 'Revision Feedback Sent to Professional' : 'Review Feedback'}
-                      </strong>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-dark)', lineHeight: 1.5, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                      {currentDeliverable.feedback}
-                    </p>
-                  </div>
-                )}
+              <span className={`status-badge ${contract.status === 'COMPLETED' ? 'status-completed' : 'status-in-progress'}`}>{contract.status.replace('_', ' ')}</span>
+            </div>
+            {taskInfo?.description && <p style={{ color: '#1B2A36', fontSize: '15px', lineHeight: 1.6, marginTop: '12px' }}>{taskInfo.description}</p>}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F0F4F6' }}>
+              <div><div style={{ fontSize: '12px', color: '#475764' }}>Gig Professional</div><div style={{ fontSize: '15px', fontWeight: 700, color: '#1B2A36', marginTop: '2px' }}>{contract.gig_pro_name}</div></div>
+              <div><div style={{ fontSize: '12px', color: '#475764' }}>Task Budget</div><div style={{ fontSize: '15px', fontWeight: 700, color: '#1B2A36', marginTop: '2px' }}>{formatCurrency(gigAmount)}</div></div>
+              <div><div style={{ fontSize: '12px', color: '#475764' }}>Payment</div><div style={{ fontSize: '15px', fontWeight: 700, color: '#1B2A36', marginTop: '2px' }}>{contract.payment_status ? PAYMENT_STATUS_UI[contract.payment_status].label : '-'}</div></div>
+            </div>
+            <div style={{ marginTop: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: '#475764', marginBottom: '6px' }}>
+                <span>Overall Deliverables Progress</span><span>{contract.progress ?? 0}% Completed</span>
+              </div>
+              <div style={{ height: '8px', backgroundColor: '#DCE3E8', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${contract.progress ?? 0}%`, backgroundColor: contract.status === 'COMPLETED' ? '#367D6F' : '#0D568D', borderRadius: '4px' }} />
               </div>
             </div>
+          </div>
 
-            {/* Right Column: Financial Summary & Section D Available Actions */}
-            <div
-              style={{
-                flex: '1 1 340px',
-                minWidth: 0,
-                maxWidth: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 'var(--spacing-lg)',
-                boxSizing: 'border-box'
-              }}
-            >
-              <div
-                className="admin-card"
-                style={{
-                  padding: 'var(--spacing-lg)',
-                  backgroundColor: 'var(--color-white)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--color-border)',
-                  width: '100%',
-                  minWidth: 0,
-                  maxWidth: '100%',
-                  boxSizing: 'border-box'
-                }}
-              >
-                
-                {/* Submitter Info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: 'var(--spacing-md)' }}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'var(--color-primary-blue)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                    {contract.gig_pro_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>{contract.gig_pro_name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                      Deliverable #{currentDeliverable?.deliverableNo} • {currentDeliverable?.status === 'submitted' ? 'Awaiting Review' : currentDeliverable?.status?.replace('_', ' ')}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Financial Summary */}
-                <div style={{ backgroundColor: 'var(--color-bg-light)', padding: '14px', borderRadius: '8px', marginBottom: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)' }}>Agreed Project Amount:</span>
-                    <span style={{ fontWeight: 600 }}>{formatCurrency(gigAmount)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)' }}>Platform Fee:</span>
-                    <span style={{ fontWeight: 600 }}>{formatCurrency(platformFee)}</span>
-                  </div>
-                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 800 }}>
-                    <span>Total Payment:</span>
-                    <span style={{ color: '#0D568D' }}>{formatCurrency(totalAmount)}</span>
-                  </div>
-                </div>
-
-                {/* ── Section D: Available Actions ── */}
-
-                {/* Action State 1: Awaiting Review (status === 'submitted') */}
-                {currentDeliverable?.status === 'submitted' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
-                      Inspect the submitted work and link above. You can approve this deliverable or request specific revisions.
-                    </p>
-                    <Button type="button" onClick={() => {
-                        setApproveApiError(null);
-                        setIsApproveModalOpen(true);
-                      }}>
-                      Approve Deliverable
-                    </Button>
-                    <Button variant="outline" size="sm" type="button" onClick={() => {
-                        setRevisionFieldError(null);
-                        setRevisionApiError(null);
-                        setIsChangesModalOpen(true);
-                      }}>
-                      Request Revision
-                    </Button>
-                  </div>
-                )}
-
-                {/* Action State 2: Revision Requested (status === 'revision_requested') */}
-                {currentDeliverable?.status === 'revision_requested' && (
-                  <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ backgroundColor: '#FFF5F5', padding: '12px', borderRadius: '8px', border: '1px solid #FED7D7' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#C53030', marginBottom: '2px' }}>
-                        ● Revision Requested
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#742A2A', lineHeight: 1.4 }}>
-                        You requested changes for this deliverable. The Gig Professional has been notified and can submit updated work. Payment remains secured in escrow.
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action State 3: Deliverable Approved, task in progress */}
-                {currentDeliverable?.status === 'approved' && contract.status !== 'COMPLETED' && (
-                  <div style={{ borderTop: '2px solid #367D6F', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ backgroundColor: '#E4F2EF', padding: '12px', borderRadius: '8px', border: '1px solid #367D6F' }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2E6E62', marginBottom: '2px' }}>
-                        ✓ Deliverable Approved
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#1B2A36' }}>
-                        {canRelease
-                          ? 'All deliverables are approved. Release the payment to complete this task.'
-                          : contract.payment_status === 'pending'
-                            ? 'Fund this task first; release unlocks once the payment is held in escrow.'
-                            : `Payment can be released once every deliverable is approved (${contract.progress}% done).`}
-                      </div>
-                    </div>
-
-                    <Button type="button" disabled={!canRelease} onClick={() => setIsPaymentModalOpen(true)}>
-                      Release {formatCurrency(gigAmount)} to {contract.gig_pro_name}
-                    </Button>
-                  </div>
-                )}
-
+          {/* Payment card: only the client can release */}
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '24px', border: '1px solid #DCE3E8', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h2 style={{ fontSize: '20px', color: '#0D568D', margin: 0, fontWeight: 700 }}>Payment</h2>
+            <div style={{ backgroundColor: 'var(--color-bg-light)', padding: '14px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}><span>Agreed Project Amount:</span><strong>{formatCurrency(gigAmount)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}><span>Platform Fee:</span><strong>{formatCurrency(platformFee)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 800, borderTop: '1px solid var(--color-border)', paddingTop: '6px' }}><span>Total Payment:</span><span style={{ color: '#0D568D' }}>{formatCurrency(totalAmount)}</span></div>
+            </div>
+            {contract.status !== 'COMPLETED' && (
+              <>
+                <p style={{ fontSize: '0.8rem', color: '#475764', margin: 0 }}>
+                  {canRelease
+                    ? 'All deliverables are approved. Release the payment to complete this task.'
+                    : contract.payment_status === 'pending'
+                      ? 'Fund this task first; release unlocks once the payment is held in escrow.'
+                      : `Payment can be released once every deliverable is approved (${contract.progress ?? 0}% done).`}
+                </p>
+                <Button type="button" disabled={!canRelease} onClick={() => setIsPaymentModalOpen(true)}>
+                  Release {formatCurrency(gigAmount)} to {contract.gig_pro_name}
+                </Button>
+              </>
+            )}
                 {/* Action State 4: Task Completed */}
                 {contract.status === 'COMPLETED' && (
                   <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -656,14 +350,53 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                     )}
                   </div>
                 )}
-
-                <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('my-gigs')} style={{ marginTop: '12px', width: '100%' }}>
-                  Return to Active Task
-                </Button>
-              </div>
-            </div>
-
           </div>
+
+          {/* Scope: the work items the client (or manager) defined */}
+          <TaskDeliverablesManager key={contract.task_id} taskId={numericTaskId} readOnly={contract.status !== 'IN_PROGRESS'} />
+
+          {/* Submitted work */}
+          <div>
+            <h2 style={{ fontSize: '20px', color: '#0D568D', margin: 0, fontWeight: 700 }}>Submitted Deliverables</h2>
+            <p style={{ fontSize: '13px', color: '#475764', margin: '4px 0 0 0' }}>Review work {contract.gig_pro_name} submits. Approving work never completes the task; releasing payment does.</p>
+          </div>
+          {!hasDeliverables ? (
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '32px', textAlign: 'center', border: '1px solid #DCE3E8' }}>
+              <p style={{ color: '#475764', margin: 0 }}>No work has been submitted for this task yet.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {deliverablesList.map((del, idx) => (
+                <div key={del.deliverableNo} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '20px 24px', border: '1px solid #DCE3E8', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#0D568D', backgroundColor: '#E4EEF5', padding: '4px 10px', borderRadius: '6px' }}>Deliverable #{del.deliverableNo}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '10px', backgroundColor: del.status === 'approved' || del.status === 'closed' ? '#E4F2EF' : del.status === 'submitted' ? '#F8EBD9' : '#F8E8E8', color: del.status === 'approved' || del.status === 'closed' ? '#2E6E62' : del.status === 'submitted' ? '#9A5100' : '#C94C4C' }}>
+                        {del.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: 600, color: '#1B2A36', marginTop: '8px', wordBreak: 'break-word' }}>{del.description}</div>
+                    {del.claimedDefinitions && del.claimedDefinitions.length > 0 && (
+                      <div className="submission-definition__claims"><strong>Client-defined deliverables:</strong><ul>{del.claimedDefinitions.map(item => <li key={item.definitionId}>{item.title}</li>)}</ul></div>
+                    )}
+                    <div style={{ fontSize: '13px', color: '#475764', marginTop: '4px' }}>
+                      Submission Path:{' '}
+                      {safeHttpUrl(del.submissionPath) ? (
+                        <a href={safeHttpUrl(del.submissionPath)} target="_blank" rel="noopener noreferrer" style={{ color: '#0D568D', fontWeight: 600 }}>{del.submissionPath}</a>
+                      ) : <span style={{ whiteSpace: 'pre-wrap' }}>{del.submissionPath}</span>}
+                    </div>
+                    {del.feedback && <div style={{ fontSize: '13px', color: '#475764', marginTop: '6px' }}><strong>Feedback:</strong> {del.feedback}</div>}
+                  </div>
+                  {del.status === 'submitted' && contract.status === 'IN_PROGRESS' && (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <Button size="sm" onClick={() => { setSelectedDeliverableIndex(idx); setApproveApiError(null); setIsApproveModalOpen(true); }}>Approve</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setSelectedDeliverableIndex(idx); setRevisionFieldError(null); setRevisionApiError(null); setIsChangesModalOpen(true); }}>Request Revision</Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -806,6 +539,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
         taskId={effectiveTaskId}
+        gigProfileId={Number(contract.gig_profile_id)}
         taskTitle={contract.task_title}
         gigProName={contract.gig_pro_name}
         onSuccess={() => {

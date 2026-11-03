@@ -57,6 +57,15 @@ before(async () => {
   } else {
     await prisma.task.update({ where: { taskId: TEST_TASK_ID }, data: { status: "completed" } });
   }
+  // Review eligibility is per hire: the hired professional's payment must be settled.
+  const hired = await prisma.gigManagerAssignment.findFirst({ where: { taskId: TEST_TASK_ID } });
+  if (hired) {
+    await prisma.payment.upsert({
+      where: { taskId_gigProfileId: { taskId: TEST_TASK_ID, gigProfileId: hired.gigProfileId } },
+      update: { status: "completed" },
+      create: { taskId: TEST_TASK_ID, gigProfileId: hired.gigProfileId, amount: 5000, status: "completed" },
+    });
+  }
   
   // Clean up any lingering test reviews on TEST_TASK_ID
   await prisma.review.deleteMany({
@@ -90,7 +99,7 @@ after(async () => {
 // Scenario 10: Backend schema validation for rating boundaries
 test("Scenario 10: Invalid ratings are rejected by Zod schemas", () => {
   for (const rating of [0, 6, -1, 2.5, "invalid", null]) {
-    const clientRes = createClientReviewSchema.safeParse({ taskId: 1, rating, comment: "Good work" });
+    const clientRes = createClientReviewSchema.safeParse({ taskId: 1, gigProfileId: 1, rating, comment: "Good work" });
     assert.equal(clientRes.success, false, `Client schema should reject rating: ${rating}`);
 
     const gigRes = createGigReviewSchema.safeParse({ taskId: 1, rating, comment: "Good client" });
@@ -98,7 +107,7 @@ test("Scenario 10: Invalid ratings are rejected by Zod schemas", () => {
   }
 
   for (const rating of [1, 2, 3, 4, 5, "1", "5"]) {
-    const clientRes = createClientReviewSchema.safeParse({ taskId: 1, rating, comment: "Good work" });
+    const clientRes = createClientReviewSchema.safeParse({ taskId: 1, gigProfileId: 1, rating, comment: "Good work" });
     assert.equal(clientRes.success, true, `Client schema should accept rating: ${rating}`);
 
     const gigRes = createGigReviewSchema.safeParse({ taskId: 1, rating, comment: "Good client" });
@@ -109,7 +118,7 @@ test("Scenario 10: Invalid ratings are rejected by Zod schemas", () => {
 // Scenario 11: Optional comments and validation rules
 test("Scenario 11: Optional comments are handled according to backend validation", () => {
   // Optional / omitted comment
-  const noCommentClient = createClientReviewSchema.safeParse({ taskId: 1, rating: 5 });
+  const noCommentClient = createClientReviewSchema.safeParse({ taskId: 1, gigProfileId: 1, rating: 5 });
   assert.equal(noCommentClient.success, true, "Client review without comment should be accepted");
 
   const noCommentGig = createGigReviewSchema.safeParse({ taskId: 1, rating: 4 });
@@ -117,17 +126,17 @@ test("Scenario 11: Optional comments are handled according to backend validation
 
   // Valid comment up to 1000 characters
   const validComment = "Great collaboration! Requirements were clear and feedback was provided promptly.";
-  assert.equal(createClientReviewSchema.safeParse({ taskId: 1, rating: 5, comment: validComment }).success, true);
+  assert.equal(createClientReviewSchema.safeParse({ taskId: 1, gigProfileId: 1, rating: 5, comment: validComment }).success, true);
   assert.equal(createGigReviewSchema.safeParse({ taskId: 1, rating: 5, comment: validComment }).success, true);
 
   // Comment exceeding 1000 characters
   const overlongComment = "A".repeat(1001);
-  assert.equal(createClientReviewSchema.safeParse({ taskId: 1, rating: 5, comment: overlongComment }).success, false);
+  assert.equal(createClientReviewSchema.safeParse({ taskId: 1, gigProfileId: 1, rating: 5, comment: overlongComment }).success, false);
   assert.equal(createGigReviewSchema.safeParse({ taskId: 1, rating: 5, comment: overlongComment }).success, false);
 
   // HTML / Code injection blocked
   const injection = "<script>alert('xss')</script>";
-  assert.equal(createClientReviewSchema.safeParse({ taskId: 1, rating: 5, comment: injection }).success, false);
+  assert.equal(createClientReviewSchema.safeParse({ taskId: 1, gigProfileId: 1, rating: 5, comment: injection }).success, false);
   assert.equal(createGigReviewSchema.safeParse({ taskId: 1, rating: 5, comment: injection }).success, false);
 });
 
@@ -224,7 +233,7 @@ test("Scenario 7: Client cannot review a task they do not own", async () => {
       "Content-Type": "application/json",
       Authorization: `Bearer ${clientToken}`,
     },
-    body: JSON.stringify({ taskId: task.taskId, rating: 5, comment: "Unauthorized review" }),
+    body: JSON.stringify({ taskId: task.taskId, gigProfileId: 1, rating: 5, comment: "Unauthorized review" }),
   });
   // Service throws notFound("Task not found") when task doesn't belong to caller's clientId -> 404
   assert.equal(res.status, 404);
@@ -267,12 +276,14 @@ test("Scenario 8: Gig Professional cannot review a task to which they were not a
 
 // Scenario 9: Incomplete tasks cannot be reviewed
 test("Scenario 9: Incomplete tasks cannot be reviewed", async () => {
-  const inProgressTask = await prisma.task.findFirst({
-    where: { status: "in_progress" },
-    include: { client: true },
+  // A hire is incomplete while its payment is unsettled.
+  const active = await prisma.payment.findFirst({
+    where: { status: { in: ["pending", "held"] } },
+    include: { task: { include: { client: true } } },
   });
 
-  if (inProgressTask) {
+  if (active) {
+    const inProgressTask = active.task;
     const clientToken = signToken({
       role: "client",
       userId: inProgressTask.client.userId,
@@ -284,9 +295,9 @@ test("Scenario 9: Incomplete tasks cannot be reviewed", async () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${clientToken}`,
       },
-      body: JSON.stringify({ taskId: inProgressTask.taskId, rating: 5 }),
+      body: JSON.stringify({ taskId: inProgressTask.taskId, gigProfileId: active.gigProfileId, rating: 5 }),
     });
-    // Task status !== "completed" -> 409 Conflict
+    // Hire not settled -> 409 Conflict
     assert.equal(res.status, 409);
     const json = (await res.json()) as { message?: string };
     assert.match(json.message ?? "", /completed/i);
@@ -324,7 +335,7 @@ test("Scenario 1, 2, 3, 4, 6: Complete two-sided review lifecycle and duplicate 
   const clientReviewRes = await fetch(`${baseUrl}/api/reviews`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${clientToken}` },
-    body: JSON.stringify({ taskId: TEST_TASK_ID, rating: 5, comment: "Integration test client review" }),
+    body: JSON.stringify({ taskId: TEST_TASK_ID, gigProfileId: hiredGig.gigProfileId, rating: 5, comment: "Integration test client review" }),
   });
   assert.equal(clientReviewRes.status, 201, "Client review should return 201 Created");
 
@@ -345,7 +356,7 @@ test("Scenario 1, 2, 3, 4, 6: Complete two-sided review lifecycle and duplicate 
   const clientDuplicateRes = await fetch(`${baseUrl}/api/reviews`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${clientToken}` },
-    body: JSON.stringify({ taskId: TEST_TASK_ID, rating: 5, comment: "Duplicate attempt" }),
+    body: JSON.stringify({ taskId: TEST_TASK_ID, gigProfileId: hiredGig.gigProfileId, rating: 5, comment: "Duplicate attempt" }),
   });
   assert.equal(clientDuplicateRes.status, 409, "Duplicate client review must return 409 Conflict");
   const dupClientJson = (await clientDuplicateRes.json()) as { message?: string };

@@ -2,8 +2,12 @@ import { prisma } from "db";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
 import { env } from "../../lib/env.js";
 import {
+  ACTIVE_PAYMENT_STATUSES,
   SERVICE_HIRE_SKILL,
+  SETTLED_PAYMENT_STATUSES,
   computeProgress,
+  definitionsForProfessional,
+  hireStatus,
   isServiceHireTask,
   latestSubmissionInclude,
   stripReservedSkills,
@@ -82,9 +86,8 @@ export function listTasks(clientId: number) {
 }
 
 /**
- * Patch a task's fields. Only allowed while the task is still open: once
- * someone is hired, title/budget/scope are the agreed contract. Status is
- * never client-editable — it moves only through hire and payment release.
+ * Patch a task's fields while its posting is open. Hires already made keep
+ * the amount on their PAYMENT row, so a budget edit only affects new hires.
  * taskId ownership is pre-verified by clientOwnershipGuard.
  */
 export async function updateTask(taskId: number, dto: UpdateTaskDto) {
@@ -119,22 +122,29 @@ export function findServiceRequestForTask(tx: any, task: { clientId: number; tit
 }
 
 /**
- * Delete (withdraw) a task. Only open tasks can be removed — anything already
- * hired has a contract, assignment and payment attached. Pending applications
- * go with it; a service-hire request is marked declined.
+ * Delete (withdraw) a task posting. With nobody hired the task is removed
+ * outright. Once anyone is hired, their contracts, assignments and escrow must
+ * survive, so the posting is closed instead (status in_progress): it leaves the
+ * marketplace and Posted Tasks, undecided applicants are declined, and existing
+ * hires carry on. A service-hire request is marked declined.
  */
 export async function deleteTask(taskId: number): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await prisma.$transaction(async (tx: any) => {
     const task = await tx.task.findUniqueOrThrow({ where: { taskId }, include: { applications: true } });
-    if (task.status !== "open" || task.applications.some((a: { status: string }) => a.status === "accepted")) {
-      throw conflict("Only open tasks that nobody has been hired for can be deleted");
+    if (task.status !== "open") {
+      throw conflict("This task has already been removed");
     }
     if (isServiceHireTask(task) && task.applications[0]) {
       const request = await findServiceRequestForTask(tx, task, task.applications[0].gigProfileId);
       if (request?.status === "pending") {
         await tx.serviceRequest.update({ where: { requestId: request.requestId }, data: { status: "declined" } });
       }
+    }
+    if (task.applications.some((a: { status: string }) => a.status === "accepted")) {
+      await tx.application.updateMany({ where: { taskId, status: { in: ["pending", "shortlisted"] } }, data: { status: "declined" } });
+      await tx.task.update({ where: { taskId }, data: { status: "in_progress" } });
+      return;
     }
     await tx.application.deleteMany({ where: { taskId } });
     await tx.task.delete({ where: { taskId } });
@@ -153,29 +163,27 @@ export function listApplications(clientId: number) {
 }
 
 /**
- * Starts a contract for an application: task -> in_progress, every other open
- * application on the task declined, the professional's assignment row created
- * with no manager (the client supervises until they pick one after funding —
- * see setTaskManager), and the pending payment row created. Shared by the
- * client accepting a marketplace application and the gig professional
- * accepting a service-hire request.
+ * Starts a contract for one application: application accepted, the
+ * professional's assignment row created with no manager (the client
+ * supervises until they pick one after funding — see setTaskManager), and the
+ * pending payment row created. A marketplace task stays open so the client can
+ * keep hiring more professionals until they delete it; a service-hire task is
+ * for one professional, so its posting closes. Shared by the client accepting
+ * a marketplace application and the gig professional accepting a service-hire request.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function startContract(tx: any, application: { applicationId: number; taskId: number; gigProfileId: number }) {
   const task = await tx.task.findUniqueOrThrow({ where: { taskId: application.taskId } });
 
-  // Conditional update: only one hire can ever win the open -> in_progress transition.
-  const moved = await tx.task.updateMany({
-    where: { taskId: application.taskId, status: "open" },
-    data: { status: "in_progress" },
+  // Conditional update: a double click can't hire the same application twice.
+  const accepted = await tx.application.updateMany({
+    where: { applicationId: application.applicationId, status: { in: ["pending", "shortlisted"] } },
+    data: { status: "accepted" },
   });
-  if (moved.count !== 1) throw conflict("This task is no longer open");
-
-  await tx.application.update({ where: { applicationId: application.applicationId }, data: { status: "accepted" } });
-  await tx.application.updateMany({
-    where: { taskId: application.taskId, applicationId: { not: application.applicationId }, status: { in: ["pending", "shortlisted"] } },
-    data: { status: "declined" },
-  });
+  if (accepted.count !== 1) throw conflict("This application has already been decided");
+  if (isServiceHireTask(task)) {
+    await tx.task.update({ where: { taskId: application.taskId }, data: { status: "in_progress" } });
+  }
 
   await tx.gigManagerAssignment.upsert({
     where: { gigProfileId_taskId: { gigProfileId: application.gigProfileId, taskId: application.taskId } },
@@ -278,53 +286,55 @@ export async function listContracts(clientId: number) {
   return applications.map((application: any) => {
     const payment = application.task.payments.find((p: { gigProfileId: number }) => p.gigProfileId === application.gigProfileId);
     const platformFee = Number(payment?.platformFee ?? 0);
+    // The payment row holds the amount agreed at hire time; the task budget may have been edited since.
+    const amount = Number(payment?.amount ?? application.task.budget);
     return {
       paymentId: payment?.paymentId ?? null,
       paymentStatus: payment?.status ?? null,
       platformFee,
-      totalAmount: Number(application.task.budget) + platformFee,
+      totalAmount: amount + platformFee,
       taskId: application.taskId,
       taskTitle: application.task.title,
       gigProfileId: application.gigProfileId,
       gigProfessionalName: application.gigProfile.user.name,
       // null = supervised by the client themselves.
       managerId: application.task.assignments.find((a: { gigProfileId: number }) => a.gigProfileId === application.gigProfileId)?.managerId ?? null,
-      status: application.task.status,
+      status: hireStatus(payment?.status),
       progress: computeProgress(
-        application.task.deliverableDefinitions,
+        definitionsForProfessional(application.task.deliverableDefinitions, application.gigProfileId),
         application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId),
       ),
-      budget: application.task.budget,
+      budget: amount,
       createdAt: application.createdAt,
-      reviews: (application.task.reviews ?? []).map(toContractReviewResponse),
+      reviews: (application.task.reviews ?? [])
+        .filter((r: { reviewerId: number; revieweeId: number }) => r.reviewerId === application.gigProfile.userId || r.revieweeId === application.gigProfile.userId)
+        .map(toContractReviewResponse),
     };
   });
 }
 
 /**
- * Choose who supervises a hired task: one of the client's managers, or null
- * to keep it with the client. Allowed once the task is funded (payment held)
- * and while it is still in progress; can be changed any time in that window.
+ * Choose who supervises one hired professional on a task: one of the client's
+ * managers, or null to keep it with the client. Allowed once that hire is
+ * funded (payment held) and can be changed any time until it is released.
  * taskId ownership is pre-verified by clientOwnershipGuard.
  */
-export async function setTaskManager(taskId: number, clientId: number, managerId: number | null) {
+export async function setTaskManager(taskId: number, gigProfileId: number, clientId: number, managerId: number | null) {
   if (managerId !== null && !(await prisma.manager.findFirst({ where: { managerId, clientId, user: { status: "ACTIVE" } } }))) {
     throw notFound("Manager not found");
   }
-  const task = await prisma.task.findUniqueOrThrow({ where: { taskId }, include: { payments: true } });
-  if (task.status !== "in_progress") {
-    throw conflict("A manager can only be chosen while the task is in progress");
+  const payment = await prisma.payment.findUnique({ where: { taskId_gigProfileId: { taskId, gigProfileId } } });
+  if (!payment) throw notFound("This professional has not been hired for this task");
+  if (payment.status !== "held") {
+    throw conflict(payment.status === "pending" ? "Fund the task before choosing who manages it" : "This hire has already been settled");
   }
-  if (!task.payments.some((p: { status: string }) => p.status === "held")) {
-    throw conflict("Fund the task before choosing who manages it");
-  }
-  // Same conditions in the write, so a concurrent release can't slip between check and update.
+  // Same condition in the write, so a concurrent release can't slip between check and update.
   const updated = await prisma.gigManagerAssignment.updateMany({
-    where: { taskId, task: { status: "in_progress", payments: { some: { status: "held" } } } },
+    where: { taskId, gigProfileId, task: { payments: { some: { gigProfileId, status: "held" } } } },
     data: { managerId },
   });
   if (updated.count === 0) throw conflict("This task can no longer be reassigned");
-  return { taskId, managerId };
+  return { taskId, gigProfileId, managerId };
 }
 
 // ---- Deliverables (client-side review) -------------------------------------
@@ -335,9 +345,11 @@ async function requireOwnedTask(taskId: number, clientId: number) {
   return task;
 }
 
+// Definitions are shared by every hire on the task, so they're editable while any hire is still active.
 async function requireOwnedActiveTask(taskId: number, clientId: number) {
   const task = await requireOwnedTask(taskId, clientId);
-  if (task.status !== "in_progress") throw forbidden("Deliverables can only be managed for active tasks");
+  const active = await prisma.payment.count({ where: { taskId, status: { in: [...ACTIVE_PAYMENT_STATUSES] } } });
+  if (active === 0) throw forbidden("Deliverables can only be managed for active tasks");
   return task;
 }
 
@@ -459,7 +471,11 @@ export async function reviewDeliverable(
   if (!deliverable || deliverable.task.clientId !== clientId) {
     throw notFound("Deliverable not found");
   }
-  if (deliverable.task.status !== "in_progress") {
+  const payment = await prisma.payment.findUnique({
+    where: { taskId_gigProfileId: { taskId: key.taskId, gigProfileId: deliverable.gigProfileId } },
+    select: { status: true },
+  });
+  if (payment?.status !== "held") {
     throw forbidden("Deliverables can only be reviewed while the task is active");
   }
 
@@ -627,18 +643,21 @@ export async function revokeManagerInvite(clientId: number, inviteId: number) {
 
 // ---- Reviews -------------------------------------------------------------
 
-/** Client rates the professional who delivered a completed task (one review per task). */
+/** Client rates one professional they hired on a task, once that hire is settled (one review per professional per task). */
 export async function createReview(clientId: number, userId: number, dto: CreateClientReviewDto) {
   const task = await prisma.task.findFirst({
     where: { taskId: dto.taskId, clientId },
     include: {
-      applications: { where: { status: "accepted" }, include: { gigProfile: { select: { userId: true } } } },
+      applications: { where: { status: "accepted", gigProfileId: dto.gigProfileId }, include: { gigProfile: { select: { userId: true } } } },
+      payments: { where: { gigProfileId: dto.gigProfileId } },
     },
   });
   if (!task) throw notFound("Task not found");
-  if (task.status !== "completed") throw conflict("You can review the professional once the task is completed");
   const hired = task.applications[0];
-  if (!hired) throw conflict("Nobody was hired for this task");
+  if (!hired) throw conflict("This professional was not hired for this task");
+  if (!SETTLED_PAYMENT_STATUSES.some((s) => s === task.payments[0]?.status)) {
+    throw conflict("You can review the professional once the task is completed");
+  }
 
   const existingReview = await prisma.review.findFirst({
     where: { taskId: dto.taskId, reviewerId: userId, revieweeId: hired.gigProfile.userId },

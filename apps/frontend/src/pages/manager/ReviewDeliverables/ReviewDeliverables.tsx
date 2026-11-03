@@ -183,7 +183,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '20px', color: '#0D568D', margin: 0, fontWeight: 700 }}>
-            Atomic Deliverables ({deliverables.length})
+            Submitted Deliverables ({deliverables.length})
           </h2>
           <p style={{ fontSize: '13px', color: '#475764', margin: '4px 0 0 0' }}>
             Review work the professional submits. Approving work never completes the task — the client does that when releasing payment.

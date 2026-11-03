@@ -10,7 +10,6 @@ import type {
   ManagerProfile,
   ManagerTask,
   Deliverable,
-  TalentProfile,
   ManagerApplication,
   ReviewDeliverableDto,
   ShortlistApplicationDto,
@@ -104,11 +103,6 @@ export const managerApi = {
       method: 'PATCH',
       actor
     });
-  },
-
-  // GET /api/gig/professionals?q= — search gig pros by name/skill (all when no query).
-  searchTalent: async (query?: string): Promise<TalentProfile[]> => {
-    return apiFetch<TalentProfile[]>(`/gig/professionals${query ? `?q=${encodeURIComponent(query)}` : ''}`, { actor });
   }
 };
 

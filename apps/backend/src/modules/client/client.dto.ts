@@ -37,6 +37,7 @@ export type UpdateTaskDeliverableDefinitionDto = z.infer<typeof updateTaskDelive
 
 /** null keeps the task with the client (no manager). */
 export const setTaskManagerSchema = z.object({
+  gigProfileId: id(),
   managerId: id().nullable(),
 });
 export type SetTaskManagerDto = z.infer<typeof setTaskManagerSchema>;
@@ -66,6 +67,7 @@ export type ReviewDeliverableAsClientDto = z.infer<typeof reviewDeliverableAsCli
 
 export const createClientReviewSchema = z.object({
   taskId: id(),
+  gigProfileId: id(),
   rating: z.coerce.number().int().min(1).max(5),
   comment: text(1000).optional(),
 });

@@ -7,6 +7,7 @@ export interface ClientReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   taskId: number;
+  gigProfileId: number;
   taskTitle: string;
   gigProName: string;
   onSuccess?: () => void;
@@ -24,6 +25,7 @@ export const ClientReviewModal: React.FC<ClientReviewModalProps> = ({
   isOpen,
   onClose,
   taskId,
+  gigProfileId,
   taskTitle,
   gigProName,
   onSuccess,
@@ -43,7 +45,7 @@ export const ClientReviewModal: React.FC<ClientReviewModalProps> = ({
     setSubmitting(true);
 
     try {
-      await submitReview(taskId, rating, comment);
+      await submitReview(taskId, gigProfileId, rating, comment);
       await refreshContracts();
       onSuccess?.();
       onClose();

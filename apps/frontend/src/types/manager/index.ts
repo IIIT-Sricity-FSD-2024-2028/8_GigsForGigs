@@ -80,21 +80,6 @@ export interface ManagerTask {
   deliverables?: Deliverable[];
 }
 
-/** A gig pro as shown in talent search. */
-export interface TalentProfile {
-  gigProfileId: number;
-  userId: number;
-  name: string;
-  bio?: string;
-  price?: number;
-  /** Average of published reviews (1-5); missing when the professional has no reviews yet. */
-  rating?: number;
-  skills: string[];
-  tools?: string[];
-  portfolio?: string[];
-  status: 'active' | 'busy' | 'offline';
-}
-
 /** An application against one of the manager's client's tasks (GET /managers/me/tasks/:id/applications). */
 export interface ManagerApplication {
   applicationId: number;

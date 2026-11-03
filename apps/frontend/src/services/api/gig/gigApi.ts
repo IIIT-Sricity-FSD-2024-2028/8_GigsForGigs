@@ -68,6 +68,12 @@ export const gigApi = {
     });
   },
 
+  /** GET this gig pro's own marketplace applications (any status). */
+
+  getMyApplications: async (): Promise<PendingRequest[]> => {
+    return apiFetch<PendingRequest[]>('/gig/applications/mine', { actor });
+  },
+
   /** DELETE a pending application. */
 
   withdrawApplication: async (applicationId: number): Promise<void> => {

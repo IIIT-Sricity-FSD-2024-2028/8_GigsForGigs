@@ -104,17 +104,17 @@ test("client assigns a manager after funding; managers see only their tasks; onl
   assert.equal(await status("GET", `/managers/me/tasks/${t}`, a.token), 404);
 
   // Can't choose a manager before paying.
-  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { managerId: a.managerId }), 409);
+  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { gigProfileId: f.gigProfileId, managerId: a.managerId }), 409);
 
-  assert.equal(await status("POST", "/payments/pay", f.clientToken, { taskId: t }), 200);
+  assert.equal(await status("POST", "/payments/pay", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId }), 200);
 
   // Unknown manager / bad body rejected; managers can't assign themselves.
-  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { managerId: 2_000_000_000 }), 404);
+  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { gigProfileId: f.gigProfileId, managerId: 2_000_000_000 }), 404);
   assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, {}), 400);
-  assert.equal(await status("PATCH", `/tasks/${t}/manager`, a.token, { managerId: a.managerId }), 403);
+  assert.equal(await status("PATCH", `/tasks/${t}/manager`, a.token, { gigProfileId: f.gigProfileId, managerId: a.managerId }), 403);
 
   // Assign A: A sees it, B doesn't.
-  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { managerId: a.managerId }), 200);
+  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { gigProfileId: f.gigProfileId, managerId: a.managerId }), 200);
   assert.equal(await status("GET", `/managers/me/tasks/${t}`, a.token), 200);
   assert.equal(await status("GET", `/managers/me/tasks/${t}`, b.token), 404);
   const listA = await (await call("GET", "/managers/me/tasks", a.token)).json();
@@ -139,11 +139,11 @@ test("client assigns a manager after funding; managers see only their tasks; onl
   assert.equal(await status("DELETE", `/managers/me/tasks/${t}/deliverable-definitions/${definitionId}`, a.token), 204);
 
   // Money stays client-only.
-  assert.equal(await status("POST", "/payments/release", a.token, { taskId: t }), 403);
-  assert.equal(await status("POST", "/payments/pay", a.token, { taskId: t }), 403);
+  assert.equal(await status("POST", "/payments/release", a.token, { taskId: t, gigProfileId: f.gigProfileId }), 403);
+  assert.equal(await status("POST", "/payments/pay", a.token, { taskId: t, gigProfileId: f.gigProfileId }), 403);
 
   // Client takes the task back: A loses access.
-  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { managerId: null }), 200);
+  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { gigProfileId: f.gigProfileId, managerId: null }), 200);
   assert.equal(await status("GET", `/managers/me/tasks/${t}`, a.token), 404);
 });
 
@@ -152,27 +152,29 @@ test("another client's manager can't be assigned, and can't see the task", async
   const other = await fixture(1);
   const foreign = other.managers[0]!;
   await status("PATCH", `/applications/${mine.applicationId}`, mine.clientToken, { status: "accepted" });
-  await status("POST", "/payments/pay", mine.clientToken, { taskId: mine.taskId });
-  assert.equal(await status("PATCH", `/tasks/${mine.taskId}/manager`, mine.clientToken, { managerId: foreign.managerId }), 404);
+  await status("POST", "/payments/pay", mine.clientToken, { taskId: mine.taskId, gigProfileId: mine.gigProfileId });
+  assert.equal(await status("PATCH", `/tasks/${mine.taskId}/manager`, mine.clientToken, { gigProfileId: mine.gigProfileId, managerId: foreign.managerId }), 404);
   assert.equal(await status("GET", `/managers/me/tasks/${mine.taskId}`, foreign.token), 404);
   // Other client can't touch my task's manager either.
-  assert.equal(await status("PATCH", `/tasks/${mine.taskId}/manager`, other.clientToken, { managerId: foreign.managerId }), 404);
+  assert.equal(await status("PATCH", `/tasks/${mine.taskId}/manager`, other.clientToken, { gigProfileId: mine.gigProfileId, managerId: foreign.managerId }), 404);
 });
 
 test("client with no managers can hire, receive work, approve and release on their own", async () => {
   const f = await fixture(0);
   const t = f.taskId;
   assert.equal(await status("PATCH", `/applications/${f.applicationId}`, f.clientToken, { status: "accepted" }), 200);
-  assert.equal(await status("POST", "/payments/pay", f.clientToken, { taskId: t }), 200);
+  assert.equal(await status("POST", "/payments/pay", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId }), 200);
 
   // Gig pro submits against an assignment with no manager.
   assert.equal(await status("POST", "/gig/deliverables", f.gigToken, { taskId: t, content: "Done" }), 201);
   assert.equal(await status("PATCH", `/deliverables/${t}-1`, f.clientToken, { status: "approved" }), 200);
-  assert.equal(await status("POST", "/payments/release", f.clientToken, { taskId: t }), 200);
-  assert.equal((await prisma.task.findUniqueOrThrow({ where: { taskId: t } })).status, "completed");
+  assert.equal(await status("POST", "/payments/release", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId }), 200);
+  // Releasing finishes this hire only; the posting stays open for more hires.
+  assert.equal((await prisma.payment.findFirstOrThrow({ where: { taskId: t } })).status, "completed");
+  assert.equal((await prisma.task.findUniqueOrThrow({ where: { taskId: t } })).status, "open");
 
-  // Completed task can't be reassigned.
-  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { managerId: null }), 409);
+  // Completed hire can't be reassigned.
+  assert.equal(await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { gigProfileId: f.gigProfileId, managerId: null }), 409);
 });
 
 test("assigned manager reviews and closes work; unassigned manager can't; client releases", async () => {
@@ -180,8 +182,8 @@ test("assigned manager reviews and closes work; unassigned manager can't; client
   const t = f.taskId;
   const [a, b] = f.managers as [{ managerId: number; token: string }, { managerId: number; token: string }];
   await status("PATCH", `/applications/${f.applicationId}`, f.clientToken, { status: "accepted" });
-  await status("POST", "/payments/pay", f.clientToken, { taskId: t });
-  await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { managerId: a.managerId });
+  await status("POST", "/payments/pay", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId });
+  await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { gigProfileId: f.gigProfileId, managerId: a.managerId });
 
   // Manager defines the scope; the gig pro submits against it.
   const def = await (await call("POST", `/managers/me/tasks/${t}/deliverable-definitions`, a.token, { title: "Logo" })).json();
@@ -193,8 +195,8 @@ test("assigned manager reviews and closes work; unassigned manager can't; client
   assert.equal(await status("PATCH", `/managers/me/tasks/${t}/deliverables/2/review`, a.token, { status: "approved" }), 200);
   assert.equal(await status("PATCH", `/managers/me/tasks/${t}/deliverables/2/close`, a.token), 200);
 
-  assert.equal(await status("POST", "/payments/release", a.token, { taskId: t }), 403);
-  assert.equal(await status("POST", "/payments/release", f.clientToken, { taskId: t }), 200);
+  assert.equal(await status("POST", "/payments/release", a.token, { taskId: t, gigProfileId: f.gigProfileId }), 403);
+  assert.equal(await status("POST", "/payments/release", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId }), 200);
 });
 
 test("service-hire contracts also start without a manager", async () => {
@@ -215,10 +217,65 @@ test("removing a manager hands their tasks to another manager; the last one is b
   const t = f.taskId;
   const [a, b] = f.managers as [{ managerId: number; token: string }, { managerId: number; token: string }];
   await status("PATCH", `/applications/${f.applicationId}`, f.clientToken, { status: "accepted" });
-  await status("POST", "/payments/pay", f.clientToken, { taskId: t });
-  await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { managerId: a.managerId });
+  await status("POST", "/payments/pay", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId });
+  await status("PATCH", `/tasks/${t}/manager`, f.clientToken, { gigProfileId: f.gigProfileId, managerId: a.managerId });
 
   assert.equal(await status("DELETE", `/managers/${a.managerId}`, f.clientToken), 204);
   assert.equal((await prisma.gigManagerAssignment.findFirstOrThrow({ where: { taskId: t } })).managerId, b.managerId);
   assert.equal(await status("DELETE", `/managers/${b.managerId}`, f.clientToken), 409);
+});
+
+test("a posted task can hire several professionals, each funded and released on their own, until the client deletes it", async () => {
+  const f = await fixture(0);
+  const t = f.taskId;
+  const gu2 = await user("gig_professional", "Gabe");
+  const gig2 = await prisma.gigProfessionalProfile.create({ data: { userId: gu2.userId } });
+  created.gigs.push(gig2.gigProfileId);
+  const gig2Token = signToken({ role: "gig_professional", userId: gu2.userId, gigProfileId: gig2.gigProfileId });
+  const app2 = await prisma.application.create({ data: { gigProfileId: gig2.gigProfileId, taskId: t } });
+
+  // Hiring the first doesn't decline the second or close the posting.
+  assert.equal(await status("PATCH", `/applications/${f.applicationId}`, f.clientToken, { status: "accepted" }), 200);
+  assert.equal((await prisma.application.findUniqueOrThrow({ where: { applicationId: app2.applicationId } })).status, "pending");
+  assert.equal((await prisma.task.findUniqueOrThrow({ where: { taskId: t } })).status, "open");
+  assert.equal(await status("PATCH", `/applications/${app2.applicationId}`, f.clientToken, { status: "accepted" }), 200);
+  // Same application can't be hired twice.
+  assert.equal(await status("PATCH", `/applications/${app2.applicationId}`, f.clientToken, { status: "accepted" }), 409);
+
+  const contracts = await (await call("GET", "/contracts", f.clientToken)).json();
+  assert.equal(contracts.filter((c: { taskId: number }) => c.taskId === t).length, 2);
+
+  // Each hire is funded and worked independently; deliverable numbers stay unique across the task.
+  assert.equal(await status("POST", "/payments/pay", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId }), 200);
+  assert.equal(await status("POST", "/gig/deliverables", gig2Token, { taskId: t, content: "Too early" }), 403);
+  assert.equal(await status("POST", "/payments/pay", f.clientToken, { taskId: t, gigProfileId: gig2.gigProfileId }), 200);
+  assert.equal(await status("POST", "/gig/deliverables", f.gigToken, { taskId: t, content: "Mine" }), 201);
+  assert.equal(await status("POST", "/gig/deliverables", gig2Token, { taskId: t, content: "Mine too" }), 201);
+  assert.equal(await status("PATCH", `/deliverables/${t}-1`, f.clientToken, { status: "approved" }), 200);
+
+  // Releasing one doesn't touch the other: the second's work isn't approved yet.
+  assert.equal(await status("POST", "/payments/release", f.clientToken, { taskId: t, gigProfileId: f.gigProfileId }), 200);
+  assert.equal(await status("POST", "/payments/release", f.clientToken, { taskId: t, gigProfileId: gig2.gigProfileId }), 409);
+  assert.equal(await status("POST", "/gig/deliverables", gig2Token, { taskId: t, content: "Again" }), 409);
+  assert.equal(await status("PATCH", `/deliverables/${t}-2`, f.clientToken, { status: "approved" }), 200);
+
+  // Still posted: a third professional can apply.
+  const gu3 = await user("gig_professional", "Gail");
+  const gig3 = await prisma.gigProfessionalProfile.create({ data: { userId: gu3.userId } });
+  created.gigs.push(gig3.gigProfileId);
+  const gig3Token = signToken({ role: "gig_professional", userId: gu3.userId, gigProfileId: gig3.gigProfileId });
+  assert.equal(await status("POST", "/gig/applications", gig3Token, { taskId: t }), 201);
+
+  // Deleting a task with hires closes the posting but keeps the hires and their escrow.
+  assert.equal(await status("DELETE", `/tasks/${t}`, f.clientToken), 204);
+  assert.equal((await prisma.task.findUniqueOrThrow({ where: { taskId: t } })).status, "in_progress");
+  const declined = await prisma.application.findFirstOrThrow({ where: { taskId: t, gigProfileId: gig3.gigProfileId } });
+  assert.equal(declined.status, "declined");
+  assert.equal(await status("POST", "/payments/release", f.clientToken, { taskId: t, gigProfileId: gig2.gigProfileId }), 200);
+  assert.equal(await status("DELETE", `/tasks/${t}`, f.clientToken), 409);
+
+  // A task nobody was hired for is deleted outright.
+  const empty = await prisma.task.create({ data: { clientId: (await prisma.task.findUniqueOrThrow({ where: { taskId: t } })).clientId, title: `${tag} empty`, budget: 1000 } });
+  assert.equal(await status("DELETE", `/tasks/${empty.taskId}`, f.clientToken), 204);
+  assert.equal(await prisma.task.findUnique({ where: { taskId: empty.taskId } }), null);
 });

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { PageHeader } from '../../../components/common/PageHeader';
-import { Avatar, Badge, Button, Card, EmptyState, useToast } from '../../../components/common';
+import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, useToast } from '../../../components/common';
 
 export interface ReviewShortlistProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -10,7 +10,8 @@ export interface ReviewShortlistProps {
 
 export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, params }) => {
   const toast = useToast();
-  const { applications, tasks, hireCandidate, rejectCandidate } = useClient();
+  const { applications, contracts, tasks, hireCandidate, rejectCandidate, deleteTask } = useClient();
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const taskId = params?.taskId;
 
   const filterTask = taskId ? tasks.find(t => String(t.task_id) === String(taskId)) : null;
@@ -24,10 +25,15 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
     .filter(a => !taskId || String(a.task_id) === String(taskId))
     .sort((a, b) => Number(b.status === 'SHORTLISTED') - Number(a.status === 'SHORTLISTED'));
 
-  // Tasks that still have undecided applicants — the "pending tasks" list.
-  const pendingTasks = tasks
-    .map(t => ({ task: t, count: applications.filter(a => isUndecided(a) && String(a.task_id) === String(t.task_id)).length }))
-    .filter(({ count }) => count > 0);
+  // Every open marketplace posting, from the moment it's posted until the client deletes it.
+  // Hiring doesn't close it: the client can keep hiring as many professionals as they want.
+  const postedTasks = tasks
+    .filter(t => t.status === 'OPEN' && !t.skills?.includes('Service Hire'))
+    .map(t => ({
+      task: t,
+      count: applications.filter(a => isUndecided(a) && String(a.task_id) === String(t.task_id)).length,
+      hired: contracts.filter(c => c.task_id === t.task_id).length,
+    }));
 
   const errorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
@@ -35,8 +41,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
   const handleApprove = async (appId: string) => {
     try {
       await hireCandidate(appId);
-      toast.success('Candidate hired! Pay the escrow amount (task budget + 10% platform fee) so they can start work.');
-      onNavigate('my-gigs');
+      toast.success('Candidate hired! Fund their escrow from Active Task so they can start work. You can keep hiring for this task.');
     } catch (err) {
       console.error('Approve hire failed:', err);
       toast.error(errorMessage(err, 'Failed to approve this candidate. Please try again.'));
@@ -53,30 +58,56 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
     }
   };
 
+  const handleDelete = async () => {
+    const id = taskToDelete;
+    setTaskToDelete(null);
+    if (!id) return;
+    try {
+      await deleteTask(id);
+      toast.success('Task removed from Posted Tasks.');
+      if (taskId) onNavigate('review-shortlist', {});
+    } catch (err) {
+      console.error('Delete task failed:', err);
+      toast.error(errorMessage(err, 'Failed to delete this task. Please try again.'));
+    }
+  };
+
+  const deleteDialog = (
+    <ConfirmDialog
+      open={taskToDelete !== null}
+      danger
+      title="Delete task"
+      message="Remove this task from Posted Tasks and the marketplace? Undecided applicants are declined. Professionals you've already hired keep working and stay in Active Task."
+      confirmLabel="Delete"
+      onConfirm={handleDelete}
+      onCancel={() => setTaskToDelete(null)}
+    />
+  );
+
   const formatCurrency = (amt: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
 
-  // No task selected: show the list of tasks that have pending applicants.
+  // No task selected: show every posted task.
   if (!filterTask) {
     return (
       <div>
         <PageHeader
-          title="Pending Tasks"
-          description="Tasks awaiting applicant review. Open one to see its applicants, edit the task, or view its details."
+          title="Posted Tasks"
+          description="Your tasks stay posted until you delete them. Open one to review applicants and hire as many professionals as you need."
         />
 
-        {pendingTasks.length === 0 ? (
+        {postedTasks.length === 0 ? (
           <Card padding="lg">
             <EmptyState
               icon="📋"
-              title="No pending tasks"
-              description="None of your posted tasks have applicants awaiting review right now."
-              action={<Button size="sm" type="button" onClick={() => onNavigate('search-talent')}>Search Gigs</Button>}
+              title="No posted tasks"
+              description="Post a task and it will appear here right away."
+              action={<Button size="sm" type="button" onClick={() => onNavigate('post-gig')}>Post a Task</Button>}
             />
           </Card>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-            {pendingTasks.map(({ task, count }) => (
+            {postedTasks.map(({ task, count, hired }) => (
               <Card key={task.task_id} padding="md" interactive style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)' }}>{task.title}</h3>
@@ -92,6 +123,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
 
                 <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
                   {formatCurrency(task.budget)} &middot; {task.category || 'General'}
+                  {hired > 0 && <> &middot; {hired} hired</>}
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
@@ -101,11 +133,15 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                   <Button variant="outline" size="sm" onClick={() => onNavigate('post-gig', { editId: task.task_id })}>
                     Edit
                   </Button>
+                  <Button variant="danger" size="sm" onClick={() => setTaskToDelete(task.task_id)}>
+                    Delete
+                  </Button>
                 </div>
               </Card>
             ))}
           </div>
         )}
+        {deleteDialog}
       </div>
     );
   }
@@ -115,9 +151,16 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
     <div>
       <PageHeader title={filterTask.title} description="Review applicants for this task." />
 
-      <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('review-shortlist', {})} style={{ marginBottom: 'var(--space-4)', paddingLeft: 0 }}>
-        ← Back to Pending Tasks
-      </Button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+        <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('review-shortlist', {})} style={{ paddingLeft: 0 }}>
+          ← Back to Posted Tasks
+        </Button>
+        {filterTask.status === 'OPEN' && (
+          <Button variant="danger" size="sm" type="button" onClick={() => setTaskToDelete(filterTask.task_id)}>
+            Delete Task
+          </Button>
+        )}
+      </div>
 
       <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: 'var(--space-4)' }}>
         Candidates {currentApplications.length > 0 ? `(${currentApplications.length})` : ''}
@@ -167,6 +210,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
           ))}
         </div>
       )}
+      {deleteDialog}
     </div>
   );
 };

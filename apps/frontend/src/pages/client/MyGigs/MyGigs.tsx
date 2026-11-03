@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useClient, type Contract, type PaymentStatus } from '../../../context/ClientContext';
 import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
-import { Button, ConfirmDialog, IconButton, Input, PageHeader, Select, useToast } from '../../../components/common';
-import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
+import { Button, Input, PageHeader, Select, useToast } from '../../../components/common';
 
 export interface MyGigsProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -11,19 +10,17 @@ export interface MyGigsProps {
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { contracts, tasks, deleteTask, managers, assignTaskManager } = useClient();
+  const { contracts, managers, assignTaskManager, releasePayment, refreshContracts } = useClient();
   const [savingManager, setSavingManager] = useState(false);
+  const [releasing, setReleasing] = useState(false);
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_PROGRESS' | 'SCHEDULED'>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<'ALL' | PaymentStatus>('ALL');
 
-  // Filter out any completed contracts — completed projects appear exclusively on Completed Projects
-  const activeContracts = contracts.filter((c) => {
-    const isCompleted = c.status === 'COMPLETED' || tasks.find((t) => t.task_id === c.task_id)?.status === 'COMPLETED';
-    return !isCompleted;
-  });
+  // One row per hired professional; completed hires appear exclusively on Completed Projects.
+  const activeContracts = contracts.filter((c) => c.status !== 'COMPLETED');
 
   const activeFiltersCount =
     (searchKeyword.trim() ? 1 : 0) +
@@ -52,20 +49,6 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
     return true;
   });
 
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const handleDeleteTask = async () => {
-    const taskId = taskToDelete;
-    setTaskToDelete(null);
-    if (!taskId) return;
-    try {
-      await deleteTask(taskId);
-      toast.success('Project contract deleted successfully!');
-    } catch (err) {
-      console.error('Delete task failed:', err);
-      toast.error(err instanceof Error && err.message ? err.message : 'Failed to delete this task. Please try again.');
-    }
-  };
-
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -80,7 +63,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
 
       {activeContracts.filter(c => c.payment_status === 'pending').map(c => (
         // After funding, open the task so the client decides who manages it.
-        <FundTaskCard key={c.task_id} contract={c} onPaid={() => setSelectedTaskPayment({ ...c, payment_status: 'held' })} />
+        <FundTaskCard key={c.contract_id} contract={c} onPaid={() => { toast.success('Payment successful! Funds are held in escrow.'); setSelectedTaskPayment({ ...c, payment_status: 'held' }); }} />
       ))}
 
       <div className="activity-section" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
@@ -229,15 +212,9 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                           <Button variant="outline" size="sm" onClick={() => setSelectedTaskPayment(c)}>
                             View Task
                           </Button>
-                          <Button size="sm" onClick={() => onNavigate('review-deliverables', { taskId: c.task_id })}>
+                          <Button size="sm" onClick={() => onNavigate('review-deliverables', { taskId: c.task_id, gigProfileId: c.gig_profile_id })}>
                             Deliverables
                           </Button>
-                          <IconButton label="Delete task" size="sm" onClick={() => setTaskToDelete(c.task_id)}>
-                            <svg className="manager-delete-icon" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                          </IconButton>
                         </div>
                       </td>
                     </tr>
@@ -291,8 +268,9 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                     const managerId = e.target.value ? Number(e.target.value) : null;
                     setSavingManager(true);
                     try {
-                      await assignTaskManager(selectedTaskPayment.task_id, managerId);
+                      await assignTaskManager(selectedTaskPayment.task_id, selectedTaskPayment.gig_profile_id, managerId);
                       setSelectedTaskPayment({ ...selectedTaskPayment, manager_id: managerId });
+                      toast.success(managerId ? 'Manager added to the task.' : 'Manager removed from the task.');
                     } catch (err) {
                       toast.error(err instanceof Error && err.message ? err.message : 'Could not change the manager.');
                     } finally {
@@ -310,30 +288,39 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               </div>
             )}
 
-            <p style={{ fontSize: '12px', color: '#475764', marginBottom: '20px', lineHeight: 1.4 }}>
-              "Deliverables must be reviewed and approved before payment authorization is enabled."
-            </p>
-
-            <TaskDeliverablesManager key={selectedTaskPayment.task_id} taskId={Number(selectedTaskPayment.task_id)} readOnly={selectedTaskPayment.status !== 'IN_PROGRESS'} />
+            {selectedTaskPayment.status !== 'COMPLETED' && (() => {
+              const t = selectedTaskPayment;
+              const canRelease = t.payment_status === 'held' && t.progress === 100;
+              return (
+                <div style={{ marginBottom: '20px', fontSize: '13px', color: '#1B2A36' }}>
+                  <p style={{ margin: '0 0 8px', color: '#475764' }}>
+                    {canRelease ? 'All deliverables are approved. Release the payment to complete this task.' : t.payment_status === 'pending' ? 'Fund this task first.' : `Payment can be released once every deliverable is approved (${t.progress ?? 0}% done).`}
+                  </p>
+                  <Button disabled={!canRelease || releasing} onClick={async () => {
+                    setReleasing(true);
+                    try {
+                      await releasePayment(t.task_id, t.gig_profile_id);
+                      toast.success(`Payment released to ${t.gig_pro_name}.`);
+                      setSelectedTaskPayment(null);
+                      await refreshContracts();
+                    } catch (err) {
+                      toast.error(err instanceof Error && err.message ? err.message : 'Payment release failed.');
+                    } finally { setReleasing(false); }
+                  }}>
+                    Release {formatCurrency(t.budget)} to {t.gig_pro_name}
+                  </Button>
+                </div>
+              );
+            })()}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <Button variant="outline" onClick={() => setSelectedTaskPayment(null)}>
                 Close
               </Button>
-              <Button
-                onClick={() => {
-                  const tid = selectedTaskPayment.task_id;
-                  setSelectedTaskPayment(null);
-                  onNavigate('review-deliverables', { taskId: tid });
-                }}
-              >
-                Review Deliverables &amp; Details
-              </Button>
             </div>
           </div>
         </div>
       )}
-      <ConfirmDialog open={taskToDelete !== null} danger title="Delete task" message="Are you sure you want to delete / cancel this contract task?" confirmLabel="Delete" onConfirm={handleDeleteTask} onCancel={() => setTaskToDelete(null)} />
     </div>
   );
 };

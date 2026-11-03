@@ -1,7 +1,7 @@
 import { prisma } from "db";
 import { initialReviewStatus } from "../../lib/textQuality.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
-import { SERVICE_HIRE_SKILL, isServiceHireTask } from "../../lib/taskRules.js";
+import { ACTIVE_PAYMENT_STATUSES, SERVICE_HIRE_SKILL, SETTLED_PAYMENT_STATUSES, isServiceHireTask } from "../../lib/taskRules.js";
 import { findServiceRequestForTask, startContract } from "../client/client.service.js";
 import type {
   CreateApplicationDto,
@@ -114,6 +114,15 @@ export async function withdrawApplication(
   await prisma.application.delete({ where: { applicationId } });
 }
 
+// The gig professional's own marketplace applications, with their decision status.
+export function listMyApplications(gigProfileId: number) {
+  return prisma.application.findMany({
+    where: { gigProfileId, NOT: { task: { skills: { has: SERVICE_HIRE_SKILL } } } },
+    include: { task: { include: { client: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 /**
  * "Pending requests" are clients hiring this professional's service: the
  * pending application on a service-hire task. Marketplace applications are
@@ -168,15 +177,16 @@ export async function respondToRequest(
   });
 }
 
-// List tasks the gig professional is currently hired on.
+// List tasks the gig professional is currently hired on (their hire not yet settled).
 export function listActiveTasks(gigProfileId: number) {
   return prisma.task.findMany({
     where: {
       assignments: { some: { gigProfileId } },
-      status: "in_progress",
+      payments: { some: { gigProfileId, status: { in: [...ACTIVE_PAYMENT_STATUSES] } } },
     },
     include: {
       client: true,
+      payments: { where: { gigProfileId } },
       deliverables: {
         where: { gigProfileId },
         include: { claimedDefinitions: { include: { definition: true } } },
@@ -256,15 +266,18 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
   if (new Set(definitionIds).size !== definitionIds.length) throw badRequest("A deliverable can only be selected once");
 
   return prisma.$transaction(async tx => {
-    const task = await tx.task.findUnique({ where: { taskId: dto.taskId }, select: { status: true } });
-    if (!task) throw notFound("Task not found");
-    if (task.status !== "in_progress") throw forbidden("Work can only be submitted for an active task");
     const payment = await tx.payment.findUnique({ where: { taskId_gigProfileId: { taskId: dto.taskId, gigProfileId } }, select: { status: true } });
     if (payment?.status !== "held") throw forbidden("The client hasn't funded this task yet");
 
     const definitions = await tx.taskDeliverableDefinition.findMany({
       where: { taskId: dto.taskId },
-      include: { submissions: { include: { submission: { select: { deliverableNo: true, status: true } } }, orderBy: { deliverableNo: "desc" } } },
+      include: {
+        submissions: {
+          where: { submission: { gigProfileId } },
+          include: { submission: { select: { deliverableNo: true, status: true } } },
+          orderBy: { deliverableNo: "desc" },
+        },
+      },
     });
     if (definitions.length > 0 && definitionIds.length === 0) {
       throw badRequest("Select at least one task deliverable completed by this submission");
@@ -279,12 +292,14 @@ export async function submitDeliverable(gigProfileId: number, dto: SubmitDeliver
       }
     }
 
+    // Numbering is task-wide (it's the PK); the review-state checks are this professional's own.
     const last = await tx.deliverable.findFirst({ where: { taskId: dto.taskId }, orderBy: { deliverableNo: "desc" } });
-    if (definitions.length === 0 && last) {
-      if (last.status === "submitted") {
+    const lastMine = await tx.deliverable.findFirst({ where: { taskId: dto.taskId, gigProfileId }, orderBy: { deliverableNo: "desc" } });
+    if (definitions.length === 0 && lastMine) {
+      if (lastMine.status === "submitted") {
         throw conflict("A deliverable submission is already under review for this task");
       }
-      if (last.status === "approved" || last.status === "closed") {
+      if (lastMine.status === "approved" || lastMine.status === "closed") {
         throw conflict("The deliverable for this task has already been approved");
       }
     }
@@ -377,12 +392,12 @@ export async function createReview(gigProfileId: number, dto: CreateReviewDto) {
   // Only the professional who was hired can review the client, and only once the task is done.
   const task = await prisma.task.findFirst({
     where: { taskId: dto.taskId, assignments: { some: { gigProfileId } } },
-    include: { client: true },
+    include: { client: true, payments: { where: { gigProfileId } } },
   });
   if (!task) {
     throw notFound("Task not found");
   }
-  if (task.status !== "completed") {
+  if (!SETTLED_PAYMENT_STATUSES.some((s) => s === task.payments[0]?.status)) {
     throw conflict("You can review the client once the task is completed");
   }
 
@@ -405,13 +420,18 @@ export async function createReview(gigProfileId: number, dto: CreateReviewDto) {
   });
 }
 
-// List the gig professional's completed tasks with reviews and payment info.
+// List the gig professional's completed tasks (their hire settled) with reviews and payment info.
 export function listCompletedProjects(gigProfileId: number) {
   return prisma.task.findMany({
-    where: { assignments: { some: { gigProfileId } }, status: "completed" },
+    where: { assignments: { some: { gigProfileId } }, payments: { some: { gigProfileId, status: { in: [...SETTLED_PAYMENT_STATUSES] } } } },
     include: {
       client: true,
-      reviews: { include: { reviewer: true, reviewee: true }, orderBy: { createdAt: "asc" } },
+      // Other professionals hired on the same task have their own reviews; show only this one's.
+      reviews: {
+        where: { OR: [{ reviewer: { gigProfile: { is: { gigProfileId } } } }, { reviewee: { gigProfile: { is: { gigProfileId } } } }] },
+        include: { reviewer: true, reviewee: true },
+        orderBy: { createdAt: "asc" },
+      },
       payments: { where: { gigProfileId } },
     },
     orderBy: { updatedAt: "desc" },
@@ -428,9 +448,7 @@ export async function getEarnings(gigProfileId: number) {
   const totalEarnings = payments
     .filter((p: { status: string }) => p.status === "completed")
     .reduce((sum: number, p: { amount: unknown }) => sum + Number(p.amount), 0);
-  const completedTasks = await prisma.task.count({
-    where: { assignments: { some: { gigProfileId } }, status: "completed" },
-  });
+  const completedTasks = payments.filter((p: { status: string }) => SETTLED_PAYMENT_STATUSES.some((s) => s === p.status)).length;
 
   return { payments, totalEarnings, completedTasks };
 }

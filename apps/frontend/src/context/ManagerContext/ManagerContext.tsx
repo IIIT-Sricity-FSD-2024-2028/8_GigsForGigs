@@ -1,7 +1,7 @@
 /**
  * @file ManagerContext.tsx
  * @description Data + actions for the Manager portal: profile, supervised tasks,
- * the currently opened task (with its deliverables and applications), and talent search.
+ * the currently opened task (with its deliverables and applications). 
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { managerApi } from '../../services/api/manager';
@@ -9,7 +9,6 @@ import type {
   ManagerProfile,
   ManagerTask,
   Deliverable,
-  TalentProfile,
   ManagerApplication,
   ReviewDeliverableDto,
   ShortlistApplicationDto,
@@ -30,8 +29,6 @@ interface ManagerContextType {
   /** Deliverables / applications of the selected task. */
   deliverables: Deliverable[];
   applications: ManagerApplication[];
-  /** Results of the last talent search. */
-  talents: TalentProfile[];
   loading: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
@@ -40,7 +37,6 @@ interface ManagerContextType {
   shortlistApplication: (taskId: number, applicationId: number, dto: ShortlistApplicationDto) => Promise<boolean>;
   reviewDeliverable: (taskId: number, deliverableNo: number, dto: ReviewDeliverableDto) => Promise<boolean>;
   closeDeliverable: (taskId: number, deliverableNo: number) => Promise<boolean>;
-  searchTalent: (query?: string) => Promise<void>;
   updateProfile: (dto: UpdateManagerProfileDto) => Promise<boolean>;
 }
 
@@ -54,7 +50,6 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [selectedTask, setSelectedTask] = useState<ManagerTask | null>(null);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [applications, setApplications] = useState<ManagerApplication[]>([]);
-  const [talents, setTalents] = useState<TalentProfile[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const taskRequestId = useRef(0);
@@ -161,19 +156,6 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  /** Search gig pros (no query = everyone). */
-  const searchTalent = useCallback(async (query?: string) => {
-    setLoading(true);
-    try {
-      const results = await managerApi.searchTalent(query);
-      setTalents(results);
-    } catch (err) {
-      setError(errorText(err, 'Failed to search talent'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const updateProfile = async (dto: UpdateManagerProfileDto): Promise<boolean> => {
     setLoading(true);
     try {
@@ -188,13 +170,13 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Initial load once logged in: profile, tasks, and the full talent list.
+  // Initial load once logged in: profile and tasks.
   useEffect(() => {
     if (isAuthenticated) {
       setLoading(true);
-      Promise.all([refreshProfile(), refreshTasks(), searchTalent()]).finally(() => setLoading(false));
+      Promise.all([refreshProfile(), refreshTasks()]).finally(() => setLoading(false));
     }
-  }, [isAuthenticated, refreshProfile, refreshTasks, searchTalent]);
+  }, [isAuthenticated, refreshProfile, refreshTasks]);
 
   return (
     <ManagerContext.Provider
@@ -204,7 +186,6 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         selectedTask,
         deliverables,
         applications,
-        talents,
         loading,
         error,
         refreshProfile,
@@ -213,7 +194,6 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         shortlistApplication,
         reviewDeliverable,
         closeDeliverable,
-        searchTalent,
         updateProfile
       }}
     >

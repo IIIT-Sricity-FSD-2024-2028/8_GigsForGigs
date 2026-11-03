@@ -95,7 +95,7 @@ export async function listTaskDeliverables(req: Request, res: Response): Promise
 
 export async function setTaskManager(req: Request, res: Response): Promise<void> {
   const dto = getValidated<SetTaskManagerDto>(res, "body");
-  const result = await clientService.setTaskManager(Number(req.params.taskId), requireClientId(req), dto.managerId);
+  const result = await clientService.setTaskManager(Number(req.params.taskId), dto.gigProfileId, requireClientId(req), dto.managerId);
   res.status(200).json(result);
 }
 

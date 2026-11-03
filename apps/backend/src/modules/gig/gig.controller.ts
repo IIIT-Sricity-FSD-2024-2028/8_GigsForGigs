@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
 import type { GigTokenPayload } from "../../lib/jwt.js";
 import { badRequest } from "../../lib/httpError.js";
+import { hireStatus } from "../../lib/taskRules.js";
 import * as gigService from "./gig.service.js";
 import type {
   CreateApplicationDto,
@@ -35,7 +36,8 @@ function toTaskResponse(task: Row) {
     title: task.title,
     description: task.description ?? "",
     budget: Number(task.budget),
-    status: task.status,
+    // When loaded with this professional's payment, show their hire's state rather than the shared posting's.
+    status: task.payments?.[0] ? hireStatus(task.payments[0].status) : task.status,
     progress: progressTotal > 0 ? Math.round((completedCount / progressTotal) * 100) : 0,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -187,6 +189,11 @@ export async function withdrawApplication(req: Request, res: Response): Promise<
   const applicationId = Number(req.params.id);
   await gigService.withdrawApplication(applicationId, gigProfileId);
   res.status(204).send();
+}
+
+export async function listMyApplications(req: Request, res: Response): Promise<void> {
+  const applications = await gigService.listMyApplications(requireGigProfileId(req));
+  res.status(200).json(applications.map(toApplicationResponse));
 }
 
 export async function listPendingRequests(req: Request, res: Response): Promise<void> {

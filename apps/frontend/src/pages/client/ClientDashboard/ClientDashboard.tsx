@@ -15,11 +15,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
   // Metrics
-  const activeTasks = tasks.filter(t => t.status === 'IN_PROGRESS');
-  const openTasks = tasks.filter(t => t.status === 'OPEN');
-  const nonOpenTasks = tasks.filter(t => t.status !== 'OPEN');
+  // A posted task stays open while the client hires for it; each hire is its own contract.
+  const openTasks = tasks.filter(t => t.status === 'OPEN' && !t.skills?.includes('Service Hire'));
 
-  const activeCount = activeTasks.length;                                                 
+  const activeCount = contracts.filter(c => c.status !== 'COMPLETED').length;
   const pendingCount = openTasks.length;
 
   // Total spent = what the client paid (gig amount + platform fee) on released contracts.
@@ -90,11 +89,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             </div>
             <span className="metric-badge metric-badge-action">Requires Action</span>
           </div>
-          <div className="metric-label">Pending Tasks</div>
+          <div className="metric-label">Posted Tasks</div>
           <div className="metric-value" id="client-pending-tasks">
             {String(pendingCount).padStart(2, '0')}
           </div>
-          <div className="metric-description">Waiting for your approval</div>
+          <div className="metric-description">Open for applicants</div>
         </div>
 
         <div className="metric-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('total-spent')}>
@@ -113,11 +112,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
         </div>
       </div>
 
-      {/* Pending Tasks (open — posted but not yet in progress) */}
+      {/* Posted Tasks (open until the client deletes them) */}
       <div className="activity-section">
         <div className="activity-header">
           <h2 className="activity-title">
-            Pending Tasks{' '}
+            Posted Tasks{' '}
             <span id="client-posted-count" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: '6px' }}>
               ({openTasks.length})
             </span>
@@ -204,31 +203,31 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             </tr>
           </thead>
           <tbody>
-            {nonOpenTasks.length === 0 ? (
+            {contracts.length === 0 ? (
               <tr>
                 <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--spacing-xl)' }}>
                   No active projects yet.
                 </td>
               </tr>
             ) : (
-              nonOpenTasks.map(t => {
+              contracts.map(c => {
                 return (
-                  <tr key={t.task_id}>
+                  <tr key={c.contract_id}>
                     <td>
-                      <div className="task-name-cell">{t.title}</div>
-                      <div className="task-category">{t.category === 'design' ? 'Design Systems' : t.category === 'dev' ? 'Software Development' : 'General'}</div>
+                      <div className="task-name-cell">{c.task_title}</div>
+                      <div className="task-category">{c.gig_pro_name}</div>
                     </td>
                     <td>
-                      <span className={`status-badge ${getStatusClass(t.status)}`}>
-                        {t.status.replace('_', ' ')}
+                      <span className={`status-badge ${getStatusClass(c.status)}`}>
+                        {c.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="budget-cell">
-                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(t.budget)}
+                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(c.budget)}
                     </td>
                     <td>
                       <div className="actions-cell">
-                        <Button variant="ghost" title="View deliverables" onClick={() => onNavigate('review-deliverables', { taskId: t.task_id })}>
+                        <Button variant="ghost" title="View deliverables" onClick={() => onNavigate('review-deliverables', { taskId: c.task_id, gigProfileId: c.gig_profile_id })}>
                           <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
