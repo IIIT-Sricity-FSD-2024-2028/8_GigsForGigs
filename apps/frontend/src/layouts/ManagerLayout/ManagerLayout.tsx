@@ -12,8 +12,8 @@ import { DashboardIcon, SearchIcon, ProjectIcon, UsersIcon } from '../../compone
 
 export interface ManagerLayoutProps {
   children: React.ReactNode;
-  activeTab: 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile';
-  setActiveTab: (tab: 'dashboard' | 'talent' | 'tasks' | 'task-detail' | 'profile') => void;
+  activeTab: 'dashboard' | 'talent' | 'tasks' | 'completed' | 'task-detail' | 'profile';
+  setActiveTab: (tab: 'dashboard' | 'talent' | 'tasks' | 'completed' | 'task-detail' | 'profile') => void;
 }
 
 const navItems: DashboardNavItem[] = [
@@ -21,6 +21,7 @@ const navItems: DashboardNavItem[] = [
   { id: 'talent', label: 'Search Talent', icon: <SearchIcon size={18} /> },
   // The task-detail page counts as "Active Tasks" in the sidebar.
   { id: 'tasks', label: 'Active Tasks', icon: <ProjectIcon size={18} />, aliases: ['task-detail'] },
+  { id: 'completed', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },
   { id: 'profile', label: 'My Profile', icon: <UsersIcon size={18} /> }
 ];
 
