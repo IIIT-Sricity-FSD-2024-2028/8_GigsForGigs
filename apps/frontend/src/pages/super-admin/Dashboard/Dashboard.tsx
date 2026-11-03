@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader } from '../../../components/common/Loader';
 import { KPICard } from '../../../components/super-admin/KPICard';
-import { DonutChart, HorizontalBarChart, RevenueAreaChart } from '../../../components/super-admin/SimpleCharts';
+import { DonutChart, HorizontalBarChart } from '../../../components/super-admin/SimpleCharts';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import {
@@ -43,38 +43,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [gigPros, setGigPros] = useState<any[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
   const [adminStaff, setAdminStaff] = useState<any[]>([]);
-  const [velocity, setVelocity] = useState<{ date: string; gmv: number; rake: number }[]>([]);
-  const [velocityRange, setVelocityRange] = useState<'7d' | '30d' | '90d'>('7d');
-  const [isVelocityLoading, setIsVelocityLoading] = useState(false);
-
-  const handleRangeChange = async (range: '7d' | '30d' | '90d') => {
-    setVelocityRange(range);
-    try {
-      setIsVelocityLoading(true);
-      const res = await adminApi.getAnalytics(range);
-      if (res?.velocity) setVelocity(res.velocity);
-    } catch (err) {
-      console.warn('Failed to load velocity for range', range, err);
-    } finally {
-      setIsVelocityLoading(false);
-    }
-  };
-
   useEffect(() => {
     let isMounted = true;
     async function loadDashboardData() {
       try {
         setLoading(true);
         setError(null);
-        const [kpiRes, projRes, clientRes, proRes, mgrRes, staffRes, analyticsRes] = await Promise.all([
+        const [kpiRes, projRes, clientRes, proRes, mgrRes, staffRes] = await Promise.all([
           // No per-call fallbacks: a failed request shows an error, never a zero that reads as real data.
           adminApi.getKPIs(),
           adminApi.getProjects(),
           adminApi.getClients(),
           adminApi.getGigPros(),
           adminApi.getManagers(),
-          adminApi.getAdminStaff(),
-          adminApi.getAnalytics('7d')
+          adminApi.getAdminStaff()
         ]);
         if (isMounted) {
           setKpis(kpiRes);
@@ -83,7 +65,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           setGigPros(Array.isArray(proRes) ? proRes : []);
           setManagers(Array.isArray(mgrRes) ? mgrRes : []);
           setAdminStaff(Array.isArray(staffRes) ? staffRes : []);
-          if (analyticsRes?.velocity) setVelocity(analyticsRes.velocity);
         }
       } catch (err: any) {
         if (isMounted) {
@@ -271,68 +252,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </div>
 
       {/* Analytics Charts Grid (100% Fed from DB with Analytical Explanations) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(480px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-              Tasks by Operational Status
+              Tasks by Status
             </h3>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>From DB tasks</span>
+            
           </div>
           <DonutChart data={taskDistribution} />
-          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
-            💡 <strong>Operational Flow:</strong> Tracks task pipeline balance across Open Bidding, Active Milestones, and Final Completion to anticipate payout velocity and prevent escrow lockups.
-          </div>
+          
         </div>
 
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-              User Demographics by Role
+              User Demographics
             </h3>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>From DB users</span>
+            
           </div>
           <HorizontalBarChart data={userDemographics} />
-          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
-            💡 <strong>Roster Liquidity:</strong> Proportions between Freelancer talent supply and Client/Manager hiring demand. Healthy ratio ensures rapid task matching without talent starvation.
-          </div>
-        </div>
-
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-            <div>
-              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
-                GMV vs Rake Velocity
-              </h3>
-              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Live Escrow Flow ({velocityRange.toUpperCase()})</span>
-            </div>
-            <div style={{ display: 'flex', backgroundColor: 'var(--color-bg-light)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '2px' }}>
-              {(['7d', '30d', '90d'] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  disabled={isVelocityLoading}
-                  onClick={() => handleRangeChange(r)}
-                  style={{
-                    padding: '3px 8px',
-                    border: 'none',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: velocityRange === r ? 'var(--color-primary-dark)' : 'transparent',
-                    color: velocityRange === r ? '#ffffff' : 'var(--color-text-dark)',
-                    fontWeight: 700,
-                    fontSize: '10px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {r.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-          <RevenueAreaChart data={velocity} />
-          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
-            💡 <strong>Financial Velocity:</strong> Real-time dual series comparing Gross Merchandise Volume (GMV) against realized platform commission (10% rake) dynamically sliced for {velocityRange.toUpperCase()}.
-          </div>
+          
         </div>
       </div>
 

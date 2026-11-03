@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { KPICard } from '../../../components/super-admin/KPICard';
 import { RevenueAreaChart } from '../../../components/super-admin/SimpleCharts';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
-import {
-  ExportIcon
-} from '../../../components/super-admin/Icons';
+import { ExportIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
 
@@ -179,44 +177,34 @@ export const AdminAnalytics: React.FC = () => {
         />
       </div>
 
-      {/* Deep-Dive Chart Visualizer */}
+      {/* Revenue Velocity Chart */}
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-              Gross Merchandise Volume vs Net Platform Rake
-            </h3>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
-              Comparison of total marketplace money-in versus retained transaction rake.
-            </p>
-          </div>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-            {analyticsData?.peak ? `Peak: ${analyticsData.peak.date} (₹${analyticsData.peak.gmv.toLocaleString('en-IN')})` : 'No released payments in this range'}
-          </span>
+          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+            Revenue Velocity (GMV vs Platform Rake)
+          </h3>
+          {analyticsData?.peak && (
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+              Peak: {analyticsData.peak.date} (₹{analyticsData.peak.gmv.toLocaleString('en-IN')})
+            </span>
+          )}
         </div>
         <RevenueAreaChart data={velocity} />
-        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', lineHeight: 1.4 }}>
-          💡 <strong>Financial Insight:</strong> Tracks gross transaction throughput (GMV) against retained platform commissions dynamically queried for {timeRange.toUpperCase()}. A tight correlation indicates healthy take rate realization with zero uncollected fees or unallocated escrow.
-        </div>
       </div>
 
-      {/* Category Performance & Order Breakdown */}
+      {/* Category Performance */}
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-            Category Demand & Contract Volume Distribution
+          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+            Skill Categories Breakdown
           </h3>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Top categories</span>
         </div>
         <DataTable
           data={categories}
           columns={categoryColumns}
           pageSize={5}
-          searchPlaceholder="Filter marketplace categories..."
+          searchPlaceholder="Filter categories..."
         />
-        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', borderTop: '1px solid var(--color-border)', paddingTop: '8px', marginTop: '12px', lineHeight: 1.4 }}>
-          💡 <strong>Marketplace Taxonomy:</strong> Summarizes task allocation, total contract spend, and average order value per skill category. High AOV categories yield maximum commission density.
-        </div>
       </div>
     </div>
   );

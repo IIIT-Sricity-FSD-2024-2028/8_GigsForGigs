@@ -46,7 +46,7 @@ export const AppliedTasks: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-      <PageHeader title="Applied Tasks" subtitle="Track your applications and see the client's decision." />
+      <PageHeader title="Applied Tasks" description="Track your applications and see the client's decision." />
       {apps.length === 0 ? <EmptyState title="No applications yet" description="Apply to tasks from Explore Tasks." /> : apps.map((a) => (
         <div key={a.applicationId} className="admin-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: 16 }}>
           <div>
