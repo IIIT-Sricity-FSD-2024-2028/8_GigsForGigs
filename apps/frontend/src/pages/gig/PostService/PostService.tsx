@@ -30,7 +30,8 @@ export const PostService: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<number | ''>('');
-  const [category, setCategory] = useState('');
+  // Match the client task form's default category and option values.
+  const [category, setCategory] = useState('dev');
   const [delivery, setDelivery] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -117,7 +118,6 @@ export const PostService: React.FC = () => {
               Category / Domain *
             </label>
             <Select className="admin-input" value={category} onChange={(e) => setCategory(e.target.value)} required>
-              <option value="" disabled>Select a category</option>
               {SERVICE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </Select>
           </div>

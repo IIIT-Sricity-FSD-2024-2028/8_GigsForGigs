@@ -224,12 +224,13 @@ function ManagerPortal() {
   const navigate = useNavigate();
   const location = useLocation();
   const activeTab = location.pathname.includes('/talent') ? 'talent'
-    : location.pathname.includes('/tasks/') ? 'task-detail'
+    : location.pathname === '/manager/tasks/completed' ? 'completed'
+      : location.pathname.includes('/tasks/') ? 'task-detail'
       : location.pathname.includes('/tasks') ? 'tasks'
         : location.pathname.includes('/profile') ? 'profile' : 'dashboard';
 
-  const go = (view: string) => navigate(({ dashboard: '/manager/dashboard', talent: '/manager/talent', tasks: '/manager/tasks', 'task-detail': '/manager/tasks', profile: '/manager/profile' } as Record<string, string>)[view] || '/manager/dashboard');
-  const openTask = (id: number) => navigate(`/manager/tasks/${id}`);
+  const go = (view: string) => navigate(({ dashboard: '/manager/dashboard', talent: '/manager/talent', tasks: '/manager/tasks', completed: '/manager/tasks/completed', 'task-detail': '/manager/tasks', profile: '/manager/profile' } as Record<string, string>)[view] || '/manager/dashboard');
+  const openTask = (id: number, from: 'tasks' | 'completed' = 'tasks') => navigate(`/manager/tasks/${id}`, { state: { from } });
 
   return (
     <ManagerLayout activeTab={activeTab} setActiveTab={go}>
@@ -238,7 +239,8 @@ function ManagerPortal() {
         <Route path="dashboard" element={<ManagerDashboard onNavigateToTask={openTask} onNavigateToQueue={() => go('tasks')} />} />
         <Route path="talent" element={<ManagerSearchTalent />} />
         <Route path="tasks" element={<ManagerTasks onSelectTask={openTask} />} />
-        <Route path="tasks/:taskId" element={<ManagerTaskRoute onBack={() => go('tasks')} />} />
+        <Route path="tasks/completed" element={<ManagerTasks showCompleted onSelectTask={id => openTask(id, 'completed')} />} />
+        <Route path="tasks/:taskId" element={<ManagerTaskRoute onBack={() => go(location.state?.from === 'completed' ? 'completed' : 'tasks')} />} />
         <Route path="profile" element={<ManagerProfile />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>

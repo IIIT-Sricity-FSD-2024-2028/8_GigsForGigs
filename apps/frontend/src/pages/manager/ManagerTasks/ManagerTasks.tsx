@@ -8,24 +8,27 @@ import { TaskCard } from '../../../components/common/cards/TaskCard/TaskCard';
 
 interface ManagerTasksProps {
   onSelectTask: (taskId: number) => void;
+  showCompleted?: boolean;
 }
 
-/** Active tasks use the same shared cards and responsive grid as client task views. */
-export const ManagerTasks: React.FC<ManagerTasksProps> = ({ onSelectTask }) => {
+/** Active and completed manager tasks use the shared task cards and responsive grid. */
+export const ManagerTasks: React.FC<ManagerTasksProps> = ({ onSelectTask, showCompleted = false }) => {
   const { tasks, loading } = useManager();
+  const visibleTasks = tasks.filter(task => (task.status === 'completed') === showCompleted);
+  const title = showCompleted ? 'Completed Projects' : 'Active Tasks';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {loading ? (
-        <Loader label="Loading active tasks..." />
-      ) : tasks.length === 0 ? (
-        <DashboardSection title="Active tasks" description="No active tasks have been assigned to you yet.">
-          <p style={{ color: '#475764', fontSize: '14px' }}>Tasks shared with you by your client will appear here.</p>
+        <Loader label={`Loading ${title.toLowerCase()}...`} />
+      ) : visibleTasks.length === 0 ? (
+        <DashboardSection title={title} description={showCompleted ? 'Completed tasks will appear here.' : 'Tasks that are not yet completed appear here.'}>
+          <p style={{ color: '#475764', fontSize: '14px' }}>{showCompleted ? 'You have no completed projects yet.' : 'Tasks shared with you by your client will appear here.'}</p>
         </DashboardSection>
       ) : (
-        <DashboardSection title="Active tasks" description={`${tasks.length} task${tasks.length === 1 ? '' : 's'} shared by your client`}>
+        <DashboardSection title={title} description={`${visibleTasks.length} ${showCompleted ? 'completed project' : 'incomplete task'}${visibleTasks.length === 1 ? '' : 's'}`}>
           <SummaryGrid minCardWidth="280px">
-            {tasks.map(task => (
+            {visibleTasks.map(task => (
               <TaskCard
                 key={task.taskId}
                 title={task.title}
