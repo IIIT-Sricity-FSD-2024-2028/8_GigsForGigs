@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
 import type { GigTokenPayload } from "../../lib/jwt.js";
 import { badRequest } from "../../lib/httpError.js";
-import { hireStatus } from "../../lib/taskRules.js";
+import { hireStatus, stripReservedSkills } from "../../lib/taskRules.js";
 import * as gigService from "./gig.service.js";
 import type {
   CreateApplicationDto,
@@ -39,6 +39,10 @@ function toTaskResponse(task: Row) {
     // When loaded with this professional's payment, show their hire's state rather than the shared posting's.
     status: task.payments?.[0] ? hireStatus(task.payments[0].status) : task.status,
     progress: progressTotal > 0 ? Math.round((completedCount / progressTotal) * 100) : 0,
+    category: task.category ?? null,
+    duration: task.duration ?? null,
+    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    skills: stripReservedSkills(task.skills) ?? [],
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
     ...(task.client
@@ -194,6 +198,13 @@ export async function withdrawApplication(req: Request, res: Response): Promise<
 export async function listMyApplications(req: Request, res: Response): Promise<void> {
   const applications = await gigService.listMyApplications(requireGigProfileId(req));
   res.status(200).json(applications.map(toApplicationResponse));
+}
+
+export async function getTaskClientProfile(req: Request, res: Response): Promise<void> {
+  const taskId = Number(req.params.taskId);
+  if (!Number.isInteger(taskId) || taskId <= 0) throw badRequest("Invalid task id");
+  const result = await gigService.getTaskClientProfile(requireGigProfileId(req), taskId);
+  res.status(200).json(result);
 }
 
 export async function listPendingRequests(req: Request, res: Response): Promise<void> {

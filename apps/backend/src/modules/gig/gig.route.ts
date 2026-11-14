@@ -36,6 +36,8 @@ gigRouter.post(
 gigRouter.get("/applications/mine", gigOnly, gigController.listMyApplications);
 // Withdraw a submitted application.
 gigRouter.delete("/applications/:id", gigOnly, gigController.withdrawApplication);
+// Profile of the client who posted a task the gig professional has applied to.
+gigRouter.get("/tasks/:taskId/client-profile", gigOnly, gigController.getTaskClientProfile);
 
 // List incoming hire/service requests awaiting the gig professional's response.
 gigRouter.get("/requests/pending", gigOnly, gigController.listPendingRequests);

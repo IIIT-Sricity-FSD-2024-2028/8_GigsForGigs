@@ -21,7 +21,7 @@ const GIG_PAGE_TITLES: Partial<Record<GigViewTab, string>> = {
   'completed-projects': 'Completed Projects Portfolio', earnings: 'Financial Overview & Payouts',
   'submit-deliverables': 'Submit Task Deliverable', 'submission-success': 'Deliverable Submitted',
   'post-service': 'Publish Service Offering', 'service-published': 'Service Published',
-  'project-detail': 'Task Specification Details', profile: 'Professional Identity & Portfolio',
+  'project-detail': 'Task Specification Details', 'client-profile': 'Client Profile', profile: 'Professional Identity & Portfolio',
   'profile-completion': 'Edit Gig Profile & Skills'
 };
 
@@ -32,7 +32,7 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
   const navItems: GigNavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
     { id: 'explore', label: 'Explore Tasks', icon: <SearchIcon size={18} /> },
-    { id: 'applied-tasks', label: 'Applied Tasks', icon: <ProjectIcon size={18} /> },
+    { id: 'applied-tasks', label: 'Applied Tasks', icon: <ProjectIcon size={18} />, aliases: ['client-profile'] },
     { id: 'my-services', label: 'My Services', icon: <ProjectIcon size={18} /> },
     { id: 'active-tasks', label: 'Active Task', icon: <ProjectIcon size={18} /> },
     { id: 'completed-projects', label: 'Completed Projects', icon: <ProjectIcon size={18} /> },

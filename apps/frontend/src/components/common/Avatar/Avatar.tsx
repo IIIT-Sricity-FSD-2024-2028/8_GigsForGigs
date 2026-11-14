@@ -19,15 +19,14 @@ export const Avatar: React.FC<AvatarProps> = ({
   className = '',
   style
 }) => {
-  // "Ada Lovelace" -> "AL"; no name -> "U" (user).
+  // "Ada Lovelace" -> "AL"; "Hansen - Raynor" -> "HR" (separator words like "-" or "&" are skipped); no name -> "U" (user).
   const initials = name
-    ? name
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    : 'U';
+    .split(' ')
+    .filter(n => /^[\p{L}\p{N}]/u.test(n))
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'U';
 
   return (
     <div

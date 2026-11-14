@@ -61,6 +61,10 @@ export interface GigTask {
   budget: number;
   status: 'open' | 'in_progress' | 'completed';
   progress?: number;
+  category?: string | null;
+  duration?: string | null;
+  dueDate?: string | null;
+  skills?: string[];
   createdAt?: string;
   updatedAt?: string;
   client?: TaskClient;

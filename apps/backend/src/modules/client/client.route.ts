@@ -74,6 +74,8 @@ clientRouter.delete("/tasks/:taskId/deliverable-definitions/:definitionId", clie
 
 // List applications received against the client's tasks.
 clientRouter.get("/applications", clientController.listApplications);
+// Profile of the professional behind one application on the client's own task.
+clientRouter.get("/applications/:applicationId/profile", clientController.getApplicantProfile);
 // Accept/decline a gig professional's application.
 clientRouter.patch(
   "/applications/:applicationId",

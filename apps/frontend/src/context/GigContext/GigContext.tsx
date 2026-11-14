@@ -24,8 +24,12 @@ export type GigViewTab =
   | 'post-service'
   | 'service-published'
   | 'project-detail'
+  | 'client-profile'
   | 'profile'
   | 'profile-completion';
+
+/** Page the Client Profile was opened from, so its back button returns there. */
+export type ClientProfileOrigin = 'applied-tasks' | 'project-detail';
 
 interface GigContextType {
   activeTab: GigViewTab;
@@ -37,6 +41,8 @@ interface GigContextType {
   selectedTaskId: string | null;
   navigateToTaskDetail: (taskId: string) => void;
   navigateToSubmitDeliverable: (taskId: string) => void;
+  /** Open the profile of the client who posted `taskId`. */
+  navigateToClientProfile: (taskId: string, from: ClientProfileOrigin) => void;
   /** Service whose incoming requests page is open. */
   selectedServiceId: string | null;
   navigateToServiceRequests: (serviceId: string) => void;
@@ -61,6 +67,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       : pathname.includes('/tasks/applied') ? 'applied-tasks'
       : pathname.includes('/tasks/') && pathname.endsWith('/submit') ? 'submit-deliverables'
         : pathname.includes('/tasks/') && pathname.endsWith('/submitted') ? 'submission-success'
+          : pathname.includes('/tasks/') && pathname.endsWith('/client') ? 'client-profile'
           : pathname.includes('/tasks/') ? 'project-detail'
             : pathname.includes('/services/new') ? 'post-service'
               : pathname.includes('/services/published') ? 'service-published'
@@ -82,6 +89,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'submission-success': id ? `/gig/tasks/${id}/submitted` : '/gig/tasks/active',
       'post-service': '/gig/services/new', 'service-published': '/gig/services/published',
       'project-detail': id ? `/gig/tasks/${id}` : '/gig/tasks/active',
+      'client-profile': id ? `/gig/tasks/${id}/client` : '/gig/tasks/applied',
       profile: '/gig/profile', 'profile-completion': '/gig/profile/complete',
     };
     navigate(paths[tab]);
@@ -96,6 +104,10 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const navigateToSubmitDeliverable = (taskId: string) => {
     navigate(`/gig/tasks/${taskId}/submit`);
+  };
+
+  const navigateToClientProfile = (taskId: string, from: ClientProfileOrigin) => {
+    navigate(`/gig/tasks/${taskId}/client`, { state: { from } });
   };
 
   const navigateToServiceRequests = (serviceId: string) => {
@@ -116,6 +128,7 @@ export const GigProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedTaskId,
         navigateToTaskDetail,
         navigateToSubmitDeliverable,
+        navigateToClientProfile,
         selectedServiceId,
         navigateToServiceRequests,
         refreshTrigger,

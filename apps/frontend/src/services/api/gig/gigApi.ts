@@ -19,6 +19,7 @@ import type {
   GigDeliverable,
   TaskDeliverableDefinition
 } from '../../../types/gig';
+import type { TaskClientProfileResponse } from '../../../types/profile';
 
 // Every call here is made with the gig professional's JWT.
 const actor = 'gig_professional' as const;
@@ -73,6 +74,11 @@ export const gigApi = {
   getMyApplications: async (): Promise<PendingRequest[]> => {
     return apiFetch<PendingRequest[]>('/gig/applications/mine', { actor });
   },
+
+  /** GET the profile of the client who posted a task this gig pro applied to (or was hired on). */
+
+  getTaskClientProfile: async (taskId: number): Promise<TaskClientProfileResponse> =>
+    apiFetch<TaskClientProfileResponse>(`/gig/tasks/${taskId}/client-profile`, { actor }),
 
   /** DELETE a pending application. */
 
