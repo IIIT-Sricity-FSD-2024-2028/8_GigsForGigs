@@ -7,4 +7,6 @@ export const APPLICATION_STATUS: Record<ApplicationStatus, { label: string; vari
   shortlisted: { label: 'Shortlisted', variant: 'info' },
   accepted: { label: 'Accepted', variant: 'success' },
   declined: { label: 'Rejected', variant: 'error' },
+  withdrawn: { label: 'Withdrawn', variant: 'neutral' },
+  removed: { label: 'Removed by client', variant: 'neutral' },
 };

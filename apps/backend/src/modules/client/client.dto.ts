@@ -47,6 +47,14 @@ export const updateApplicationSchema = z.object({
 });
 export type UpdateApplicationDto = z.infer<typeof updateApplicationSchema>;
 
+/** A dispute freezes the escrow until an admin rules on it; it never moves money by itself. */
+export const createDisputeSchema = z.object({
+  gigProfileId: id(),
+  reason: line(255),
+  description: text(1000).refine((s) => s.length >= 10, "Describe the problem in at least 10 characters"),
+});
+export type CreateDisputeDto = z.infer<typeof createDisputeSchema>;
+
 export const reviewDeliverableAsClientSchema = z
   .object({
     status: z.enum(["approved", "revision_requested"]),

@@ -45,7 +45,7 @@ export interface RawTask {
   description: string | null;
   budget: number | string;
   dueDate: string | null;
-  status: 'open' | 'in_progress' | 'completed';
+  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
   category: string | null;
@@ -58,7 +58,7 @@ export interface RawApplication {
   applicationId: number;
   gigProfileId: number;
   taskId: number;
-  status: 'pending' | 'accepted' | 'declined' | 'shortlisted';
+  status: 'pending' | 'accepted' | 'declined' | 'shortlisted' | 'withdrawn' | 'removed';
   createdAt: string;
   hourlyRate: number | null;
   rating: number | null;

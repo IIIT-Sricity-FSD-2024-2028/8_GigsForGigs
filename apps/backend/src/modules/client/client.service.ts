@@ -8,18 +8,20 @@ import {
   computeProgress,
   definitionsForProfessional,
   hireStatus,
+  hireWorkStatus,
   isServiceHireTask,
   latestSubmissionInclude,
   stripReservedSkills,
 } from "../../lib/taskRules.js";
 import { managerInviteToken } from "../auth/auth.service.js";
-import { platformFeeFor } from "../payment/payment.service.js";
+import { assertNoOpenDispute, platformFeeFor } from "../payment/payment.service.js";
 import { getPlatformSettings } from "../admin/platformSettings.js";
 import { initialReviewStatus } from "../../lib/textQuality.js";
 import { getPublicGigProfile, toApplicationContext } from "../profile/profile.service.js";
 import { parseDeliverableKey } from "./client.dto.js";
 import type {
   CreateClientReviewDto,
+  CreateDisputeDto,
   CreateManagerInviteDto,
   CreateTaskDto,
   CreateTaskDeliverableDefinitionDto,
@@ -96,6 +98,22 @@ export async function updateTask(taskId: number, dto: UpdateTaskDto) {
   if (task.status !== "open") {
     throw conflict("A task can only be edited while it is open for applications");
   }
+  // Once someone is hired (funded or not) the agreed scope is fixed: title, description, budget,
+  // duration and deadline can't change. Category and skills stay editable. Unchanged values are
+  // ignored, since the edit form resubmits every field.
+  const activeHires = await prisma.payment.count({ where: { taskId, status: { in: [...ACTIVE_PAYMENT_STATUSES] } } });
+  if (activeHires > 0) {
+    const changed = [
+      dto.title !== undefined && dto.title !== task.title ? "title" : null,
+      dto.description !== undefined && (dto.description ?? "") !== (task.description ?? "") ? "description" : null,
+      dto.budget !== undefined && Number(dto.budget) !== Number(task.budget) ? "budget" : null,
+      dto.duration !== undefined && (dto.duration ?? "") !== (task.duration ?? "") ? "duration" : null,
+      dto.dueDate !== undefined && (dto.dueDate ? new Date(dto.dueDate).toISOString().slice(0, 10) : null) !== (task.dueDate ? task.dueDate.toISOString().slice(0, 10) : null) ? "deadline" : null,
+    ].filter(Boolean);
+    if (changed.length > 0) {
+      throw conflict(`The agreed scope can't be changed while a professional is hired (${changed.join(", ")}). Remove the hire first, or manage deliverables instead.`);
+    }
+  }
   const skills = dto.skills !== undefined
     ? [...(stripReservedSkills(dto.skills) ?? []), ...(isServiceHireTask(task) ? [SERVICE_HIRE_SKILL] : [])]
     : undefined;
@@ -123,11 +141,13 @@ export function findServiceRequestForTask(tx: any, task: { clientId: number; tit
 }
 
 /**
- * Delete (withdraw) a task posting. With nobody hired the task is removed
- * outright. Once anyone is hired, their contracts, assignments and escrow must
- * survive, so the posting is closed instead (status in_progress): it leaves the
- * marketplace and Posted Tasks, undecided applicants are declined, and existing
- * hires carry on. A service-hire request is marked declined.
+ * Delete (withdraw) a task posting. With no applications at all the task is
+ * removed outright. Once anyone is hired, their contracts, assignments and
+ * escrow must survive, so the posting is closed instead (status in_progress):
+ * it leaves the marketplace and Posted Tasks, undecided applicants are declined,
+ * and existing hires carry on. With applicants or past hires but nobody hired
+ * now, it is marked cancelled so that history is kept. A service-hire request
+ * is marked declined.
  */
 export async function deleteTask(taskId: number): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -147,7 +167,12 @@ export async function deleteTask(taskId: number): Promise<void> {
       await tx.task.update({ where: { taskId }, data: { status: "in_progress" } });
       return;
     }
-    await tx.application.deleteMany({ where: { taskId } });
+    // Nobody is working on it: keep any applications / ended hires on record as a cancelled task.
+    if (task.applications.length > 0 || (await tx.payment.count({ where: { taskId } })) > 0) {
+      await tx.application.updateMany({ where: { taskId, status: { in: ["pending", "shortlisted"] } }, data: { status: "declined" } });
+      await tx.task.update({ where: { taskId }, data: { status: "cancelled" } });
+      return;
+    }
     await tx.task.delete({ where: { taskId } });
   });
 }
@@ -155,11 +180,30 @@ export async function deleteTask(taskId: number): Promise<void> {
 // ---- Applications ---------------------------------------------------------
 
 // List applications received across all of the client's tasks.
-export function listApplications(clientId: number) {
-  return prisma.application.findMany({
+export async function listApplications(clientId: number) {
+  const applications = await prisma.application.findMany({
     where: { task: { clientId } },
     include: { task: true, gigProfile: { include: { user: true } } },
     orderBy: { createdAt: "desc" },
+  });
+  // Reviews each applicant has RECEIVED (reviewee = the professional, never ones they wrote),
+  // PUBLISHED only, in one query: same rule as the applicant's profile (profile.service reviewSummary).
+  const grouped = await prisma.review.groupBy({
+    by: ["revieweeId"],
+    where: { revieweeId: { in: [...new Set(applications.map((a) => a.gigProfile.userId))] }, status: "PUBLISHED" },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  const byUser = new Map(grouped.map((g) => [g.revieweeId, g]));
+  return applications.map((a) => {
+    const g = byUser.get(a.gigProfile.userId);
+    return {
+      ...a,
+      reviewRating: {
+        average: g?._avg.rating == null ? null : Math.round(Number(g._avg.rating) * 10) / 10,
+        count: g?._count._all ?? 0,
+      },
+    };
   });
 }
 
@@ -216,6 +260,16 @@ export async function startContract(tx: any, application: { applicationId: numbe
     create: { gigProfileId: application.gigProfileId, taskId: application.taskId },
   });
 
+  // A previous hire of this professional on this task ended with escrow returned (status failed): start a fresh pending contract on that row.
+  await tx.payment.updateMany({
+    where: { taskId: application.taskId, gigProfileId: application.gigProfileId, status: "failed" },
+    data: {
+      status: "pending",
+      settledAt: null,
+      amount: task.budget,
+      platformFee: platformFeeFor(Number(task.budget), (await getPlatformSettings()).commissionRakePercent),
+    },
+  });
   // Payment row is created when the contract starts (pending until the client funds it); see payment.service.
   await tx.payment.upsert({
     where: { taskId_gigProfileId: { taskId: application.taskId, gigProfileId: application.gigProfileId } },
@@ -269,6 +323,98 @@ export async function reviewApplication(
   });
 }
 
+/**
+ * Ends one professional's hire before any work was submitted — used by the
+ * client removing them and by the professional withdrawing. The application
+ * becomes "removed" / "withdrawn" (history kept; it leaves the undecided list,
+ * and unlike a rejection the professional may apply again), the assignment is removed,
+ * an unfunded payment row is deleted and escrowed money is released back
+ * (held -> failed, kept as a record). Other applications are untouched, so the
+ * client can hire someone else. An open posting stays open; a posting the client
+ * had already closed (in_progress) or a one-professional service hire that now
+ * has nobody hired becomes cancelled. Completed/cancelled tasks are never reopened. Everything is one serializable transaction with conditional
+ * writes, so a double click or a racing funding/submission can't corrupt state.
+ * Callers must already have verified who is allowed to act.
+ */
+export async function endHire(taskId: number, gigProfileId: number, endedBy: "client" | "professional"): Promise<void> {
+  await assertNoOpenDispute(taskId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await prisma.$transaction(async (tx: any) => {
+    const application = await tx.application.findUnique({
+      where: { gigProfileId_taskId: { gigProfileId, taskId } },
+      include: { task: true },
+    });
+    if (!application || application.status !== "accepted") {
+      throw conflict("This professional is not currently hired on this task");
+    }
+    if ((await tx.deliverable.count({ where: { taskId, gigProfileId } })) > 0) {
+      throw conflict("Work has already been submitted for this task, so the assignment can no longer be ended");
+    }
+    const payment = await tx.payment.findUnique({ where: { taskId_gigProfileId: { taskId, gigProfileId } } });
+    if (payment && !ACTIVE_PAYMENT_STATUSES.some((s) => s === payment.status)) {
+      throw conflict("This hire has already been settled");
+    }
+
+    const ended = await tx.application.updateMany({ where: { applicationId: application.applicationId, status: "accepted" }, data: { status: endedBy === "client" ? "removed" : "withdrawn" } });
+    if (ended.count !== 1) throw conflict("This assignment has already been ended");
+    await tx.gigManagerAssignment.deleteMany({ where: { taskId, gigProfileId } });
+    await tx.payment.deleteMany({ where: { taskId, gigProfileId, status: "pending" } });
+    await tx.payment.updateMany({ where: { taskId, gigProfileId, status: "held" }, data: { status: "failed", settledAt: new Date() } });
+
+    // Nobody left on a closed posting / service hire: archive it (history stays). Settled hires count as hired, so finished work is never cancelled.
+    if (application.task.status === "in_progress" && (await tx.application.count({ where: { taskId, status: "accepted" } })) === 0) {
+      await tx.task.update({ where: { taskId }, data: { status: "cancelled" } });
+    }
+
+    // A service hire is addressed to one professional: let the client request it again.
+    if (isServiceHireTask(application.task)) {
+      const request = await findServiceRequestForTask(tx, application.task, gigProfileId);
+      if (request?.status === "accepted") {
+        await tx.serviceRequest.update({ where: { requestId: request.requestId }, data: { status: "declined" } });
+      }
+    }
+  }, { isolationLevel: "Serializable" });
+}
+
+/**
+ * Client disputes one professional's submitted work. This is neither a revision
+ * request (the work is still being reviewed) nor a refund (only an admin ruling
+ * moves escrowed money): it records the complaint and, while it is open, freezes
+ * release/refund of that task's escrow (assertNoOpenDispute). Allowed only while
+ * the professional's escrow is held and they have submitted something; one open
+ * dispute per client/professional pair on a task. taskId ownership is pre-verified
+ * by clientOwnershipGuard.
+ */
+export async function createDispute(taskId: number, clientUserId: number, dto: CreateDisputeDto) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return prisma.$transaction(async (tx: any) => {
+    const application = await tx.application.findUnique({
+      where: { gigProfileId_taskId: { gigProfileId: dto.gigProfileId, taskId } },
+      include: { gigProfile: { select: { userId: true } } },
+    });
+    if (!application || application.status !== "accepted") throw conflict("This professional is not currently hired on this task");
+    const payment = await tx.payment.findUnique({ where: { taskId_gigProfileId: { taskId, gigProfileId: dto.gigProfileId } } });
+    if (payment?.status !== "held") throw conflict("A dispute can only be raised while this hire's payment is held in escrow");
+    if ((await tx.deliverable.count({ where: { taskId, gigProfileId: dto.gigProfileId } })) === 0) {
+      throw conflict("Nothing has been submitted yet. Remove the professional instead if you want to end the assignment.");
+    }
+    const open = await tx.dispute.count({
+      where: { taskId, againstUserId: application.gigProfile.userId, filedByUserId: clientUserId, status: { in: ["OPEN", "UNDER_REVIEW"] } },
+    });
+    if (open > 0) throw conflict("A dispute is already open for this professional on this task");
+    return tx.dispute.create({
+      data: {
+        taskId,
+        filedByUserId: clientUserId,
+        againstUserId: application.gigProfile.userId,
+        disputeAmount: payment.amount,
+        reason: dto.reason,
+        description: dto.description,
+      },
+    });
+  }, { isolationLevel: "Serializable" });
+}
+
 // ---- Contracts (derived — no CONTRACT table) -------------------------------
 
 export function toContractReviewResponse(review: any) {
@@ -293,8 +439,9 @@ export async function listContracts(clientId: number) {
       task: {
         include: {
           deliverableDefinitions: { include: latestSubmissionInclude },
-          deliverables: { select: { gigProfileId: true, status: true } },
+          deliverables: { select: { gigProfileId: true, status: true, deliverableNo: true } },
           assignments: { select: { gigProfileId: true, managerId: true } },
+          disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { againstUserId: true } },
           payments: true,
           reviews: {
             include: { reviewer: true, reviewee: true },
@@ -325,11 +472,20 @@ export async function listContracts(clientId: number) {
       // null = supervised by the client themselves.
       managerId: application.task.assignments.find((a: { gigProfileId: number }) => a.gigProfileId === application.gigProfileId)?.managerId ?? null,
       status: hireStatus(payment?.status),
+      workStatus: hireWorkStatus(
+        payment?.status,
+        application.task.status,
+        definitionsForProfessional(application.task.deliverableDefinitions, application.gigProfileId),
+        application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId),
+      ),
+      hasOpenDispute: application.task.disputes.some((d: { againstUserId: number }) => d.againstUserId === application.gigProfile.userId),
       progress: computeProgress(
         definitionsForProfessional(application.task.deliverableDefinitions, application.gigProfileId),
         application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId),
       ),
       budget: amount,
+      // Any submission (even one awaiting review) means the hire can no longer be ended.
+      submissionCount: application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId).length,
       createdAt: application.createdAt,
       reviews: (application.task.reviews ?? [])
         .filter((r: { reviewerId: number; revieweeId: number }) => r.reviewerId === application.gigProfile.userId || r.revieweeId === application.gigProfile.userId)

@@ -5,6 +5,7 @@ import { clientOwnershipGuard } from "../../middleware/clientOwnershipGuard.js";
 import { validate } from "../../middleware/validate.js";
 import {
   createClientReviewSchema,
+  createDisputeSchema,
   createManagerInviteSchema,
   createTaskSchema,
   createTaskDeliverableDefinitionSchema,
@@ -82,6 +83,12 @@ clientRouter.patch(
   validate(updateApplicationSchema),
   clientController.reviewApplication,
 );
+
+// Remove a hired professional from a task before any work was submitted (task and other applicants stay).
+clientRouter.delete("/tasks/:taskId/hires/:gigProfileId", clientOwnershipGuard, clientController.removeHire);
+
+// Dispute a professional's submitted work while escrow is held (freezes the escrow for admin arbitration; moves no money).
+clientRouter.post("/tasks/:taskId/disputes", clientOwnershipGuard, validate(createDisputeSchema), clientController.createDispute);
 
 // List the client's active contracts (tasks with an accepted application).
 clientRouter.get("/contracts", clientController.listContracts);

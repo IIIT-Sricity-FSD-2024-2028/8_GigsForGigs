@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { getValidated } from "../../middleware/validate.js";
 import type { GigTokenPayload } from "../../lib/jwt.js";
 import { badRequest } from "../../lib/httpError.js";
-import { hireStatus, stripReservedSkills } from "../../lib/taskRules.js";
+import { hireStatus, hireWorkStatus, stripReservedSkills } from "../../lib/taskRules.js";
 import * as gigService from "./gig.service.js";
 import type {
   CreateApplicationDto,
@@ -38,6 +38,10 @@ function toTaskResponse(task: Row) {
     budget: Number(task.budget),
     // When loaded with this professional's payment, show their hire's state rather than the shared posting's.
     status: task.payments?.[0] ? hireStatus(task.payments[0].status) : task.status,
+    // Only when loaded with this professional's payment (active tasks): the funding state and the shared work status.
+    ...(task.payments?.[0]
+      ? { paymentStatus: task.payments[0].status, workStatus: hireWorkStatus(task.payments[0].status, task.status, definitions, submissions) }
+      : {}),
     progress: progressTotal > 0 ? Math.round((completedCount / progressTotal) * 100) : 0,
     category: task.category ?? null,
     duration: task.duration ?? null,
@@ -192,6 +196,13 @@ export async function withdrawApplication(req: Request, res: Response): Promise<
   const gigProfileId = requireGigProfileId(req);
   const applicationId = Number(req.params.id);
   await gigService.withdrawApplication(applicationId, gigProfileId);
+  res.status(204).send();
+}
+
+export async function withdrawFromTask(req: Request, res: Response): Promise<void> {
+  const taskId = Number(req.params.taskId);
+  if (!Number.isInteger(taskId) || taskId <= 0) throw badRequest("Invalid task id");
+  await gigService.withdrawFromTask(requireGigProfileId(req), taskId);
   res.status(204).send();
 }
 

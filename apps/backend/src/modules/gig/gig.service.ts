@@ -2,7 +2,7 @@ import { prisma } from "db";
 import { initialReviewStatus } from "../../lib/textQuality.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
 import { ACTIVE_PAYMENT_STATUSES, SERVICE_HIRE_SKILL, SETTLED_PAYMENT_STATUSES, isServiceHireTask } from "../../lib/taskRules.js";
-import { findServiceRequestForTask, startContract } from "../client/client.service.js";
+import { endHire, findServiceRequestForTask, startContract } from "../client/client.service.js";
 import { getPublicClientProfile, toApplicationContext } from "../profile/profile.service.js";
 import type {
   CreateApplicationDto,
@@ -12,6 +12,9 @@ import type {
   SubmitDeliverableDto,
   UpdateGigProfileDto,
 } from "./gig.dto.js";
+
+/** Statuses of an application whose hire was ended; unlike "declined" they allow applying again. */
+const REAPPLY_STATUSES = ["withdrawn", "removed"] as const;
 
 const profileInclude = { user: true, skills: true, tools: true, portfolio: true } as const;
 
@@ -69,7 +72,8 @@ export function listMarketplaceTasks(gigProfileId: number) {
   return prisma.task.findMany({
     where: {
       status: "open",
-      applications: { none: { gigProfileId } },
+      // A professional whose earlier hire on the task ended (withdrawn / removed) may apply again.
+      applications: { none: { gigProfileId, status: { notIn: [...REAPPLY_STATUSES] } } },
       NOT: { skills: { has: SERVICE_HIRE_SKILL } },
     },
     include: { client: true },
@@ -90,6 +94,15 @@ export async function createApplication(gigProfileId: number, dto: CreateApplica
   const existing = await prisma.application.findUnique({
     where: { gigProfileId_taskId: { gigProfileId, taskId: dto.taskId } },
   });
+  if (existing && REAPPLY_STATUSES.some((s) => s === existing.status)) {
+    // Same row (history stays on one application); it becomes a fresh pending application. Conditional, so a double click applies once.
+    const reopened = await prisma.application.updateMany({
+      where: { applicationId: existing.applicationId, status: { in: [...REAPPLY_STATUSES] } },
+      data: { status: "pending", createdAt: new Date() },
+    });
+    if (reopened.count !== 1) throw conflict("Already applied to this task");
+    return prisma.application.findUniqueOrThrow({ where: { applicationId: existing.applicationId } });
+  }
   if (existing) {
     throw conflict("Already applied to this task");
   }
@@ -239,6 +252,11 @@ export function listActiveTasks(gigProfileId: number) {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/** The professional withdraws from a task they were hired on, before submitting any work. Own hire only: the id comes from the token. */
+export async function withdrawFromTask(gigProfileId: number, taskId: number): Promise<void> {
+  await endHire(taskId, gigProfileId, "professional");
 }
 
 export async function listTaskDeliverableDefinitions(gigProfileId: number, taskId: number) {

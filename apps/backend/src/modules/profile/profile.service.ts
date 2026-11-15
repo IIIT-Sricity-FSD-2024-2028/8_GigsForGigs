@@ -15,7 +15,7 @@ import { SERVICE_HIRE_SKILL, SETTLED_PAYMENT_STATUSES } from "../../lib/taskRule
 
 const RECENT_REVIEW_LIMIT = 3;
 
-type ApplicationStatus = "pending" | "accepted" | "declined" | "shortlisted";
+type ApplicationStatus = "pending" | "accepted" | "declined" | "shortlisted" | "withdrawn" | "removed";
 
 /** The application that links the viewer to the profile, so the UI can show which task it came from. */
 export interface ApplicationContext {

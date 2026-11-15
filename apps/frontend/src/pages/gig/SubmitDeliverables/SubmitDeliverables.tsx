@@ -235,7 +235,12 @@ export const SubmitDeliverables: React.FC = () => {
           <Button variant="outline" type="button" onClick={() => setActiveTab('active-tasks')}>
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting || !definitionsReady}>
+          {task?.paymentStatus === 'pending' && (
+            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', alignSelf: 'center' }}>
+              The client hasn't funded this task yet, so you can't submit work.
+            </span>
+          )}
+          <Button type="submit" disabled={submitting || !definitionsReady || task?.paymentStatus === 'pending'}>
             {submitting ? 'Submitting...' : 'Submit Deliverable for Review'}
           </Button>
         </div>

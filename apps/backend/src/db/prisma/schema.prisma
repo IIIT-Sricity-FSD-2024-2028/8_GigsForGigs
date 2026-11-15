@@ -316,6 +316,7 @@ enum TaskStatus {
   open
   in_progress
   completed
+  cancelled
 }
 
 enum ApplicationStatus {
@@ -323,6 +324,8 @@ enum ApplicationStatus {
   accepted
   declined
   shortlisted
+  withdrawn
+  removed
 }
 
 enum DeliverableStatus {

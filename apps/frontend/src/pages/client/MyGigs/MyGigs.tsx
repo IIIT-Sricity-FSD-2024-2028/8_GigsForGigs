@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useClient, type Contract, type PaymentStatus } from '../../../context/ClientContext';
 import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
-import { Button, Input, PageHeader, Select, useToast } from '../../../components/common';
+import { HIRE_WORK_STATUS } from '../../../utils/taskStatus';
+import { Button, ConfirmDialog, Input, Modal, PageHeader, Select, TextArea, useToast } from '../../../components/common';
 
 export interface MyGigsProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -10,7 +11,13 @@ export interface MyGigsProps {
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { contracts, managers, assignTaskManager, releasePayment, refreshContracts } = useClient();
+  const { contracts, managers, assignTaskManager, releasePayment, refreshContracts, removeHire, raiseDispute } = useClient();
+  const [disputeOpen, setDisputeOpen] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeText, setDisputeText] = useState('');
+  const [disputing, setDisputing] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [savingManager, setSavingManager] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
@@ -194,7 +201,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                         <span className={`status-badge ${
                           c.status === 'SCHEDULED' ? 'status-scheduled' : 'status-in-progress'
                         }`}>
-                          {c.status.replace('_', ' ')}
+                          {c.work_status ? HIRE_WORK_STATUS[c.work_status].label : c.status.replace('_', ' ')}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -290,7 +297,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
 
             {selectedTaskPayment.status !== 'COMPLETED' && (() => {
               const t = selectedTaskPayment;
-              const canRelease = t.payment_status === 'held' && t.progress === 100;
+              const canRelease = t.payment_status === 'held' && t.progress === 100 && !t.has_open_dispute;
               return (
                 <div style={{ marginBottom: '20px', fontSize: '13px', color: '#1B2A36' }}>
                   <p style={{ margin: '0 0 8px', color: '#475764' }}>
@@ -313,7 +320,23 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               );
             })()}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            {selectedTaskPayment.has_open_dispute && (
+              <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#9a3412' }}>
+                A dispute is open for this work. The payment stays in escrow until an administrator rules on it.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+              {selectedTaskPayment.payment_status === 'held' && selectedTaskPayment.status !== 'COMPLETED' && selectedTaskPayment.submission_count > 0 && !selectedTaskPayment.has_open_dispute && (
+                <Button variant="danger" onClick={() => setDisputeOpen(true)}>
+                  Raise Dispute
+                </Button>
+              )}
+              {selectedTaskPayment.status !== 'COMPLETED' && selectedTaskPayment.submission_count === 0 && (
+                <Button variant="danger" onClick={() => setConfirmRemove(true)}>
+                  Remove Professional
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setSelectedTaskPayment(null)}>
                 Close
               </Button>
@@ -321,6 +344,64 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
           </div>
         </div>
       )}
+
+      <Modal open={disputeOpen && selectedTaskPayment !== null} title="Raise a dispute" onClose={() => setDisputeOpen(false)}>
+        <p>
+          Use this if the submitted work is not acceptable and a revision request will not resolve it. The payment stays in escrow and no money moves until an administrator reviews the case and rules on it.
+        </p>
+        <Select label="Reason" required value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)}
+          placeholder="Select a reason"
+          options={['Work does not match the agreed requirements', 'Work is incomplete', 'Quality is unacceptable', 'Professional is unresponsive', 'Other'].map((r) => ({ value: r, label: r }))} />
+        <TextArea label="What went wrong?" required rows={4} maxLength={1000} value={disputeText} onChange={(e) => setDisputeText(e.target.value)}
+          helperText="At least 10 characters." />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+          <Button variant="outline" onClick={() => setDisputeOpen(false)} disabled={disputing}>Cancel</Button>
+          <Button variant="danger" loading={disputing} disabled={!disputeReason || disputeText.trim().length < 10} onClick={async () => {
+            const t = selectedTaskPayment;
+            if (!t) return;
+            setDisputing(true);
+            try {
+              await raiseDispute(t.task_id, t.gig_profile_id, disputeReason, disputeText.trim());
+              toast.success('Dispute raised. The payment stays in escrow until an administrator rules on it.');
+              setSelectedTaskPayment({ ...t, has_open_dispute: true });
+              setDisputeOpen(false);
+              setDisputeReason('');
+              setDisputeText('');
+            } catch (err) {
+              toast.error(err instanceof Error && err.message ? err.message : 'Could not raise the dispute.');
+            } finally {
+              setDisputing(false);
+            }
+          }}>Submit Dispute</Button>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={confirmRemove && selectedTaskPayment !== null}
+        danger
+        loading={removing}
+        title="Remove professional"
+        message={`Remove ${selectedTaskPayment?.gig_pro_name ?? 'this professional'} from "${selectedTaskPayment?.task_title ?? 'this task'}"? The assignment ends and the task leaves Active Task. ${selectedTaskPayment?.payment_status === 'held' ? 'Any funds held in escrow for them are returned to you. ' : ''}Their application stays on record, they cannot be re-hired for this task, and the task stays posted so you can hire another applicant.`}
+        confirmLabel="Remove"
+        onConfirm={async () => {
+          const t = selectedTaskPayment;
+          if (!t) return;
+          setRemoving(true);
+          try {
+            await removeHire(t.task_id, t.gig_profile_id);
+            toast.success(`${t.gig_pro_name} was removed from the task.`);
+            setSelectedTaskPayment(null);
+          } catch (err) {
+            toast.error(err instanceof Error && err.message ? err.message : 'Could not remove this professional.');
+            await refreshContracts().catch(() => undefined);
+          } finally {
+            setRemoving(false);
+            setConfirmRemove(false);
+          }
+        }}
+        onCancel={() => setConfirmRemove(false)}
+      />
+
     </div>
   );
 };

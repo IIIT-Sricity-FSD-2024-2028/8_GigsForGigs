@@ -30,6 +30,11 @@ export const gigApi = {
     return apiFetch<GigTask[]>('/gig/tasks/active', { actor });
   },
 
+  /** DELETE this gig pro's own assignment to a task (only before any deliverable is submitted). */
+  withdrawFromTask: async (taskId: number): Promise<void> => {
+    return apiFetch<void>(`/gig/tasks/${taskId}/assignment`, { method: 'DELETE', actor });
+  },
+
   /** GET the deliverables the client expects for a task. */
 
   getTaskDeliverableDefinitions: async (taskId: number): Promise<TaskDeliverableDefinition[]> =>

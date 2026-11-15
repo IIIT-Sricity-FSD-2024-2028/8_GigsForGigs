@@ -50,6 +50,8 @@ export interface TaskDeliverableDefinition {
   }>;
 }
 
+import type { HireWorkStatus } from '../../utils/taskStatus';
+
 /**
  * Task item structure as viewed by the Gig Professional.
  */
@@ -59,7 +61,11 @@ export interface GigTask {
   title: string;
   description: string;
   budget: number;
-  status: 'open' | 'in_progress' | 'completed';
+  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+  /** This professional's escrow state for the task (only on active tasks). */
+  paymentStatus?: 'pending' | 'held' | 'completed' | 'refunded' | 'failed';
+  /** Shared user-facing state of this hire (only on active tasks). */
+  workStatus?: HireWorkStatus;
   progress?: number;
   category?: string | null;
   duration?: string | null;
@@ -78,7 +84,7 @@ export interface PendingRequest {
   applicationId: number;
   taskId: number;
   gigProfileId: number;
-  status: 'pending' | 'accepted' | 'declined' | 'shortlisted';
+  status: 'pending' | 'accepted' | 'declined' | 'shortlisted' | 'withdrawn' | 'removed';
   createdAt?: string;
   task?: GigTask;
 }
