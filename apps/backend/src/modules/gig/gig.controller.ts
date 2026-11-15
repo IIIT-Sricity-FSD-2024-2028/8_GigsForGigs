@@ -195,6 +195,13 @@ export async function withdrawApplication(req: Request, res: Response): Promise<
   res.status(204).send();
 }
 
+export async function withdrawFromTask(req: Request, res: Response): Promise<void> {
+  const taskId = Number(req.params.taskId);
+  if (!Number.isInteger(taskId) || taskId <= 0) throw badRequest("Invalid task id");
+  await gigService.withdrawFromTask(requireGigProfileId(req), taskId);
+  res.status(204).send();
+}
+
 export async function listMyApplications(req: Request, res: Response): Promise<void> {
   const applications = await gigService.listMyApplications(requireGigProfileId(req));
   res.status(200).json(applications.map(toApplicationResponse));

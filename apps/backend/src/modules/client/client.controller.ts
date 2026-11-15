@@ -88,6 +88,14 @@ export async function reviewApplication(req: Request, res: Response): Promise<vo
   res.status(200).json(application);
 }
 
+/** taskId ownership already verified by clientOwnershipGuard; endHire only touches that task's own hire. */
+export async function removeHire(req: Request, res: Response): Promise<void> {
+  const gigProfileId = Number(req.params.gigProfileId);
+  if (!Number.isInteger(gigProfileId) || gigProfileId <= 0) throw badRequest("Invalid professional id");
+  await clientService.endHire(Number(req.params.taskId), gigProfileId);
+  res.status(204).send();
+}
+
 export async function listContracts(req: Request, res: Response): Promise<void> {
   const contracts = await clientService.listContracts(requireClientId(req));
   res.status(200).json(contracts);

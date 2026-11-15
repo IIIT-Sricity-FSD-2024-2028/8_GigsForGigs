@@ -13,7 +13,7 @@ import {
   stripReservedSkills,
 } from "../../lib/taskRules.js";
 import { managerInviteToken } from "../auth/auth.service.js";
-import { platformFeeFor } from "../payment/payment.service.js";
+import { assertNoOpenDispute, platformFeeFor } from "../payment/payment.service.js";
 import { getPlatformSettings } from "../admin/platformSettings.js";
 import { initialReviewStatus } from "../../lib/textQuality.js";
 import { getPublicGigProfile, toApplicationContext } from "../profile/profile.service.js";
@@ -155,11 +155,30 @@ export async function deleteTask(taskId: number): Promise<void> {
 // ---- Applications ---------------------------------------------------------
 
 // List applications received across all of the client's tasks.
-export function listApplications(clientId: number) {
-  return prisma.application.findMany({
+export async function listApplications(clientId: number) {
+  const applications = await prisma.application.findMany({
     where: { task: { clientId } },
     include: { task: true, gigProfile: { include: { user: true } } },
     orderBy: { createdAt: "desc" },
+  });
+  // Reviews each applicant has RECEIVED (reviewee = the professional, never ones they wrote),
+  // PUBLISHED only, in one query: same rule as the applicant's profile (profile.service reviewSummary).
+  const grouped = await prisma.review.groupBy({
+    by: ["revieweeId"],
+    where: { revieweeId: { in: [...new Set(applications.map((a) => a.gigProfile.userId))] }, status: "PUBLISHED" },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  const byUser = new Map(grouped.map((g) => [g.revieweeId, g]));
+  return applications.map((a) => {
+    const g = byUser.get(a.gigProfile.userId);
+    return {
+      ...a,
+      reviewRating: {
+        average: g?._avg.rating == null ? null : Math.round(Number(g._avg.rating) * 10) / 10,
+        count: g?._count._all ?? 0,
+      },
+    };
   });
 }
 
@@ -269,6 +288,53 @@ export async function reviewApplication(
   });
 }
 
+/**
+ * Ends one professional's hire before any work was submitted — used by the
+ * client removing them and by the professional withdrawing. The application
+ * becomes "declined" (history kept; it never reappears among undecided
+ * applicants and the professional can't re-apply), the assignment is removed,
+ * an unfunded payment row is deleted and escrowed money is released back
+ * (held -> failed, kept as a record). The task and every other application
+ * are untouched, so the client can hire someone else from the remaining
+ * applicants. Everything is one serializable transaction with conditional
+ * writes, so a double click or a racing funding/submission can't corrupt state.
+ * Callers must already have verified who is allowed to act.
+ */
+export async function endHire(taskId: number, gigProfileId: number): Promise<void> {
+  await assertNoOpenDispute(taskId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await prisma.$transaction(async (tx: any) => {
+    const application = await tx.application.findUnique({
+      where: { gigProfileId_taskId: { gigProfileId, taskId } },
+      include: { task: true },
+    });
+    if (!application || application.status !== "accepted") {
+      throw conflict("This professional is not currently hired on this task");
+    }
+    if ((await tx.deliverable.count({ where: { taskId, gigProfileId } })) > 0) {
+      throw conflict("Work has already been submitted for this task, so the assignment can no longer be ended");
+    }
+    const payment = await tx.payment.findUnique({ where: { taskId_gigProfileId: { taskId, gigProfileId } } });
+    if (payment && !ACTIVE_PAYMENT_STATUSES.some((s) => s === payment.status)) {
+      throw conflict("This hire has already been settled");
+    }
+
+    const ended = await tx.application.updateMany({ where: { applicationId: application.applicationId, status: "accepted" }, data: { status: "declined" } });
+    if (ended.count !== 1) throw conflict("This assignment has already been ended");
+    await tx.gigManagerAssignment.deleteMany({ where: { taskId, gigProfileId } });
+    await tx.payment.deleteMany({ where: { taskId, gigProfileId, status: "pending" } });
+    await tx.payment.updateMany({ where: { taskId, gigProfileId, status: "held" }, data: { status: "failed", settledAt: new Date() } });
+
+    // A service hire is addressed to one professional: let the client request it again.
+    if (isServiceHireTask(application.task)) {
+      const request = await findServiceRequestForTask(tx, application.task, gigProfileId);
+      if (request?.status === "accepted") {
+        await tx.serviceRequest.update({ where: { requestId: request.requestId }, data: { status: "declined" } });
+      }
+    }
+  }, { isolationLevel: "Serializable" });
+}
+
 // ---- Contracts (derived — no CONTRACT table) -------------------------------
 
 export function toContractReviewResponse(review: any) {
@@ -330,6 +396,8 @@ export async function listContracts(clientId: number) {
         application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId),
       ),
       budget: amount,
+      // Any submission (even one awaiting review) means the hire can no longer be ended.
+      submissionCount: application.task.deliverables.filter((d: { gigProfileId: number }) => d.gigProfileId === application.gigProfileId).length,
       createdAt: application.createdAt,
       reviews: (application.task.reviews ?? [])
         .filter((r: { reviewerId: number; revieweeId: number }) => r.reviewerId === application.gigProfile.userId || r.revieweeId === application.gigProfile.userId)

@@ -14,6 +14,7 @@ import type { TaskDeliverableDefinition } from '../../../types/gig';
 import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
 import { Button } from '../../../components/common';
+import { WithdrawTaskButton } from '../../../components/gig/modals/WithdrawTaskButton';
 import { ClientDetailsCard } from '../../../components/gig/profile/ClientDetailsCard';
 
 export const ProjectDetail: React.FC = () => {
@@ -132,6 +133,9 @@ export const ProjectDetail: React.FC = () => {
           <Button onClick={() => navigateToSubmitDeliverable(String(task.taskId))}>
             Submit Deliverable
           </Button>
+          {deliverables.length === 0 && (
+            <WithdrawTaskButton taskId={task.taskId} title={task.title} onWithdrawn={() => setActiveTab('active-tasks')} />
+          )}
         </div>
       </div>
 

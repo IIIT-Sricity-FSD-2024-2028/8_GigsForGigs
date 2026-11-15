@@ -16,9 +16,10 @@ import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { Button, useToast } from '../../../components/common';
+import { WithdrawTaskButton } from '../../../components/gig/modals/WithdrawTaskButton';
 
 export const ActiveTasks: React.FC = () => {
-  const { navigateToTaskDetail, navigateToSubmitDeliverable, refreshTrigger } = useGig();
+  const { navigateToTaskDetail, navigateToSubmitDeliverable, refreshTrigger, triggerRefresh } = useGig();
   const [activeTasks, setActiveTasks] = useState<GigTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -157,6 +158,9 @@ export const ActiveTasks: React.FC = () => {
                   <Button size="sm" onClick={() => navigateToSubmitDeliverable(String(task.taskId))} style={{ width: '100%' }}>
                     Submit Deliverable
                   </Button>
+                  {!hasSubmissions && (
+                    <WithdrawTaskButton taskId={task.taskId} title={task.title} onWithdrawn={triggerRefresh} style={{ width: '100%' }} />
+                  )}
                 </div>
               </div>
             );

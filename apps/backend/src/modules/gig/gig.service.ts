@@ -2,7 +2,7 @@ import { prisma } from "db";
 import { initialReviewStatus } from "../../lib/textQuality.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
 import { ACTIVE_PAYMENT_STATUSES, SERVICE_HIRE_SKILL, SETTLED_PAYMENT_STATUSES, isServiceHireTask } from "../../lib/taskRules.js";
-import { findServiceRequestForTask, startContract } from "../client/client.service.js";
+import { endHire, findServiceRequestForTask, startContract } from "../client/client.service.js";
 import { getPublicClientProfile, toApplicationContext } from "../profile/profile.service.js";
 import type {
   CreateApplicationDto,
@@ -239,6 +239,11 @@ export function listActiveTasks(gigProfileId: number) {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/** The professional withdraws from a task they were hired on, before submitting any work. Own hire only: the id comes from the token. */
+export async function withdrawFromTask(gigProfileId: number, taskId: number): Promise<void> {
+  await endHire(taskId, gigProfileId);
 }
 
 export async function listTaskDeliverableDefinitions(gigProfileId: number, taskId: number) {

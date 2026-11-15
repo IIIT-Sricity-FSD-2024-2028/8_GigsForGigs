@@ -83,6 +83,9 @@ clientRouter.patch(
   clientController.reviewApplication,
 );
 
+// Remove a hired professional from a task before any work was submitted (task and other applicants stay).
+clientRouter.delete("/tasks/:taskId/hires/:gigProfileId", clientOwnershipGuard, clientController.removeHire);
+
 // List the client's active contracts (tasks with an accepted application).
 clientRouter.get("/contracts", clientController.listContracts);
 

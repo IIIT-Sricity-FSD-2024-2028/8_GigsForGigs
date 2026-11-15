@@ -194,7 +194,17 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
               </div>
 
               <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                <div>Rating: {a.rating ? `${a.rating} / 5` : '—'}</div>
+                {a.review_average !== null ? (
+                  <div aria-label={`Average rating ${a.review_average} out of 5 from ${a.review_count} review${a.review_count === 1 ? '' : 's'}`}>
+                    <span aria-hidden="true" style={{ color: '#f5a623', letterSpacing: '1px' }}>
+                      {'★'.repeat(Math.round(a.review_average))}{'☆'.repeat(5 - Math.round(a.review_average))}
+                    </span>{' '}
+                    <strong>{a.review_average.toFixed(1)}</strong> / 5 ({a.review_count} review{a.review_count === 1 ? '' : 's'})
+                  </div>
+                ) : (
+                  <div>No ratings yet</div>
+                )}
+                {a.rating ? <div>Manager score: {a.rating} / 5</div> : null}
                 <div>Hourly: {a.hourlyRate ? formatCurrency(a.hourlyRate) : '—'}</div>
               </div>
 

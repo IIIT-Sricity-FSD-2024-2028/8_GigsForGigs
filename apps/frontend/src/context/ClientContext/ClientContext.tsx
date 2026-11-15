@@ -101,6 +101,8 @@ export interface Contract {
   payment_status: PaymentStatus | null;
   /** MANAGER.manager_id supervising this task; null = the client supervises it. */
   manager_id?: number | null;
+  /** How many deliverables this professional has submitted; the hire can be removed only while 0. */
+  submission_count: number;
   createdAt: string;
   reviews?: ContractReview[];
 }
@@ -128,6 +130,9 @@ export interface Application {
   candidate_role: string;
   status: 'PENDING' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
   rating?: number;
+  /** Average of the reviews the professional has received (null = none yet) and how many. */
+  review_average: number | null;
+  review_count: number;
   hourlyRate?: number;
   rate: number;
   createdAt: string;
@@ -161,6 +166,8 @@ interface ClientContextType {
   /** Pick the manager for one funded hire; null keeps it with the client. */
   assignTaskManager: (taskId: string, gigProfileId: string, managerId: number | null) => Promise<void>;
   rejectCandidate: (applicationId: string) => Promise<void>;
+  /** Remove a hired professional before any work was submitted; the task stays open for other applicants. */
+  removeHire: (taskId: string, gigProfileId: string) => Promise<void>;
   requestService: (serviceId: string) => Promise<void>;
   requestedServices: Set<string>;
   refreshContracts: () => Promise<void>;
@@ -208,6 +215,7 @@ interface RawApplication {
   taskId: number;
   status: 'pending' | 'shortlisted' | 'accepted' | 'declined';
   rating: number | null;
+  reviewRating?: { average: number | null; count: number };
   hourlyRate: string | null;
   createdAt: string;
   task?: RawTask;
@@ -227,6 +235,7 @@ interface RawContract {
   totalAmount: number;
   paymentStatus: PaymentStatus | null;
   managerId?: number | null;
+  submissionCount?: number;
   createdAt: string;
   reviews?: ContractReview[];
 }
@@ -356,6 +365,7 @@ function mapContract(raw: RawContract): Contract {
     total_amount: Number(raw.totalAmount),
     payment_status: raw.paymentStatus,
     manager_id: raw.managerId ?? null,
+    submission_count: raw.submissionCount ?? 0,
     createdAt: raw.createdAt,
     reviews: raw.reviews ?? [],
   };
@@ -414,6 +424,8 @@ function mapApplication(raw: RawApplication): Application {
     candidate_role: raw.gigProfile?.bio || 'Gig Professional',
     status: mapApplicationStatus(raw.status),
     rating: raw.rating ?? undefined,
+    review_average: raw.reviewRating?.average ?? null,
+    review_count: raw.reviewRating?.count ?? 0,
     hourlyRate: raw.hourlyRate ? Number(raw.hourlyRate) : undefined,
     rate: raw.task?.budget ? Number(raw.task.budget) : 0,
     createdAt: raw.createdAt,
@@ -851,6 +863,16 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const removeHire = async (taskId: string, gigProfileId: string) => {
+    setError(null);
+    try {
+      await apiFetch(`/tasks/${Number(taskId)}/hires/${Number(gigProfileId)}`, { method: 'DELETE', actor: 'client' });
+      await Promise.all([refreshApplications(), refreshContracts(), refreshTasks()]);
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
   /** Ask a gig pro to do one of their services. 409 = already requested, which we treat as success. */
   const requestService = async (serviceId: string) => {
     setError(null);
@@ -908,6 +930,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       releasePayment,
       assignTaskManager,
       rejectCandidate,
+      removeHire,
       requestService,
       requestedServices,
       refreshContracts,

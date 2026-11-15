@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useClient, type Contract, type PaymentStatus } from '../../../context/ClientContext';
 import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
-import { Button, Input, PageHeader, Select, useToast } from '../../../components/common';
+import { Button, ConfirmDialog, Input, PageHeader, Select, useToast } from '../../../components/common';
 
 export interface MyGigsProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -10,7 +10,9 @@ export interface MyGigsProps {
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { contracts, managers, assignTaskManager, releasePayment, refreshContracts } = useClient();
+  const { contracts, managers, assignTaskManager, releasePayment, refreshContracts, removeHire } = useClient();
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [savingManager, setSavingManager] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [selectedTaskPayment, setSelectedTaskPayment] = useState<Contract | null>(null);
@@ -313,7 +315,12 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               );
             })()}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+              {selectedTaskPayment.status !== 'COMPLETED' && selectedTaskPayment.submission_count === 0 && (
+                <Button variant="danger" onClick={() => setConfirmRemove(true)}>
+                  Remove Professional
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setSelectedTaskPayment(null)}>
                 Close
               </Button>
@@ -321,6 +328,33 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmRemove && selectedTaskPayment !== null}
+        danger
+        loading={removing}
+        title="Remove professional"
+        message={`Remove ${selectedTaskPayment?.gig_pro_name ?? 'this professional'} from "${selectedTaskPayment?.task_title ?? 'this task'}"? The assignment ends and the task leaves Active Task. ${selectedTaskPayment?.payment_status === 'held' ? 'Any funds held in escrow for them are returned to you. ' : ''}Their application stays on record, they cannot be re-hired for this task, and the task stays posted so you can hire another applicant.`}
+        confirmLabel="Remove"
+        onConfirm={async () => {
+          const t = selectedTaskPayment;
+          if (!t) return;
+          setRemoving(true);
+          try {
+            await removeHire(t.task_id, t.gig_profile_id);
+            toast.success(`${t.gig_pro_name} was removed from the task.`);
+            setSelectedTaskPayment(null);
+          } catch (err) {
+            toast.error(err instanceof Error && err.message ? err.message : 'Could not remove this professional.');
+            await refreshContracts().catch(() => undefined);
+          } finally {
+            setRemoving(false);
+            setConfirmRemove(false);
+          }
+        }}
+        onCancel={() => setConfirmRemove(false)}
+      />
+
     </div>
   );
 };
