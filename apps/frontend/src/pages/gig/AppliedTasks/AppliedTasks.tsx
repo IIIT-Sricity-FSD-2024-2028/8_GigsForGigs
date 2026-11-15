@@ -93,7 +93,7 @@ export const AppliedTasks: React.FC = () => {
               <div>
                 <strong>{a.task?.title ?? `Task #${a.taskId}`}</strong>
                 <div className="applied-task__meta">
-                  {a.task?.client?.clientName} · Applied {a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''} · <b>{APPLICATION_STATUS[a.status].label}</b>
+                  {a.task?.client?.clientName} · Applied {a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''} · <b>{a.task?.status === 'cancelled' ? 'Task cancelled' : APPLICATION_STATUS[a.status].label}</b>
                 </div>
               </div>
               <div className="applied-task__actions">

@@ -16,6 +16,7 @@ import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { Button, useToast } from '../../../components/common';
+import { HIRE_WORK_STATUS } from '../../../utils/taskStatus';
 import { WithdrawTaskButton } from '../../../components/gig/modals/WithdrawTaskButton';
 
 export const ActiveTasks: React.FC = () => {
@@ -71,6 +72,7 @@ export const ActiveTasks: React.FC = () => {
             const deliverables = task.deliverables || [];
             const hasSubmissions = deliverables.length > 0;
             const progress = task.progress ?? 0;
+            const awaitingFunding = task.paymentStatus === 'pending';
 
             return (
               <div
@@ -91,33 +93,14 @@ export const ActiveTasks: React.FC = () => {
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-text-dark)' }}>
                       {task.title}
                     </h3>
-                    {hasSubmissions ? (
-                      <span
-                        style={{
-                          padding: '3px 10px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          backgroundColor: '#e8f0fe',
-                          color: '#1a73e8'
-                        }}
-                      >
-                        ● Deliverable Submitted
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          padding: '3px 10px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          backgroundColor: '#fef3c7',
-                          color: '#92400e'
-                        }}
-                      >
-                        ● Work In Progress
-                      </span>
-                    )}
+                    {(() => {
+                      const badge = HIRE_WORK_STATUS[task.workStatus ?? (hasSubmissions ? 'submitted' : 'in_progress')];
+                      return (
+                        <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, backgroundColor: badge.bg, color: badge.color }}>
+                          ● {badge.label}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-md)' }}>
@@ -155,9 +138,14 @@ export const ActiveTasks: React.FC = () => {
                   <Button variant="outline" size="sm" onClick={() => navigateToTaskDetail(String(task.taskId))} style={{ width: '100%' }}>
                     View Details
                   </Button>
-                  <Button size="sm" onClick={() => navigateToSubmitDeliverable(String(task.taskId))} style={{ width: '100%' }}>
+                  <Button size="sm" disabled={awaitingFunding} onClick={() => navigateToSubmitDeliverable(String(task.taskId))} style={{ width: '100%' }}>
                     Submit Deliverable
                   </Button>
+                  {awaitingFunding && (
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', textAlign: 'right' }}>
+                      Submission opens once the client funds this task.
+                    </span>
+                  )}
                   {!hasSubmissions && (
                     <WithdrawTaskButton taskId={task.taskId} title={task.title} onWithdrawn={triggerRefresh} style={{ width: '100%' }} />
                   )}

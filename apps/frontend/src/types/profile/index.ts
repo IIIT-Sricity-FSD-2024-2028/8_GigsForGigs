@@ -7,7 +7,7 @@
  * apps/backend/src/modules/profile/profile.service.ts.
  */
 
-export type ApplicationStatus = 'pending' | 'shortlisted' | 'accepted' | 'declined';
+export type ApplicationStatus = 'pending' | 'shortlisted' | 'accepted' | 'declined' | 'withdrawn' | 'removed';
 
 /** A published review someone received. */
 export interface PublicReview {

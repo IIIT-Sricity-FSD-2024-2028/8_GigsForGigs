@@ -78,3 +78,29 @@ export async function isTaskWorkComplete(taskId: number, gigProfileId: number): 
   if (definitions.length === 0 && deliverables.length === 0) return false;
   return computeProgress(definitionsForProfessional(definitions, gigProfileId), deliverables) === 100;
 }
+
+export type HireWorkStatus = "awaiting_funding" | "in_progress" | "submitted" | "revision_requested" | "completed" | "cancelled";
+
+/**
+ * The one user-facing state of a hire, shared by the client's contracts and the
+ * professional's tasks (each portal only localises the label). Derived purely
+ * from the payment row, the task posting and this professional's submissions, so no
+ * extra column can drift. Definitions must be this professional's own, loaded
+ * with latestSubmissionInclude; deliverables need deliverableNo to find the latest.
+ */
+export function hireWorkStatus(
+  paymentStatus: string | null | undefined,
+  taskStatus: string,
+  definitions: DefinitionWithLatest[],
+  deliverables: Array<{ status: string; deliverableNo?: number }>,
+): HireWorkStatus {
+  if (paymentStatus === "completed" || paymentStatus === "refunded") return "completed";
+  if (taskStatus === "cancelled") return "cancelled";
+  if (paymentStatus == null || paymentStatus === "pending") return "awaiting_funding";
+  const latest = [...deliverables].sort((a, b) => (b.deliverableNo ?? 0) - (a.deliverableNo ?? 0))[0];
+  const needsRevision = definitions.length > 0
+    ? definitions.some((d) => d.submissions[0]?.submission.status === "revision_requested")
+    : latest?.status === "revision_requested";
+  if (needsRevision) return "revision_requested";
+  return deliverables.length > 0 ? "submitted" : "in_progress";
+}

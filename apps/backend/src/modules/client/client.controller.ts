@@ -5,6 +5,7 @@ import type { ClientTokenPayload } from "../../lib/jwt.js";
 import * as clientService from "./client.service.js";
 import type {
   CreateClientReviewDto,
+  CreateDisputeDto,
   CreateManagerInviteDto,
   CreateTaskDto,
   CreateTaskDeliverableDefinitionDto,
@@ -92,8 +93,15 @@ export async function reviewApplication(req: Request, res: Response): Promise<vo
 export async function removeHire(req: Request, res: Response): Promise<void> {
   const gigProfileId = Number(req.params.gigProfileId);
   if (!Number.isInteger(gigProfileId) || gigProfileId <= 0) throw badRequest("Invalid professional id");
-  await clientService.endHire(Number(req.params.taskId), gigProfileId);
+  await clientService.endHire(Number(req.params.taskId), gigProfileId, "client");
   res.status(204).send();
+}
+
+/** taskId ownership already verified by clientOwnershipGuard. */
+export async function createDispute(req: Request, res: Response): Promise<void> {
+  const dto = getValidated<CreateDisputeDto>(res, "body");
+  const dispute = await clientService.createDispute(Number(req.params.taskId), (req.user as ClientTokenPayload).userId, dto);
+  res.status(201).json({ disputeId: dispute.disputeId, status: dispute.status });
 }
 
 export async function listContracts(req: Request, res: Response): Promise<void> {
