@@ -198,7 +198,7 @@ export const SearchTalent: React.FC<SearchTalentProps> = () => {
             </div>
 
             {/* Profile Content */}
-            <div style={{ padding: '0 24px 24px 24px' }}>
+            <div style={{ padding: '0 24px 24px 24px', position: 'relative' }}>
               {/* Photo & Identity */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '-45px', marginBottom: '16px' }}>
                 <div

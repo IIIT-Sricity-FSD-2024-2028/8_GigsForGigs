@@ -108,9 +108,9 @@ export const ProjectDetail: React.FC = () => {
           gap: 'var(--spacing-lg)'
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-xs)' }}>
-            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
+        <div style={{ minWidth: 0, flex: '1 1 320px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-xs)' }}>
+            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary-dark)', minWidth: 0, maxWidth: '100%', overflowWrap: 'anywhere' }}>
               {task.title}
             </h1>
             <span className="admin-badge badge-info">{task.workStatus ? HIRE_WORK_STATUS[task.workStatus].label.toUpperCase() : task.status.toUpperCase()}</span>
@@ -127,7 +127,7 @@ export const ProjectDetail: React.FC = () => {
             </Button>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--spacing-md)' }}>
           <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-secondary)' }}>
             {formatCurrency(task.budget)}
           </span>
