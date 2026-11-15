@@ -305,3 +305,55 @@ section[id] { scroll-margin-top: 88px; }
 .ui-talent-card__skills { display: flex; flex-wrap: wrap; gap: 6px; }
 .ui-talent-card__description { margin: 0; font-size: .875rem; color: var(--color-text-muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .ui-talent-card__actions { display: flex; gap: var(--spacing-sm); margin-top: auto; padding-top: var(--spacing-sm); }.ui-talent-card__actions > * { flex: 1; }
+
+/* ==========================================================================
+   Counterparty profiles — Applicant Profile modal (client), Client Details
+   card and Client Profile page (gig), and the applied-task details section.
+   ========================================================================== */
+.profile-modal { width: min(100%, 640px); }
+.profile-body { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.profile-header { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.profile-header .avatar-component { flex: 0 0 auto; }
+.profile-header__identity { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.profile-header__name { margin: 0; color: var(--color-primary-dark); font-size: 18px; overflow-wrap: anywhere; }
+.profile-header__subtitle { color: var(--color-text-muted); font-size: 13px; overflow-wrap: anywhere; }
+.profile-header__badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.profile-context { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--color-info-soft); color: var(--color-text); font-size: 13px; line-height: 1.5; }
+.profile-section { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-top: 14px; border-top: 1px solid var(--color-border); }
+.profile-section > h4 { margin: 0; color: var(--color-text-subtle); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+.profile-text { margin: 0; color: var(--color-text); font-size: 14px; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
+.profile-muted { margin: 0; color: var(--color-text-muted); font-size: 13px; }
+.profile-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.profile-chips li { padding: 4px 10px; border: 1px solid var(--color-border); border-radius: 999px; background: #f7f9fa; color: var(--color-primary-dark); font-size: 12px; font-weight: 600; }
+.profile-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0; }
+.profile-facts > div { min-width: 0; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: #f7f9fa; }
+.profile-facts dt { color: var(--color-text-muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.profile-facts dd { margin: 4px 0 0; color: var(--color-primary-dark); font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.profile-rating { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.profile-rating__stars { color: #B45F00; letter-spacing: 1px; }
+.profile-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.profile-links a { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.profile-review { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.profile-review__meta { color: var(--color-text-muted); font-size: 12px; }
+.profile-service { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 13px; }
+.profile-service strong { color: var(--color-text); overflow-wrap: anywhere; }
+.profile-service span { flex: 0 0 auto; color: var(--color-primary-dark); font-weight: 700; }
+.profile-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.profile-page { display: flex; flex-direction: column; gap: 20px; max-width: 880px; width: 100%; margin: 0 auto; }
+.profile-page__card { display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+.client-details-card { display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: white; }
+.applied-task { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+.applied-task__summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 16px; }
+.applied-task__summary > div:first-child { flex: 1 1 260px; min-width: 0; }
+.applied-task__meta { color: var(--color-text); font-size: var(--font-size-sm, 13px); opacity: .8; overflow-wrap: anywhere; }
+.applied-task__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.applied-task__details { display: flex; flex-direction: column; gap: 14px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+.applied-task__details > .profile-section:first-child { padding-top: 0; border-top: 0; }
+.applied-task__client { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+@media (max-width: 640px) {
+  .profile-page__card { padding: 16px; }
+  .profile-header { align-items: flex-start; }
+  .applied-task__actions { width: 100%; }
+  .applied-task__actions > .ui-button { flex: 1 1 auto; }
+  .profile-actions > .ui-button { flex: 1 1 auto; }
+}

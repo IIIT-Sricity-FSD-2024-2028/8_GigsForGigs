@@ -6,6 +6,7 @@
  */
 
 import { apiFetch } from '../httpClient';
+import type { ApplicantProfileResponse } from '../../../types/profile';
 
 // Every call here is made with the client's JWT.
 const actor = 'client' as const;
@@ -259,6 +260,11 @@ export const clientApi = {
   getApplications: async (): Promise<RawApplication[]> => {
     return apiFetch<RawApplication[]>('/applications', { actor });
   },
+
+  /** GET /applications/:id/profile — profile of the gig pro behind one application to this client's task. */
+
+  getApplicantProfile: async (applicationId: number): Promise<ApplicantProfileResponse> =>
+    apiFetch<ApplicantProfileResponse>(`/applications/${applicationId}/profile`, { actor }),
 
   /** PATCH /applications/:id — accept, decline or shortlist an applicant. */
 

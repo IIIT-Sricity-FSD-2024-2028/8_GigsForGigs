@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useClient } from '../../../context/ClientContext';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, useToast } from '../../../components/common';
+import { ApplicantProfileModal } from '../../../components/client/modals/ApplicantProfileModal';
 
 export interface ReviewShortlistProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -12,6 +13,9 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
   const toast = useToast();
   const { applications, contracts, tasks, hireCandidate, rejectCandidate, deleteTask } = useClient();
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  // Application whose applicant profile is open (keyed by application, not candidate, so it's always the right person).
+  const [profileApplicationId, setProfileApplicationId] = useState<number | null>(null);
+  const closeProfile = useCallback(() => setProfileApplicationId(null), []);
   const taskId = params?.taskId;
 
   const filterTask = taskId ? tasks.find(t => String(t.task_id) === String(taskId)) : null;
@@ -198,7 +202,10 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                 {formatCurrency(a.rate)}
               </div>
 
-              <div style={{ display: 'flex', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <Button variant="ghost" size="sm" onClick={() => setProfileApplicationId(Number(a.application_id))} aria-label={`View profile of ${a.candidate_name}`}>
+                  View Profile
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => handleApprove(a.application_id)}>
                   Approve
                 </Button>
@@ -211,6 +218,7 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
         </div>
       )}
       {deleteDialog}
+      <ApplicantProfileModal applicationId={profileApplicationId} onClose={closeProfile} />
     </div>
   );
 };

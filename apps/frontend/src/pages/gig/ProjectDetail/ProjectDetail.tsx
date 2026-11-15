@@ -14,9 +14,11 @@ import type { TaskDeliverableDefinition } from '../../../types/gig';
 import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
 import { Button } from '../../../components/common';
+import { ClientDetailsCard } from '../../../components/gig/profile/ClientDetailsCard';
 
 export const ProjectDetail: React.FC = () => {
-  const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable } = useGig();
+  const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable, navigateToClientProfile } = useGig();
+  const [showClientDetails, setShowClientDetails] = useState(false);
   const [task, setTask] = useState<GigTask | null>(null);
   const [definitions, setDefinitions] = useState<TaskDeliverableDefinition[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -114,6 +116,14 @@ export const ProjectDetail: React.FC = () => {
           <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
             Task Ref ID: <strong>{task.taskId}</strong> • Client: <strong>{task.client?.clientName || 'Client'}</strong>
           </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-sm)' }}>
+            <Button size="sm" variant="outline" aria-expanded={showClientDetails} aria-controls="project-client-details" onClick={() => setShowClientDetails((open) => !open)}>
+              {showClientDetails ? 'Hide Client Details' : 'Client Details'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => navigateToClientProfile(String(task.taskId), 'project-detail')}>
+              View Client Profile
+            </Button>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
           <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-secondary)' }}>
@@ -124,6 +134,14 @@ export const ProjectDetail: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {showClientDetails && (
+        <ClientDetailsCard
+          id="project-client-details"
+          taskId={task.taskId}
+          onViewProfile={() => navigateToClientProfile(String(task.taskId), 'project-detail')}
+        />
+      )}
 
       {/* Specification Content */}
       <div className="admin-card task-scope-card" style={{ padding: 'var(--spacing-xl)' }}>

@@ -12,6 +12,7 @@ export * from './Input';
 export * from './Loader';
 export * from './Modal';
 export * from './PageHeader';
+export * from './ProfileDetails';
 export * from './ProgressBar';
 export * from './SearchBar';
 export * from './Select';

@@ -72,6 +72,13 @@ export async function listApplications(req: Request, res: Response): Promise<voi
   res.status(200).json(applications);
 }
 
+export async function getApplicantProfile(req: Request, res: Response): Promise<void> {
+  const applicationId = Number(req.params.applicationId);
+  if (!Number.isInteger(applicationId) || applicationId <= 0) throw badRequest("Invalid application id");
+  const result = await clientService.getApplicantProfile(applicationId, requireClientId(req));
+  res.status(200).json(result);
+}
+
 export async function reviewApplication(req: Request, res: Response): Promise<void> {
   const clientId = requireClientId(req);
   const applicationId = Number(req.params.applicationId);

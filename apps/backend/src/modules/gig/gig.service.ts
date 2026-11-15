@@ -3,6 +3,7 @@ import { initialReviewStatus } from "../../lib/textQuality.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/httpError.js";
 import { ACTIVE_PAYMENT_STATUSES, SERVICE_HIRE_SKILL, SETTLED_PAYMENT_STATUSES, isServiceHireTask } from "../../lib/taskRules.js";
 import { findServiceRequestForTask, startContract } from "../client/client.service.js";
+import { getPublicClientProfile, toApplicationContext } from "../profile/profile.service.js";
 import type {
   CreateApplicationDto,
   CreateReviewDto,
@@ -121,6 +122,40 @@ export function listMyApplications(gigProfileId: number) {
     include: { task: { include: { client: true } } },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/**
+ * The profile of the client who posted a task, for a professional linked to
+ * that task: they applied to it (any status, including a service-hire
+ * request) or were hired on it. Hires normally come from an application, but
+ * older rows can have an assignment alone, so both links are accepted. The
+ * client is resolved through the task itself, so it is always the task's
+ * real owner. No link = 404, so task ids can't be probed for clients.
+ */
+export async function getTaskClientProfile(gigProfileId: number, taskId: number) {
+  const key = { gigProfileId_taskId: { gigProfileId, taskId } };
+  const taskSelect = { select: { taskId: true, title: true, clientId: true } };
+  const [application, assignment] = await Promise.all([
+    prisma.application.findUnique({
+      where: key,
+      select: { applicationId: true, status: true, createdAt: true, task: taskSelect },
+    }),
+    prisma.gigManagerAssignment.findUnique({ where: key, select: { task: taskSelect } }),
+  ]);
+  const task = application?.task ?? assignment?.task;
+  if (!task) throw notFound("Task not found");
+
+  // Contact details are shared once this client has hired the professional on any task.
+  const hiredByClient = await prisma.gigManagerAssignment.count({
+    where: { gigProfileId, task: { clientId: task.clientId } },
+  });
+  return {
+    task: { taskId: task.taskId, title: task.title },
+    /** null for a hire that has no application record. */
+    application: application ? toApplicationContext(application) : null,
+    hiredOnTask: assignment !== null,
+    profile: await getPublicClientProfile(task.clientId, { includeContact: hiredByClient > 0 }),
+  };
 }
 
 /**

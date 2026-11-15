@@ -55,6 +55,7 @@ import { SubmissionSuccess } from './pages/gig/SubmissionSuccess/SubmissionSucce
 import { PostService } from './pages/gig/PostService/PostService';
 import { ServicePublished } from './pages/gig/ServicePublished/ServicePublished';
 import { ProjectDetail } from './pages/gig/ProjectDetail/ProjectDetail';
+import { ClientProfileView } from './pages/gig/ClientProfileView/ClientProfileView';
 import { GigProfile } from './pages/gig/GigProfile/GigProfile';
 import { GigProfileCompletion } from './pages/gig/GigProfileCompletion/GigProfileCompletion';
 import { MyServices } from './pages/gig/MyServices/MyServices';
@@ -289,6 +290,7 @@ function GigPortal() {
         <Route path="tasks/applied" element={<AppliedTasks />} />
         <Route path="tasks/:taskId/submit" element={<GigTaskRoute page="submit" />} />
         <Route path="tasks/:taskId/submitted" element={<GigTaskRoute page="submitted" />} />
+        <Route path="tasks/:taskId/client" element={<ClientProfileView />} />
         <Route path="tasks/:taskId" element={<GigTaskRoute page="detail" />} />
         <Route path="services" element={<MyServices />} />
         <Route path="services/new" element={<PostService />} />

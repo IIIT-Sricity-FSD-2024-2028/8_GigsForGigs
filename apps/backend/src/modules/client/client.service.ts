@@ -16,6 +16,7 @@ import { managerInviteToken } from "../auth/auth.service.js";
 import { platformFeeFor } from "../payment/payment.service.js";
 import { getPlatformSettings } from "../admin/platformSettings.js";
 import { initialReviewStatus } from "../../lib/textQuality.js";
+import { getPublicGigProfile, toApplicationContext } from "../profile/profile.service.js";
 import { parseDeliverableKey } from "./client.dto.js";
 import type {
   CreateClientReviewDto,
@@ -160,6 +161,30 @@ export function listApplications(clientId: number) {
     include: { task: true, gigProfile: { include: { user: true } } },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/**
+ * The profile of the professional behind one application. Keyed by the
+ * application (not the professional) so each applicant on a task maps to
+ * exactly their own profile, and scoped to the client's own tasks: another
+ * client's application id is a 404, indistinguishable from a missing one.
+ */
+export async function getApplicantProfile(applicationId: number, clientId: number) {
+  const application = await prisma.application.findFirst({
+    where: { applicationId, task: { clientId } },
+    select: {
+      applicationId: true,
+      gigProfileId: true,
+      status: true,
+      createdAt: true,
+      task: { select: { taskId: true, title: true } },
+    },
+  });
+  if (!application) throw notFound("Application not found");
+  return {
+    application: toApplicationContext(application),
+    profile: await getPublicGigProfile(application.gigProfileId),
+  };
 }
 
 /**
