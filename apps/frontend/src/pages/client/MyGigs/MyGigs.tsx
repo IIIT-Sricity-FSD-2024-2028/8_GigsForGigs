@@ -3,6 +3,7 @@ import { useClient, type Contract, type PaymentStatus } from '../../../context/C
 import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { HIRE_WORK_STATUS } from '../../../utils/taskStatus';
+import { activeCount } from '../../../utils/managerLoad';
 import { Button, ConfirmDialog, Input, Modal, PageHeader, Select, TextArea, useToast } from '../../../components/common';
 
 export interface MyGigsProps {
@@ -286,7 +287,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                   }} style={{ width: '100%' }}>
                   <option value="">Me (I'll manage this task)</option>
                   {managers.filter(m => m.kind === 'manager').map(m => (
-                    <option key={m.invite_id} value={m.invite_id}>{m.name || m.email}</option>
+                    <option key={m.invite_id} value={m.invite_id}>{m.name || m.email} ({activeCount(contracts, m.invite_id)} active)</option>
                   ))}
                 </Select>
                 <p style={{ fontSize: '12px', color: '#475764', margin: '4px 0 0' }}>

@@ -5,6 +5,7 @@ import { Loader } from '../../../components/common/Loader';
 import { ManagerProfileFields } from '../../manager/ManagerProfile/ManagerProfile';
 import type { UpdateManagerProfileDto } from '../../../types/manager';
 import { Button } from '../../../components/common';
+import { hiresFor } from '../../../utils/managerLoad';
 
 interface ManagerProfileViewProps {
   managerId: string;
@@ -12,7 +13,7 @@ interface ManagerProfileViewProps {
 }
 
 export const ManagerProfileView: React.FC<ManagerProfileViewProps> = ({ managerId, onBack }) => {
-  const { managers, updateManager, loading } = useClient();
+  const { managers, contracts, updateManager, loading } = useClient();
   const manager = managers.find((item) => item.invite_id === managerId);
 
   const onSave = async ({ name, email }: UpdateManagerProfileDto) => {
@@ -56,6 +57,31 @@ export const ManagerProfileView: React.FC<ManagerProfileViewProps> = ({ managerI
             allowPasswordChange={false}
             onSave={onSave}
           />
+        )}
+
+        {manager?.kind === 'manager' && (
+          <Card padding="lg">
+            <h2 style={{ color: '#0D568D', marginTop: 0 }}>Assigned tasks ({hiresFor(contracts, manager.invite_id).length})</h2>
+            {hiresFor(contracts, manager.invite_id).length === 0 ? (
+              <p style={{ color: '#475764', margin: 0 }}>No tasks assigned yet. Assign this manager from My Gigs once a hire is funded.</p>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {hiresFor(contracts, manager.invite_id).map((c) => (
+                  <li key={c.contract_id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '10px 12px', border: '1px solid #DCE3E8', borderRadius: '10px' }}>
+                    <span>
+                      <strong>{c.task_title}</strong>
+                      <br />
+                      <span style={{ color: '#475764', fontSize: '0.85rem' }}>{c.gig_pro_name}</span>
+                    </span>
+                    <span style={{ color: '#475764', fontSize: '0.85rem', textAlign: 'right' }}>
+                      {c.status === 'COMPLETED' ? 'Completed' : `${c.progress}% done`}
+                      {c.has_open_dispute && <><br /><strong style={{ color: '#B42318' }}>Dispute open</strong></>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
         )}
       </div>
     </main>
