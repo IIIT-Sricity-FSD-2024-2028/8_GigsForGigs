@@ -23,11 +23,11 @@ function matchesDeep(val: any, query: string): boolean {
 }
 
 // ponytail: exports scalar top-level fields of the filtered rows; per-column formatting if a report needs it.
-// A leading = + - @ is prefixed with ' so spreadsheets never run user-supplied text as a formula.
+// A cell starting (after any whitespace) with = + - @, or with tab/CR, is prefixed with ' so spreadsheets never run user-supplied text as a formula.
 function downloadCsv(rows: Record<string, any>[], name: string) {
   const keys = Object.keys(rows[0] ?? {}).filter((k) => typeof rows[0][k] !== 'object');
-  const cell = (v: any) => `"${String(v ?? '').replace(/^[=+\-@]/, "'$&").replace(/"/g, '""')}"`;
-  const csv = [keys.join(','), ...rows.map((r) => keys.map((k) => cell(r[k])).join(','))].join('\r\n');
+  const cell = (v: any) => `"${String(v ?? '').replace(/^(\s*[=+\-@]|[\t\r])/, "'$&").replace(/"/g, '""')}"`;
+  const csv = [keys.map(cell).join(','),...rows.map((r) => keys.map((k) => cell(r[k])).join(','))].join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
