@@ -43,20 +43,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [gigPros, setGigPros] = useState<any[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
   const [adminStaff, setAdminStaff] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any[]>([]);
   useEffect(() => {
     let isMounted = true;
     async function loadDashboardData() {
       try {
         setLoading(true);
         setError(null);
-        const [kpiRes, projRes, clientRes, proRes, mgrRes, staffRes] = await Promise.all([
+        const [kpiRes, projRes, clientRes, proRes, mgrRes, staffRes, auditRes] = await Promise.all([
           // No per-call fallbacks: a failed request shows an error, never a zero that reads as real data.
           adminApi.getKPIs(),
           adminApi.getProjects(),
           adminApi.getClients(),
           adminApi.getGigPros(),
           adminApi.getManagers(),
-          adminApi.getAdminStaff()
+          adminApi.getAdminStaff(),
+          adminApi.getAuditLogs()
         ]);
         if (isMounted) {
           setKpis(kpiRes);
@@ -65,6 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           setGigPros(Array.isArray(proRes) ? proRes : []);
           setManagers(Array.isArray(mgrRes) ? mgrRes : []);
           setAdminStaff(Array.isArray(staffRes) ? staffRes : []);
+          setActivity(Array.isArray(auditRes) ? auditRes.slice(0, 6) : []); // API returns newest first
         }
       } catch (err: any) {
         if (isMounted) {
@@ -321,6 +324,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             searchPlaceholder="Filter tasks..."
           />
         </div>
+      </div>
+
+      {/* Accountability: the latest audited admin actions */}
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+          <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+            Recent Admin Activity
+          </h3>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('admin-staff')}
+              style={{ background: 'none', border: 'none', color: 'var(--color-primary-blue)', fontSize: 'var(--font-size-xs)', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Full Audit Log <ArrowRightIcon size={13} color="var(--color-primary-blue)" style={{ marginLeft: '4px' }} />
+            </button>
+          )}
+        </div>
+        {activity.length === 0 ? (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', margin: 0 }}>No admin actions recorded yet.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {activity.map((a) => (
+              <li key={a.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: 'var(--font-size-sm)', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
+                <span>
+                  <strong>{a.action}</strong> on {a.target}
+                  <span style={{ color: 'var(--color-text-muted)' }}> by {a.adminEmail}</span>
+                </span>
+                <span style={{ color: 'var(--color-text-muted)', whiteSpace: 'nowrap', fontSize: 'var(--font-size-xs)' }}>
+                  {new Date(a.createdAt).toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
