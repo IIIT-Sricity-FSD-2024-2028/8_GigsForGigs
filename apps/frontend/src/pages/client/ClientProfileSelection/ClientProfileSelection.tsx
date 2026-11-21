@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useClient, type ManagerInvite } from '../../../context/ClientContext';
 import { InviteLinkModal } from '../../../components/client';
 import { Button, ConfirmDialog, Input, useToast } from '../../../components/common';
+import { activeCount, hiresFor } from '../../../utils/managerLoad';
 
 export interface ClientProfileSelectionProps {
   onNavigate: (viewId: string, params?: Record<string, string>) => void;
@@ -11,7 +12,7 @@ export interface ClientProfileSelectionProps {
 export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ onNavigate }) => {
   const toast = useToast();
   const { user } = useAuth();
-  const { managers, updateManager, deleteManager, revokeManagerInvite } = useClient();
+  const { managers, contracts, updateManager, deleteManager, revokeManagerInvite } = useClient();
 
   const [editingManager, setEditingManager] = useState<ManagerInvite | null>(null);
   const [editName, setEditName] = useState('');
@@ -166,6 +167,11 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
                   <span className="avatar-role" style={{ fontSize: '0.78rem', color: '#475764', fontWeight: 600, marginTop: '2px' }}>
                     {mgr.kind === 'manager' ? 'Manager' : 'Manager (Invite Pending)'}
                   </span>
+                  {mgr.kind === 'manager' && (
+                    <span style={{ fontSize: '0.75rem', color: '#0D568D', fontWeight: 700, marginTop: '4px' }}>
+                      {activeCount(contracts, mgr.invite_id)} active · {hiresFor(contracts, mgr.invite_id).length} total
+                    </span>
+                  )}
                 </div>
               </Button>
 

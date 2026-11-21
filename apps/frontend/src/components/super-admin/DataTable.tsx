@@ -22,6 +22,19 @@ function matchesDeep(val: any, query: string): boolean {
   return false;
 }
 
+// ponytail: exports scalar top-level fields of the filtered rows; per-column formatting if a report needs it.
+// A cell starting (after any whitespace) with = + - @, or with tab/CR, is prefixed with ' so spreadsheets never run user-supplied text as a formula.
+function downloadCsv(rows: Record<string, any>[], name: string) {
+  const keys = Object.keys(rows[0] ?? {}).filter((k) => typeof rows[0][k] !== 'object');
+  const cell = (v: any) => `"${String(v ?? '').replace(/^(\s*[=+\-@]|[\t\r])/, "'$&").replace(/"/g, '""')}"`;
+  const csv = [keys.map(cell).join(','),...rows.map((r) => keys.map((k) => cell(r[k])).join(','))].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export interface ColumnDef<T> {
   header: string;
   accessorKey?: keyof T;
@@ -137,6 +150,15 @@ export function DataTable<T extends Record<string, any>>({
               }}
             />
           </div>
+          <button
+            type="button"
+            className="admin-btn admin-btn-secondary"
+            disabled={filteredData.length === 0}
+            onClick={() => downloadCsv(filteredData, (title || 'export').toLowerCase().replace(/\W+/g, '-'))}
+            title="Download the filtered rows as CSV"
+          >
+            Export CSV
+          </button>
           {actions}
         </div>
       </div>
