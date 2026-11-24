@@ -4,11 +4,21 @@
  * Client organization profile page.
  * Displays and allows updating client company details, domain/industry,
  * and shows associated user account information and supervised manager counts.
+ * Migrated to Redux Toolkit (clientSlice).
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import clientApi, { type ClientProfileData } from '../../../services/api/client/clientApi';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchClientProfile,
+  updateClientProfile,
+} from '../../../store/client/clientSlice';
+import {
+  selectClientProfile,
+  selectClientProfileRequest,
+  selectClientProfileSave,
+} from '../../../store/client/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Card } from '../../../components/common/Card';
 import { Input } from '../../../components/common/Input';
@@ -20,35 +30,35 @@ export interface ClientProfileProps {
 }
 
 export const ClientProfile: React.FC<ClientProfileProps> = () => {
+  const dispatch = useAppDispatch();
   const { user, updateUserSession } = useAuth();
-  const [profile, setProfile] = useState<ClientProfileData | null>(null);
-  const [clientName, setClientName] = useState('');
-  const [domain, setDomain] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+
+  const profile = useAppSelector(selectClientProfile);
+  const profileRequest = useAppSelector(selectClientProfileRequest);
+  const profileSave = useAppSelector(selectClientProfileSave);
+
+  const [clientName, setClientName] = useState(() => profile?.clientName || '');
+  const [domain, setDomain] = useState(() => profile?.domain || '');
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const loadProfile = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await clientApi.getProfile();
-      setProfile(data);
-      setClientName(data.clientName || '');
-      setDomain(data.domain || '');
-      setMsg(null);
-    } catch (err) {
-      setMsg({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to load client profile.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    async function load() {
+      try {
+        const data = await dispatch(fetchClientProfile()).unwrap();
+        setClientName(data.clientName || '');
+        setDomain(data.domain || '');
+      } catch (err) {
+        setMsg({
+          type: 'error',
+          text: typeof err === 'string' ? err : 'Failed to load client profile.',
+        });
+      }
+    }
+
+    if (!profile) {
+      void load();
+    }
+  }, [dispatch, profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,13 +69,14 @@ export const ClientProfile: React.FC<ClientProfileProps> = () => {
     }
 
     try {
-      setIsSaving(true);
       setMsg(null);
-      const updated = await clientApi.updateProfile({
-        clientName: cleanName,
-        domain: domain.trim() || undefined,
-      });
-      setProfile(updated);
+      const updated = await dispatch(
+        updateClientProfile({
+          clientName: cleanName,
+          domain: domain.trim() || undefined,
+        }),
+      ).unwrap();
+
       setClientName(updated.clientName);
       setDomain(updated.domain || '');
       updateUserSession({ name: updated.clientName });
@@ -73,16 +84,16 @@ export const ClientProfile: React.FC<ClientProfileProps> = () => {
     } catch (err) {
       setMsg({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to update profile.',
+        text: typeof err === 'string' ? err : 'Failed to update profile.',
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  if (loading) {
+  if (profileRequest.status === 'loading' && !profile) {
     return <Loader label="Loading client profile..." />;
   }
+
+  const isSaving = profileSave.status === 'loading';
 
   const initials = (clientName || user?.name || 'Client')
     .split(' ')
