@@ -63,7 +63,7 @@ export const SubmitDeliverables: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [selectedTaskId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
