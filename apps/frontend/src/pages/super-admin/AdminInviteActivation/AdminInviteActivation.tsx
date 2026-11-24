@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { adminApi } from '../../../services/api/admin/adminApi';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { useToast } from '../../../components/super-admin/Toast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
@@ -15,7 +14,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
   initialEmail,
   onActivationSuccess
 }) => {
-  const { updateUserSession } = useAuth();
+  const { acceptAdminInvite } = useAuth();
   const toast = useToast();
 
   const [token, setToken] = useState(initialToken || '');
@@ -58,31 +57,15 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
 
     setLoading(true);
     try {
-      const res = await adminApi.acceptAdminInvitation(token, email, tempPassword.trim(), newPassword);
-      
-
-      const userSession = {
-        userId: res.user.userId,
-        role: 'SUPER_ADMIN' as const,
-        name: res.user.name,
-        email: res.user.email,
-        adminTier: res.user.adminTier,
-        permissions: res.user.permissions,
-        appliedTaskIds: []
-      };
-
-      // Completely clear out any old owner or staff sessions in this browser
-      sessionStorage.clear();
-      sessionStorage.setItem('g4g_admin_token', res.token);
-      sessionStorage.setItem('gfg_active_user', JSON.stringify(userSession));
-      updateUserSession(userSession);
+      const activated = await acceptAdminInvite(token, email, tempPassword.trim(), newPassword);
+      if (!activated) throw new Error('Could not verify token. Please check your credentials.');
 
       // Clean query params and pathname to root
       if (typeof window !== 'undefined') {
         window.history.replaceState({}, document.title, '/');
       }
 
-      toast.success('Admin Seat Activated!', `Welcome to the Super Admin vertical, ${userSession.name}`);
+      toast.success('Admin Seat Activated!', 'Your administrator account is ready.');
       if (onActivationSuccess) {
         onActivationSuccess();
       } else if (typeof window !== 'undefined') {
