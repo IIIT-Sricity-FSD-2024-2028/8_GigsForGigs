@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { AdminTier } from '../../store/auth/authSlice';
+import { canAccessAdminView } from '../../utils/adminAccess';
 import {
   DashboardIcon,
   AnalyticsIcon,
@@ -19,6 +21,7 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (viewId: string) => void;
+  userTier?: AdminTier;
 }
 
 interface NavItemDef {
@@ -29,27 +32,29 @@ interface NavItemDef {
   keywords: string[];
 }
 
-export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, onNavigate }) => {
+const COMMAND_PALETTE_ITEMS: NavItemDef[] = [
+  { id: 'dashboard', label: 'Dashboard & Platform KPIs', category: 'Analytics', icon: <DashboardIcon size={18} />, keywords: ['home', 'overview', 'kpi', 'revenue'] },
+  { id: 'analytics', label: 'Analytics & Financial Velocity', category: 'Analytics', icon: <AnalyticsIcon size={18} />, keywords: ['charts', 'take rate', 'rake', 'volume', 'gmv'] },
+  { id: 'clients', label: 'Client Organizations & KYC', category: 'Management', icon: <ClientIcon size={18} />, keywords: ['organizations', 'enterprise', 'buyers', 'kyc'] },
+  { id: 'gig-pros', label: 'Gig Professionals & Talent', category: 'Management', icon: <GigProIcon size={18} />, keywords: ['freelancers', 'contractors', 'skills', 'verified pro'] },
+  { id: 'managers', label: 'Manager Oversight & Hierarchy', category: 'Management', icon: <ManagerIcon size={18} />, keywords: ['supervisors', 'teams', 'seats'] },
+  { id: 'projects', label: 'Projects & Tasks Monitor', category: 'Operations', icon: <ProjectIcon size={18} />, keywords: ['contracts', 'deliverables', 'milestones', 'status'] },
+  { id: 'payments', label: 'Financial Ledger & Escrow Overrides', category: 'Financial', icon: <PaymentIcon size={18} />, keywords: ['escrow', 'transactions', 'payouts', 'funds'] },
+  { id: 'reviews', label: 'Reviews & Reputation Moderation', category: 'Operations', icon: <ReviewIcon size={18} />, keywords: ['feedback', 'stars', 'ratings', 'profanity'] },
+  { id: 'disputes', label: 'Arbitration Court & Dispute Docket', category: 'Operations', icon: <DisputeIcon size={18} />, keywords: ['claims', 'evidence', 'settlement', 'refund'] },
+  { id: 'admin-staff', label: 'Admin Staff & Delegation Tokens', category: 'Governance', icon: <UsersIcon size={18} />, keywords: ['invitations', 'roles', 'permissions', 'audit logs'] },
+  { id: 'profile', label: 'Admin Profile & 2FA Security', category: 'Governance', icon: <ShieldIcon size={18} />, keywords: ['password', 'totp', 'sessions', 'security'] },
+  { id: 'settings', label: 'Platform Settings & Commission Rake', category: 'Governance', icon: <SettingsIcon size={18} />, keywords: ['take rate', 'minimum budget', 'maintenance', 'taxonomy'] }
+];
+
+const CommandPaletteDialog: React.FC<Omit<CommandPaletteProps, 'isOpen'>> = ({ onClose, onNavigate, userTier }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const items: NavItemDef[] = [
-    { id: 'dashboard', label: 'Dashboard & Platform KPIs', category: 'Analytics', icon: <DashboardIcon size={18} />, keywords: ['home', 'overview', 'kpi', 'revenue'] },
-    { id: 'analytics', label: 'Analytics & Financial Velocity', category: 'Analytics', icon: <AnalyticsIcon size={18} />, keywords: ['charts', 'take rate', 'rake', 'volume', 'gmv'] },
-    { id: 'clients', label: 'Client Organizations & KYC', category: 'Management', icon: <ClientIcon size={18} />, keywords: ['organizations', 'enterprise', 'buyers', 'kyc'] },
-    { id: 'gig-pros', label: 'Gig Professionals & Talent', category: 'Management', icon: <GigProIcon size={18} />, keywords: ['freelancers', 'contractors', 'skills', 'verified pro'] },
-    { id: 'managers', label: 'Manager Oversight & Hierarchy', category: 'Management', icon: <ManagerIcon size={18} />, keywords: ['supervisors', 'teams', 'seats'] },
-    { id: 'projects', label: 'Projects & Tasks Monitor', category: 'Operations', icon: <ProjectIcon size={18} />, keywords: ['contracts', 'deliverables', 'milestones', 'status'] },
-    { id: 'payments', label: 'Financial Ledger & Escrow Overrides', category: 'Financial', icon: <PaymentIcon size={18} />, keywords: ['escrow', 'transactions', 'payouts', 'funds'] },
-    { id: 'reviews', label: 'Reviews & Reputation Moderation', category: 'Operations', icon: <ReviewIcon size={18} />, keywords: ['feedback', 'stars', 'ratings', 'profanity'] },
-    { id: 'disputes', label: 'Arbitration Court & Dispute Docket', category: 'Operations', icon: <DisputeIcon size={18} />, keywords: ['claims', 'evidence', 'settlement', 'refund'] },
-    { id: 'admin-staff', label: 'Admin Staff & Delegation Tokens', category: 'Governance', icon: <UsersIcon size={18} />, keywords: ['invitations', 'roles', 'permissions', 'audit logs'] },
-    { id: 'profile', label: 'Admin Profile & 2FA Security', category: 'Governance', icon: <ShieldIcon size={18} />, keywords: ['password', 'totp', 'sessions', 'security'] },
-    { id: 'settings', label: 'Platform Settings & Commission Rake', category: 'Governance', icon: <SettingsIcon size={18} />, keywords: ['take rate', 'minimum budget', 'maintenance', 'taxonomy'] }
-  ];
+  const allowedItems = COMMAND_PALETTE_ITEMS.filter((item) => canAccessAdminView(userTier, item.id));
 
-  const filtered = items.filter((item) => {
+  const filtered = allowedItems.filter((item) => {
     const q = query.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -59,29 +64,24 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
     );
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [isOpen]);
+  const activeIndex = filtered.length > 0 ? Math.min(selectedIndex, filtered.length - 1) : 0;
 
   useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'ArrowDown' && filtered.length > 0) {
       e.preventDefault();
       setSelectedIndex((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === 'ArrowUp' && filtered.length > 0) {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (filtered[selectedIndex]) {
-        onNavigate(filtered[selectedIndex].id);
+      if (filtered[activeIndex]) {
+        onNavigate(filtered[activeIndex].id);
         onClose();
       }
     } else if (e.key === 'Escape') {
@@ -89,8 +89,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       onClose();
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div
@@ -136,7 +134,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type a command, page, or search keyword..."
             style={{
@@ -172,7 +173,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
             </div>
           ) : (
             filtered.map((item, index) => {
-              const isSelected = index === selectedIndex;
+              const isSelected = index === activeIndex;
               return (
                 <div
                   key={item.id}
@@ -251,4 +252,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       </div>
     </div>
   );
+};
+
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, onNavigate, userTier }) => {
+  if (!isOpen) return null;
+  return <CommandPaletteDialog onClose={onClose} onNavigate={onNavigate} userTier={userTier} />;
 };

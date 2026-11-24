@@ -22,6 +22,7 @@ import {
   SearchIcon
 } from '../components/super-admin/Icons';
 import { CommandPalette } from '../components/super-admin/CommandPalette';
+import { canAccessAdminView } from '../utils/adminAccess';
 
 /** One sidebar link. */
 export interface NavItem {
@@ -56,16 +57,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { id: 'profile', label: 'Admin Profile & 2FA', icon: <UsersIcon size={18} /> },
   { id: 'settings', label: 'Platform Settings', icon: <SettingsIcon size={18} /> }
 ];
-
-/**
- * Pages each limited admin tier may open. Tiers not listed (OWNER, SUPER_ADMIN) see everything;
- * AUDITOR is handled separately (everything except settings).
- */
-const TIER_ALLOWED_VIEWS: Partial<Record<AdminTier, string[]>> = {
-  FINANCIAL_ADMIN: ['dashboard', 'analytics', 'payments', 'projects', 'settings', 'profile'],
-  SUPPORT_ADMIN: ['dashboard', 'disputes', 'reviews', 'clients', 'gig-pros', 'projects', 'profile'],
-  CONTENT_MODERATOR: ['reviews', 'gig-pros', 'clients', 'projects', 'profile'],
-};
 
 /** Label and colours of the tier pill shown in the sidebar and header. */
 const TIER_BADGES: Record<AdminTier, { text: string; bg: string; color: string }> = {
@@ -102,12 +93,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   // Which sidebar links this admin may see.
   const userTier: AdminTier = user?.adminTier || 'AUDITOR';
-  const filteredNavItems = ALL_NAV_ITEMS.filter((item) => {
-    // Auditors can inspect all data except modifying platform settings
-    if (userTier === 'AUDITOR') return item.id !== 'settings';
-    const allowed = TIER_ALLOWED_VIEWS[userTier];
-    return allowed ? allowed.includes(item.id) : true;
-  });
+  const filteredNavItems = ALL_NAV_ITEMS.filter((item) => canAccessAdminView(userTier, item.id));
 
   const badgeInfo = TIER_BADGES[userTier] || TIER_BADGES.OWNER;
 
@@ -286,6 +272,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '16px',
             padding: '0 var(--spacing-xl)',
             position: 'sticky',
             top: 0,
@@ -293,7 +280,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           }}
         >
           {/* Breadcrumb / Title */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: '1 1 auto' }}>
             <h1 style={{ margin: 0, fontSize: 'var(--font-size-lg)', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
               {pageTitle || 'Super Admin Platform Overview'}
             </h1>
@@ -305,7 +292,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           </div>
 
           {/* Header Action Controls */}
-          <div className="admin-shell__header-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+          <div className="admin-shell__header-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', flexShrink: 0 }}>
             {/* Active Tier Pill */}
             <div
               style={{
@@ -314,7 +301,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 backgroundColor: badgeInfo.bg,
                 color: badgeInfo.color,
                 padding: '4px 10px',
-                borderRadius: 'var(--radius-pill)'
+                borderRadius: 'var(--radius-pill)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               {badgeInfo.text}
@@ -378,6 +367,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onNavigate={onNavigate}
+        userTier={userTier}
       />
     </div>
   );

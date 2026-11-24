@@ -20,6 +20,7 @@ import { ToastProvider } from './components/super-admin/Toast';
 import { ToastProvider as AppToastProvider } from './components/common/Toast';
 import { Loader } from './components/common/Loader';
 import { AdminLayout } from './layouts/AdminLayout';
+import { canAccessAdminView, defaultAdminViewFor } from './utils/adminAccess';
 import { ClientLayout } from './layouts/ClientLayout/ClientLayout';
 import { ManagerLayout } from './layouts/ManagerLayout/ManagerLayout';
 import { GigLayout } from './layouts/GigLayout/GigLayout';
@@ -321,18 +322,27 @@ function GigTaskRoute({ page }: { page: 'detail' | 'submit' | 'submitted' }) {
 }
 
 function AdminPortal() {
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const segment = location.pathname.split('/')[2] || 'dashboard';
   const currentView = ({ 'gig-professionals': 'gig-pros', staff: 'admin-staff' } as Record<string, string>)[segment] || segment;
+  const viewToSlug = (view: string) => ({ 'gig-pros': 'gig-professionals', 'admin-staff': 'staff' } as Record<string, string>)[view] || view;
+  const defaultSlug = viewToSlug(defaultAdminViewFor(user?.adminTier));
+  const isKnownView = Boolean(ADMIN_VIEW_METADATA[currentView]);
+
+  if (user?.adminTier && isKnownView && !canAccessAdminView(user.adminTier, currentView)) {
+    return <Navigate to={`/admin/${defaultSlug}`} replace />;
+  }
+
   const metadata = ADMIN_VIEW_METADATA[currentView] || ADMIN_VIEW_METADATA.dashboard;
-  const go = (view: string) => navigate(`/admin/${({ 'gig-pros': 'gig-professionals', 'admin-staff': 'staff' } as Record<string, string>)[view] || view}`);
+  const go = (view: string) => navigate(`/admin/${viewToSlug(view)}`);
 
   return (
     <AdminLayout currentView={currentView} onNavigate={go} pageTitle={metadata.title} pageSubtitle={metadata.subtitle}>
       <Suspense fallback={<Loader label="Loading..." />}>
         <Routes>
-          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route index element={<Navigate to={defaultSlug} replace />} />
           <Route path="dashboard" element={<Dashboard onNavigate={go} />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="clients" element={<ClientManagement />} />
@@ -345,7 +355,7 @@ function AdminPortal() {
           <Route path="staff" element={<AdminManagement />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="settings" element={<PlatformSettings />} />
-          <Route path="*" element={<Navigate to="dashboard" replace />} />
+          <Route path="*" element={<Navigate to={defaultSlug} replace />} />
         </Routes>
       </Suspense>
     </AdminLayout>
