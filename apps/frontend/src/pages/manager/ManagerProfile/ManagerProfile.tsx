@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import type { UpdateManagerProfileDto } from '../../../types/manager';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { updateManagerProfile } from '../../../store/manager/managerSlice';
+import { selectManagerProfile, selectManagerProfileSave } from '../../../store/manager/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Card } from '../../../components/common/Card';
 import { Input } from '../../../components/common/Input';
@@ -87,8 +89,12 @@ export const ManagerProfileFields: React.FC<ManagerProfileFieldsProps> = ({
 };
 
 export const ManagerProfile: React.FC = () => {
-  const { profile, updateProfile, loading } = useManager();
-  const onSave = (values: UpdateManagerProfileDto) => updateProfile(values);
+  const dispatch = useAppDispatch();
+  const profile = useAppSelector(selectManagerProfile);
+  const loading = useAppSelector(selectManagerProfileSave).status === 'loading';
+  // Form drafts stay local in ManagerProfileFields; only the submitted values reach Redux.
+  const onSave = async (values: UpdateManagerProfileDto) =>
+    updateManagerProfile.fulfilled.match(await dispatch(updateManagerProfile(values)));
 
   return (
     <ManagerProfileFields

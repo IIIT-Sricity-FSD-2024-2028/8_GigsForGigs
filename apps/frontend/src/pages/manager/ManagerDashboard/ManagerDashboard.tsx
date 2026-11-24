@@ -1,8 +1,10 @@
-import React from 'react';
-import { useManager } from '../../../context/ManagerContext/ManagerContext';
+import React, { useEffect, useMemo } from 'react';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
 import { Button } from '../../../components/common/Button';
 import { safeHttpUrl } from '../../../utils/safeUrl';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchTaskDeliverables, reviewManagerDeliverable } from '../../../store/manager/managerSlice';
+import { selectManagerProfile, selectManagerTasks, selectPendingManagerDeliverables } from '../../../store/manager/selectors';
 
 interface ManagerDashboardProps {
   onNavigateToTask: (taskId: number) => void;
@@ -10,12 +12,26 @@ interface ManagerDashboardProps {
 }
 
 export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateToTask, onNavigateToQueue }) => {
-  const { profile, tasks, deliverables, reviewDeliverable } = useManager();
+  const dispatch = useAppDispatch();
+  const profile = useAppSelector(selectManagerProfile);
+  const tasks = useAppSelector(selectManagerTasks);
+  const pendingDeliverables = useAppSelector(selectPendingManagerDeliverables);
+  const deliverableRequests = useAppSelector(state => state.manager.deliverablesRequests);
+  const taskBusy = useAppSelector(state => state.manager.taskMutations);
 
   const managerName = profile?.user?.name || 'Manager';
-  const pendingTasks = tasks.filter(t => t.status === 'open');
-  const activeTasks = tasks.filter(t => t.status === 'in_progress');
-  const pendingDeliverables = deliverables.filter(d => d.status === 'submitted');
+  const pendingTasks = useMemo(() => tasks.filter(t => t.status === 'open'), [tasks]);
+  const activeTasks = useMemo(() => tasks.filter(t => t.status === 'in_progress'), [tasks]);
+
+  // Load submitted work for each in-progress task once, so the review queue spans all tasks.
+  useEffect(() => {
+    activeTasks.forEach(task => {
+      if (!deliverableRequests[task.taskId]) void dispatch(fetchTaskDeliverables(task.taskId));
+    });
+  }, [activeTasks, deliverableRequests, dispatch]);
+
+  const reviewDeliverable = (taskId: number, deliverableNo: number, status: 'approved' | 'revision_requested') =>
+    void dispatch(reviewManagerDeliverable({ taskId, deliverableNo, dto: { status } }));
 
   const formatBudget = (budget: number | string) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(budget));
@@ -246,10 +262,10 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ onNavigateTo
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-                  <Button size="sm" onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'approved' })}>
+                  <Button size="sm" disabled={!!taskBusy[del.taskId]} onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, 'approved')}>
                     Approve
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, { status: 'revision_requested' })}>
+                  <Button variant="outline" size="sm" disabled={!!taskBusy[del.taskId]} onClick={() => reviewDeliverable(del.taskId, del.deliverableNo, 'revision_requested')}>
                     Request revision
                   </Button>
                 </div>
