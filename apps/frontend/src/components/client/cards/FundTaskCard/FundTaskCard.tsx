@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import type { Contract } from '../../../../types/client';
-import { useAppDispatch } from '../../../../store/hooks';
-import { payClientTask } from '../../../../store/client/clientSlice';
-
-/** Format a number as Indian Rupees with no decimals, e.g. 15000 -> "₹15,000". */
-const inr = (val: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
+import { payEscrowTask } from '../../../../store/payment/paymentSlice';
+import { selectClientPayRequest } from '../../../../store/payment/selectors';
+import { fetchClientContracts, fetchClientTasks } from '../../../../store/client/clientSlice';
+import { formatCurrency } from '../../../../utils/format';
+import { extractErrorMessage } from '../../../../utils/adminAccess';
 
 /**
  * Simulated checkout: the client pays gig amount + platform fee into escrow after hiring.
@@ -13,22 +13,26 @@ const inr = (val: number) =>
  */
 export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }> = ({ contract, onPaid }) => {
   const dispatch = useAppDispatch();
+  const payRequest = useAppSelector(selectClientPayRequest);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
+  const isBusy = paying || payRequest.status === 'loading';
 
   const pay = async () => {
     setPaying(true);
     setError('');
     try {
       await dispatch(
-        payClientTask({
+        payEscrowTask({
           taskId: Number(contract.task_id),
           gigProfileId: Number(contract.gig_profile_id),
         }),
       ).unwrap();
+      void dispatch(fetchClientContracts());
+      void dispatch(fetchClientTasks());
       onPaid?.();
-    } catch (err) {
-      setError(typeof err === 'string' ? err : err instanceof Error ? err.message : 'Payment failed. Please try again.');
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, 'Payment failed. Please try again.'));
       setPaying(false);
     }
     // On success `paying` stays true: the card is replaced once the contract refreshes.
@@ -43,20 +47,20 @@ export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }>
         {contract.gig_pro_name} can start once you pay. The platform holds the money until you release it after approving all deliverables.
       </p>
       <div style={{ background: '#fff', borderRadius: '8px', padding: '12px', fontSize: '0.85rem', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gig amount</span><strong>{inr(contract.budget)}</strong></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Platform fee</span><strong>{inr(contract.platform_fee)}</strong></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gig amount</span><strong>{formatCurrency(contract.budget)}</strong></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Platform fee</span><strong>{formatCurrency(contract.platform_fee)}</strong></div>
         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #DCE3E8', marginTop: '6px', paddingTop: '6px', fontWeight: 700 }}>
-          <span>Total payable now</span><span style={{ color: '#0D568D' }}>{inr(contract.total_amount)}</span>
+          <span>Total payable now</span><span style={{ color: '#0D568D' }}>{formatCurrency(contract.total_amount)}</span>
         </div>
       </div>
       {error && <p role="alert" style={{ color: '#B42318', fontSize: '0.8rem', margin: '0 0 8px' }}>{error}</p>}
       <button
         type="button"
         onClick={pay}
-        disabled={paying}
-        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#B45F00', color: '#fff', fontWeight: 700, cursor: paying ? 'wait' : 'pointer' }}
+        disabled={isBusy}
+        style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#B45F00', color: '#fff', fontWeight: 700, cursor: isBusy ? 'wait' : 'pointer', opacity: isBusy ? 0.7 : 1 }}
       >
-        {paying ? 'Processing…' : `Pay ${inr(contract.total_amount)}`}
+        {isBusy ? 'Processing…' : `Pay ${formatCurrency(contract.total_amount)}`}
       </button>
     </article>
   );

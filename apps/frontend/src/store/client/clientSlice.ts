@@ -12,6 +12,7 @@
 
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { clientApi } from '../../services/api/client/clientApi';
+import { payEscrowTask, releaseEscrowPayment } from '../payment/paymentSlice';
 import type {
   ClientProfileData,
   UpdateClientProfileDto,
@@ -255,37 +256,6 @@ export const fetchClientContracts = createAsyncThunk<RawContract[], void, ThunkC
     }
   },
 );
-
-export const payClientTask = createAsyncThunk<
-  { taskId: number; gigProfileId: number },
-  { taskId: number; gigProfileId: number },
-  ThunkConfig
->('client/payTask', async ({ taskId, gigProfileId }, { dispatch, rejectWithValue }) => {
-  try {
-    await clientApi.payTask(taskId, gigProfileId);
-    void dispatch(fetchClientContracts());
-    void dispatch(fetchClientTasks());
-    return { taskId, gigProfileId };
-  } catch (error) {
-    return rejectWithValue(messageOf(error, 'Payment failed.'));
-  }
-});
-
-export const releaseClientPayment = createAsyncThunk<
-  { taskId: number; gigProfileId: number },
-  { taskId: number; gigProfileId: number },
-  ThunkConfig
->('client/releasePayment', async ({ taskId, gigProfileId }, { dispatch, rejectWithValue }) => {
-  try {
-    await clientApi.releasePayment(taskId, gigProfileId);
-    void dispatch(fetchClientContracts());
-    void dispatch(fetchClientTasks());
-    void dispatch(fetchTaskSubmittedDeliverables(taskId));
-    return { taskId, gigProfileId };
-  } catch (error) {
-    return rejectWithValue(messageOf(error, 'Payment release failed.'));
-  }
-});
 
 // ===========================================================================
 // DELIVERABLE DEFINITIONS & SUBMISSIONS THUNKS
@@ -755,7 +725,7 @@ const clientSlice = createSlice({
       .addCase(fetchClientContracts.rejected, (s, a) => {
         s.contractsRequest = { status: 'failed', error: a.payload ?? 'Failed to load client contracts.' };
       })
-      .addCase(payClientTask.fulfilled, (s, a) => {
+      .addCase(payEscrowTask.fulfilled, (s, a) => {
         const { taskId, gigProfileId } = a.payload;
         s.contracts = s.contracts.map((c) =>
           c.taskId === taskId && c.gigProfileId === gigProfileId
@@ -763,7 +733,7 @@ const clientSlice = createSlice({
             : c,
         );
       })
-      .addCase(releaseClientPayment.fulfilled, (s, a) => {
+      .addCase(releaseEscrowPayment.fulfilled, (s, a) => {
         const { taskId, gigProfileId } = a.payload;
         s.contracts = s.contracts.map((c) =>
           c.taskId === taskId && c.gigProfileId === gigProfileId
