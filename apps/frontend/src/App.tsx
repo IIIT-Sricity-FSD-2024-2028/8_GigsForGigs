@@ -13,7 +13,6 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
-import { ClientProvider } from './context/ClientContext/ClientContext';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { clearManagerTaskDetail, fetchAssignedTasks, fetchManagerProfile, fetchManagerTaskDetail, setSelectedManagerTask } from './store/manager/managerSlice';
 import { selectManagerTaskDetail, selectManagerTaskDetailRequest } from './store/manager/selectors';
@@ -359,7 +358,6 @@ function ProtectedRole({ role }: { role: 'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONA
   const location = useLocation();
   if (!isAuthenticated || !user) return <Navigate to="/login" replace state={{ from: location }} />;
   if (user.role !== role) return <HomeRedirect />;
-  if (role === 'CLIENT') return <ClientProvider><Outlet /></ClientProvider>;
   if (role === 'GIG_PROFESSIONAL') return <GigProvider><Outlet /></GigProvider>;
   return <Outlet />;
 }

@@ -1,5 +1,19 @@
-import React from 'react';
-import { useClient } from '../../../context/ClientContext';
+import React, { useEffect, useMemo } from 'react';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchClientManagers,
+  fetchManagerInvitations,
+  fetchClientContracts,
+  fetchManagerProfile,
+  updateManager as updateManagerThunk,
+} from '../../../store/client/clientSlice';
+import {
+  selectUnifiedManagerRoster,
+  selectClientContracts,
+  selectClientManagersRequest,
+  selectManagerProfileRequest,
+} from '../../../store/client/selectors';
+import type { Contract } from '../../../types/client';
 import { Card } from '../../../components/common/Card';
 import { Loader } from '../../../components/common/Loader';
 import { ManagerProfileFields } from '../../manager/ManagerProfile/ManagerProfile';
@@ -13,13 +27,59 @@ interface ManagerProfileViewProps {
 }
 
 export const ManagerProfileView: React.FC<ManagerProfileViewProps> = ({ managerId, onBack }) => {
-  const { managers, contracts, updateManager, loading } = useClient();
+  const dispatch = useAppDispatch();
+  const numericManagerId = Number(managerId);
+
+  const managers = useAppSelector(selectUnifiedManagerRoster);
+  const rawContracts = useAppSelector(selectClientContracts);
+  const managersRequest = useAppSelector(selectClientManagersRequest);
+  const profileRequest = useAppSelector((state) => selectManagerProfileRequest(state, numericManagerId));
+
+  useEffect(() => {
+    if (numericManagerId) {
+      dispatch(fetchManagerProfile(numericManagerId));
+    }
+    dispatch(fetchClientManagers());
+    dispatch(fetchManagerInvitations());
+    dispatch(fetchClientContracts());
+  }, [dispatch, numericManagerId]);
+
   const manager = managers.find((item) => item.invite_id === managerId);
+
+  const contracts: Contract[] = useMemo(() => {
+    return rawContracts.map((c) => ({
+      contract_id: `${c.taskId}-${c.gigProfileId}`,
+      task_id: String(c.taskId),
+      gig_profile_id: String(c.gigProfileId),
+      task_title: c.taskTitle,
+      gig_pro_name: c.gigProfessionalName,
+      status: (c.status === 'completed' ? 'COMPLETED' : 'IN_PROGRESS') as 'IN_PROGRESS' | 'COMPLETED',
+      progress: c.progress,
+      budget: Number(c.budget),
+      payment_id: c.paymentId,
+      platform_fee: c.platformFee,
+      total_amount: c.totalAmount,
+      payment_status: c.paymentStatus,
+      manager_id: c.managerId,
+      submission_count: c.submissionCount ?? 0,
+      work_status: c.workStatus,
+      has_open_dispute: c.hasOpenDispute ?? false,
+      createdAt: c.createdAt,
+      reviews: c.reviews || [],
+    }));
+  }, [rawContracts]);
+
+  const loading = managersRequest.status === 'loading' || profileRequest.status === 'loading';
 
   const onSave = async ({ name, email }: UpdateManagerProfileDto) => {
     if (!manager || manager.kind !== 'manager' || !name || !email) return false;
     try {
-      await updateManager(manager.invite_id, name, email);
+      await dispatch(
+        updateManagerThunk({
+          managerId: Number(manager.invite_id),
+          dto: { name, email },
+        }),
+      ).unwrap();
       return true;
     } catch {
       return false;

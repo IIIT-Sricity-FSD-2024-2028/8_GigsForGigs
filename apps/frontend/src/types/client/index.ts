@@ -317,3 +317,101 @@ export interface ReviewRecord {
   createdAt: string;
   updatedAt?: string;
 }
+
+// ===========================================================================
+// CLIENT DOMAIN / UI VIEW MODELS
+// ===========================================================================
+
+export type PaymentStatus = RawPaymentStatus;
+export type ContractReview = RawContractReview;
+
+/** A task (job) the client has posted. */
+export interface Task {
+  task_id: string;
+  title: string;
+  description: string;
+  budget: number;
+  status: 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;
+  dueDate?: string | null;
+  skills?: string[];
+  category?: string;
+  duration?: string;
+}
+
+/** A manager row: either a pending invite or an active manager. */
+export interface ManagerInvite {
+  invite_id: string;
+  client_id: string;
+  name: string;
+  email: string;
+  clientName?: string;
+  status: 'PENDING' | 'ACCEPTED';
+  createdAt: string;
+  invite_link?: string;
+  kind: 'invite' | 'manager';
+}
+
+/** A service a gig pro offers on the marketplace. */
+export interface Service {
+  service_id: string;
+  title: string;
+  price: number;
+  description: string;
+  skills: string[];
+  category?: string;
+  rating?: number;
+  user?: { name: string; email: string };
+  gig_profile_id: string;
+}
+
+/** One hired gig pro on a task with progress and payment info. */
+export interface Contract {
+  contract_id: string;
+  task_id: string;
+  gig_profile_id: string;
+  task_title: string;
+  gig_pro_name: string;
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'SCHEDULED';
+  progress: number;
+  budget: number;
+  payment_id: number | null;
+  platform_fee: number;
+  total_amount: number;
+  payment_status: PaymentStatus | null;
+  manager_id?: number | null;
+  submission_count: number;
+  work_status?: HireWorkStatus;
+  has_open_dispute: boolean;
+  createdAt: string;
+  reviews?: ContractReview[];
+}
+
+/** One piece of work a gig pro submitted on a task. */
+export interface Deliverable {
+  task_id: string;
+  deliverable_no: number;
+  content: string;
+  status: 'PENDING' | 'APPROVED' | 'REVISION_REQUESTED' | 'CLOSED';
+  createdAt: string;
+  feedback?: string | null;
+}
+
+/** A gig pro's application to one of the client's tasks. */
+export interface Application {
+  application_id: string;
+  task_id: string;
+  task_title: string;
+  gig_profile_id: string;
+  candidate_name: string;
+  candidate_role: string;
+  status: 'PENDING' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
+  rating?: number;
+  review_average: number | null;
+  review_count: number;
+  hourlyRate?: number;
+  rate: number;
+  createdAt: string;
+  is_service_request: boolean;
+}
+

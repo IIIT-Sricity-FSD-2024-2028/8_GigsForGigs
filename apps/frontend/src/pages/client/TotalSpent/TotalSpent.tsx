@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { useClient, type PaymentStatus } from '../../../context/ClientContext';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { PaymentStatus } from '../../../types/client';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchClientContracts, payClientTask } from '../../../store/client/clientSlice';
+import {
+  selectClientContracts,
+  selectClientContractsRequest,
+} from '../../../store/client/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Table } from '../../../components/common/Table';
 import { Loader } from '../../../components/common/Loader';
@@ -36,7 +42,18 @@ const LEDGER_STATUS: Record<PaymentStatus, LedgerStatus> = {
 
 export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { contracts, loading, payTask } = useClient();
+  const dispatch = useAppDispatch();
+  const rawContracts = useAppSelector(selectClientContracts);
+  const contractsRequest = useAppSelector(selectClientContractsRequest);
+
+  useEffect(() => {
+    if (contractsRequest.status === 'idle') {
+      dispatch(fetchClientContracts());
+    }
+  }, [dispatch, contractsRequest.status]);
+
+  const loading = contractsRequest.status === 'loading';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [payingPayment, setPayingPayment] = useState<LedgerRow | null>(null);
@@ -72,20 +89,22 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   };
 
   // Amounts and statuses come from the stored payment row on each contract.
-  const clientPayments: LedgerRow[] = contracts
-    .filter((c) => c.payment_status)
-    .map((c) => ({
-      paymentId: `PAY-${c.payment_id}`,
-      taskId: c.task_id,
-      gigProfileId: c.gig_profile_id,
-      taskTitle: c.task_title,
-      gigProName: c.gig_pro_name,
-      gigAmount: c.budget,
-      platformFee: c.platform_fee,
-      totalAmount: c.total_amount,
-      status: LEDGER_STATUS[c.payment_status!],
-      createdAt: c.createdAt,
-    }));
+  const clientPayments: LedgerRow[] = useMemo(() => {
+    return rawContracts
+      .filter((c) => c.paymentStatus)
+      .map((c) => ({
+        paymentId: `PAY-${c.paymentId}`,
+        taskId: String(c.taskId),
+        gigProfileId: String(c.gigProfileId),
+        taskTitle: c.taskTitle,
+        gigProName: c.gigProfessionalName,
+        gigAmount: Number(c.budget),
+        platformFee: c.platformFee,
+        totalAmount: c.totalAmount,
+        status: LEDGER_STATUS[c.paymentStatus!],
+        createdAt: c.createdAt,
+      }));
+  }, [rawContracts]);
 
   // 1. Total Spent: Sum of the costs of all completed projects using existing project cost fields (budget) from actual DB records
   // What the client actually paid (gig amount + platform fee) on released payments.
@@ -99,7 +118,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     .reduce((sum, p) => sum + p.totalAmount, 0);
 
   // Active task contracts count (excluding completed)
-  const activeContractsCount = contracts.filter((c) => c.status !== 'COMPLETED').length;
+  const activeContractsCount = rawContracts.filter((c) => c.status !== 'completed').length;
 
   // Filtered Payments based on status dropdown and keyword search
   const filteredPayments = clientPayments.filter((p) => {
@@ -126,11 +145,16 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
 
   const handlePayNow = async (payment: LedgerRow) => {
     try {
-      await payTask(payment.taskId, payment.gigProfileId);
+      await dispatch(
+        payClientTask({
+          taskId: Number(payment.taskId),
+          gigProfileId: Number(payment.gigProfileId),
+        }),
+      ).unwrap();
       setPayingPayment(null);
       toast.success(`Payment successful! ${formatCurrency(payment.totalAmount)} has been securely locked in escrow until work approval.`);
     } catch (err) {
-      toast.error(err instanceof Error && err.message ? err.message : 'Failed to process payment. Please try again.');
+      toast.error(typeof err === 'string' ? err : 'Failed to process payment. Please try again.');
     }
   };
 

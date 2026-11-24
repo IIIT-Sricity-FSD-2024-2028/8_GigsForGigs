@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { useClient } from '../../../context/ClientContext';
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { createManagerInvitation, fetchClientManagers, fetchManagerInvitations } from '../../../store/client/clientSlice';
+import { selectClientManagersRequest, selectUnifiedManagerRoster } from '../../../store/client/selectors';
 import { InviteLinkModal } from '../../../components/client';
 import { Button, Input, useToast } from '../../../components/common';
 
@@ -9,9 +11,18 @@ export interface AddManagerFlowProps {
 
 export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { inviteManager, managers } = useClient();
+  const dispatch = useAppDispatch();
+  const managers = useAppSelector(selectUnifiedManagerRoster);
+  const managersRequest = useAppSelector(selectClientManagersRequest);
   const [email, setEmail] = useState('');
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (managersRequest.status === 'idle') {
+      dispatch(fetchClientManagers());
+      dispatch(fetchManagerInvitations());
+    }
+  }, [dispatch, managersRequest.status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,16 +39,16 @@ export const AddManagerFlow: React.FC<AddManagerFlowProps> = ({ onNavigate }) =>
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
         .join(' ') || 'Manager';
-      const link = await inviteManager(name, email);
-      if (link) {
-        setInviteLink(link);
+      const invite = await dispatch(createManagerInvitation({ name, email })).unwrap();
+      if (invite?.inviteLink) {
+        setInviteLink(invite.inviteLink);
       } else {
         toast.success('Invite created. Open your manager list to copy the activation link.');
         onNavigate('profile-selection');
       }
     } catch (err) {
       console.error('Invite manager failed:', err);
-      toast.error(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
+      toast.error(typeof err === 'string' ? err : 'Failed to create the manager invite. Please try again.');
     }
   };
 

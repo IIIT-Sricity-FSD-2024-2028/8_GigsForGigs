@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import type { Contract, ContractReview } from '../../../context/ClientContext';
+import type { Contract, ContractReview } from '../../../types/client';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   fetchClientContracts,

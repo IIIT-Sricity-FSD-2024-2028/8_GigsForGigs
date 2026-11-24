@@ -7,7 +7,6 @@ import {
 } from '../../../store/client/clientSlice';
 import {
   selectClientTasks,
-  selectClientTasksRequest,
 } from '../../../store/client/selectors';
 import { Button, Input, Select, TextArea, useToast } from '../../../components/common';
 
@@ -32,17 +31,17 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
   const toast = useToast();
   const dispatch = useAppDispatch();
   const tasks = useAppSelector(selectClientTasks);
-  const tasksRequest = useAppSelector(selectClientTasksRequest);
 
   const editId = params?.editId;
+  const existingTask = tasks.find((t) => String(t.taskId) === String(editId));
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [budget, setBudget] = useState<number | ''>('');
-  const [category, setCategory] = useState('dev');
-  const [duration, setDuration] = useState('1-3-months');
+  const [title, setTitle] = useState(() => existingTask?.title || '');
+  const [description, setDescription] = useState(() => existingTask?.description || '');
+  const [budget, setBudget] = useState<number | ''>(() => (existingTask?.budget ? Number(existingTask.budget) : ''));
+  const [category, setCategory] = useState(() => existingTask?.category || 'dev');
+  const [duration, setDuration] = useState(() => existingTask?.duration || '1-3-months');
   const [pricing, setPricing] = useState('fixed');
-  const [skills, setSkills] = useState('');
+  const [skills, setSkills] = useState(() => (Array.isArray(existingTask?.skills) ? existingTask.skills.join(', ') : ''));
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -51,24 +50,25 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (editId && tasksRequest.status === 'idle') {
-      dispatch(fetchClientTasks());
-    }
-  }, [dispatch, editId, tasksRequest.status]);
-
-  useEffect(() => {
-    if (editId) {
-      const task = tasks.find((t) => String(t.taskId) === String(editId));
-      if (task) {
-        setTitle(task.title || '');
-        setDescription(task.description || '');
-        setBudget(task.budget ? Number(task.budget) : '');
-        setCategory(task.category || 'dev');
-        setDuration(task.duration || '1-3-months');
-        setSkills(Array.isArray(task.skills) ? task.skills.join(', ') : '');
+    async function loadTaskForEdit() {
+      if (!editId) return;
+      try {
+        const loadedTasks = await dispatch(fetchClientTasks()).unwrap();
+        const task = loadedTasks.find((t) => String(t.taskId) === String(editId));
+        if (task) {
+          setTitle(task.title || '');
+          setDescription(task.description || '');
+          setBudget(task.budget ? Number(task.budget) : '');
+          setCategory(task.category || 'dev');
+          setDuration(task.duration || '1-3-months');
+          setSkills(Array.isArray(task.skills) ? task.skills.join(', ') : '');
+        }
+      } catch {
+        // ignore
       }
     }
-  }, [editId, tasks]);
+    loadTaskForEdit();
+  }, [dispatch, editId]);
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;

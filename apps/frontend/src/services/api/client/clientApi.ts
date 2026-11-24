@@ -42,6 +42,14 @@ import type {
   CreateClientReviewDto,
   ReviewRecord,
   RawPaymentStatus,
+  Contract,
+  ContractReview,
+  PaymentStatus,
+  ManagerInvite,
+  Service,
+  Task,
+  Application,
+  Deliverable,
 } from '../../../types/client';
 
 // Re-export all client types so existing component/slice imports remain fully backward-compatible
@@ -75,6 +83,14 @@ export type {
   CreateClientReviewDto,
   ReviewRecord,
   RawPaymentStatus,
+  Contract,
+  ContractReview,
+  PaymentStatus,
+  ManagerInvite,
+  Service,
+  Task,
+  Application,
+  Deliverable,
 };
 
 // Every call here is made with the client's JWT

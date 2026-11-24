@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Contract } from '../../../../context/ClientContext';
+import type { Contract } from '../../../../types/client';
 import { useAppDispatch } from '../../../../store/hooks';
 import { payClientTask } from '../../../../store/client/clientSlice';
 
