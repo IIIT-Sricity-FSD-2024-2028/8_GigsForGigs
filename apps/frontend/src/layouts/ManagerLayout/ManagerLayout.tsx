@@ -4,8 +4,9 @@
  * client organisation this manager works for.
  */
 import React from 'react';
-import { useAuth } from '../../context/AuthContext/AuthContext';
-import { useManager } from '../../context/ManagerContext/ManagerContext';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { logoutManager } from '../../store/auth/authSlice';
+import { selectManagerProfile } from '../../store/manager/selectors';
 import '../../pages/client/client.css';
 import { DashboardLayout, type DashboardNavItem } from '../common/DashboardLayout/DashboardLayout';
 import { DashboardIcon, ProjectIcon, UsersIcon } from '../../components/super-admin/Icons';
@@ -25,8 +26,9 @@ const navItems: DashboardNavItem[] = [
 ];
 
 export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTab, setActiveTab }) => {
-  const { user, logoutManager } = useAuth();
-  const { profile } = useManager();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const profile = useAppSelector(selectManagerProfile);
   const name = user?.name || profile?.user?.name || 'Manager';
 
   return (
@@ -37,7 +39,7 @@ export const ManagerLayout: React.FC<ManagerLayoutProps> = ({ children, activeTa
       activeView={activeTab}
       navItems={navItems}
       onNavigate={(view) => setActiveTab(view as ManagerLayoutProps['activeTab'])}
-      onLogout={logoutManager}
+      onLogout={() => { void dispatch(logoutManager()); }}
       onBrandClick={() => setActiveTab('dashboard')}
       headerTitle="Manager Workspace"
       sidebarContent={

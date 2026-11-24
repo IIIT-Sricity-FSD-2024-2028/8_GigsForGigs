@@ -1,7 +1,8 @@
 import React from 'react';
-import { useManager } from '../../../context/ManagerContext/ManagerContext';
 import { Button, PageHeader } from '../../../components/common';
 import { Loader } from '../../../components/common/Loader';
+import { useAppSelector } from '../../../store/hooks';
+import { selectActiveManagerTasks, selectCompletedManagerTasks, selectManagerTasksRequest } from '../../../store/manager/selectors';
 
 interface ManagerTasksProps {
   onSelectTask: (taskId: number) => void;
@@ -13,13 +14,20 @@ const inr = (val: number | string) =>
 
 /** Same table as the client's Active Task page. Managers manage deliverables only: no payment or manager controls. */
 export const ManagerTasks: React.FC<ManagerTasksProps> = ({ onSelectTask, showCompleted = false }) => {
-  const { tasks, loading } = useManager();
-  const visibleTasks = tasks.filter(task => (task.status === 'completed') === showCompleted);
+  const visibleTasks = useAppSelector(showCompleted ? selectCompletedManagerTasks : selectActiveManagerTasks);
+  const request = useAppSelector(selectManagerTasksRequest);
+  // Show the loader only on first load; background refreshes keep the last good list on screen.
+  const loading = request.status === 'idle' || (request.status === 'loading' && visibleTasks.length === 0);
   const title = showCompleted ? 'Completed Projects' : 'Active Task';
 
   return (
     <div style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       <PageHeader title={title} description={showCompleted ? 'Completed tasks will appear here.' : 'Track ongoing work, define deliverables, and review submissions.'} />
+      {request.status === 'failed' && (
+        <div role="alert" style={{ backgroundColor: '#FDE8E8', color: '#9B1C1C', padding: '12px 16px', borderRadius: '8px', marginBottom: '12px' }}>
+          {request.error}
+        </div>
+      )}
       {loading ? (
         <Loader label={`Loading ${title.toLowerCase()}...`} />
       ) : (
