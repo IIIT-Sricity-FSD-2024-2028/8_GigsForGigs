@@ -6,11 +6,11 @@
  * and direct action buttons for detailed inspection or deliverable uploads.
  */
 
-import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { GigTask } from '../../../types/gig';
+import React, { useEffect } from 'react';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchActiveTasks } from '../../../store/gig/gigSlice';
+import { selectActiveTasks } from '../../../store/gig/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
@@ -20,39 +20,14 @@ import { HIRE_WORK_STATUS } from '../../../utils/taskStatus';
 import { WithdrawTaskButton } from '../../../components/gig/modals/WithdrawTaskButton';
 
 export const ActiveTasks: React.FC = () => {
-  const { navigateToTaskDetail, navigateToSubmitDeliverable, refreshTrigger, triggerRefresh } = useGig();
-  const [activeTasks, setActiveTasks] = useState<GigTask[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { navigateToTaskDetail, navigateToSubmitDeliverable } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const { data: activeTasks, loaded, error } = useAppSelector(selectActiveTasks);
   const toast = useToast();
+  useEffect(() => { void dispatch(fetchActiveTasks()); }, [dispatch]);
   useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (mounted) setError(null);
-      try {
-        const tasks = await gigApi.getActiveTasks();
-        if (mounted) {
-          setActiveTasks(tasks);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load active tasks.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [refreshTrigger]);
-
+  const loading = !loaded && !error;
   if (loading) {
     return <Loader label="Loading active tasks..." />;
   }
@@ -147,7 +122,7 @@ export const ActiveTasks: React.FC = () => {
                     </span>
                   )}
                   {!hasSubmissions && (
-                    <WithdrawTaskButton taskId={task.taskId} title={task.title} onWithdrawn={triggerRefresh} style={{ width: '100%' }} />
+                    <WithdrawTaskButton taskId={task.taskId} title={task.title} style={{ width: '100%' }} />
                   )}
                 </div>
               </div>

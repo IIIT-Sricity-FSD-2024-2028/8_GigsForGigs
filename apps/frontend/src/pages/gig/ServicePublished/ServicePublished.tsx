@@ -5,11 +5,11 @@
  */
 
 import React from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
 import { Button } from '../../../components/common';
 
 export const ServicePublished: React.FC = () => {
-  const { setActiveTab } = useGig();
+  const { setActiveTab } = useGigNavigation();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>

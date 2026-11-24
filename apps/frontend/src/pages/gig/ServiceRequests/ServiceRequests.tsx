@@ -8,66 +8,44 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { GigService, PendingRequest } from '../../../types/gig';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchServiceRequests, fetchServices, rejectionMessage, respondToRequest } from '../../../store/gig/gigSlice';
+import { selectGigServices, selectServiceRequests } from '../../../store/gig/selectors';
 import { Loader } from '../../../components/common/Loader';
 import { Button, useToast } from '../../../components/common';
 
 export const ServiceRequests: React.FC = () => {
   const { serviceId } = useParams<{ serviceId: string }>();
-  const { refreshTrigger, triggerRefresh, setActiveTab } = useGig();
-  const [service, setService] = useState<GigService | null>(null);
-  const [requests, setRequests] = useState<PendingRequest[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const id = serviceId && Number.isSafeInteger(Number(serviceId)) ? Number(serviceId) : null;
+  const { setActiveTab } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const servicesRes = useAppSelector(selectGigServices);
+  const requestsRes = useAppSelector((state) => selectServiceRequests(state, id));
+  const service = servicesRes.data.find((s) => s.serviceId === id) ?? null;
+  const requests = requestsRes?.data ?? [];
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [respondError, setRespondError] = useState<string | null>(null);
+  const error = respondError ?? requestsRes?.error ?? servicesRes.error;
+  const loading = !error && !(servicesRes.loaded && requestsRes?.loaded);
   const toast = useToast();
   useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (!serviceId) return;
-      if (mounted) setError(null);
-      try {
-        const [services, res] = await Promise.all([
-          gigApi.getServices(),
-          gigApi.getServiceRequests(Number(serviceId))
-        ]);
-        if (mounted) {
-          setService(services.find((s) => s.serviceId === Number(serviceId)) || null);
-          setRequests(res);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load requests.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [refreshTrigger, serviceId]);
+    void dispatch(fetchServices());
+    if (id !== null) void dispatch(fetchServiceRequests(id));
+  }, [dispatch, id]);
 
   const handleRespond = async (applicationId: number, action: 'accepted' | 'declined') => {
     setProcessingId(applicationId);
-    setError(null);
+    setRespondError(null);
     try {
-      await gigApi.respondToRequest(applicationId, action);
-      triggerRefresh();
+      await dispatch(respondToRequest({ applicationId, action, serviceId: id ?? undefined })).unwrap();
       if (action === 'accepted') {
         setActiveTab('active-tasks');
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed responding to request.');
+      setRespondError(rejectionMessage(err, 'Failed responding to request.'));
     } finally {
       setProcessingId(null);
     }

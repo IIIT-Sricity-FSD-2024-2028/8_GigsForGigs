@@ -1,31 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchEarnings } from '../../../store/gig/gigSlice';
+import { selectGigEarnings } from '../../../store/gig/selectors';
 import type { EarningsSummary } from '../../../types/gig';
 import { Loader } from '../../../components/common/Loader';
 import { Button, useToast } from '../../../components/common';
 
+const NO_EARNINGS: EarningsSummary = { totalEarnings: 0, completedTasks: 0, payments: [] };
+
 export const TotalEarnings: React.FC = () => {
   const toast = useToast();
-  const [earnings, setEarnings] = useState<EarningsSummary>({ totalEarnings: 0, completedTasks: 0, payments: [] });
-  const [loading, setLoading] = useState<boolean>(true);
+  const dispatch = useAppDispatch();
+  const earningsRes = useAppSelector(selectGigEarnings);
+  const earnings = earningsRes.data ?? NO_EARNINGS;
+  const loading = !earningsRes.loaded && !earningsRes.error;
   const [withdrawing, setWithdrawing] = useState<boolean>(false);
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        const data = await gigApi.getEarnings();
-        if (mounted) setEarnings(data);
-      } catch (err) {
-        console.error(err instanceof ApiError ? err.message : 'Failed to load earnings.');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => { mounted = false; };
-  }, []);
+  useEffect(() => { void dispatch(fetchEarnings()); }, [dispatch]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {

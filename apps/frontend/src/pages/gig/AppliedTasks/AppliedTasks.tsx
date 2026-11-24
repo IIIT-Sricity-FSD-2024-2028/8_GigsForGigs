@@ -7,10 +7,11 @@
  * a Client Details card, and links to the full profile of the posting client.
  */
 import React, { useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchMyApplications, rejectionMessage, withdrawApplication } from '../../../store/gig/gigSlice';
+import { selectMyApplications } from '../../../store/gig/selectors';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
 import type { PendingRequest } from '../../../types/gig';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
@@ -56,27 +57,24 @@ const AppliedTaskDetails: React.FC<{ application: PendingRequest; onViewClientPr
 };
 
 export const AppliedTasks: React.FC = () => {
-  const { refreshTrigger, triggerRefresh, navigateToClientProfile } = useGig();
-  const [apps, setApps] = useState<PendingRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { navigateToClientProfile } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const { data: applications, loaded, error } = useAppSelector(selectMyApplications);
+  const apps = applications.filter((a) => a.status !== 'accepted'); // accepted ones live in Active Task now
+  const loading = !loaded && !error;
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const toast = useToast();
   const { user, updateUserSession } = useAuth();
 
-  useEffect(() => {
-    gigApi.getMyApplications()
-      .then((all) => setApps(all.filter((a) => a.status !== 'accepted'))) // accepted ones live in Active Task now
-      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Failed to load applications.'))
-      .finally(() => setLoading(false));
-  }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void dispatch(fetchMyApplications()); }, [dispatch]);
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const withdraw = async (id: number, taskId: number) => {
     try {
-      await gigApi.withdrawApplication(id);
+      await dispatch(withdrawApplication(id)).unwrap();
       updateUserSession({ appliedTaskIds: (user?.appliedTaskIds || []).filter((t) => t !== String(taskId)) }); // lets Explore offer it again
-      triggerRefresh();
     }
-    catch (err) { toast.error(err instanceof ApiError ? err.message : 'Could not withdraw.'); }
+    catch (err) { toast.error(rejectionMessage(err, 'Could not withdraw.')); }
   };
 
   if (loading) return <Loader label="Loading applied tasks..." />;

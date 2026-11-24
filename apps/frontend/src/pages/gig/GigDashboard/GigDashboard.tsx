@@ -6,71 +6,53 @@
  * recent pending client requests table, and quick active task previews.
  */
 
-import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { GigTask, PendingRequest, CompletedProject, EarningsSummary } from '../../../types/gig';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchActiveTasks, fetchCompletedProjects, fetchEarnings, fetchPendingRequests, fetchServices, rejectionMessage, respondToRequest } from '../../../store/gig/gigSlice';
+import { selectActiveTasks, selectCompletedProjects, selectGigEarnings, selectGigServices, selectPendingRequests } from '../../../store/gig/selectors';
+import type { EarningsSummary } from '../../../types/gig';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
 import { Loader } from '../../../components/common/Loader';
 import { Button } from '../../../components/common/Button';
 
+const NO_EARNINGS: EarningsSummary = { totalEarnings: 0, completedTasks: 0, payments: [] };
+
 export const GigDashboard: React.FC = () => {
-  const { setActiveTab, navigateToTaskDetail, refreshTrigger, triggerRefresh } = useGig();
+  const { setActiveTab, navigateToTaskDetail } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const active = useAppSelector(selectActiveTasks);
+  const pending = useAppSelector(selectPendingRequests);
+  const completed = useAppSelector(selectCompletedProjects);
+  const earn = useAppSelector(selectGigEarnings);
+  const services = useAppSelector(selectGigServices);
+  const [respondError, setRespondError] = useState<string | null>(null);
 
-  const [activeTasks, setActiveTasks] = useState<GigTask[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
-  const [completedProjects, setCompletedProjects] = useState<CompletedProject[]>([]);
-  const [postedServices, setPostedServices] = useState<any[]>([]);
-  const [earnings, setEarnings] = useState<EarningsSummary>({ totalEarnings: 0, completedTasks: 0, payments: [] });
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const activeTasks = active.data;
+  const pendingRequests = pending.data;
+  const completedProjects = completed.data;
+  const postedServices = services.data;
+  const earnings = earn.data ?? NO_EARNINGS;
+  const resources = [active, pending, completed, earn, services];
+  const loadError = resources.find((r) => r.error)?.error ?? null;
+  const error = respondError ?? loadError;
+  const loading = !resources.every((r) => r.loaded) && !loadError;
 
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (mounted) {
-        setLoading(true);
-        setError(null);
-      }
-      try {
-        const [active, pending, completed, earn, srvs] = await Promise.all([
-          gigApi.getActiveTasks(),
-          gigApi.getPendingRequests(),
-          gigApi.getCompletedProjects(),
-          gigApi.getEarnings(),
-          gigApi.getServices()
-        ]);
-        if (mounted) {
-          setActiveTasks(active);
-          setPendingRequests(pending);
-          setCompletedProjects(completed);
-          setEarnings(earn);
-          setPostedServices(srvs || []);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load dashboard data.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [refreshTrigger]);
+  const loadAll = useCallback(() => {
+    void dispatch(fetchActiveTasks());
+    void dispatch(fetchPendingRequests());
+    void dispatch(fetchCompletedProjects());
+    void dispatch(fetchEarnings());
+    void dispatch(fetchServices());
+  }, [dispatch]);
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   const handleRespondRequest = async (applicationId: number, action: 'accepted' | 'declined') => {
+    setRespondError(null);
     try {
-      await gigApi.respondToRequest(applicationId, action);
-      triggerRefresh();
+      await dispatch(respondToRequest({ applicationId, action })).unwrap();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed responding to request.');
+      setRespondError(rejectionMessage(err, 'Failed responding to request.'));
     }
   };
 
@@ -102,7 +84,7 @@ export const GigDashboard: React.FC = () => {
           }}
         >
           <span>{error}</span>
-          <Button variant="danger" size="sm" type="button" onClick={triggerRefresh}>
+          <Button variant="danger" size="sm" type="button" onClick={() => { setRespondError(null); loadAll(); }}>
             Retry
           </Button>
         </div>

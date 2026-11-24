@@ -6,10 +6,11 @@
  * payout amounts, and completion dates with modal-based review submission.
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchCompletedProjects } from '../../../store/gig/gigSlice';
+import { selectCompletedProjects } from '../../../store/gig/selectors';
 import type { CompletedProject } from '../../../types/gig';
 import { GigReviewModal } from '../../../components/gig/modals/GigReviewModal';
 import { Loader } from '../../../components/common/Loader';
@@ -17,30 +18,16 @@ import { Button, useToast } from '../../../components/common';
 
 export const CompletedProjects: React.FC = () => {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<CompletedProject[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const { data: projects, loaded, error } = useAppSelector(selectCompletedProjects);
+  const loading = !loaded && !error;
   const toast = useToast();
   useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   useEffect(() => { if (successMessage) toast.success(successMessage); }, [successMessage]); // eslint-disable-line react-hooks/exhaustive-deps
   const [selectedProjectForReview, setSelectedProjectForReview] = useState<CompletedProject | null>(null);
 
-  const loadProjects = useCallback(async () => {
-    try {
-      const res = await gigApi.getCompletedProjects();
-      setProjects(res);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load completed projects.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+  useEffect(() => { void dispatch(fetchCompletedProjects()); }, [dispatch]);
 
   const formatCurrency = (amt: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
@@ -293,9 +280,8 @@ export const CompletedProjects: React.FC = () => {
           taskId={selectedProjectForReview.taskId}
           taskTitle={selectedProjectForReview.title}
           clientName={selectedProjectForReview.client?.clientName || 'Client'}
-          onSuccess={async () => {
+          onSuccess={() => { // createReview already refetched the projects
             const clientName = selectedProjectForReview.client?.clientName || 'Client';
-            await loadProjects();
             setSuccessMessage(`Review for ${clientName} submitted successfully!`);
             setSelectedProjectForReview(null);
           }}

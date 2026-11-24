@@ -6,43 +6,26 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchGigProfile, rejectionMessage, updateGigProfile } from '../../../store/gig/gigSlice';
+import { selectGigProfile } from '../../../store/gig/selectors';
+import type { GigProfile } from '../../../types/gig';
 import { Loader } from '../../../components/common/Loader';
 import { Button, Input, TextArea, useToast } from '../../../components/common';
 
-export const GigProfileCompletion: React.FC = () => {
-  const { setActiveTab, triggerRefresh } = useGig();
-  const [bio, setBio] = useState('');
-  const [skills, setSkills] = useState('');
-  const [portfolio, setPortfolio] = useState('');
-  const [loading, setLoading] = useState(true);
+/** Draft form; mounted only once the profile has loaded, so its initial values come straight from the server profile. */
+const GigProfileForm: React.FC<{ profile: GigProfile }> = ({ profile }) => {
+  const { setActiveTab } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  // Form drafts stay local until save.
+  const [bio, setBio] = useState(profile.bio || '');
+  const [skills, setSkills] = useState((profile.skills || []).join(', '));
+  const [portfolio, setPortfolio] = useState((profile.portfolio || []).join(', '));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
   useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    let mounted = true;
-    gigApi.getProfile().then((prof) => {
-      if (mounted && prof) {
-        setBio(prof.bio || '');
-        setSkills((prof.skills || []).join(', '));
-        setPortfolio((prof.portfolio || []).join(', '));
-        setLoading(false);
-      }
-    }).catch((err) => {
-      if (mounted) {
-        setError(err instanceof ApiError ? err.message : 'Failed to load profile.');
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,24 +35,19 @@ export const GigProfileCompletion: React.FC = () => {
       const skillsArray = skills.split(',').map((s) => s.trim()).filter(Boolean);
       const portfolioArray = portfolio.split(',').map((p) => p.trim()).filter(Boolean);
 
-      await gigApi.updateProfile({
+      await dispatch(updateGigProfile({
         bio: bio.trim(),
         skills: skillsArray,
         portfolio: portfolioArray
-      });
+      })).unwrap();
 
-      triggerRefresh();
       setActiveTab('profile');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed updating profile.');
+      setError(rejectionMessage(err, 'Failed updating profile.'));
     } finally {
       setSaving(false);
     }
   };
-
-  if (loading) {
-    return <Loader label="Loading Profile Editor..." />;
-  }
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
@@ -136,6 +114,17 @@ export const GigProfileCompletion: React.FC = () => {
       </form>
     </div>
   );
+};
+
+export const GigProfileCompletion: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { data: profile, error } = useAppSelector(selectGigProfile);
+  const toast = useToast();
+  useEffect(() => { void dispatch(fetchGigProfile()); }, [dispatch]);
+  useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!profile) return error ? null : <Loader label="Loading Profile Editor..." />;
+  return <GigProfileForm profile={profile} />;
 };
 
 export default GigProfileCompletion;

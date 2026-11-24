@@ -1,36 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchServices, removeService } from '../../../store/gig/gigSlice';
+import { selectGigServices } from '../../../store/gig/selectors';
 import type { GigService } from '../../../types/gig';
 import { Loader } from '../../../components/common/Loader';
 import { Button, ConfirmDialog, useToast } from '../../../components/common';
 
 export const MyServices: React.FC = () => {
   const toast = useToast();
-  const { setActiveTab, navigateToServiceRequests, refreshTrigger, triggerRefresh } = useGig();
-  const [services, setServices] = useState<GigService[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { setActiveTab, navigateToServiceRequests } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const { data: services, loaded, error } = useAppSelector(selectGigServices);
+  const loading = !loaded && !error;
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [serviceToRemove, setServiceToRemove] = useState<GigService | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await gigApi.getServices();
-        if (mounted) {
-          setServices(data || []);
-        }
-      } catch (err) {
-        console.error('Failed to load services:', err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => { mounted = false; };
-  }, [refreshTrigger]);
+  useEffect(() => { void dispatch(fetchServices()); }, [dispatch]);
 
   const formatCurrency = (amt: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -50,9 +36,8 @@ export const MyServices: React.FC = () => {
     const service = serviceToRemove;
     setRemovingId(service.serviceId);
     try {
-      await gigApi.removeService(service.serviceId);
+      await dispatch(removeService(service.serviceId)).unwrap();
       toast.success(`Removed "${service.title}".`);
-      triggerRefresh();
     } catch (err) {
       console.error('Failed to remove service:', err);
       toast.error('Failed to remove service.');

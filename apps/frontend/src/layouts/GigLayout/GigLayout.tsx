@@ -5,7 +5,10 @@
  */
 import React from 'react';
 import { useAuth } from '../../context/AuthContext/AuthContext';
-import { useGig, type GigViewTab } from '../../context/GigContext/GigContext';
+import { useGigNavigation, type GigViewTab } from '../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { setTaskSearch } from '../../store/gig/gigSlice';
+import { selectGigTaskSearch } from '../../store/gig/selectors';
 import { DashboardLayout, type DashboardNavItem } from '../common/DashboardLayout/DashboardLayout';
 import { DashboardIcon, SearchIcon, ProjectIcon, UsersIcon, PaymentIcon } from '../../components/super-admin/Icons';
 import { SearchBar } from '../../components/common/SearchBar';
@@ -27,7 +30,9 @@ const GIG_PAGE_TITLES: Partial<Record<GigViewTab, string>> = {
 
 export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
-  const { activeTab, setActiveTab, taskSearch, setTaskSearch } = useGig();
+  const { activeTab, setActiveTab } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const taskSearch = useAppSelector(selectGigTaskSearch);
 
   const navItems: GigNavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon size={18} /> },
@@ -53,7 +58,7 @@ export const GigLayout: React.FC<GigLayoutProps> = ({ children }) => {
       headerTitle={GIG_PAGE_TITLES[activeTab] || 'Gig Portal'}
       headerActions={<>
         {/* Only the Explore page has something to search; elsewhere the box would do nothing. */}
-        {activeTab === 'explore' && <SearchBar aria-label="Search marketplace tasks" placeholder="Search by keyword, client, or topic..." value={taskSearch} onChange={(event) => setTaskSearch(event.target.value)} />}
+        {activeTab === 'explore' && <SearchBar aria-label="Search marketplace tasks" placeholder="Search by keyword, client, or topic..." value={taskSearch} onChange={(event) => dispatch(setTaskSearch(event.target.value))} />}
         <Button size="sm" onClick={() => setActiveTab('post-service')}>＋ Post Service</Button>
       </>}
     >

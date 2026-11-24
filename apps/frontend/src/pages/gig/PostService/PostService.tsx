@@ -6,9 +6,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch } from '../../../store/hooks';
+import { postService, rejectionMessage } from '../../../store/gig/gigSlice';
 import { Button, Input, Select, TextArea, useToast } from '../../../components/common';
 
 /** Same keys as task categories (PostGig) so client-side category filters line up. */
@@ -26,7 +26,8 @@ const MAX_ESCROW_THRESHOLD = 10_000_000;
 const MAX_SERVICE_PRICE = Math.floor(MAX_ESCROW_THRESHOLD / 1.1);
 
 export const PostService: React.FC = () => {
-  const { setActiveTab, triggerRefresh } = useGig();
+  const { setActiveTab } = useGigNavigation();
+  const dispatch = useAppDispatch();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<number | ''>('');
@@ -55,18 +56,17 @@ export const PostService: React.FC = () => {
     try {
       const categoryLabel = SERVICE_CATEGORIES.find(c => c.value === category)?.label;
       const tags = [categoryLabel, delivery].filter((t): t is string => !!t);
-      await gigApi.postService({
+      await dispatch(postService({
         title: title.trim(),
         description: description.trim(),
         price: Number(price),
         tags: tags.length ? tags : ['Web Development'],
         category,
         thumbnail: thumbnail.trim() || undefined
-      });
-      triggerRefresh();
+      })).unwrap();
       setActiveTab('my-services');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to publish service.');
+      setError(rejectionMessage(err, 'Failed to publish service.'));
     } finally {
       setSubmitting(false);
     }

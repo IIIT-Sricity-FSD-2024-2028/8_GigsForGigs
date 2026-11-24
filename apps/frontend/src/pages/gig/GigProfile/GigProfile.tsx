@@ -5,50 +5,31 @@
  * Visualizes user identity, bio, verified skills, posted services, client ratings, and portfolio links.
  */
 
-import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { GigProfile as IGigProfile, GigService } from '../../../types/gig';
+import React, { useEffect } from 'react';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchGigProfile, fetchServices } from '../../../store/gig/gigSlice';
+import { selectGigProfile, selectGigServices } from '../../../store/gig/selectors';
 import { safeHttpUrl } from '../../../utils/safeUrl';
 import { Loader } from '../../../components/common/Loader';
 import { Button, useToast } from '../../../components/common';
 
 export const GigProfile: React.FC = () => {
-  const { setActiveTab, refreshTrigger } = useGig();
-  const [profile, setProfile] = useState<IGigProfile | null>(null);
-  const [services, setServices] = useState<GigService[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { setActiveTab } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const profileRes = useAppSelector(selectGigProfile);
+  const servicesRes = useAppSelector(selectGigServices);
+  const profile = profileRes.data;
+  const services = servicesRes.data;
+  const error = profileRes.error ?? servicesRes.error;
+  const loading = !error && !(profileRes.loaded && servicesRes.loaded);
   const toast = useToast();
   useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (mounted) setError(null);
-      try {
-        const [prof, srvs] = await Promise.all([gigApi.getProfile(), gigApi.getServices()]);
-        if (mounted) {
-          setProfile(prof);
-          setServices(srvs);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load profile.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [refreshTrigger]);
+    void dispatch(fetchGigProfile());
+    void dispatch(fetchServices());
+  }, [dispatch]);
 
   const formatCurrency = (amt: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
