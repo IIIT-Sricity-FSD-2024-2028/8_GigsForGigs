@@ -1,8 +1,30 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { useClient, type ContractReview } from '../../../context/ClientContext';
+import type { Contract, ContractReview } from '../../../context/ClientContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchClientContracts,
+  fetchClientTasks,
+  fetchTaskDeliverableDefinitions,
+  createTaskDeliverable,
+  updateTaskDeliverable,
+  deleteTaskDeliverable,
+  fetchTaskSubmittedDeliverables,
+  reviewSubmittedDeliverable,
+  releaseClientPayment,
+} from '../../../store/client/clientSlice';
+import {
+  selectClientContracts,
+  selectClientContractsRequest,
+  selectClientTasks,
+  selectClientTasksRequest,
+  selectDeliverableDefinitionsByTask,
+  selectDeliverableDefinitionsRequest,
+  selectDefinitionMutation,
+  selectSubmittedDeliverablesByTask,
+  selectSubmittedDeliverablesRequest,
+} from '../../../store/client/selectors';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
-import { clientApi, type RawDeliverable } from '../../../services/api/client/clientApi';
 import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
 import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { Loader } from '../../../components/common/Loader';
@@ -17,43 +39,80 @@ export interface ReviewDeliverablesProps {
 
 export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNavigate, params }) => {
   const { user } = useAuth();
-  const { contracts: clientContracts, tasks, approveDeliverable, rejectDeliverable, releasePayment, refreshContracts } = useClient();
+  const dispatch = useAppDispatch();
+  const toast = useToast();
+
   const taskId = params?.taskId;
   const gigProfileId = params?.gigProfileId;
   const numericTaskId = Number(String(taskId).replace(/[^0-9]/g, '')) || 1;
 
+  const clientContracts = useAppSelector(selectClientContracts);
+  const contractsRequest = useAppSelector(selectClientContractsRequest);
+  const tasks = useAppSelector(selectClientTasks);
+  const tasksRequest = useAppSelector(selectClientTasksRequest);
+
+  const definitions = useAppSelector((state) => selectDeliverableDefinitionsByTask(state, numericTaskId));
+  const definitionsRequest = useAppSelector((state) => selectDeliverableDefinitionsRequest(state, numericTaskId));
+  const definitionsBusy = useAppSelector((state) => selectDefinitionMutation(state, numericTaskId));
+
+  const allDeliverables = useAppSelector((state) => selectSubmittedDeliverablesByTask(state, numericTaskId));
+  const deliverablesRequest = useAppSelector((state) => selectSubmittedDeliverablesRequest(state, numericTaskId));
+
   // Retrieve the specific dynamic contract for the clicked task
-  const contract = useMemo(() => {
-    if (!taskId) return null;
-    // A task can have several hires; without a professional in the URL, fall back to the first.
-    const foundInClient = clientContracts.find((c) => c.task_id === taskId && (!gigProfileId || c.gig_profile_id === gigProfileId));
-    if (foundInClient) {
-      return { ...foundInClient, reviews: foundInClient.reviews || ([] as ContractReview[]) };
-    }
-    return null;
-  }, [taskId, gigProfileId, clientContracts]);
+  const contract = useMemo((): Contract | null => {
+    if (!numericTaskId) return null;
+    const found = clientContracts.find(
+      (c) => c.taskId === numericTaskId && (!gigProfileId || String(c.gigProfileId) === String(gigProfileId)),
+    );
+    if (!found) return null;
+
+    return {
+      contract_id: `${found.taskId}-${found.gigProfileId}`,
+      task_id: String(found.taskId),
+      gig_profile_id: String(found.gigProfileId),
+      task_title: found.taskTitle,
+      gig_pro_name: found.gigProfessionalName,
+      status: (found.status === 'completed' ? 'COMPLETED' : 'IN_PROGRESS') as 'IN_PROGRESS' | 'COMPLETED',
+      progress: found.progress,
+      budget: Number(found.budget),
+      payment_id: found.paymentId,
+      platform_fee: Number(found.platformFee),
+      total_amount: Number(found.totalAmount),
+      payment_status: found.paymentStatus,
+      manager_id: found.managerId,
+      submission_count: found.submissionCount ?? 0,
+      work_status: found.workStatus,
+      has_open_dispute: found.hasOpenDispute ?? false,
+      createdAt: found.createdAt,
+      reviews: (found.reviews as ContractReview[]) || [],
+    };
+  }, [numericTaskId, gigProfileId, clientContracts]);
 
   // Lookup matching task info (for description, deadline, category)
   const taskInfo = useMemo(() => {
-    if (!taskId) return null;
-    return tasks.find((t) => t.task_id === taskId || String(t.task_id) === String(numericTaskId)) || null;
-  }, [taskId, numericTaskId, tasks]);
+    if (!numericTaskId) return null;
+    return tasks.find((t) => t.taskId === numericTaskId) || null;
+  }, [numericTaskId, tasks]);
 
-  const [allDeliverables, setDeliverablesList] = useState<RawDeliverable[]>([]);
+  useEffect(() => {
+    if (contractsRequest.status === 'idle') {
+      dispatch(fetchClientContracts());
+    }
+    if (tasksRequest.status === 'idle') {
+      dispatch(fetchClientTasks());
+    }
+    if (numericTaskId) {
+      dispatch(fetchTaskDeliverableDefinitions(numericTaskId));
+      dispatch(fetchTaskSubmittedDeliverables(numericTaskId));
+    }
+  }, [dispatch, contractsRequest.status, tasksRequest.status, numericTaskId]);
+
   // The task endpoint returns every hire's submissions; this page is for one professional.
   const deliverablesList = useMemo(
     () => (contract ? allDeliverables.filter((d) => String(d.gigProfileId) === contract.gig_profile_id) : allDeliverables),
     [allDeliverables, contract],
   );
   const [selectedDeliverableIndex, setSelectedDeliverableIndex] = useState<number>(0);
-  const [loadingDeliverables, setLoadingDeliverables] = useState<boolean>(true);
-
-  // Notifications & error states
-  const [successNotification, setSuccessNotification] = useState<string | null>(null);
-  const [pageError, setPageError] = useState<string | null>(null);
-  const toast = useToast();
-  useEffect(() => { if (successNotification) { toast.success(successNotification); setSuccessNotification(null); } }, [successNotification]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (pageError) { toast.error(pageError); setPageError(null); } }, [pageError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Modals state
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -72,27 +131,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const [revisionApiError, setRevisionApiError] = useState<string | null>(null);
   const [isSubmittingRevision, setIsSubmittingRevision] = useState(false);
 
-  const fetchDeliverables = useCallback(async () => {
-    if (!taskId) return;
-    try {
-      setLoadingDeliverables(true);
-      const dels = await clientApi.getTaskDeliverables(numericTaskId);
-      setDeliverablesList(dels || []);
-      if (dels && dels.length > 0) {
-        setSelectedDeliverableIndex(dels.length - 1);
-      }
-    } catch (err) {
-      setPageError(err instanceof Error && err.message ? err.message : 'Could not fetch deliverable history.');
-      setDeliverablesList([]);
-    } finally {
-      setLoadingDeliverables(false);
-    }
-  }, [taskId, numericTaskId]);
-
-  useEffect(() => {
-    fetchDeliverables();
-  }, [fetchDeliverables]);
-
   const hasDeliverables = deliverablesList.length > 0;
   const currentDeliverable = hasDeliverables
     ? deliverablesList[selectedDeliverableIndex] || deliverablesList[deliverablesList.length - 1]
@@ -103,15 +141,15 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const clientReview = useMemo(() => {
     if (!contract?.reviews || !user) return undefined;
     return contract.reviews.find((r) => r.reviewerId === user.userId);
-  }, [contract?.reviews, user]);
+  }, [contract, user]);
 
   const gigReview = useMemo(() => {
     if (!contract?.reviews || !user) return undefined;
     return contract.reviews.find((r) => r.reviewerId !== user.userId && r.revieweeId === user.userId);
-  }, [contract?.reviews, user]);
+  }, [contract, user]);
 
   // Amounts come from the stored payment row (via the contract), never recomputed here.
-  const gigAmount = contract?.budget ?? taskInfo?.budget ?? 0;
+  const gigAmount = contract?.budget ?? (taskInfo?.budget ? Number(taskInfo.budget) : 0);
   const platformFee = contract?.platform_fee ?? 0;
   const totalAmount = contract?.total_amount ?? gigAmount;
   // Release unlocks only once the client has funded the task and every deliverable is approved.
@@ -121,7 +159,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(val);
   };
 
@@ -136,13 +174,17 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     setIsApprovingDeliverable(true);
     setApproveApiError(null);
     try {
-      await approveDeliverable(String(numericTaskId), currentDeliverable.deliverableNo);
+      await dispatch(
+        reviewSubmittedDeliverable({
+          taskId: numericTaskId,
+          deliverableNo: currentDeliverable.deliverableNo,
+          status: 'approved',
+        }),
+      ).unwrap();
       setIsApproveModalOpen(false);
-      setSuccessNotification(`Deliverable #${currentDeliverable.deliverableNo} approved successfully!`);
-      await fetchDeliverables();
-      await refreshContracts();
+      toast.success(`Deliverable #${currentDeliverable.deliverableNo} approved successfully!`);
     } catch (err) {
-      setApproveApiError(err instanceof Error && err.message ? err.message : 'Failed to approve deliverable.');
+      setApproveApiError(typeof err === 'string' ? err : 'Failed to approve deliverable.');
     } finally {
       setIsApprovingDeliverable(false);
     }
@@ -165,14 +207,23 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     setRevisionApiError(null);
     setRevisionFieldError(null);
     try {
-      await rejectDeliverable(String(numericTaskId), currentDeliverable.deliverableNo, trimmed);
+      await dispatch(
+        reviewSubmittedDeliverable({
+          taskId: numericTaskId,
+          deliverableNo: currentDeliverable.deliverableNo,
+          status: 'revision_requested',
+          feedback: trimmed,
+        }),
+      ).unwrap();
       setIsChangesModalOpen(false);
       setChangesFeedback('');
-      setSuccessNotification(`Revision requested for Deliverable #${currentDeliverable.deliverableNo}. Feedback has been saved and sent to ${contract?.gig_pro_name || 'the professional'}.`);
-      await fetchDeliverables();
-      await refreshContracts();
+      toast.success(
+        `Revision requested for Deliverable #${currentDeliverable.deliverableNo}. Feedback has been saved and sent to ${
+          contract?.gig_pro_name || 'the professional'
+        }.`,
+      );
     } catch (err) {
-      setRevisionApiError(err instanceof Error && err.message ? err.message : 'Failed to submit revision request.');
+      setRevisionApiError(typeof err === 'string' ? err : 'Failed to submit revision request.');
     } finally {
       setIsSubmittingRevision(false);
     }
@@ -182,18 +233,53 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
   const handleProcessPayment = async () => {
     if (!contract) return;
     try {
-      await releasePayment(contract.task_id, contract.gig_profile_id);
+      await dispatch(
+        releaseClientPayment({
+          taskId: Number(contract.task_id),
+          gigProfileId: Number(contract.gig_profile_id),
+        }),
+      ).unwrap();
       setIsPaymentModalOpen(false);
-      setSuccessNotification(`Payment released! ${formatCurrency(gigAmount)} sent to ${contract.gig_pro_name}; ${formatCurrency(platformFee)} kept as platform fee.`);
-      await refreshContracts();
-      await fetchDeliverables();
+      toast.success(`Payment released! ${formatCurrency(gigAmount)} sent to ${contract.gig_pro_name}; ${formatCurrency(platformFee)} kept as platform fee.`);
     } catch (err) {
-      setPageError(err instanceof Error && err.message ? err.message : 'Payment release failed. Please try again.');
+      toast.error(typeof err === 'string' ? err : 'Payment release failed. Please try again.');
+    }
+  };
+
+  // Deliverable definitions CRUD handlers passed to presentational TaskDeliverablesManager
+  const handleCreateDefinition = async (values: { title: string; description?: string }) => {
+    try {
+      await dispatch(createTaskDeliverable({ taskId: numericTaskId, values })).unwrap();
+      return null;
+    } catch (err) {
+      return typeof err === 'string' ? err : 'Could not add the deliverable.';
+    }
+  };
+
+  const handleUpdateDefinition = async (definitionId: number, values: { title: string; description: string }) => {
+    try {
+      await dispatch(updateTaskDeliverable({ taskId: numericTaskId, definitionId, values })).unwrap();
+      return null;
+    } catch (err) {
+      return typeof err === 'string' ? err : 'Could not update the deliverable.';
+    }
+  };
+
+  const handleDeleteDefinition = async (definitionId: number) => {
+    try {
+      await dispatch(deleteTaskDeliverable({ taskId: numericTaskId, definitionId })).unwrap();
+      return null;
+    } catch (err) {
+      return typeof err === 'string' ? err : 'Could not remove the deliverable.';
     }
   };
 
   // Contract not found state
   if (!contract) {
+    if (contractsRequest.status === 'loading') {
+      return <Loader label="Loading task details..." />;
+    }
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
         <div className="page-header">
@@ -217,6 +303,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     );
   }
 
+  const loadingDeliverables = deliverablesRequest.status === 'loading' && deliverablesList.length === 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {/* Page Header */}
@@ -226,7 +314,14 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         </Button>
       </div>
 
-      {contract.payment_status === 'pending' && <FundTaskCard contract={contract} />}
+      {contract.payment_status === 'pending' && (
+        <FundTaskCard
+          contract={contract}
+          onPaid={() => {
+            dispatch(fetchClientContracts());
+          }}
+        />
+      )}
 
       {loadingDeliverables ? (
         <Loader label="Loading deliverables..." />
@@ -279,81 +374,91 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
                 </Button>
               </>
             )}
-                {/* Action State 4: Task Completed */}
-                {contract.status === 'COMPLETED' && (
-                  <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ backgroundColor: '#e6f4ea', padding: '12px', borderRadius: '8px', border: '1px solid #137333', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#137333', marginBottom: '2px' }}>
-                        ✓ Task Completed &amp; Paid
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#137333' }}>
-                        {formatCurrency(gigAmount)} released to {contract.gig_pro_name}.
-                      </div>
+            {/* Action State 4: Task Completed */}
+            {contract.status === 'COMPLETED' && (
+              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ backgroundColor: '#e6f4ea', padding: '12px', borderRadius: '8px', border: '1px solid #137333', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#137333', marginBottom: '2px' }}>
+                    ✓ Task Completed &amp; Paid
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#137333' }}>
+                    {formatCurrency(gigAmount)} released to {contract.gig_pro_name}.
+                  </div>
+                </div>
+
+                {/* Client Review Section */}
+                {clientReview ? (
+                  <div style={{ backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        ✓ Your Review of {contract.gig_pro_name}
+                      </span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#eab308' }}>
+                        {'★'.repeat(clientReview.rating)}{'☆'.repeat(5 - clientReview.rating)} ({clientReview.rating}.0)
+                      </span>
                     </div>
-
-                    {/* Client Review Section */}
-                    {clientReview ? (
-                      <div style={{ backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            ✓ Your Review of {contract.gig_pro_name}
-                          </span>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#eab308' }}>
-                            {'★'.repeat(clientReview.rating)}{'☆'.repeat(5 - clientReview.rating)} ({clientReview.rating}.0)
-                          </span>
-                        </div>
-                        {clientReview.comment && (
-                          <p style={{ fontSize: '0.82rem', color: '#1f2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
-                            "{clientReview.comment}"
-                          </p>
-                        )}
-                        {clientReview.createdAt && (
-                          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '6px', textAlign: 'right' }}>
-                            {formatDate(clientReview.createdAt)}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <Button variant="outline" size="sm" type="button" onClick={() => setIsReviewModalOpen(true)}>
-                        ★ Rate &amp; Review Gig Professional
-                      </Button>
+                    {clientReview.comment && (
+                      <p style={{ fontSize: '0.82rem', color: '#1f2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
+                        "{clientReview.comment}"
+                      </p>
                     )}
-
-                    {/* Gig Professional Review Section */}
-                    {gigReview && (
-                      <div style={{ backgroundColor: '#fdf4ff', padding: '12px', borderRadius: '8px', border: '1px solid #f5d0fe' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#86198f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            {contract.gig_pro_name}'s Review of You
-                          </span>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#eab308' }}>
-                            {'★'.repeat(gigReview.rating)}{'☆'.repeat(5 - gigReview.rating)} ({gigReview.rating}.0)
-                          </span>
-                        </div>
-                        {gigReview.comment && (
-                          <p style={{ fontSize: '0.82rem', color: '#1f2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
-                            "{gigReview.comment}"
-                          </p>
-                        )}
-                        {gigReview.createdAt && (
-                          <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '6px', textAlign: 'right' }}>
-                            {formatDate(gigReview.createdAt)}
-                          </div>
-                        )}
+                    {clientReview.createdAt && (
+                      <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '6px', textAlign: 'right' }}>
+                        {formatDate(clientReview.createdAt)}
                       </div>
                     )}
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" type="button" onClick={() => setIsReviewModalOpen(true)}>
+                    ★ Rate &amp; Review Gig Professional
+                  </Button>
+                )}
 
-                    {contract.reviews && contract.reviews.length > 0 && (
-                      <Button variant="outline" size="sm" type="button" onClick={() => setIsReviewsViewModalOpen(true)}>
-                        View Two-Sided Project Reviews ({contract.reviews.length})
-                      </Button>
+                {/* Gig Professional Review Section */}
+                {gigReview && (
+                  <div style={{ backgroundColor: '#fdf4ff', padding: '12px', borderRadius: '8px', border: '1px solid #f5d0fe' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#86198f', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {contract.gig_pro_name}'s Review of You
+                      </span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#eab308' }}>
+                        {'★'.repeat(gigReview.rating)}{'☆'.repeat(5 - gigReview.rating)} ({gigReview.rating}.0)
+                      </span>
+                    </div>
+                    {gigReview.comment && (
+                      <p style={{ fontSize: '0.82rem', color: '#1f2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
+                        "{gigReview.comment}"
+                      </p>
+                    )}
+                    {gigReview.createdAt && (
+                      <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '6px', textAlign: 'right' }}>
+                        {formatDate(gigReview.createdAt)}
+                      </div>
                     )}
                   </div>
                 )}
+
+                {contract.reviews && contract.reviews.length > 0 && (
+                  <Button variant="outline" size="sm" type="button" onClick={() => setIsReviewsViewModalOpen(true)}>
+                    View Two-Sided Project Reviews ({contract.reviews.length})
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Scope: the work items the client (or manager) defined */}
-          <TaskDeliverablesManager key={contract.task_id} taskId={numericTaskId} readOnly={contract.status !== 'IN_PROGRESS'} />
+          <TaskDeliverablesManager
+            key={numericTaskId}
+            deliverableDefinitions={definitions}
+            loading={definitionsRequest.status === 'loading' && definitions.length === 0}
+            loadError={definitionsRequest.status === 'failed' ? definitionsRequest.error : null}
+            busy={definitionsBusy}
+            readOnly={contract.status !== 'IN_PROGRESS'}
+            onCreate={handleCreateDefinition}
+            onUpdate={handleUpdateDefinition}
+            onDelete={handleDeleteDefinition}
+          />
 
           {/* Submitted work */}
           <div>
@@ -544,8 +649,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
         gigProName={contract.gig_pro_name}
         onSuccess={() => {
           setIsReviewModalOpen(false);
-          setSuccessNotification(`Review for ${contract.gig_pro_name} submitted successfully!`);
-          refreshContracts();
+          toast.success(`Review for ${contract.gig_pro_name} submitted successfully!`);
+          dispatch(fetchClientContracts());
         }}
       />
 
@@ -560,7 +665,6 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
           setIsReviewModalOpen(true);
         }}
       />
-
     </div>
   );
 };

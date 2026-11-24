@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { useClient, type Contract, type PaymentStatus } from '../../../context/ClientContext';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useClient, type Contract, type ContractReview, type PaymentStatus } from '../../../context/ClientContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  assignTaskManager as assignTaskManagerThunk,
+  endClientHire,
+  fetchClientContracts,
+  raiseClientDispute,
+  releaseClientPayment,
+} from '../../../store/client/clientSlice';
+import {
+  selectClientContracts,
+  selectClientContractsRequest,
+} from '../../../store/client/selectors';
 import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
 import { HIRE_WORK_STATUS } from '../../../utils/taskStatus';
@@ -12,7 +24,40 @@ export interface MyGigsProps {
 
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { contracts, managers, assignTaskManager, releasePayment, refreshContracts, removeHire, raiseDispute } = useClient();
+  const dispatch = useAppDispatch();
+  const { managers } = useClient();
+
+  const rawContracts = useAppSelector(selectClientContracts);
+  const contractsRequest = useAppSelector(selectClientContractsRequest);
+
+  useEffect(() => {
+    if (contractsRequest.status === 'idle') {
+      dispatch(fetchClientContracts());
+    }
+  }, [dispatch, contractsRequest.status]);
+
+  const contracts: Contract[] = useMemo(() => {
+    return rawContracts.map((found) => ({
+      contract_id: `${found.taskId}-${found.gigProfileId}`,
+      task_id: String(found.taskId),
+      gig_profile_id: String(found.gigProfileId),
+      task_title: found.taskTitle,
+      gig_pro_name: found.gigProfessionalName,
+      status: (found.status === 'completed' ? 'COMPLETED' : 'IN_PROGRESS') as 'IN_PROGRESS' | 'COMPLETED',
+      progress: found.progress,
+      budget: Number(found.budget),
+      payment_id: found.paymentId,
+      platform_fee: Number(found.platformFee),
+      total_amount: Number(found.totalAmount),
+      payment_status: found.paymentStatus,
+      manager_id: found.managerId,
+      submission_count: found.submissionCount ?? 0,
+      work_status: found.workStatus,
+      has_open_dispute: found.hasOpenDispute ?? false,
+      createdAt: found.createdAt,
+      reviews: (found.reviews as ContractReview[]) || [],
+    }));
+  }, [rawContracts]);
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeText, setDisputeText] = useState('');
@@ -118,7 +163,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               </div>
 
               <div style={{ minWidth: '150px' }}>
-                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={{ width: '100%' }}>
+                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'IN_PROGRESS' | 'SCHEDULED')} style={{ width: '100%' }}>
                   <option value="ALL">All Active Statuses</option>
                   <option value="IN_PROGRESS">In Progress</option>
                   <option value="SCHEDULED">Scheduled</option>
@@ -126,7 +171,7 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
               </div>
 
               <div style={{ minWidth: '160px' }}>
-                <Select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value as any)} style={{ width: '100%' }}>
+                <Select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value as 'ALL' | PaymentStatus)} style={{ width: '100%' }}>
                   <option value="ALL">All Payment Statuses</option>
                   <option value="pending">{PAYMENT_STATUS_UI.pending.label}</option>
                   <option value="held">{PAYMENT_STATUS_UI.held.label}</option>
@@ -276,11 +321,17 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                     const managerId = e.target.value ? Number(e.target.value) : null;
                     setSavingManager(true);
                     try {
-                      await assignTaskManager(selectedTaskPayment.task_id, selectedTaskPayment.gig_profile_id, managerId);
+                      await dispatch(
+                        assignTaskManagerThunk({
+                          taskId: Number(selectedTaskPayment.task_id),
+                          gigProfileId: Number(selectedTaskPayment.gig_profile_id),
+                          managerId,
+                        }),
+                      ).unwrap();
                       setSelectedTaskPayment({ ...selectedTaskPayment, manager_id: managerId });
                       toast.success(managerId ? 'Manager added to the task.' : 'Manager removed from the task.');
                     } catch (err) {
-                      toast.error(err instanceof Error && err.message ? err.message : 'Could not change the manager.');
+                      toast.error(typeof err === 'string' ? err : 'Could not change the manager.');
                     } finally {
                       setSavingManager(false);
                     }
@@ -307,12 +358,16 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                   <Button disabled={!canRelease || releasing} onClick={async () => {
                     setReleasing(true);
                     try {
-                      await releasePayment(t.task_id, t.gig_profile_id);
+                      await dispatch(
+                        releaseClientPayment({
+                          taskId: Number(t.task_id),
+                          gigProfileId: Number(t.gig_profile_id),
+                        }),
+                      ).unwrap();
                       toast.success(`Payment released to ${t.gig_pro_name}.`);
                       setSelectedTaskPayment(null);
-                      await refreshContracts();
                     } catch (err) {
-                      toast.error(err instanceof Error && err.message ? err.message : 'Payment release failed.');
+                      toast.error(typeof err === 'string' ? err : 'Payment release failed.');
                     } finally { setReleasing(false); }
                   }}>
                     Release {formatCurrency(t.budget)} to {t.gig_pro_name}
@@ -362,14 +417,23 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
             if (!t) return;
             setDisputing(true);
             try {
-              await raiseDispute(t.task_id, t.gig_profile_id, disputeReason, disputeText.trim());
+              await dispatch(
+                raiseClientDispute({
+                  taskId: Number(t.task_id),
+                  dto: {
+                    gigProfileId: Number(t.gig_profile_id),
+                    reason: disputeReason,
+                    description: disputeText.trim(),
+                  },
+                }),
+              ).unwrap();
               toast.success('Dispute raised. The payment stays in escrow until an administrator rules on it.');
               setSelectedTaskPayment({ ...t, has_open_dispute: true });
               setDisputeOpen(false);
               setDisputeReason('');
               setDisputeText('');
             } catch (err) {
-              toast.error(err instanceof Error && err.message ? err.message : 'Could not raise the dispute.');
+              toast.error(typeof err === 'string' ? err : 'Could not raise the dispute.');
             } finally {
               setDisputing(false);
             }
@@ -389,12 +453,16 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
           if (!t) return;
           setRemoving(true);
           try {
-            await removeHire(t.task_id, t.gig_profile_id);
+            await dispatch(
+              endClientHire({
+                taskId: Number(t.task_id),
+                gigProfileId: Number(t.gig_profile_id),
+              }),
+            ).unwrap();
             toast.success(`${t.gig_pro_name} was removed from the task.`);
             setSelectedTaskPayment(null);
           } catch (err) {
-            toast.error(err instanceof Error && err.message ? err.message : 'Could not remove this professional.');
-            await refreshContracts().catch(() => undefined);
+            toast.error(typeof err === 'string' ? err : 'Could not remove this professional.');
           } finally {
             setRemoving(false);
             setConfirmRemove(false);
