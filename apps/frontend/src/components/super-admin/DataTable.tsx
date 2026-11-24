@@ -8,7 +8,7 @@ import { SearchIcon } from './Icons';
  * client-side filtering, and automatic pagination resets. Adheres to strict TypeScript generic patterns.
  */
 
-function matchesDeep(val: any, query: string): boolean {
+function matchesDeep(val: unknown, query: string): boolean {
   if (val === null || val === undefined) return false;
   if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
     return String(val).toLowerCase().includes(query);
@@ -17,17 +17,18 @@ function matchesDeep(val: any, query: string): boolean {
     return val.some((sub) => matchesDeep(sub, query));
   }
   if (typeof val === 'object') {
-    return Object.values(val).some((sub) => matchesDeep(sub, query));
+    return Object.values(val as Record<string, unknown>).some((sub) => matchesDeep(sub, query));
   }
   return false;
 }
 
 // ponytail: exports scalar top-level fields of the filtered rows; per-column formatting if a report needs it.
 // A cell starting (after any whitespace) with = + - @, or with tab/CR, is prefixed with ' so spreadsheets never run user-supplied text as a formula.
-function downloadCsv(rows: Record<string, any>[], name: string) {
-  const keys = Object.keys(rows[0] ?? {}).filter((k) => typeof rows[0][k] !== 'object');
-  const cell = (v: any) => `"${String(v ?? '').replace(/^(\s*[=+\-@]|[\t\r])/, "'$&").replace(/"/g, '""')}"`;
-  const csv = [keys.map(cell).join(','),...rows.map((r) => keys.map((k) => cell(r[k])).join(','))].join('\r\n');
+function downloadCsv(rows: object[], name: string) {
+  const firstRow = rows[0] as Record<string, unknown> | undefined;
+  const keys = firstRow ? Object.keys(firstRow).filter((k) => typeof firstRow[k] !== 'object') : [];
+  const cell = (v: unknown) => `"${String(v ?? '').replace(/^(\s*[=+\-@]|[\t\r])/, "'$&").replace(/"/g, '""')}"`;
+  const csv = [keys.map(cell).join(','), ...rows.map((r) => keys.map((k) => cell((r as Record<string, unknown>)[k])).join(','))].join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -54,7 +55,7 @@ export interface DataTableProps<T> {
   actions?: React.ReactNode;
 }
 
-export function DataTable<T extends Record<string, any>>({
+export function DataTable<T extends object>({
   columns,
   data = [],
   searchPlaceholder = 'Search records...',
@@ -66,16 +67,6 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-
-  // React-recommended pattern: Adjust state during render to avoid cascading useEffect renders
-  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
-  const [prevData, setPrevData] = useState(data);
-
-  if (prevSearchQuery !== searchQuery || prevData !== data) {
-    setPrevSearchQuery(searchQuery);
-    setPrevData(data);
-    setCurrentPage(1);
-  }
 
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
@@ -94,10 +85,11 @@ export function DataTable<T extends Record<string, any>>({
 
   // Compute pagination slices
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const activePage = Math.min(currentPage, totalPages);
   const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (activePage - 1) * pageSize;
     return filteredData.slice(start, start + pageSize);
-  }, [filteredData, currentPage, pageSize]);
+  }, [filteredData, activePage, pageSize]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -132,12 +124,13 @@ export function DataTable<T extends Record<string, any>>({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', flex: '1 1 auto', maxWidth: '380px', marginLeft: 'auto' }}>
-          <div style={{ position: 'relative', width: '100%' }}>
-            <SearchIcon
-              size={16}
-              color="var(--color-text-muted)"
-              className=""
-            />
+          <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'absolute', left: '10px', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+              <SearchIcon
+                size={16}
+                color="var(--color-text-muted)"
+              />
+            </div>
             <input
               type="text"
               className="admin-input"
@@ -257,22 +250,22 @@ export function DataTable<T extends Record<string, any>>({
           }}
         >
           <span>
-            Page {currentPage} of {totalPages}
+            Page {activePage} of {totalPages}
           </span>
           <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
             <button
               className="admin-btn admin-btn-outline admin-btn-sm"
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-              style={{ opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+              disabled={activePage === 1}
+              onClick={() => handlePageChange(activePage - 1)}
+              style={{ opacity: activePage === 1 ? 0.5 : 1, cursor: activePage === 1 ? 'not-allowed' : 'pointer' }}
             >
               Previous
             </button>
             <button
               className="admin-btn admin-btn-outline admin-btn-sm"
-              disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(currentPage + 1)}
-              style={{ opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+              disabled={activePage === totalPages}
+              onClick={() => handlePageChange(activePage + 1)}
+              style={{ opacity: activePage === totalPages ? 0.5 : 1, cursor: activePage === totalPages ? 'not-allowed' : 'pointer' }}
             >
               Next
             </button>

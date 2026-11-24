@@ -15,8 +15,8 @@ export interface StatusBadgeProps {
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => {
   const normalized = status.toUpperCase().replace(/\s+/g, '_');
 
-  let badgeClass = 'badge-neutral';
-  let displayLabel = status.replace(/_/g, ' ');
+  let badgeClass: string;
+  const displayLabel = status.replace(/_/g, ' ');
 
   switch (normalized) {
     case 'ACTIVE':
@@ -43,6 +43,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'PENDING_KYC':
     case 'UNDER_REVIEW':
     case 'INVITED':
+    case 'AWAITING_FUNDING':
       badgeClass = 'badge-warning';
       break;
 
@@ -54,6 +55,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'REFUNDED':
     case 'REVOKED':
     case 'EXPIRED':
+    case 'FAILED':
       badgeClass = 'badge-danger';
       break;
 
@@ -76,7 +78,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
         gap: '5px',
         fontWeight: 600,
         letterSpacing: '0.01em',
-        transition: 'all 0.15s ease'
+        transition: 'all 0.15s ease',
+        whiteSpace: 'nowrap'
       }}
     >
       <span
