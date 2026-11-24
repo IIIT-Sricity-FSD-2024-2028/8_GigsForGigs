@@ -1,43 +1,73 @@
 /**
  * @file adminApi.ts
  * @description
- * High-performance API client for the Super Admin vertical.
- * Communicates directly with Express backend REST endpoints (/api/admin/*)
- * using the centralized apiFetch wrapper.
+ * API repository for the Super Admin vertical.
+ * Communicates with Express backend REST endpoints (/api/admin/*)
+ * using the centralized apiFetch wrapper with strict domain typing.
  */
 
 import { apiFetch } from '../httpClient';
+import type {
+  AdminAnalyticsData,
+  AdminInviteResult,
+  AdminKPIs,
+  AdminStaff,
+  AdminUserProfile,
+  AdminUserSummary,
+  AuditLogEntry,
+  ClientDetail,
+  DisputeCase,
+  DisputeSettlementOutcome,
+  GigProDetail,
+  ManagerDetail,
+  ModerationReview,
+  PlatformSettingsData,
+  ProjectTask,
+} from './adminTypes';
 
-// Every call here is made with the admin's JWT. Responses are untyped (`any`) for now.
+export type {
+  AdminAnalyticsData,
+  AdminInviteResult,
+  AdminKPIs,
+  AdminStaff,
+  AdminUserProfile,
+  AdminUserSummary,
+  AuditLogEntry,
+  ClientDetail,
+  DisputeCase,
+  DisputeSettlementOutcome,
+  GigProDetail,
+  ManagerDetail,
+  ModerationReview,
+  PlatformSettingsData,
+  ProjectTask,
+};
+
 const actor = 'admin' as const;
 
 export const adminApi = {
   // KPIs & Analytics
-  /** GET headline platform KPIs. */
-  async getKPIs() {
-    return apiFetch<any>('/admin/kpis', { actor });
+  async getKPIs(): Promise<AdminKPIs> {
+    return apiFetch<AdminKPIs>('/admin/kpis', { actor });
   },
 
-  /** GET trend data for a range like "7d" / "30d". */
-
-  async getAnalytics(timeRange: string = '30d') {
-    return apiFetch<any>(`/admin/analytics?timeRange=${timeRange}`, { actor });
+  async getAnalytics(timeRange: string = '30d'): Promise<AdminAnalyticsData> {
+    return apiFetch<AdminAnalyticsData>(`/admin/analytics?timeRange=${encodeURIComponent(timeRange)}`, { actor });
   },
 
   // Master Directories
-  /** GET every user. */
-  async getUsers() {
-    return apiFetch<any[]>('/admin/users', { actor });
+  async getUsers(): Promise<AdminUserSummary[]> {
+    return apiFetch<AdminUserSummary[]>('/admin/users', { actor });
   },
 
-  /** GET client organisations. */
-
-  async getClients() {
-    return apiFetch<any[]>('/admin/clients', { actor });
+  async getClients(): Promise<ClientDetail[]> {
+    return apiFetch<ClientDetail[]>('/admin/clients', { actor });
   },
 
-  /** Record a KYC decision for a client. */
-  async decideClientKYC(clientId: string, status: 'VERIFIED' | 'REJECTED') {
+  async decideClientKYC(
+    clientId: string,
+    status: 'VERIFIED' | 'REJECTED',
+  ): Promise<{ success: boolean; clientId: number; kycStatus: 'VERIFIED' | 'REJECTED'; isVerified: boolean }> {
     return apiFetch(`/admin/clients/${clientId}/kyc`, {
       method: 'PATCH',
       body: { status },
@@ -45,15 +75,14 @@ export const adminApi = {
     });
   },
 
-  /** GET gig professionals. */
-
-  async getGigPros() {
-    return apiFetch<any[]>('/admin/gig-pros', { actor });
+  async getGigPros(): Promise<GigProDetail[]> {
+    return apiFetch<GigProDetail[]>('/admin/gig-pros', { actor });
   },
 
-  /** Set a gig pro's badge. */
-
-  async updateGigProBadge(gigProId: string, badge: string) {
+  async updateGigProBadge(
+    gigProId: string,
+    badge: string,
+  ): Promise<{ success: boolean; gigProfileId: number; badge: string }> {
     return apiFetch(`/admin/gig-pros/${gigProId}/badge`, {
       method: 'PATCH',
       body: { badge },
@@ -61,22 +90,15 @@ export const adminApi = {
     });
   },
 
-  /** GET managers. */
-
-  async getManagers() {
-    return apiFetch<any[]>('/admin/managers', { actor });
+  async getManagers(): Promise<ManagerDetail[]> {
+    return apiFetch<ManagerDetail[]>('/admin/managers', { actor });
   },
 
-  /** GET projects. */
-
-  async getProjects() {
-    return apiFetch<any[]>('/admin/projects', { actor });
+  async getProjects(): Promise<ProjectTask[]> {
+    return apiFetch<ProjectTask[]>('/admin/projects', { actor });
   },
 
-  /** Force a project/task into a status (sent lowercase). */
-
-  async overrideProjectStatus(projectId: string, status: string) {
-    // Strip "tsk-" prefix if present
+  async overrideProjectStatus(projectId: string, status: string): Promise<{ taskId: number; status: string }> {
     const id = projectId.replace(/\D/g, '');
     return apiFetch(`/admin/tasks/${id}`, {
       method: 'PATCH',
@@ -85,45 +107,32 @@ export const adminApi = {
     });
   },
 
-  /** GET payments ledger. */
-
-  async getPayments() {
-    return apiFetch<any[]>('/admin/payments', { actor });
+  async getReviews(): Promise<ModerationReview[]> {
+    return apiFetch<ModerationReview[]>('/admin/reviews', { actor });
   },
 
-  /** GET reviews for moderation. */
-
-  async getReviews() {
-    return apiFetch<any[]>('/admin/reviews', { actor });
+  async getDisputes(): Promise<DisputeCase[]> {
+    return apiFetch<DisputeCase[]>('/admin/disputes', { actor });
   },
 
-  /** GET disputes. */
-
-  async getDisputes() {
-    return apiFetch<any[]>('/admin/disputes', { actor });
+  async getAdminStaff(): Promise<AdminStaff[]> {
+    return apiFetch<AdminStaff[]>('/admin/admin-staff', { actor });
   },
 
-  /** GET admin accounts. */
-
-  async getAdminStaff() {
-    return apiFetch<any[]>('/admin/admin-staff', { actor });
+  async getAuditLogs(): Promise<AuditLogEntry[]> {
+    return apiFetch<AuditLogEntry[]>('/admin/audit-logs', { actor });
   },
 
-  /** GET audit log entries. */
-
-  async getAuditLogs() {
-    return apiFetch<any[]>('/admin/audit-logs', { actor });
-  },
-
-  /** GET platform settings. */
-
-  async getPlatformSettings() {
-    return apiFetch<any>('/admin/settings', { actor });
+  async getPlatformSettings(): Promise<PlatformSettingsData> {
+    return apiFetch<PlatformSettingsData>('/admin/settings', { actor });
   },
 
   // Mutations
-  /** Suspend/activate a user, with a reason for the audit log. */
-  async updateUserStatus(userId: string, status: string, reason: string) {
+  async updateUserStatus(
+    userId: string,
+    status: string,
+    reason: string,
+  ): Promise<{ success: boolean; userId: number; status: string }> {
     return apiFetch(`/admin/users/${userId}/status`, {
       method: 'PATCH',
       body: { status, reason },
@@ -131,66 +140,56 @@ export const adminApi = {
     });
   },
 
-  /** Invite a new admin with a role and permissions. */
-
-  async inviteAdmin(email: string, role: string, permissions: string[]) {
-    return apiFetch<any>('/admin/invitations', {
+  async inviteAdmin(email: string, role: string, permissions: string[]): Promise<AdminInviteResult> {
+    return apiFetch<AdminInviteResult>('/admin/invitations', {
       method: 'POST',
       body: { email, role, permissions },
       actor,
     });
   },
 
-  /** Activate an admin invite. The one-time password is always replaced. */
-
-  async acceptAdminInvitation(token: string, email: string, password: string, newPassword: string) {
-    return apiFetch<any>('/admin/invitations/accept', {
+  async acceptAdminInvitation(
+    token: string,
+    email: string,
+    password: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; token: string; user: AdminUserProfile }> {
+    return apiFetch('/admin/invitations/accept', {
       method: 'POST',
       body: { token, email, password, newPassword },
       actor,
     });
   },
 
-  /** Removes an admin account entirely; their token stops working on the next request. */
-  async removeAdmin(staffId: string) {
-    // staffId may look like "ADM-12"; the API wants just the digits.
-    return apiFetch(`/admin/users/${staffId.replace(/\D/g, '')}`, { method: 'DELETE', actor });
+  async removeAdmin(staffId: string): Promise<void> {
+    return apiFetch<void>(`/admin/users/${staffId.replace(/\D/g, '')}`, { method: 'DELETE', actor });
   },
 
-  /**
-   * End every session for an admin by bumping their tokenVersion. Revoking your
-   * own also returns a fresh token, which the caller must store to stay signed in.
-   */
-  async revokeAdminSession(staffId: string) {
+  async revokeAdminSession(staffId: string): Promise<{ success: boolean; token?: string }> {
     return apiFetch<{ success: boolean; token?: string }>(`/admin/sessions/${staffId}/revoke`, {
       method: 'POST',
       actor,
     });
   },
 
-  /** Resolve a dispute (optionally splitting funds by percentage). */
-
-  async settleDispute(disputeId: string, settlementType: string, resolutionNotes: string, splitClientPercent?: number) {
-    return apiFetch<{ refundToClient: number; payoutToPro: number; platformFee: number }>(`/admin/disputes/${disputeId}/settle`, {
+  async settleDispute(
+    disputeId: string,
+    settlementType: string,
+    resolutionNotes: string,
+    splitClientPercent?: number,
+  ): Promise<DisputeSettlementOutcome> {
+    return apiFetch<DisputeSettlementOutcome>(`/admin/disputes/${disputeId}/settle`, {
       method: 'POST',
       body: { settlementType, resolutionNotes, splitClientPercent },
       actor,
     });
   },
 
-  /** Manually release or refund an escrow payment. */
-
-  async overrideEscrow(paymentId: string | number, action: 'RELEASE' | 'REFUND', auditReason: string) {
-    return apiFetch(`/admin/payments/${paymentId}/override`, {
-      method: 'PATCH',
-      body: { action, auditReason },
-      actor,
-    });
-  },
-
-  /** Approve/hide a review. */
-
-  async moderateReview(reviewId: string, status: string, moderatorNotes?: string) {
+  async moderateReview(
+    reviewId: string,
+    status: string,
+    moderatorNotes?: string,
+  ): Promise<{ success: boolean; reviewId: number; status: string }> {
     return apiFetch(`/admin/reviews/${reviewId}/moderate`, {
       method: 'PATCH',
       body: { status, moderatorNotes },
@@ -198,32 +197,19 @@ export const adminApi = {
     });
   },
 
-  /** PUT platform settings. */
-
-  async updatePlatformSettings(settings: any) {
-    return apiFetch('/admin/settings', {
+  async updatePlatformSettings(settings: PlatformSettingsData): Promise<PlatformSettingsData> {
+    return apiFetch<PlatformSettingsData>('/admin/settings', {
       method: 'PUT',
       body: settings,
       actor,
     });
   },
 
-    /** Fetch the logged-in admin profile details. */
-  async getAdminProfile() {
-    return apiFetch<{
-      userId: number;
-      name: string;
-      email: string;
-      adminTier: string;
-      permissions: string[];
-      isTwoFactorEnabled: boolean;
-      status: string;
-      createdAt: string;
-    }>('/admin/profile', { actor });
+  async getAdminProfile(): Promise<AdminUserProfile> {
+    return apiFetch<AdminUserProfile>('/admin/profile', { actor });
   },
 
-  /** Change your own password. Returns a fresh token because other sessions are ended. */
-  async updateAdminPassword(currentPassword: string, newPassword: string) {
+  async updateAdminPassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; token: string }> {
     return apiFetch<{ success: boolean; token: string }>('/admin/profile/password', {
       method: 'POST',
       body: { currentPassword, newPassword },
@@ -231,20 +217,17 @@ export const adminApi = {
     });
   },
 
-  /** Step 1 of 2FA enrollment: get a new secret for the authenticator app. */
-  async enrollAdmin2FA() {
+  async enrollAdmin2FA(): Promise<{ secret: string; otpauthUri: string }> {
     return apiFetch<{ secret: string; otpauthUri: string }>('/admin/profile/2fa/enroll', { method: 'POST', actor });
   },
 
-  /** Step 2 of enrollment: a valid code from the app turns 2FA on. */
-  async confirmAdmin2FA(code: string) {
+  async confirmAdmin2FA(code: string): Promise<{ success: boolean; twoFactorEnabled: boolean }> {
     return apiFetch('/admin/profile/2fa/confirm', { method: 'POST', body: { code }, actor });
   },
 
-  /** Turn 2FA off. Also needs a valid code. */
-  async disableAdmin2FA(code: string) {
+  async disableAdmin2FA(code: string): Promise<{ success: boolean; twoFactorEnabled: boolean }> {
     return apiFetch('/admin/profile/2fa/disable', { method: 'POST', body: { code }, actor });
-  }
+  },
 };
 
 export default adminApi;
