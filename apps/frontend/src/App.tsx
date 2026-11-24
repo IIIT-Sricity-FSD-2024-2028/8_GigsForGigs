@@ -1,5 +1,5 @@
 /** Application route tree and role-aware portal layouts. */
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import {
   Navigate,
   Outlet,
@@ -14,7 +14,9 @@ import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
 import { ClientProvider } from './context/ClientContext/ClientContext';
-import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
+import { useAppDispatch, useAppSelector } from './store/hooks';
+import { clearManagerTaskDetail, fetchAssignedTasks, fetchManagerProfile, fetchManagerTaskDetail, setSelectedManagerTask } from './store/manager/managerSlice';
+import { selectManagerTaskDetail, selectManagerTaskDetailRequest } from './store/manager/selectors';
 import { GigProvider } from './context/GigContext/GigContext';
 import { ToastProvider } from './components/super-admin/Toast';
 import { ToastProvider as AppToastProvider } from './components/common/Toast';
@@ -236,6 +238,13 @@ function ManagerPortal() {
   const go = (view: string) => navigate(({ dashboard: '/manager/dashboard', tasks: '/manager/tasks', completed: '/manager/tasks/completed', 'task-detail': '/manager/tasks', profile: '/manager/profile' } as Record<string, string>)[view] || '/manager/dashboard');
   const openTask = (id: number, from: 'tasks' | 'completed' = 'tasks') => navigate(`/manager/tasks/${id}`, { state: { from } });
 
+  // Load the manager's profile and assigned tasks once per portal session (cleared on logout).
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    void dispatch(fetchManagerProfile());
+    void dispatch(fetchAssignedTasks());
+  }, [dispatch]);
+
   return (
     <ManagerLayout activeTab={activeTab} setActiveTab={go}>
       <Routes>
@@ -253,32 +262,31 @@ function ManagerPortal() {
 
 function ManagerTaskRoute({ onBack }: { onBack: () => void }) {
   const { taskId } = useParams();
-  const { selectTask, selectedTask, error } = useManager();
   const numericTaskId = Number(taskId);
-  const [loadState, setLoadState] = useState<{ taskId: number; status: 'loading' | 'ready' | 'failed' } | null>(null);
+  const validTaskId = Number.isSafeInteger(numericTaskId) && numericTaskId > 0;
+  const dispatch = useAppDispatch();
+  const task = useAppSelector(state => selectManagerTaskDetail(state, numericTaskId));
+  const request = useAppSelector(state => selectManagerTaskDetailRequest(state, numericTaskId));
   useEffect(() => {
-    if (!Number.isSafeInteger(numericTaskId) || numericTaskId <= 0) return;
-    let active = true;
-    setLoadState({ taskId: numericTaskId, status: 'loading' });
-    void selectTask(numericTaskId).then(found => {
-      if (active) setLoadState({ taskId: numericTaskId, status: found ? 'ready' : 'failed' });
-    });
-    return () => { active = false; };
-  }, [numericTaskId, selectTask]);
-  if (!Number.isSafeInteger(numericTaskId) || numericTaskId <= 0) {
+    if (!validTaskId) return;
+    dispatch(setSelectedManagerTask(numericTaskId));
+    void dispatch(fetchManagerTaskDetail(numericTaskId));
+    // Leaving the task clears only this task's detail, not the cached task list.
+    return () => { dispatch(clearManagerTaskDetail(numericTaskId)); };
+  }, [dispatch, numericTaskId, validTaskId]);
+  if (!validTaskId) {
     return <div role="alert">Invalid task ID.</div>;
   }
-  const currentLoadState = loadState?.taskId === numericTaskId ? loadState.status : 'loading';
-  if (currentLoadState === 'loading') {
+  if (!task && (!request || request.status === 'loading')) {
     return <Loader label="Loading task details..." />;
   }
-  if (currentLoadState === 'failed' || selectedTask?.taskId !== numericTaskId) {
+  if (!task) {
     return <div role="alert" style={{ padding: '24px', color: '#9B1C1C' }}>
-      <p>{error || 'Task details could not be loaded. It may have been deleted or reassigned.'}</p>
+      <p>{request?.error || 'Task details could not be loaded. It may have been deleted or reassigned.'}</p>
       <button type="button" onClick={onBack}>Back to Active Tasks</button>
     </div>;
   }
-  return <ManagerReviewDeliverables onBack={onBack} />;
+  return <ManagerReviewDeliverables taskId={numericTaskId} onBack={onBack} />;
 }
 
 function GigPortal() {
@@ -352,7 +360,6 @@ function ProtectedRole({ role }: { role: 'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONA
   if (!isAuthenticated || !user) return <Navigate to="/login" replace state={{ from: location }} />;
   if (user.role !== role) return <HomeRedirect />;
   if (role === 'CLIENT') return <ClientProvider><Outlet /></ClientProvider>;
-  if (role === 'MANAGER') return <ManagerProvider><Outlet /></ManagerProvider>;
   if (role === 'GIG_PROFESSIONAL') return <GigProvider><Outlet /></GigProvider>;
   return <Outlet />;
 }

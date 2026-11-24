@@ -19,20 +19,6 @@ managerRouter.use(authGuard);
 // ---- Client-facing manager roster (client token) --------------------
 // List the managers belonging to the authenticated client.
 managerRouter.get("/managers", roleGuard("client"), managerController.listManagers);
-// Remove a manager from the client's roster.
-managerRouter.delete(
-  "/managers/:managerId",
-  roleGuard("client"),
-  managerController.deleteManager,
-);
-// Update a manager's own record (e.g. name) on the client's roster.
-managerRouter.patch(
-  "/managers/:managerId",
-  roleGuard("client"),
-  validate(updateManagerSchema),
-  managerController.updateManager,
-);
-
 // ---- Manager self-service (manager token) ----------------------------
 const managerOnly = roleGuard("manager");
 
@@ -97,6 +83,22 @@ managerRouter.patch(
   managerOnly,
   taskAccessGuard,
   managerController.closeDeliverable,
+);
+
+// Client roster edits by id. Registered after every /managers/me route so
+// "me" is never captured as :managerId (which would 403 a manager's own PATCH).
+// Remove a manager from the client's roster.
+managerRouter.delete(
+  "/managers/:managerId",
+  roleGuard("client"),
+  managerController.deleteManager,
+);
+// Update a manager's own record (e.g. name) on the client's roster.
+managerRouter.patch(
+  "/managers/:managerId",
+  roleGuard("client"),
+  validate(updateManagerSchema),
+  managerController.updateManager,
 );
 
 // Deliverable definitions (scope items) on an assigned task. Manager handlers

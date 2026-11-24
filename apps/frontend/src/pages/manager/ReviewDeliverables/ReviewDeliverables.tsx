@@ -1,16 +1,71 @@
-import React, { useState } from 'react';
-import { useManager } from '../../../context/ManagerContext/ManagerContext';
+import React, { useEffect, useState } from 'react';
 import { safeHttpUrl } from '../../../utils/safeUrl';
-import { TaskDeliverablesManager } from '../../../components/client/sections/TaskDeliverablesManager';
-import { managerApi } from '../../../services/api/manager/managerApi';
+import { TaskDeliverablesManagerView } from '../../../components/client/sections/TaskDeliverablesManager';
 import { Button, Input, Select } from '../../../components/common';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  closeManagerDeliverable,
+  createTaskDefinition,
+  deleteTaskDefinition,
+  fetchTaskDefinitions,
+  reviewManagerDeliverable,
+  shortlistManagerApplication,
+  updateTaskDefinition,
+} from '../../../store/manager/managerSlice';
+import {
+  selectManagerDefinitionsBusy,
+  selectManagerDefinitionsRequest,
+  selectManagerTaskActionError,
+  selectManagerTaskApplications,
+  selectManagerTaskBusy,
+  selectManagerTaskDefinitions,
+  selectManagerTaskDeliverables,
+  selectManagerTaskDetail,
+} from '../../../store/manager/selectors';
 
 interface ReviewDeliverablesProps {
+  /** Task opened from the route; data is read from managerSlice by this id. */
+  taskId: number;
   onBack: () => void;
 }
 
-export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }) => {
-  const { selectedTask, deliverables, applications, shortlistApplication, reviewDeliverable, closeDeliverable, loading, error } = useManager();
+/** Manager container for the shared, presentational deliverable-definitions UI. */
+const ManagerTaskDefinitions: React.FC<{ taskId: number; readOnly: boolean }> = ({ taskId, readOnly }) => {
+  const dispatch = useAppDispatch();
+  const definitions = useAppSelector(state => selectManagerTaskDefinitions(state, taskId));
+  const request = useAppSelector(state => selectManagerDefinitionsRequest(state, taskId));
+  const busy = useAppSelector(state => selectManagerDefinitionsBusy(state, taskId));
+
+  useEffect(() => { void dispatch(fetchTaskDefinitions(taskId)); }, [dispatch, taskId]);
+
+  const resultOf = async (pending: Promise<{ meta: { requestStatus: string }; payload?: unknown }>) => {
+    const action = await pending;
+    return action.meta.requestStatus === 'fulfilled' ? null : String(action.payload ?? 'Request failed.');
+  };
+
+  return <TaskDeliverablesManagerView
+    definitions={definitions}
+    loading={!request || (request.status === 'loading' && definitions.length === 0)}
+    loadError={request?.status === 'failed' ? request.error : null}
+    busy={busy}
+    readOnly={readOnly}
+    onCreate={values => resultOf(dispatch(createTaskDefinition({ taskId, values })))}
+    onUpdate={(definitionId, values) => resultOf(dispatch(updateTaskDefinition({ taskId, definitionId, values })))}
+    onDelete={definitionId => resultOf(dispatch(deleteTaskDefinition({ taskId, definitionId })))}
+  />;
+};
+
+export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ taskId, onBack }) => {
+  const dispatch = useAppDispatch();
+  const selectedTask = useAppSelector(state => selectManagerTaskDetail(state, taskId));
+  const deliverables = useAppSelector(state => selectManagerTaskDeliverables(state, taskId));
+  const applications = useAppSelector(state => selectManagerTaskApplications(state, taskId));
+  const loading = useAppSelector(state => selectManagerTaskBusy(state, taskId));
+  const error = useAppSelector(state => selectManagerTaskActionError(state, taskId));
+
+  const shortlistApplication = (applicationId: number, rating?: number) =>
+    dispatch(shortlistManagerApplication({ taskId, applicationId, dto: rating ? { rating } : {} }));
+  const closeDeliverable = (deliverableNo: number) => dispatch(closeManagerDeliverable({ taskId, deliverableNo }));
 
   const [reviewingNo, setReviewingNo] = useState<number | null>(null);
   const [reviewStatus, setReviewStatus] = useState<'approved' | 'revision_requested'>('approved');
@@ -32,11 +87,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
   const openApplications = applications.filter(a => a.status === 'pending' || a.status === 'shortlisted');
 
   const handleReviewSubmit = async (deliverableNo: number) => {
-    const success = await reviewDeliverable(selectedTask.taskId, deliverableNo, {
-      status: reviewStatus,
-      feedback
-    });
-    if (success) {
+    const action = await dispatch(reviewManagerDeliverable({ taskId, deliverableNo, dto: { status: reviewStatus, feedback } }));
+    if (reviewManagerDeliverable.fulfilled.match(action)) {
       setReviewingNo(null);
       setFeedback('');
     }
@@ -164,7 +216,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                         <option value="">Rating (optional)</option>
                         {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} / 5</option>)}
                       </Select>
-                      <Button size="sm" disabled={loading} onClick={() => shortlistApplication(selectedTask.taskId, app.applicationId, ratings[app.applicationId] ? { rating: ratings[app.applicationId] } : {})}>
+                      <Button size="sm" disabled={loading} onClick={() => void shortlistApplication(app.applicationId, ratings[app.applicationId])}>
                         Shortlist
                       </Button>
                     </div>
@@ -177,7 +229,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
       )}
 
       {/* Show scope items for every task; managers may add/edit only while active. */}
-      <TaskDeliverablesManager key={selectedTask.taskId} taskId={selectedTask.taskId} readOnly={selectedTask.status !== 'in_progress'} api={managerApi} />
+      <ManagerTaskDefinitions key={taskId} taskId={taskId} readOnly={selectedTask.status !== 'in_progress'} />
 
       {/* Deliverables Section Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -257,13 +309,13 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
               <div style={{ display: 'flex', gap: '10px' }}>
                 {reviewingNo === del.deliverableNo ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '220px' }}>
-                    <Select value={reviewStatus} onChange={e => setReviewStatus(e.target.value as any)}>
+                    <Select value={reviewStatus} onChange={e => setReviewStatus(e.target.value as 'approved' | 'revision_requested')}>
                       <option value="approved">Approve</option>
                       <option value="revision_requested">Request Revision</option>
                     </Select>
                     <Input maxLength={500} type="text" placeholder="Optional feedback..." value={feedback} onChange={e => setFeedback(e.target.value)} />
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <Button size="sm" onClick={() => handleReviewSubmit(del.deliverableNo)} style={{ flex: 1 }}>
+                      <Button size="sm" disabled={loading} onClick={() => handleReviewSubmit(del.deliverableNo)} style={{ flex: 1 }}>
                         Submit
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => setReviewingNo(null)}>
@@ -279,7 +331,7 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onBack }
                     </Button>
                     )}
                     {(del.status === 'approved' || del.status === 'closed') && (
-                    <Button variant="outline" size="sm" onClick={() => closeDeliverable(selectedTask.taskId, del.deliverableNo)} disabled={del.status === 'closed' || selectedTask.status !== 'in_progress'}>
+                    <Button variant="outline" size="sm" onClick={() => void closeDeliverable(del.deliverableNo)} disabled={loading || del.status === 'closed' || selectedTask.status !== 'in_progress'}>
                       {del.status === 'closed' ? 'Closed' : 'Close'}
                     </Button>
                     )}
