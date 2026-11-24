@@ -4,64 +4,39 @@ import { DataTable, type ColumnDef } from '../../../components/super-admin/DataT
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { ReviewIcon, ArrowRightIcon } from '../../../components/super-admin/Icons';
-import { useToast } from '../../../components/super-admin/Toast';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useToast } from '../../../components/super-admin/useToast';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchReviews,
+  moderateReview
+} from '../../../store/admin/adminSlice';
+import {
+  selectReviews,
+  selectReviewsRequest
+} from '../../../store/admin/selectors';
+import type { ModerationReview } from '../../../store/admin/types';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
-export interface ModerationReview {
-  id: string;
-  taskId: string;
-  taskTitle: string;
-  reviewerName: string;
-  reviewerRole: 'CLIENT' | 'GIG_PROFESSIONAL';
-  targetUserName: string;
-  rating: number;
-  comment: string | null;
-  moderatorNotes: string | null;
-  status: 'PUBLISHED' | 'FLAGGED' | 'HIDDEN';
-  createdAt: string;
-}
+export type { ModerationReview };
 
 export const Reviews: React.FC = () => {
   const toast = useToast();
-  const [reviews, setReviews] = useState<ModerationReview[]>([]);
+  const dispatch = useAppDispatch();
+  const reviews = useAppSelector(selectReviews);
+  const reviewsRequest = useAppSelector(selectReviewsRequest);
+
   const [activeTab, setActiveTab] = useState<'all' | 'flagged' | 'hidden'>('all');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadReviews() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await adminApi.getReviews();
-        if (isMounted) {
-          setReviews(Array.isArray(data) ? data : []);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err?.message || 'Failed to load reviews queue.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-    loadReviews();
-    return () => { isMounted = false; };
-  }, []);
+    dispatch(fetchReviews());
+  }, [dispatch]);
 
   const handleModerate = async (id: string, newStatus: ModerationReview['status']) => {
     try {
-      await adminApi.moderateReview(id, newStatus);
-      const updated = reviews.map((r) =>
-        r.id === id ? { ...r, status: newStatus } : r
-      );
-      setReviews(updated);
+      await dispatch(moderateReview({ reviewId: id, status: newStatus })).unwrap();
       toast.info('Review Moderated', `Review is now ${newStatus}. Hidden reviews don't count toward ratings.`);
-    } catch (err: any) {
-      toast.error('Moderation Failed', err?.message || 'Failed to update review status.');
+    } catch (err: unknown) {
+      toast.error('Moderation Failed', extractErrorMessage(err, 'Failed to update review status.'));
     }
   };
 
@@ -131,7 +106,7 @@ export const Reviews: React.FC = () => {
             <button
               onClick={() => handleModerate(row.id, 'PUBLISHED')}
               className="admin-btn admin-btn-secondary"
-              style={{ padding: '4px 8px', fontSize: '11px' }}
+              style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
             >
               Publish
             </button>
@@ -140,7 +115,7 @@ export const Reviews: React.FC = () => {
             <button
               onClick={() => handleModerate(row.id, 'HIDDEN')}
               className="admin-btn admin-btn-danger"
-              style={{ padding: '4px 8px', fontSize: '11px' }}
+              style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
             >
               Hide Review
             </button>
@@ -150,14 +125,14 @@ export const Reviews: React.FC = () => {
     }
   ];
 
-  if (loading) {
+  if (reviewsRequest.status === 'loading' && reviews.length === 0) {
     return <Loader label="Loading reviews..." />;
   }
 
-  if (error) {
+  if (reviewsRequest.error && reviews.length === 0) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
-        {error}
+        {reviewsRequest.error}
       </div>
     );
   }
@@ -171,7 +146,7 @@ export const Reviews: React.FC = () => {
           { id: 'hidden', label: 'Hidden / Suppressed', count: reviews.filter((r) => r.status === 'HIDDEN').length }
         ]}
         activeTab={activeTab}
-        onChange={(tabId) => setActiveTab(tabId as any)}
+        onChange={(tabId) => setActiveTab(tabId as 'all' | 'flagged' | 'hidden')}
       />
 
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>

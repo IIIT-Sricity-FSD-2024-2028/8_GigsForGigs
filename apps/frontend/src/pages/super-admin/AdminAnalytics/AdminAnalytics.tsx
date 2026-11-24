@@ -3,46 +3,30 @@ import { KPICard } from '../../../components/super-admin/KPICard';
 import { RevenueAreaChart } from '../../../components/super-admin/SimpleCharts';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ExportIcon } from '../../../components/super-admin/Icons';
-import { useToast } from '../../../components/super-admin/Toast';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useToast } from '../../../components/super-admin/useToast';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchAnalytics } from '../../../store/admin/adminSlice';
+import { selectAnalyticsByRange, selectAnalyticsRequest } from '../../../store/admin/selectors';
+import type { CategoryDemand } from '../../../store/admin/types';
 
 /**
  * @file AdminAnalytics.tsx
  * @description
  * Deep-dive business intelligence and financial metrics for the GigsForGigs platform.
- * Fetches cohort analysis, category demand distribution, and dataset export tools directly from the backend API.
+ * 100% selector-driven from Redux store (`adminSlice`).
  */
-
-interface CategoryDemand {
-  category: string;
-  contracts: number;
-  totalVolume: number;
-  avgContractValue: number;
-  marketShare: number;
-}
 
 export const AdminAnalytics: React.FC = () => {
   const toast = useToast();
+  const dispatch = useAppDispatch();
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'ytd'>('30d');
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const analyticsData = useAppSelector((state) => selectAnalyticsByRange(state, timeRange));
+  const analyticsRequest = useAppSelector(selectAnalyticsRequest);
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadAnalytics() {
-      try {
-        const data = await adminApi.getAnalytics(timeRange);
-        if (isMounted) {
-          setAnalyticsData(data);
-          setLoadError(null);
-        }
-      } catch (err: any) {
-        if (isMounted) setLoadError(err?.message || 'Failed to load analytics.');
-      }
-    }
-    loadAnalytics();
-    return () => { isMounted = false; };
-  }, [timeRange]);
+    void dispatch(fetchAnalytics(timeRange));
+  }, [dispatch, timeRange]);
 
   const categoryColumns: ColumnDef<CategoryDemand>[] = [
     { header: 'Category', accessorKey: 'category' },
@@ -68,7 +52,11 @@ export const AdminAnalytics: React.FC = () => {
     }
   ];
 
-  /** Download what's on screen. CSV is one row per time bucket, then one per category. */
+  const rawVelocity = analyticsData?.velocity;
+  const velocity = Array.isArray(rawVelocity) ? rawVelocity : [];
+  const categories: CategoryDemand[] = Array.isArray(analyticsData?.categories) ? analyticsData.categories : [];
+
+  /** Download what's on screen. CSV is a pure utility over selected Redux state. */
   const handleExport = (format: 'CSV' | 'JSON') => {
     if (!analyticsData) return;
     const csvCell = (value: unknown) => `"${String(value).replace(/"/g, '""')}"`;
@@ -90,15 +78,10 @@ export const AdminAnalytics: React.FC = () => {
     toast.success('Report Exported', `Generated ${format} report for ${timeRange.toUpperCase()}.`);
   };
 
-  const rawVelocity = analyticsData?.velocity;
-  const velocity = Array.isArray(rawVelocity) ? rawVelocity : [];
-
-  const categories: CategoryDemand[] = Array.isArray(analyticsData?.categories) ? analyticsData.categories : [];
-
-  if (loadError) {
+  if (analyticsRequest.status === 'failed' && !analyticsData) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
-        {loadError}
+        {analyticsRequest.error || 'Failed to load analytics.'}
       </div>
     );
   }
@@ -149,7 +132,7 @@ export const AdminAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Analytics KPI Metric Tiles (100% Dynamically Fed from DB & Time Range) */}
+      {/* Analytics KPI Metric Tiles (Dynamically fed from Redux analyticsData) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Gross Volume"

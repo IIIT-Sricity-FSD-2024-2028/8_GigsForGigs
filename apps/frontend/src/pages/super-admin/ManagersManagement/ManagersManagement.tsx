@@ -3,52 +3,38 @@ import { Loader } from '../../../components/common/Loader';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
-import { useToast } from '../../../components/super-admin/Toast';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useToast } from '../../../components/super-admin/useToast';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchManagers,
+  updateUserStatus
+} from '../../../store/admin/adminSlice';
+import {
+  selectManagers,
+  selectManagersRequest
+} from '../../../store/admin/selectors';
+import type { ManagerDetail } from '../../../store/admin/types';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
-export interface ManagerDetail {
-  id: string;
-  name: string;
-  email: string;
-  linkedClients: string[];
-  activeSupervisedTasks: number;
-  status: 'ACTIVE' | 'SUSPENDED';
-}
+export type { ManagerDetail };
 
 export const ManagersManagement: React.FC = () => {
   const toast = useToast();
-  const [managers, setManagers] = useState<ManagerDetail[]>([]);
-  const [selectedManager, setSelectedManager] = useState<ManagerDetail | null>(null);
+  const dispatch = useAppDispatch();
+  const managers = useAppSelector(selectManagers);
+  const managersRequest = useAppSelector(selectManagersRequest);
+
+  const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const selectedManager = managers.find((m) => m.id === selectedManagerId) || null;
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadManagers() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await adminApi.getManagers();
-        if (isMounted) {
-          setManagers(Array.isArray(data) ? data : []);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err?.message || 'Failed to load managers directory.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-    loadManagers();
-    return () => { isMounted = false; };
-  }, []);
+    dispatch(fetchManagers());
+  }, [dispatch]);
 
   const handleOpenManagerModal = (mgr: ManagerDetail) => {
-    setSelectedManager(mgr);
+    setSelectedManagerId(mgr.id);
     setIsModalOpen(true);
   };
 
@@ -56,15 +42,16 @@ export const ManagersManagement: React.FC = () => {
     if (!selectedManager) return;
     const newStatus: 'ACTIVE' | 'SUSPENDED' = selectedManager.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
     try {
-      await adminApi.updateUserStatus(selectedManager.id, newStatus, 'Manager status updated');
-      const updated = managers.map((m) =>
-        m.id === selectedManager.id ? { ...m, status: newStatus } : m
-      );
-      setManagers(updated);
-      setSelectedManager({ ...selectedManager, status: newStatus });
+      await dispatch(
+        updateUserStatus({
+          userId: selectedManager.id,
+          status: newStatus,
+          reason: 'Manager status updated'
+        })
+      ).unwrap();
       toast.success('Status Updated', `Manager seat for ${selectedManager.name} is now ${newStatus}.`);
-    } catch (err: any) {
-      toast.error('Update Failed', err?.message || 'Could not update manager status.');
+    } catch (err: unknown) {
+      toast.error('Update Failed', extractErrorMessage(err, 'Could not update manager status.'));
     }
   };
 
@@ -82,7 +69,7 @@ export const ManagersManagement: React.FC = () => {
       header: 'Client Organizations',
       cell: (row) => (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-          {row.linkedClients.map((client) => (
+          {row.linkedClients.map((client: string) => (
             <span
               key={client}
               style={{
@@ -123,14 +110,14 @@ export const ManagersManagement: React.FC = () => {
     }
   ];
 
-  if (loading) {
+  if (managersRequest.status === 'loading' && managers.length === 0) {
     return <Loader label="Loading managers..." />;
   }
 
-  if (error) {
+  if (managersRequest.error && managers.length === 0) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
-        {error}
+        {managersRequest.error}
       </div>
     );
   }
@@ -149,7 +136,7 @@ export const ManagersManagement: React.FC = () => {
       <ActionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={`Manager Permissions: ${selectedManager?.name}`}
+        title={`Manager Permissions: ${selectedManager?.name || ''}`}
         maxWidth="580px"
       >
         {selectedManager && (

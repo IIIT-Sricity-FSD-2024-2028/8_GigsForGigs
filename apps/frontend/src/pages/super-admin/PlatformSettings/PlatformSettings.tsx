@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PlusIcon, CloseIcon } from '../../../components/super-admin/Icons';
-import { useToast } from '../../../components/super-admin/Toast';
+import { useToast } from '../../../components/super-admin/useToast';
 import { Loader } from '../../../components/common/Loader';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchPlatformSettings,
+  updatePlatformSettings
+} from '../../../store/admin/adminSlice';
+import {
+  selectPlatformSettings,
+  selectPlatformSettingsRequest,
+  selectPlatformSettingsSave
+} from '../../../store/admin/selectors';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
 export interface PlatformConfig {
   platformRakePercentage: number;
@@ -16,41 +26,47 @@ export interface PlatformConfig {
 export const PlatformSettings: React.FC = () => {
   const { hasPermission } = useAuth();
   const toast = useToast();
-  // Null until the database answers, so the form never shows invented values.
-  const [config, setConfig] = useState<PlatformConfig | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+
+  const reduxConfig = useAppSelector(selectPlatformSettings);
+  const settingsRequest = useAppSelector(selectPlatformSettingsRequest);
+  const saveRequest = useAppSelector(selectPlatformSettingsSave);
+  const saving = saveRequest.status === 'loading';
+
+  const serverConfig = useMemo<PlatformConfig | null>(() => {
+    if (!reduxConfig) return null;
+    return {
+      platformRakePercentage: reduxConfig.commissionRakePercent,
+      minimumGigBudget: reduxConfig.minimumTaskBudget,
+      maxEscrowThreshold: reduxConfig.maxEscrowThreshold,
+      isMaintenanceMode: reduxConfig.maintenanceMode,
+      allowedCategories: reduxConfig.allowedCategories
+    };
+  }, [reduxConfig]);
+
+  // Form editing draft overlaid on top of Redux-fetched config
+  const [draftConfig, setDraftConfig] = useState<PlatformConfig | null>(null);
   const [newCategory, setNewCategory] = useState('');
   const [isSaved, setIsSaved] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadSettings() {
-      try {
-        const data = await adminApi.getPlatformSettings();
-        if (isMounted) {
-          setConfig({
-            platformRakePercentage: data.commissionRakePercent,
-            minimumGigBudget: data.minimumTaskBudget,
-            maxEscrowThreshold: data.maxEscrowThreshold,
-            isMaintenanceMode: data.maintenanceMode,
-            allowedCategories: data.allowedCategories
-          });
-        }
-      } catch (err: any) {
-        if (isMounted) setLoadError(err?.message || 'Failed to load platform settings.');
-      }
-    }
-    loadSettings();
-    return () => { isMounted = false; };
-  }, []);
+  const config = draftConfig ?? serverConfig;
 
-  if (loadError) {
+  useEffect(() => {
+    dispatch(fetchPlatformSettings());
+  }, [dispatch]);
+
+  if (settingsRequest.error && !config) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
-        {loadError}
+        {settingsRequest.error}
       </div>
     );
   }
+
+  if (settingsRequest.status === 'loading' && !config) {
+    return <Loader label="Loading settings..." />;
+  }
+
   if (!config) {
     return <Loader label="Loading settings..." />;
   }
@@ -62,7 +78,7 @@ export const PlatformSettings: React.FC = () => {
       toast.warning('Category Exists', 'This skill category is already in the platform taxonomy.');
       return;
     }
-    setConfig({
+    setDraftConfig({
       ...config,
       allowedCategories: [...config.allowedCategories, newCategory.trim()]
     });
@@ -71,7 +87,7 @@ export const PlatformSettings: React.FC = () => {
   };
 
   const handleRemoveCategory = (catToRemove: string) => {
-    setConfig({
+    setDraftConfig({
       ...config,
       allowedCategories: config.allowedCategories.filter((c) => c !== catToRemove)
     });
@@ -81,17 +97,20 @@ export const PlatformSettings: React.FC = () => {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await adminApi.updatePlatformSettings({
-        commissionRakePercent: config.platformRakePercentage,
-        minimumTaskBudget: config.minimumGigBudget,
-        maxEscrowThreshold: config.maxEscrowThreshold,
-        allowedCategories: config.allowedCategories,
-        maintenanceMode: config.isMaintenanceMode
-      });
-    } catch (err: any) {
-      toast.error('Save Failed', err?.message || 'Settings were not saved.');
+      await dispatch(
+        updatePlatformSettings({
+          commissionRakePercent: config.platformRakePercentage,
+          minimumTaskBudget: config.minimumGigBudget,
+          maxEscrowThreshold: config.maxEscrowThreshold,
+          allowedCategories: config.allowedCategories,
+          maintenanceMode: config.isMaintenanceMode
+        })
+      ).unwrap();
+    } catch (err: unknown) {
+      toast.error('Save Failed', extractErrorMessage(err, 'Settings were not saved.'));
       return;
     }
+    setDraftConfig(null);
     setIsSaved(true);
     toast.success('Platform Settings Saved', `Commission is ${config.platformRakePercentage}% for new contracts. Existing contracts keep their agreed fee.`);
     setTimeout(() => setIsSaved(false), 2500);
@@ -127,7 +146,7 @@ export const PlatformSettings: React.FC = () => {
                 max="50"
                 className="admin-input"
                 value={config.platformRakePercentage}
-                onChange={(e) => setConfig({ ...config, platformRakePercentage: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setDraftConfig({ ...config, platformRakePercentage: parseFloat(e.target.value) || 0 })}
               />
               <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>%</span>
             </div>
@@ -145,10 +164,9 @@ export const PlatformSettings: React.FC = () => {
               min="5"
               className="admin-input"
               value={config.minimumGigBudget}
-              onChange={(e) => setConfig({ ...config, minimumGigBudget: parseInt(e.target.value, 10) || 0 })}
+              onChange={(e) => setDraftConfig({ ...config, minimumGigBudget: parseInt(e.target.value, 10) || 0 })}
             />
           </div>
-
         </div>
 
         {/* Operational Constraints */}
@@ -166,7 +184,7 @@ export const PlatformSettings: React.FC = () => {
               min="1"
               className="admin-input"
               value={config.maxEscrowThreshold}
-              onChange={(e) => setConfig({ ...config, maxEscrowThreshold: Number(e.target.value) || 0 })}
+              onChange={(e) => setDraftConfig({ ...config, maxEscrowThreshold: Number(e.target.value) || 0 })}
             />
           </div>
 
@@ -175,7 +193,7 @@ export const PlatformSettings: React.FC = () => {
               <input
                 type="checkbox"
                 checked={config.isMaintenanceMode}
-                onChange={(e) => setConfig({ ...config, isMaintenanceMode: e.target.checked })}
+                onChange={(e) => setDraftConfig({ ...config, isMaintenanceMode: e.target.checked })}
               />
               <div>
                 <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', color: 'var(--color-danger-text)' }}>
@@ -253,10 +271,11 @@ export const PlatformSettings: React.FC = () => {
         {hasPermission('settings:manage') ? (
           <button
             type="submit"
+            disabled={saving}
             className="admin-btn admin-btn-primary"
             style={{ padding: '0.75rem 2rem', fontSize: 'var(--font-size-sm)' }}
           >
-            Save Platform Changes
+            {saving ? 'Saving...' : 'Save Platform Changes'}
           </button>
         ) : (
           <div style={{ backgroundColor: 'var(--color-bg-light)', border: '1px solid var(--color-border)', padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>

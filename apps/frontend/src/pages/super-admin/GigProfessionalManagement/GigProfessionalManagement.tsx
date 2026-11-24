@@ -5,84 +5,69 @@ import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ReviewIcon } from '../../../components/super-admin/Icons';
-import { useToast } from '../../../components/super-admin/Toast';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useToast } from '../../../components/super-admin/useToast';
 import { safeHttpUrl } from '../../../utils/safeUrl';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchGigPros,
+  updateGigProBadge,
+  updateUserStatus
+} from '../../../store/admin/adminSlice';
+import {
+  selectGigPros,
+  selectGigProsRequest
+} from '../../../store/admin/selectors';
+import type { GigProDetail } from '../../../store/admin/types';
+import { formatCurrency } from '../../../utils/format';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
-export interface GigProDetail {
-  id: string;
-  name: string;
-  headline: string | null;
-  skills: string[];
-  totalEarnings: number;
-  completedJobs: number;
-  rating: number | null;
-  reviewCount: number;
-  portfolioUrls: string[];
-  badge: 'NONE' | 'VERIFIED_PRO' | 'TOP_RATED';
-  status: 'ACTIVE' | 'SUSPENDED';
-  portfolioCount: number;
-}
+export type { GigProDetail };
 
 export const GigProfessionalManagement: React.FC = () => {
   const toast = useToast();
-  const [gigPros, setGigPros] = useState<GigProDetail[]>([]);
-  const [selectedPro, setSelectedPro] = useState<GigProDetail | null>(null);
+  const dispatch = useAppDispatch();
+  const gigPros = useAppSelector(selectGigPros);
+  const gigProsRequest = useAppSelector(selectGigProsRequest);
+
+  const [selectedProId, setSelectedProId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSuspendDialogOpen, setIsSuspendDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const selectedPro = gigPros.find((p) => p.id === selectedProId) || null;
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadGigPros() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await adminApi.getGigPros();
-        if (isMounted) {
-          setGigPros(Array.isArray(data) ? data : []);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err?.message || 'Failed to load gig professionals.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-    loadGigPros();
-    return () => { isMounted = false; };
-  }, []);
+    dispatch(fetchGigPros());
+  }, [dispatch]);
 
   const handleOpenProDrawer = (pro: GigProDetail) => {
-    setSelectedPro(pro);
+    setSelectedProId(pro.id);
     setIsDrawerOpen(true);
   };
 
   const handleUpdateBadge = async (newBadge: GigProDetail['badge']) => {
     if (!selectedPro) return;
     try {
-      await adminApi.updateGigProBadge(selectedPro.id, newBadge);
-      setGigPros(gigPros.map((p) => (p.id === selectedPro.id ? { ...p, badge: newBadge } : p)));
-      setSelectedPro({ ...selectedPro, badge: newBadge });
+      await dispatch(updateGigProBadge({ gigProId: selectedPro.id, badge: newBadge })).unwrap();
       toast.success('Badge Updated', `Badge set to ${newBadge.replace('_', ' ')} for ${selectedPro.name}.`);
-    } catch (err: any) {
-      toast.error('Badge Update Failed', err?.message || 'Could not update the badge.');
+    } catch (err: unknown) {
+      toast.error('Badge Update Failed', extractErrorMessage(err, 'Could not update the badge.'));
     }
   };
 
   const handleSuspendConfirm = async () => {
     if (!selectedPro) return;
     try {
-      await adminApi.updateUserStatus(selectedPro.id, 'SUSPENDED', 'Quality standards review');
-      setGigPros(gigPros.map((p) => (p.id === selectedPro.id ? { ...p, status: 'SUSPENDED' as const } : p)));
+      await dispatch(
+        updateUserStatus({
+          userId: selectedPro.id,
+          status: 'SUSPENDED',
+          reason: 'Quality standards review'
+        })
+      ).unwrap();
       setIsDrawerOpen(false);
       toast.warning('Freelancer Suspended', `Account for ${selectedPro.name} paused.`);
-    } catch (err: any) {
-      toast.error('Suspension Failed', err?.message || 'Could not suspend this account.');
+    } catch (err: unknown) {
+      toast.error('Suspension Failed', extractErrorMessage(err, 'Could not suspend this account.'));
     }
     setIsSuspendDialogOpen(false);
   };
@@ -90,15 +75,16 @@ export const GigProfessionalManagement: React.FC = () => {
   const handleReactivatePro = async () => {
     if (!selectedPro) return;
     try {
-      await adminApi.updateUserStatus(selectedPro.id, 'ACTIVE', 'Reactivated by Admin');
-      const updated = gigPros.map((p) =>
-        p.id === selectedPro.id ? { ...p, status: 'ACTIVE' as const } : p
-      );
-      setGigPros(updated);
-      setSelectedPro({ ...selectedPro, status: 'ACTIVE' });
+      await dispatch(
+        updateUserStatus({
+          userId: selectedPro.id,
+          status: 'ACTIVE',
+          reason: 'Reactivated by Admin'
+        })
+      ).unwrap();
       toast.success('Freelancer Reactivated', `Account for ${selectedPro.name} restored to Active.`);
-    } catch (err: any) {
-      toast.error('Reactivation Failed', err?.message || 'Could not reactivate freelancer.');
+    } catch (err: unknown) {
+      toast.error('Reactivation Failed', extractErrorMessage(err, 'Could not reactivate freelancer.'));
     }
   };
 
@@ -106,7 +92,7 @@ export const GigProfessionalManagement: React.FC = () => {
     {
       header: 'Freelancer',
       cell: (row) => (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '210px' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.name}</span>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{row.skills.slice(0, 3).join(', ') || 'No skills listed'}</span>
         </div>
@@ -114,18 +100,18 @@ export const GigProfessionalManagement: React.FC = () => {
     },
     {
       header: 'Earnings',
-      cell: (row) => <span style={{ fontWeight: 700 }}>₹{row.totalEarnings.toLocaleString('en-IN')}</span>
+      cell: (row) => <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{formatCurrency(row.totalEarnings)}</span>
     },
     {
       header: 'Rating & Jobs',
       cell: (row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#9A5100', fontWeight: 700 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9A5100', fontWeight: 700 }}>
             <ReviewIcon size={14} color="#9A5100" />
             <span>{row.rating ?? '—'}</span>
           </div>
-          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
-            ({row.reviewCount} reviews, {row.completedJobs} jobs)
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', whiteSpace: 'nowrap' }}>
+            {row.reviewCount} reviews · {row.completedJobs} jobs
           </span>
         </div>
       )
@@ -144,7 +130,7 @@ export const GigProfessionalManagement: React.FC = () => {
         <button
           onClick={() => handleOpenProDrawer(row)}
           className="admin-btn admin-btn-secondary"
-          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
+          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)', whiteSpace: 'nowrap' }}
         >
           Review Talent
         </button>
@@ -152,14 +138,14 @@ export const GigProfessionalManagement: React.FC = () => {
     }
   ];
 
-  if (loading) {
+  if (gigProsRequest.status === 'loading' && gigPros.length === 0) {
     return <Loader label="Loading gig professionals..." />;
   }
 
-  if (error) {
+  if (gigProsRequest.error && gigPros.length === 0) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
-        {error}
+        {gigProsRequest.error}
       </div>
     );
   }
@@ -179,7 +165,7 @@ export const GigProfessionalManagement: React.FC = () => {
       <ActionModal
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title={`Freelancer Profile: ${selectedPro?.name}`}
+        title={`Freelancer Profile: ${selectedPro?.name || ''}`}
         maxWidth="680px"
       >
         {selectedPro && (
@@ -191,7 +177,7 @@ export const GigProfessionalManagement: React.FC = () => {
               </div>
               <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>{selectedPro.headline || 'No bio provided'}</span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: 'var(--spacing-xs)' }}>
-                {selectedPro.skills.map((skill) => (
+                {selectedPro.skills.map((skill: string) => (
                   <span
                     key={skill}
                     style={{
@@ -211,7 +197,7 @@ export const GigProfessionalManagement: React.FC = () => {
               <div style={{ marginTop: 'var(--spacing-sm)', fontSize: 'var(--font-size-xs)' }}>
                 <strong>Portfolio ({selectedPro.portfolioUrls.length}):</strong>{' '}
                 {selectedPro.portfolioUrls.length === 0 && 'none submitted'}
-                {selectedPro.portfolioUrls.map((url) => (
+                {selectedPro.portfolioUrls.map((url: string) => (
                   <div key={url}>
                     <a href={safeHttpUrl(url)} target="_blank" rel="noreferrer">{url}</a>
                   </div>
@@ -273,7 +259,7 @@ export const GigProfessionalManagement: React.FC = () => {
       {/* Suspend Confirmation Dialog */}
       <ConfirmDialog
         isOpen={isSuspendDialogOpen}
-        title={`Suspend ${selectedPro?.name}?`}
+        title={`Suspend ${selectedPro?.name || ''}?`}
         message="Suspending this freelancer will prevent them from bidding on new tasks or submitting milestones. All active escrow balances will remain locked until ongoing deliverables are arbitrated."
         confirmLabel="Confirm Suspension"
         isDanger={true}

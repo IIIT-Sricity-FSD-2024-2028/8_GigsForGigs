@@ -1,62 +1,50 @@
 import React, { useState, useEffect } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
-import { useToast } from '../../../components/super-admin/Toast';
+import { useToast } from '../../../components/super-admin/useToast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
-import { adminApi } from '../../../services/api/admin/adminApi';
 import { safeHttpUrl } from '../../../utils/safeUrl';
+import { formatCurrency } from '../../../utils/format';
+import { extractErrorMessage } from '../../../utils/adminAccess';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchDisputes,
+  settleDispute
+} from '../../../store/admin/adminSlice';
+import {
+  selectDisputes,
+  selectDisputesRequest
+} from '../../../store/admin/selectors';
+import type { DisputeCase } from '../../../store/admin/types';
 
-export interface DisputeCase {
-  id: string;
-  taskId: string;
-  taskTitle: string;
-  filedByName: string;
-  filedByRole: 'CLIENT' | 'GIG_PROFESSIONAL';
-  againstName: string;
-  disputeAmount: number;
-  escrowHeld: number;
-  reason: string;
-  description: string;
-  evidenceUrls: string[];
-  status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
-  /** Derived by the server from createdAt. Negative once breached, null when closed. */
-  slaHoursLeft: number | null;
-  resolutionNotes: string | null;
-  settlementType: string | null;
-  splitPercent: number | null;
-  createdAt: string;
-}
+export type { DisputeCase };
 
 export const DisputesReports: React.FC = () => {
   const { hasPermission } = useAuth();
   const toast = useToast();
-  const [disputes, setDisputes] = useState<DisputeCase[]>([]);
-  const [selectedDispute, setSelectedDispute] = useState<DisputeCase | null>(null);
+  const dispatch = useAppDispatch();
+  const disputes = useAppSelector(selectDisputes);
+  const disputesRequest = useAppSelector(selectDisputesRequest);
+
+  const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
   const [isDocketOpen, setIsDocketOpen] = useState(false);
 
   // Settlement Engine State
   const [settlementType, setSettlementType] = useState<'FULL_REFUND' | 'FULL_RELEASE' | 'SPLIT'>('FULL_REFUND');
   const [splitClientPercent, setSplitClientPercent] = useState<number>(50);
   const [resolutionNotes, setResolutionNotes] = useState('');
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [settling, setSettling] = useState(false);
+
+  const selectedDispute = disputes.find((d) => d.id === selectedDisputeId) || null;
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadDisputes() {
-      try {
-        const data = await adminApi.getDisputes();
-        if (isMounted) setDisputes(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        if (isMounted) setLoadError(err?.message || 'Failed to load the dispute docket.');
-      }
-    }
-    loadDisputes();
-    return () => { isMounted = false; };
-  }, []);
+    dispatch(fetchDisputes());
+  }, [dispatch]);
 
   const handleOpenDocket = (dispute: DisputeCase) => {
-    setSelectedDispute(dispute);
+    setSelectedDisputeId(dispute.id);
     setSettlementType('FULL_REFUND');
     setResolutionNotes('');
     setIsDocketOpen(true);
@@ -64,29 +52,29 @@ export const DisputesReports: React.FC = () => {
 
   const handleExecuteSettlement = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDispute || !resolutionNotes.trim()) return;
+    if (!selectedDispute || !resolutionNotes.trim() || settling) return;
 
     // Only claim success if the server moved the money: a failed ruling must stay visibly open.
+    setSettling(true);
     try {
-      const outcome = await adminApi.settleDispute(
-        selectedDispute.id,
-        settlementType,
-        resolutionNotes,
-        settlementType === 'SPLIT' ? splitClientPercent : undefined
-      );
-      setDisputes(disputes.map((d) =>
-        d.id === selectedDispute.id
-          ? { ...d, status: 'RESOLVED' as const, escrowHeld: 0, slaHoursLeft: null, settlementType, resolutionNotes }
-          : d
-      ));
+      const res = await dispatch(
+        settleDispute({
+          disputeId: selectedDispute.id,
+          settlementType,
+          resolutionNotes,
+          splitClientPercent: settlementType === 'SPLIT' ? splitClientPercent : undefined
+        })
+      ).unwrap();
       setIsDocketOpen(false);
-      const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+      const out = res.outcome;
       toast.success(
         'Ruling Executed',
-        `Client ${inr(outcome.refundToClient)} · Pro ${inr(outcome.payoutToPro)} · Platform ${inr(outcome.platformFee)}`
+        `Client ${formatCurrency(Number(out.refundToClient || 0))} · Pro ${formatCurrency(Number(out.payoutToPro || 0))} · Platform ${formatCurrency(Number(out.platformFee || 0))}`
       );
-    } catch (err: any) {
-      toast.error('Ruling Failed', err?.message || 'The ruling was not applied. No money moved.');
+    } catch (err: unknown) {
+      toast.error('Ruling Failed', extractErrorMessage(err, 'The ruling was not applied. No money moved.'));
+    } finally {
+      setSettling(false);
     }
   };
 
@@ -111,7 +99,7 @@ export const DisputesReports: React.FC = () => {
     },
     {
       header: 'Disputed Escrow',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>₹{row.disputeAmount.toLocaleString('en-IN')}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)', whiteSpace: 'nowrap' }}>{formatCurrency(row.disputeAmount)}</span>
     },
     {
       header: 'Reason',
@@ -141,7 +129,7 @@ export const DisputesReports: React.FC = () => {
         <button
           onClick={() => handleOpenDocket(row)}
           className="admin-btn admin-btn-primary"
-          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
+          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)', whiteSpace: 'nowrap' }}
         >
           {row.status === 'RESOLVED' || row.status === 'DISMISSED' ? 'View Ruling' : 'Arbitrate Docket'}
         </button>
@@ -149,10 +137,14 @@ export const DisputesReports: React.FC = () => {
     }
   ];
 
-  if (loadError) {
+  if (disputesRequest.status === 'loading' && disputes.length === 0) {
+    return <Loader label="Loading disputes..." />;
+  }
+
+  if (disputesRequest.error && disputes.length === 0) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
-        {loadError}
+        {disputesRequest.error}
       </div>
     );
   }
@@ -172,15 +164,15 @@ export const DisputesReports: React.FC = () => {
       <ActionModal
         isOpen={isDocketOpen}
         onClose={() => setIsDocketOpen(false)}
-        title={`Arbitration Court Docket: Case #${selectedDispute?.id}`}
+        title={`Arbitration Court Docket: Case #${selectedDispute?.id || ''}`}
         maxWidth="760px"
       >
         {selectedDispute && (
           <form onSubmit={handleExecuteSettlement} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
             <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
               <div><strong>Task:</strong> {selectedDispute.taskTitle}</div>
-              <div><strong>Claimed Amount:</strong> ₹{selectedDispute.disputeAmount.toLocaleString('en-IN')}</div>
-              <div><strong>Held in Escrow:</strong> ₹{selectedDispute.escrowHeld.toLocaleString('en-IN')} (a ruling applies to this whole amount)</div>
+              <div><strong>Claimed Amount:</strong> {formatCurrency(selectedDispute.disputeAmount)}</div>
+              <div><strong>Held in Escrow:</strong> {formatCurrency(selectedDispute.escrowHeld)} (a ruling applies to this whole amount)</div>
               <div><strong>Filer:</strong> {selectedDispute.filedByName} ({selectedDispute.filedByRole})</div>
               <div><strong>Against:</strong> {selectedDispute.againstName}</div>
               <div style={{ marginTop: '8px' }}><strong>Filer Description:</strong> {selectedDispute.description}</div>
@@ -195,7 +187,7 @@ export const DisputesReports: React.FC = () => {
                 {(selectedDispute.evidenceUrls ?? []).length === 0 && (
                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>No evidence submitted</span>
                 )}
-                {(selectedDispute.evidenceUrls ?? []).map((url, i) => (
+                {(selectedDispute.evidenceUrls ?? []).map((url: string, i: number) => (
                   <a
                     key={i}
                     href={safeHttpUrl(url)}
@@ -289,6 +281,7 @@ export const DisputesReports: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)' }}>
                   <button
                     type="button"
+                    disabled={settling}
                     onClick={() => setIsDocketOpen(false)}
                     className="admin-btn admin-btn-secondary"
                   >
@@ -297,10 +290,10 @@ export const DisputesReports: React.FC = () => {
                   <button
                     type="submit"
                     className="admin-btn admin-btn-primary"
-                    disabled={selectedDispute.escrowHeld <= 0}
+                    disabled={settling || selectedDispute.escrowHeld <= 0}
                     title={selectedDispute.escrowHeld <= 0 ? 'No funds are held in escrow for this task' : undefined}
                   >
-                    Execute Final Arbitration Ruling
+                    {settling ? 'Executing...' : 'Execute Final Arbitration Ruling'}
                   </button>
                 </div>
               </>
