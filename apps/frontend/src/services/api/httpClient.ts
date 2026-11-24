@@ -20,38 +20,15 @@ export const API_BASE_URL =
   configuredApiUrl ||
   (import.meta.env.PROD ? '/api' : `${window.location.protocol}//${window.location.hostname}:5000/api`);
 
-/** One sessionStorage key per actor — session-scoped so closing the tab or leaving
- * the site clears the session and returns visitors directly to the Landing Page. */
 export type ActorRole = 'client' | 'manager' | 'gig_professional' | 'admin';
+type TokenReader = (actor: ActorRole) => string | null;
+let readToken: TokenReader = () => null;
 
-const TOKEN_KEYS: Record<ActorRole, string> = {
-  client: 'g4g_client_token',
-  manager: 'g4g_manager_token',
-  gig_professional: 'g4g_gig_token',
-  admin: 'g4g_admin_token',
-};
+/** Injected by store setup; keeps this transport module independent of Redux imports. */
+export function configureTokenReader(reader: TokenReader) { readToken = reader; }
 
-// Older builds kept tokens in localStorage (survives tab close). Wipe them on load.
-Object.values(TOKEN_KEYS).forEach((k) => localStorage.removeItem(k));
-localStorage.removeItem('gfg_active_user');
-
-/** Read the saved JWT for one actor (null when that actor isn't logged in). */
-export function getToken(actor: ActorRole): string | null {
-  return sessionStorage.getItem(TOKEN_KEYS[actor]);
-}
-
-/** Save the JWT returned by login/signup for one actor. */
-export function setToken(actor: ActorRole, token: string): void {
-  sessionStorage.setItem(TOKEN_KEYS[actor], token);
-}
-
-/** Forget one actor's JWT (logout / expired session). */
-export function clearToken(actor: ActorRole): void {
-  sessionStorage.removeItem(TOKEN_KEYS[actor]);
-}
-
-/** Every role's token slot — handy for "log out of everything". */
-export const ALL_ACTORS: ActorRole[] = ['client', 'manager', 'gig_professional', 'admin'];
+/** Return the in-memory Redux token for the active actor only. */
+export function getToken(actor: ActorRole): string | null { return readToken(actor); }
 
 /** Error thrown by apiFetch for any failed request. `status` is 0 for network errors. */
 export class ApiError extends Error {
@@ -65,7 +42,7 @@ export class ApiError extends Error {
   }
 }
 
-/** Fired whenever a request for `actor` comes back 401 so AuthContext can log that actor out. */
+/** Fired whenever a request for `actor` comes back 401 so the Redux auth adapter can clear session state. */
 export const UNAUTHORIZED_EVENT = 'g4g:unauthorized';
 
 interface RequestOptions {
@@ -110,9 +87,8 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   if (!res.ok) {
-    // 401 = token expired/revoked: drop it and tell AuthContext to log this actor out.
+    // 401 = token expired/revoked: tell the Redux auth adapter to clear the session.
     if (res.status === 401 && actor) {
-      clearToken(actor);
       window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { actor } }));
     }
     // Prefer the backend's own error message when it sent one.

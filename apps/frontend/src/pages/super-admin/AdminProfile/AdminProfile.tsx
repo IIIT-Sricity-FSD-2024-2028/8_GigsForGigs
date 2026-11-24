@@ -4,7 +4,7 @@ import { ShieldIcon } from '../../../components/super-admin/Icons';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
 import { useToast } from '../../../components/super-admin/Toast';
 import { adminApi } from '../../../services/api/admin/adminApi';
-import { getToken, setToken } from '../../../services/api/httpClient';
+import { getToken } from '../../../services/api/httpClient';
 import { decodeJwtPayload } from '../../../utils/jwt';
 
 /**
@@ -17,7 +17,7 @@ import { decodeJwtPayload } from '../../../utils/jwt';
  */
 
 export const AdminProfile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateToken } = useAuth();
   const toast = useToast();
 
   const [dbProfile, setDbProfile] = useState<{
@@ -78,7 +78,7 @@ export const AdminProfile: React.FC = () => {
     }
     try {
       const res = await adminApi.updateAdminPassword(currentPassword, newPassword);
-      setToken('admin', res.token); // other devices were signed out; keep this one
+      updateToken(res.token); // Keep this browser's replacement token in Redux memory.
     } catch (err: any) {
       setMessage({ text: err?.message || 'Could not update password.', type: 'error' });
       return;
@@ -119,7 +119,7 @@ export const AdminProfile: React.FC = () => {
     if (!user?.userId) return;
     try {
       const res = await adminApi.revokeAdminSession(`adm-${user.userId}`);
-      if (res.token) setToken('admin', res.token);
+      if (res.token) updateToken(res.token);
       toast.success('Other Sessions Ended', 'Every other device must sign in again.');
     } catch (err: any) {
       toast.error('Revocation Failed', err?.message || 'Could not revoke sessions.');

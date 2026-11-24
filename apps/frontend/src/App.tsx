@@ -11,6 +11,8 @@ import {
   useParams,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext/AuthContext';
+import { Provider } from 'react-redux';
+import { store } from './store/store';
 import { ClientProvider } from './context/ClientContext/ClientContext';
 import { ManagerProvider, useManager } from './context/ManagerContext/ManagerContext';
 import { GigProvider } from './context/GigContext/GigContext';
@@ -387,10 +389,12 @@ function RouteTree() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppToastProvider><BrowserRouter><RouteTree /></BrowserRouter></AppToastProvider>
-      </ToastProvider>
-    </AuthProvider>
+    <Provider store={store}>
+      <AuthProvider>
+        <ToastProvider>
+          <AppToastProvider><BrowserRouter><RouteTree /></BrowserRouter></AppToastProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </Provider>
   );
 }

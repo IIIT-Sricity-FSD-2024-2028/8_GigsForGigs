@@ -52,6 +52,10 @@ export const authApi = {
   acceptManagerInvite: (token: string, password: string) =>
     apiFetch<AuthResponse>('/auth/manager/accept-invite', { method: 'POST', body: { token, password } }),
 
+  /** Activate an invited admin and return the authenticated session. */
+  acceptAdminInvite: (token: string, email: string, password: string, newPassword: string) =>
+    apiFetch<AuthResponse>('/admin/invitations/accept', { method: 'POST', body: { token, email, password, newPassword } }),
+
   /** Notify the backend a manager logged out (sessions are stateless JWTs). */
   managerLogout: () =>
     apiFetch<{ success: boolean }>('/auth/manager/logout', { method: 'POST', actor: 'manager' }),

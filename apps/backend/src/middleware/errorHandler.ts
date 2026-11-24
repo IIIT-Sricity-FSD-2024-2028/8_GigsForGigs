@@ -65,6 +65,11 @@ export function errorHandler(
 
   // Malformed input that reached a query (e.g. a non-numeric :id becoming NaN).
   if (err instanceof Prisma.PrismaClientValidationError) {
+    if (process.env.NODE_ENV !== "production") {
+      // Keep the client response generic, but make the rejected Prisma argument
+      // visible in local development so request/schema mismatches can be fixed.
+      console.error("Prisma rejected request parameters:", err.message);
+    }
     res.status(400).json({ success: false, message: "Invalid request parameters" });
     return;
   }
