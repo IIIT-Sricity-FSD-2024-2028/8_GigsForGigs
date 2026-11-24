@@ -1,6 +1,23 @@
-import React, { useState } from 'react';
-import { useClient, type Task } from '../../../context/ClientContext';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchClientTasks,
+  fetchClientContracts,
+  fetchClientApplications,
+} from '../../../store/client/clientSlice';
+import {
+  selectClientTasks,
+  selectClientTasksRequest,
+  selectClientContracts,
+  selectClientContractsRequest,
+  selectClientApplications,
+  selectClientApplicationsRequest,
+  selectTotalClientSpent,
+  selectActiveContracts,
+  selectPostedMarketplaceTasks,
+} from '../../../store/client/selectors';
+import type { RawTask } from '../../../services/api/client/clientApi';
 import { DashboardWelcome } from '../../../components/common/dashboard/DashboardWelcome';
 import { Loader } from '../../../components/common/Loader';
 import { Button } from '../../../components/common';
@@ -11,45 +28,77 @@ export interface ClientDashboardProps {
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { tasks, contracts, applications, loading, error } = useClient();
-  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  const dispatch = useAppDispatch();
 
-  // Metrics
-  // A posted task stays open while the client hires for it; each hire is its own contract.
-  const openTasks = tasks.filter(t => t.status === 'OPEN' && !t.skills?.includes('Service Hire'));
+  const tasks = useAppSelector(selectClientTasks);
+  const tasksRequest = useAppSelector(selectClientTasksRequest);
+  const contracts = useAppSelector(selectClientContracts);
+  const contractsRequest = useAppSelector(selectClientContractsRequest);
+  const applications = useAppSelector(selectClientApplications);
+  const applicationsRequest = useAppSelector(selectClientApplicationsRequest);
 
-  const activeCount = contracts.filter(c => c.status !== 'COMPLETED').length;
+  const openTasks = useAppSelector(selectPostedMarketplaceTasks);
+  const activeContracts = useAppSelector(selectActiveContracts);
+  const totalSpent = useAppSelector(selectTotalClientSpent);
+
+  const [viewingTask, setViewingTask] = useState<RawTask | null>(null);
+
+  // Fetch initial data on mount if not yet requested
+  useEffect(() => {
+    if (tasksRequest.status === 'idle') void dispatch(fetchClientTasks());
+    if (contractsRequest.status === 'idle') void dispatch(fetchClientContracts());
+    if (applicationsRequest.status === 'idle') void dispatch(fetchClientApplications());
+  }, [dispatch, tasksRequest.status, contractsRequest.status, applicationsRequest.status]);
+
+  const activeCount = activeContracts.length;
   const pendingCount = openTasks.length;
 
-  // Total spent = what the client paid (gig amount + platform fee) on released contracts.
-  const totalSpent = contracts.filter(c => c.payment_status === 'completed').reduce((sum, c) => sum + c.total_amount, 0);
   const totalSpentFormatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(totalSpent);
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'IN_PROGRESS': return 'status-in-progress';
-      case 'COMPLETED': return 'status-completed';
-      default: return 'status-scheduled';
+    const s = status.toLowerCase();
+    switch (s) {
+      case 'in_progress':
+        return 'status-in-progress';
+      case 'completed':
+        return 'status-completed';
+      default:
+        return 'status-scheduled';
     }
   };
+
+  const loading =
+    (tasksRequest.status === 'loading' && tasks.length === 0) ||
+    (contractsRequest.status === 'loading' && contracts.length === 0);
+
+  const error = tasksRequest.error || contractsRequest.error || applicationsRequest.error;
 
   return (
     <div>
       {error && (
-        <div style={{ marginBottom: 'var(--spacing-md)', padding: 'var(--spacing-sm) var(--spacing-md)', borderRadius: 'var(--radius-sm)', backgroundColor: '#fde8e8', color: '#c94c4c', fontSize: '0.875rem' }}>
+        <div
+          style={{
+            marginBottom: 'var(--spacing-md)',
+            padding: 'var(--spacing-sm) var(--spacing-md)',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: '#fde8e8',
+            color: '#c94c4c',
+            fontSize: '0.875rem',
+          }}
+        >
           {error}
         </div>
       )}
-      {loading && tasks.length === 0 && (
+      {loading && (
         <Loader label="Loading your workspace..." />
       )}
 
@@ -148,14 +197,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
               </tr>
             ) : (
               openTasks.map(t => (
-                <tr key={t.task_id}>
+                <tr key={t.taskId}>
                   <td>
                     <div className="task-name-cell">{t.title}</div>
                     <div className="task-category">{t.category === 'design' ? 'Design Systems' : t.category === 'dev' ? 'Software Development' : 'General'}</div>
                   </td>
                   <td>{formatDate(t.createdAt)}</td>
                   <td className="budget-cell">
-                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(t.budget)}
+                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(t.budget))}
                   </td>
                   <td>
                     <div className="actions-cell">
@@ -165,7 +214,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                           <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                       </Button>
-                      <Button variant="ghost" title="Edit Task" onClick={() => onNavigate('post-gig', { editId: t.task_id })} aria-label={`Edit ${t.title}`}>
+                      <Button variant="ghost" title="Edit Task" onClick={() => onNavigate('post-gig', { editId: String(t.taskId) })} aria-label={`Edit ${t.title}`}>
                         <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                           <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -212,10 +261,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
             ) : (
               contracts.map(c => {
                 return (
-                  <tr key={c.contract_id}>
+                  <tr key={`${c.taskId}-${c.gigProfileId}`}>
                     <td>
-                      <div className="task-name-cell">{c.task_title}</div>
-                      <div className="task-category">{c.gig_pro_name}</div>
+                      <div className="task-name-cell">{c.taskTitle}</div>
+                      <div className="task-category">{c.gigProfessionalName}</div>
                     </td>
                     <td>
                       <span className={`status-badge ${getStatusClass(c.status)}`}>
@@ -223,11 +272,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                       </span>
                     </td>
                     <td className="budget-cell">
-                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(c.budget)}
+                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(c.budget))}
                     </td>
                     <td>
                       <div className="actions-cell">
-                        <Button variant="ghost" title="View deliverables" onClick={() => onNavigate('review-deliverables', { taskId: c.task_id, gigProfileId: c.gig_profile_id })}>
+                        <Button variant="ghost" title="View deliverables" onClick={() => onNavigate('review-deliverables', { taskId: String(c.taskId), gigProfileId: String(c.gigProfileId) })}>
                           <svg fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" viewBox="0 0 24 24">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
@@ -318,7 +367,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>Budget</span>
                 <strong style={{ fontSize: '15px', color: '#084875' }}>
-                  {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(viewingTask.budget)}
+                  {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(viewingTask.budget))}
                 </strong>
               </div>
               <div>
@@ -371,7 +420,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
 
             {/* Applications Status */}
             {(() => {
-              const taskApps = applications.filter(a => String(a.task_id) === String(viewingTask.task_id));
+              const taskApps = applications.filter(a => a.taskId === viewingTask.taskId);
               return (
                 <div
                   style={{
@@ -401,7 +450,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                   </div>
                   {taskApps.length > 0 ? (
                     <Button size="sm" type="button" onClick={() => {
-                        const tId = viewingTask.task_id;
+                        const tId = String(viewingTask.taskId);
                         setViewingTask(null);
                         onNavigate('review-shortlist', { taskId: tId });
                       }}>
@@ -425,7 +474,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ onNavigate }) 
                 Close
               </Button>
               <Button size="sm" type="button" onClick={() => {
-                  const editId = viewingTask.task_id;
+                  const editId = String(viewingTask.taskId);
                   setViewingTask(null);
                   onNavigate('post-gig', { editId });
                 }}>
