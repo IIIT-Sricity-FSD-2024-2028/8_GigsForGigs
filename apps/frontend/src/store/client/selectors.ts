@@ -5,7 +5,13 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
-import type { RawContract, RawTask } from '../../services/api/client/clientApi';
+import type {
+  RawContract,
+  RawTask,
+  RawManager,
+  RawManagerInvite,
+  ManagerInvite,
+} from '../../services/api/client/clientApi';
 
 // Base slice selector
 const selectClientState = (state: RootState) => state.client;
@@ -148,6 +154,44 @@ export const selectPendingManagerInvitations = createSelector([selectManagerInvi
 
 export const selectLatestCreatedInvite = (state: RootState) => selectClientState(state).latestCreatedInvite;
 
+export const selectManagerProfile = (state: RootState, managerId: number) =>
+  selectClientState(state).managerProfiles[managerId] ??
+  selectClientState(state).managers.find((m) => m.managerId === managerId) ??
+  null;
+
+export const selectManagerProfileRequest = (state: RootState, managerId: number) =>
+  selectClientState(state).managerProfileRequests[managerId] ?? { status: 'idle', error: null };
+
+export const selectUnifiedManagerRoster = createSelector(
+  [selectClientManagers, selectManagerInvitations],
+  (managers: RawManager[], invites: RawManagerInvite[]): ManagerInvite[] => {
+    return [
+      ...managers.map((m) => ({
+        invite_id: String(m.managerId),
+        client_id: String(m.clientId),
+        name: m.user?.name || 'Manager',
+        email: m.user?.email || '',
+        clientName: m.client?.clientName,
+        status: 'ACCEPTED' as const,
+        createdAt: m.createdAt,
+        kind: 'manager' as const,
+      })),
+      ...invites
+        .filter((i) => i.status === 'pending')
+        .map((i) => ({
+          invite_id: String(i.inviteId),
+          client_id: String(i.clientId),
+          name: i.name,
+          email: i.email,
+          status: 'PENDING' as const,
+          createdAt: i.createdAt,
+          invite_link: i.inviteLink,
+          kind: 'invite' as const,
+        })),
+    ];
+  },
+);
+
 export const selectManagerWorkload = createSelector(
   [selectClientContracts, (_state: RootState, managerId: number) => managerId],
   (contracts: RawContract[], managerId: number) => {
@@ -181,6 +225,8 @@ export const selectEscrowLockedTotal = createSelector([selectClientContracts], (
 // REVIEW & DISPUTE SELECTORS
 // ===========================================================================
 
+export const selectClientReviews = (state: RootState) => selectClientState(state).reviews;
+export const selectClientReviewsRequest = (state: RootState) => selectClientState(state).reviewsRequest;
 export const selectReviewSubmitState = (state: RootState) => selectClientState(state).reviewSubmitState;
 
 export const selectDisputeRequest = (state: RootState, taskId: number, gigProfileId: number) =>

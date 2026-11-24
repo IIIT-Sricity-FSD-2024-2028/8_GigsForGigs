@@ -1,16 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useClient, type Contract, type ContractReview, type PaymentStatus } from '../../../context/ClientContext';
+import type { Contract, ContractReview, PaymentStatus } from '../../../types/client';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   assignTaskManager as assignTaskManagerThunk,
   endClientHire,
   fetchClientContracts,
+  fetchClientManagers,
+  fetchManagerInvitations,
   raiseClientDispute,
   releaseClientPayment,
 } from '../../../store/client/clientSlice';
 import {
   selectClientContracts,
   selectClientContractsRequest,
+  selectClientManagersRequest,
+  selectUnifiedManagerRoster,
 } from '../../../store/client/selectors';
 import { PAYMENT_STATUS_UI } from '../../../utils/paymentStatus';
 import { FundTaskCard } from '../../../components/client/cards/FundTaskCard';
@@ -25,7 +29,8 @@ export interface MyGigsProps {
 export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
   const toast = useToast();
   const dispatch = useAppDispatch();
-  const { managers } = useClient();
+  const managers = useAppSelector(selectUnifiedManagerRoster);
+  const managersRequest = useAppSelector(selectClientManagersRequest);
 
   const rawContracts = useAppSelector(selectClientContracts);
   const contractsRequest = useAppSelector(selectClientContractsRequest);
@@ -34,7 +39,11 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
     if (contractsRequest.status === 'idle') {
       dispatch(fetchClientContracts());
     }
-  }, [dispatch, contractsRequest.status]);
+    if (managersRequest.status === 'idle') {
+      dispatch(fetchClientManagers());
+      dispatch(fetchManagerInvitations());
+    }
+  }, [dispatch, contractsRequest.status, managersRequest.status]);
 
   const contracts: Contract[] = useMemo(() => {
     return rawContracts.map((found) => ({

@@ -37,6 +37,7 @@ import type {
   CreateDisputeResponse,
   CreateClientReviewDto,
   ReviewRecord,
+  RawContractReview,
 } from '../../services/api/client/clientApi';
 import type { ClientState, RequestState } from './types';
 import { login } from '../auth/authSlice';
@@ -83,6 +84,8 @@ export const initialClientState: ClientState = {
 
   managers: [],
   managersRequest: idle,
+  managerProfiles: {},
+  managerProfileRequests: {},
   managerActionErrors: {},
 
   invites: [],
@@ -91,6 +94,10 @@ export const initialClientState: ClientState = {
   latestCreatedInvite: null,
 
   disputeRequests: {},
+
+  reviews: [],
+  reviewsRequest: idle,
+
   reviewSubmitState: idle,
 };
 
@@ -417,6 +424,27 @@ export const fetchClientManagers = createAsyncThunk<RawManager[], void, ThunkCon
   },
 );
 
+export const fetchManagerProfile = createAsyncThunk<RawManager, number, ThunkConfig>(
+  'client/fetchManagerProfile',
+  async (managerId, { getState, rejectWithValue }) => {
+    try {
+      const state = getState();
+      const existing = state.client.managers.find((m) => m.managerId === managerId);
+      if (existing) {
+        return existing;
+      }
+      const managers = await clientApi.getManagers();
+      const found = managers.find((m) => m.managerId === managerId);
+      if (!found) {
+        return rejectWithValue('Manager not found.');
+      }
+      return found;
+    } catch (error) {
+      return rejectWithValue(messageOf(error, 'Failed to load manager profile.'));
+    }
+  },
+);
+
 export const updateManager = createAsyncThunk<
   { managerId: number; dto: UpdateManagerDto },
   { managerId: number; dto: UpdateManagerDto },
@@ -528,8 +556,24 @@ export const raiseClientDispute = createAsyncThunk<
 });
 
 // ===========================================================================
-// REVIEWS THUNK
+// REVIEWS THUNKS
 // ===========================================================================
+
+export const fetchClientReviews = createAsyncThunk<RawContractReview[], void, ThunkConfig>(
+  'client/fetchReviews',
+  async (_, { rejectWithValue }) => {
+    try {
+      const contracts = await clientApi.getContracts();
+      const reviews: RawContractReview[] = [];
+      contracts.forEach((c) => {
+        if (c.reviews) reviews.push(...c.reviews);
+      });
+      return reviews;
+    } catch (error) {
+      return rejectWithValue(messageOf(error, 'Failed to load reviews.'));
+    }
+  },
+);
 
 export const submitClientReview = createAsyncThunk<ReviewRecord, CreateClientReviewDto, ThunkConfig>(
   'client/submitReview',
@@ -857,6 +901,17 @@ const clientSlice = createSlice({
         s.managersRequest = { status: 'failed', error: a.payload ?? 'Failed to load managers.' };
       })
 
+      .addCase(fetchManagerProfile.pending, (s, a) => {
+        s.managerProfileRequests[a.meta.arg] = { status: 'loading', error: null, requestId: a.meta.requestId };
+      })
+      .addCase(fetchManagerProfile.fulfilled, (s, a) => {
+        s.managerProfiles[a.meta.arg] = a.payload;
+        s.managerProfileRequests[a.meta.arg] = { status: 'succeeded', error: null, requestId: a.meta.requestId };
+      })
+      .addCase(fetchManagerProfile.rejected, (s, a) => {
+        s.managerProfileRequests[a.meta.arg] = { status: 'failed', error: a.payload ?? 'Failed to load manager profile.', requestId: a.meta.requestId };
+      })
+
       .addCase(updateManager.pending, (s, a) => {
         delete s.managerActionErrors[a.meta.arg.managerId];
       })
@@ -874,6 +929,16 @@ const clientSlice = createSlice({
               }
             : m,
         );
+        if (s.managerProfiles[managerId]) {
+          s.managerProfiles[managerId] = {
+            ...s.managerProfiles[managerId],
+            user: {
+              ...s.managerProfiles[managerId].user,
+              ...(dto.name ? { name: dto.name } : {}),
+              ...(dto.email ? { email: dto.email } : {}),
+            },
+          };
+        }
       })
       .addCase(updateManager.rejected, (s, a) => {
         s.managerActionErrors[a.meta.arg.managerId] = a.payload ?? 'Failed to update manager.';
@@ -881,6 +946,8 @@ const clientSlice = createSlice({
 
       .addCase(removeManager.fulfilled, (s, a) => {
         s.managers = s.managers.filter((m) => m.managerId !== a.payload);
+        delete s.managerProfiles[a.payload];
+        delete s.managerProfileRequests[a.payload];
       })
       .addCase(removeManager.rejected, (s, a) => {
         s.managerActionErrors[a.meta.arg] = a.payload ?? 'Failed to remove manager.';
@@ -947,6 +1014,17 @@ const clientSlice = createSlice({
       })
 
       // Reviews
+      .addCase(fetchClientReviews.pending, (s) => {
+        s.reviewsRequest = { status: 'loading', error: null };
+      })
+      .addCase(fetchClientReviews.fulfilled, (s, a) => {
+        s.reviews = a.payload;
+        s.reviewsRequest = { status: 'succeeded', error: null };
+      })
+      .addCase(fetchClientReviews.rejected, (s, a) => {
+        s.reviewsRequest = { status: 'failed', error: a.payload ?? 'Failed to load reviews.' };
+      })
+
       .addCase(submitClientReview.pending, (s) => {
         s.reviewSubmitState = { status: 'loading', error: null };
       })

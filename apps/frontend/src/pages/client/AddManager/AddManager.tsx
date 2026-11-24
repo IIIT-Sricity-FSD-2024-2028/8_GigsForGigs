@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useClient } from '../../../context/ClientContext';
+import { useAppDispatch } from '../../../store/hooks';
+import { createManagerInvitation } from '../../../store/client/clientSlice';
 import { InviteLinkModal } from '../../../components/client';
 import { Button, Input, useToast } from '../../../components/common';
 
@@ -9,7 +10,7 @@ export interface AddManagerProps {
 
 export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
   const toast = useToast();
-  const { inviteManager } = useClient();
+  const dispatch = useAppDispatch();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -22,16 +23,16 @@ export const AddManager: React.FC<AddManagerProps> = ({ onNavigate }) => {
     }
 
     try {
-      const link = await inviteManager(name, email);
-      if (link) {
-        setInviteLink(link);
+      const invite = await dispatch(createManagerInvitation({ name, email })).unwrap();
+      if (invite?.inviteLink) {
+        setInviteLink(invite.inviteLink);
       } else {
         toast.success('Invite created. Open your manager list to copy the activation link.');
         onNavigate('profile-selection');
       }
     } catch (err) {
       console.error('Invite manager failed:', err);
-      toast.error(err instanceof Error && err.message ? err.message : 'Failed to create the manager invite. Please try again.');
+      toast.error(typeof err === 'string' ? err : 'Failed to create the manager invite. Please try again.');
     }
   };
 

@@ -15,6 +15,7 @@ import type {
   RawServiceRequest,
   RawManager,
   RawManagerInvite,
+  RawContractReview,
 } from '../../services/api/client/clientApi';
 
 export type RequestStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
@@ -71,6 +72,8 @@ export interface ClientState {
   /** Client's supervised manager roster */
   managers: RawManager[];
   managersRequest: RequestState;
+  managerProfiles: Record<number, RawManager>;
+  managerProfileRequests: Record<number, RequestState>;
   managerActionErrors: Record<number, string | null>;
 
   /** Invitations sent to prospective managers */
@@ -81,6 +84,10 @@ export interface ClientState {
 
   /** Dispute creation status tracked by composite hire key `${taskId}-${gigProfileId}` */
   disputeRequests: Record<string, RequestState>;
+
+  /** Client reviews */
+  reviews: RawContractReview[];
+  reviewsRequest: RequestState;
 
   /** Review submission status */
   reviewSubmitState: RequestState;

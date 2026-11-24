@@ -1,5 +1,16 @@
-import React, { useState } from 'react';
-import { useClient, type Service } from '../../../context/ClientContext';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { Service } from '../../../types/client';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchClientServices,
+  fetchClientServiceRequests,
+  createClientServiceRequest,
+} from '../../../store/client/clientSlice';
+import {
+  selectClientServices,
+  selectClientServicesRequest,
+  selectRequestedServiceIds,
+} from '../../../store/client/selectors';
 import { Button, SearchBar, Select, TalentCard, useToast } from '../../../components/common';
 
 export interface SearchTalentProps {
@@ -8,23 +19,52 @@ export interface SearchTalentProps {
 
 export const SearchTalent: React.FC<SearchTalentProps> = () => {
   const toast = useToast();
-  const { services, requestService, requestedServices } = useClient();
+  const dispatch = useAppDispatch();
+
+  const rawServices = useAppSelector(selectClientServices);
+  const servicesRequest = useAppSelector(selectClientServicesRequest);
+  const requestedServiceIds = useAppSelector(selectRequestedServiceIds);
+
+  useEffect(() => {
+    if (servicesRequest.status === 'idle') {
+      dispatch(fetchClientServices());
+      dispatch(fetchClientServiceRequests());
+    }
+  }, [dispatch, servicesRequest.status]);
+
+  const requestedServices = useMemo(
+    () => new Set(requestedServiceIds.map(String)),
+    [requestedServiceIds],
+  );
+
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [rateFilter, setRateFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [localRequested, setLocalRequested] = useState<Set<string>>(new Set());
   const [selectedProfile, setSelectedProfile] = useState<Service | null>(null);
 
-  const allServices = services;
+  const allServices: Service[] = useMemo(() => {
+    return rawServices.map((s) => ({
+      service_id: String(s.serviceId),
+      title: s.title,
+      price: Number(s.price),
+      description: s.description || '',
+      skills: (s.tags || []).map((t) => t.tag),
+      category: s.category || undefined,
+      rating: s.rating ?? undefined,
+      user: s.profile?.user ? { name: s.profile.user.name, email: s.profile.user.email } : undefined,
+      gig_profile_id: String(s.gigProfileId),
+    }));
+  }, [rawServices]);
 
   const handleHireClick = async (serviceId: string) => {
     try {
-      await requestService(serviceId);
+      await dispatch(createClientServiceRequest(Number(serviceId))).unwrap();
       setLocalRequested((prev) => new Set(prev).add(serviceId));
       toast.success('Hiring request sent! Once the Gig Professional accepts, you will be asked to pay the escrow amount (service price + 10% platform fee) to start work.');
     } catch (err) {
       console.error('Request service failed:', err);
-      toast.error(err instanceof Error && err.message ? err.message : 'Failed to send hiring request. Please try again.');
+      toast.error(typeof err === 'string' ? err : 'Failed to send hiring request. Please try again.');
     }
   };
 

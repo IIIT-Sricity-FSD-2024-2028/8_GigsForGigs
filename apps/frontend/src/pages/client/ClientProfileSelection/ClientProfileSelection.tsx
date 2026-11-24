@@ -1,6 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
-import { useClient, type ManagerInvite } from '../../../context/ClientContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchClientManagers,
+  fetchManagerInvitations,
+  fetchClientContracts,
+  updateManager as updateManagerThunk,
+  removeManager,
+  revokeManagerInvitation,
+} from '../../../store/client/clientSlice';
+import {
+  selectUnifiedManagerRoster,
+  selectClientContracts,
+  selectClientManagersRequest,
+} from '../../../store/client/selectors';
+import type { ManagerInvite, Contract } from '../../../types/client';
 import { InviteLinkModal } from '../../../components/client';
 import { Button, ConfirmDialog, Input, useToast } from '../../../components/common';
 import { activeCount, hiresFor } from '../../../utils/managerLoad';
@@ -11,8 +25,42 @@ export interface ClientProfileSelectionProps {
 
 export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ onNavigate }) => {
   const toast = useToast();
+  const dispatch = useAppDispatch();
   const { user } = useAuth();
-  const { managers, contracts, updateManager, deleteManager, revokeManagerInvite } = useClient();
+  const managers = useAppSelector(selectUnifiedManagerRoster);
+  const managersRequest = useAppSelector(selectClientManagersRequest);
+  const rawContracts = useAppSelector(selectClientContracts);
+
+  useEffect(() => {
+    if (managersRequest.status === 'idle') {
+      dispatch(fetchClientManagers());
+      dispatch(fetchManagerInvitations());
+      dispatch(fetchClientContracts());
+    }
+  }, [dispatch, managersRequest.status]);
+
+  const contracts: Contract[] = useMemo(() => {
+    return rawContracts.map((c) => ({
+      contract_id: `${c.taskId}-${c.gigProfileId}`,
+      task_id: String(c.taskId),
+      gig_profile_id: String(c.gigProfileId),
+      task_title: c.taskTitle,
+      gig_pro_name: c.gigProfessionalName,
+      status: (c.status === 'completed' ? 'COMPLETED' : 'IN_PROGRESS') as 'IN_PROGRESS' | 'COMPLETED',
+      progress: c.progress,
+      budget: Number(c.budget),
+      payment_id: c.paymentId,
+      platform_fee: c.platformFee,
+      total_amount: c.totalAmount,
+      payment_status: c.paymentStatus,
+      manager_id: c.managerId,
+      submission_count: c.submissionCount ?? 0,
+      work_status: c.workStatus,
+      has_open_dispute: c.hasOpenDispute ?? false,
+      createdAt: c.createdAt,
+      reviews: c.reviews || [],
+    }));
+  }, [rawContracts]);
 
   const [editingManager, setEditingManager] = useState<ManagerInvite | null>(null);
   const [editName, setEditName] = useState('');
@@ -48,11 +96,16 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
     e.preventDefault();
     if (editingManager && editName && editEmail) {
       try {
-        await updateManager(editingManager.invite_id, editName, editEmail);
+        await dispatch(
+          updateManagerThunk({
+            managerId: Number(editingManager.invite_id),
+            dto: { name: editName, email: editEmail },
+          }),
+        ).unwrap();
         setEditingManager(null);
       } catch (err) {
         console.error('Update manager failed:', err);
-        toast.error(err instanceof Error && err.message ? err.message : 'Failed to update this manager. Please try again.');
+        toast.error(typeof err === 'string' ? err : 'Failed to update this manager. Please try again.');
       }
     }
   };
@@ -69,12 +122,15 @@ export const ClientProfileSelection: React.FC<ClientProfileSelectionProps> = ({ 
     if (!mgr) return;
     const isInvite = mgr.kind !== 'manager';
     try {
-      if (isInvite) await revokeManagerInvite(mgr.invite_id);
-      else await deleteManager(mgr.invite_id);
+      if (isInvite) {
+        await dispatch(revokeManagerInvitation(Number(mgr.invite_id))).unwrap();
+      } else {
+        await dispatch(removeManager(Number(mgr.invite_id))).unwrap();
+      }
       toast.success(isInvite ? 'Invite revoked successfully.' : 'Manager removed successfully.');
     } catch (err) {
       if (!isInvite) console.error('Delete manager failed:', err);
-      toast.error(err instanceof Error && err.message ? err.message : isInvite ? 'Failed to revoke this invite.' : 'Failed to remove this manager. Please try again.');
+      toast.error(typeof err === 'string' ? err : isInvite ? 'Failed to revoke this invite.' : 'Failed to remove this manager. Please try again.');
     }
   };
 
