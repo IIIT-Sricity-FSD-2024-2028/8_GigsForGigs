@@ -249,6 +249,37 @@ export const fetchClientContracts = createAsyncThunk<RawContract[], void, ThunkC
   },
 );
 
+export const payClientTask = createAsyncThunk<
+  { taskId: number; gigProfileId: number },
+  { taskId: number; gigProfileId: number },
+  ThunkConfig
+>('client/payTask', async ({ taskId, gigProfileId }, { dispatch, rejectWithValue }) => {
+  try {
+    await clientApi.payTask(taskId, gigProfileId);
+    void dispatch(fetchClientContracts());
+    void dispatch(fetchClientTasks());
+    return { taskId, gigProfileId };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Payment failed.'));
+  }
+});
+
+export const releaseClientPayment = createAsyncThunk<
+  { taskId: number; gigProfileId: number },
+  { taskId: number; gigProfileId: number },
+  ThunkConfig
+>('client/releasePayment', async ({ taskId, gigProfileId }, { dispatch, rejectWithValue }) => {
+  try {
+    await clientApi.releasePayment(taskId, gigProfileId);
+    void dispatch(fetchClientContracts());
+    void dispatch(fetchClientTasks());
+    void dispatch(fetchTaskSubmittedDeliverables(taskId));
+    return { taskId, gigProfileId };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Payment release failed.'));
+  }
+});
+
 // ===========================================================================
 // DELIVERABLE DEFINITIONS & SUBMISSIONS THUNKS
 // ===========================================================================
@@ -679,6 +710,22 @@ const clientSlice = createSlice({
       })
       .addCase(fetchClientContracts.rejected, (s, a) => {
         s.contractsRequest = { status: 'failed', error: a.payload ?? 'Failed to load client contracts.' };
+      })
+      .addCase(payClientTask.fulfilled, (s, a) => {
+        const { taskId, gigProfileId } = a.payload;
+        s.contracts = s.contracts.map((c) =>
+          c.taskId === taskId && c.gigProfileId === gigProfileId
+            ? { ...c, paymentStatus: 'held' }
+            : c,
+        );
+      })
+      .addCase(releaseClientPayment.fulfilled, (s, a) => {
+        const { taskId, gigProfileId } = a.payload;
+        s.contracts = s.contracts.map((c) =>
+          c.taskId === taskId && c.gigProfileId === gigProfileId
+            ? { ...c, paymentStatus: 'completed', status: 'completed', progress: 100 }
+            : c,
+        );
       })
 
       // Deliverable Definitions

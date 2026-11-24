@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { useClient, type Contract } from '../../../../context/ClientContext';
+import type { Contract } from '../../../../context/ClientContext';
+import { useAppDispatch } from '../../../../store/hooks';
+import { payClientTask } from '../../../../store/client/clientSlice';
 
 /** Format a number as Indian Rupees with no decimals, e.g. 15000 -> "₹15,000". */
 const inr = (val: number) =>
@@ -10,7 +12,7 @@ const inr = (val: number) =>
  * Shown on a contract whose payment is still pending. `onPaid` lets the parent refresh/close.
  */
 export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }> = ({ contract, onPaid }) => {
-  const { payTask } = useClient();
+  const dispatch = useAppDispatch();
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
 
@@ -18,10 +20,15 @@ export const FundTaskCard: React.FC<{ contract: Contract; onPaid?: () => void }>
     setPaying(true);
     setError('');
     try {
-      await payTask(contract.task_id, contract.gig_profile_id);
+      await dispatch(
+        payClientTask({
+          taskId: Number(contract.task_id),
+          gigProfileId: Number(contract.gig_profile_id),
+        }),
+      ).unwrap();
       onPaid?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Payment failed. Please try again.');
+      setError(typeof err === 'string' ? err : err instanceof Error ? err.message : 'Payment failed. Please try again.');
       setPaying(false);
     }
     // On success `paying` stays true: the card is replaced once the contract refreshes.

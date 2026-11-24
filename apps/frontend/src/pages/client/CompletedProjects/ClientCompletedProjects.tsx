@@ -4,11 +4,18 @@
  * Completed projects view for the Client Portal.
  * Displays the Client's genuinely completed projects/contracts, two-sided review
  * feedback (Client's rating & Professional's rating), financial totals, and review actions.
+ * Migrated to Redux Toolkit (clientSlice).
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { useClient, type Contract } from '../../../context/ClientContext';
+import type { Contract, ContractReview } from '../../../context/ClientContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchClientContracts } from '../../../store/client/clientSlice';
+import {
+  selectClientContracts,
+  selectClientContractsRequest,
+} from '../../../store/client/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { ClientReviewModal } from '../../../components/client/modals/ClientReviewModal';
 import { TaskReviewsModal } from '../../../components/client/modals/TaskReviewsModal';
@@ -20,12 +27,45 @@ export interface ClientCompletedProjectsProps {
 
 export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { contracts } = useClient();
+  const dispatch = useAppDispatch();
+
+  const rawContracts = useAppSelector(selectClientContracts);
+  const contractsRequest = useAppSelector(selectClientContractsRequest);
+
   const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
   const [viewReviewsContract, setViewReviewsContract] = useState<Contract | null>(null);
 
+  useEffect(() => {
+    if (contractsRequest.status === 'idle') {
+      dispatch(fetchClientContracts());
+    }
+  }, [dispatch, contractsRequest.status]);
+
   // A task can have several hires; each one is completed once its own payment settles.
-  const allCompletedProjects: Contract[] = contracts.filter((c) => c.status === 'COMPLETED');
+  const allCompletedProjects: Contract[] = useMemo(() => {
+    return rawContracts
+      .filter((c) => c.status === 'completed' || (c.status as string) === 'COMPLETED')
+      .map((found) => ({
+        contract_id: `${found.taskId}-${found.gigProfileId}`,
+        task_id: String(found.taskId),
+        gig_profile_id: String(found.gigProfileId),
+        task_title: found.taskTitle,
+        gig_pro_name: found.gigProfessionalName,
+        status: 'COMPLETED' as const,
+        progress: found.progress,
+        budget: Number(found.budget),
+        payment_id: found.paymentId,
+        platform_fee: Number(found.platformFee),
+        total_amount: Number(found.totalAmount),
+        payment_status: found.paymentStatus,
+        manager_id: found.managerId,
+        submission_count: found.submissionCount ?? 0,
+        work_status: found.workStatus,
+        has_open_dispute: found.hasOpenDispute ?? false,
+        createdAt: found.createdAt,
+        reviews: (found.reviews as ContractReview[]) || [],
+      }));
+  }, [rawContracts]);
 
   const formatCurrency = (amt: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
@@ -99,32 +139,22 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
           <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: '8px' }}>
             No Completed Projects Found
           </h3>
-          <p style={{ fontSize: '0.875rem', maxWidth: '440px', margin: '0 auto var(--spacing-lg) auto' }}>
-            When tasks are completed and payments are released to gig professionals, they will appear here along with mutual ratings and reviews.
+          <p style={{ fontSize: 'var(--font-size-sm)', maxWidth: '440px', margin: '0 auto var(--spacing-lg) auto' }}>
+            You haven't completed any hired tasks yet. Finished tasks will show up here along with their review records once payments are settled.
           </p>
-          <Button size="sm" type="button" onClick={() => onNavigate('my-gigs')}>
-            View Active Task
+          <Button onClick={() => onNavigate('dashboard')}>
+            Go to Dashboard
           </Button>
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))',
-            gap: 'var(--spacing-lg)',
-            width: '100%',
-            minWidth: 0,
-          }}
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--spacing-lg)' }}>
           {allCompletedProjects.map((contract) => {
-            const displayTotal = contract.total_amount;
-
-            const reviews = contract.reviews || [];
             const clientReview = user?.userId
-              ? reviews.find((r) => r.reviewerId === user.userId)
+              ? contract.reviews?.find((r) => r.reviewerId === user.userId)
               : undefined;
+
             const gigReview = user?.userId
-              ? reviews.find((r) => r.reviewerId !== user.userId && r.revieweeId === user.userId)
+              ? contract.reviews?.find((r) => r.reviewerId !== user.userId && r.revieweeId === user.userId)
               : undefined;
 
             return (
@@ -132,132 +162,181 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
                 key={contract.contract_id}
                 className="admin-card"
                 style={{
-                  padding: 'var(--spacing-xl)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: 'var(--spacing-md)',
                   backgroundColor: '#FFFFFF',
                   borderRadius: 'var(--radius-lg)',
                   border: '1px solid var(--color-border)',
-                  minWidth: 0,
+                  padding: 'var(--spacing-xl)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-md)',
                 }}
               >
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-dark)', margin: 0, wordBreak: 'break-word' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: '#475764', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Task #{contract.task_id} &middot; Contract #{contract.contract_id}
+                    </span>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary-dark)', margin: '4px 0' }}>
                       {contract.task_title}
                     </h3>
+                    <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+                      Gig Professional: <strong>{contract.gig_pro_name}</strong>
+                    </p>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0D568D', display: 'block' }}>
+                      {formatCurrency(contract.budget)}
+                    </span>
                     <span
                       style={{
-                        padding: '3px 10px',
-                        borderRadius: '999px',
                         fontSize: '11px',
                         fontWeight: 700,
-                        backgroundColor: '#e6f4ea',
-                        color: '#137333',
-                        flexShrink: 0,
+                        backgroundColor: '#DEF7EC',
+                        color: '#03543F',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        display: 'inline-block',
+                        marginTop: '4px',
                       }}
                     >
-                      ● Completed
+                      ✓ COMPLETED &amp; PAID
                     </span>
                   </div>
+                </div>
 
-                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#0D568D', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
-                        {contract.gig_pro_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-                      <span>Professional: <strong style={{ color: 'var(--color-text-dark)' }}>{contract.gig_pro_name}</strong></span>
-                    </div>
-                    {contract.createdAt && (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Finished: {formatDate(contract.createdAt)}</span>
-                    )}
-                  </div>
+                {/* Submissions & Completion progress info */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    fontSize: 'var(--font-size-sm)',
+                    color: 'var(--color-text-muted)',
+                    backgroundColor: 'var(--color-bg-light)',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span>
+                    Approved Deliverables: <strong>{contract.submission_count} item(s)</strong>
+                  </span>
+                  <span>&bull;</span>
+                  <span>
+                    Contract Progress: <strong>{contract.progress}%</strong>
+                  </span>
+                  {contract.createdAt && (
+                    <>
+                      <span>&bull;</span>
+                      <span>Hired on: {formatDate(contract.createdAt)}</span>
+                    </>
+                  )}
+                </div>
 
-                  {/* Financial Details */}
-                  <div style={{ backgroundColor: 'var(--color-bg-light)', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)' }}>Total Payment Released:</span>
-                    <strong style={{ color: '#0D568D', fontSize: '0.95rem' }}>{formatCurrency(displayTotal)}</strong>
-                  </div>
-
-                  {/* Two-Sided Reviews Section */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-                    {/* Client's review of Professional */}
-                    <div
-                      style={{
-                        padding: '10px 12px',
-                        backgroundColor: clientReview ? '#FEF7E0' : 'var(--color-bg-light)',
-                        borderRadius: '6px',
-                        border: clientReview ? '1px solid #FEEFC3' : '1px solid var(--color-border)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: clientReview ? '#B06000' : 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          Your Rating for Professional
+                {/* Review Snippets */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '6px' }}>
+                  {/* Client's Review of Professional */}
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: clientReview ? '#F0FDF4' : '#FFF9F2',
+                      border: `1px solid ${clientReview ? '#BBF7D0' : '#FFE8D1'}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: clientReview ? '#15803D' : '#B45F00', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Your Feedback
                         </span>
                         {clientReview && (
-                          <span style={{ color: '#B06000', fontSize: '0.8rem', fontWeight: 700 }}>
-                            ★ {clientReview.rating}.0
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#EAB308' }}>
+                            {'★'.repeat(clientReview.rating)}{'☆'.repeat(5 - clientReview.rating)} ({clientReview.rating}.0)
                           </span>
                         )}
                       </div>
                       {clientReview ? (
-                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-dark)', fontStyle: 'italic', margin: '4px 0 0 0', lineHeight: 1.4 }}>
-                          "{clientReview.comment || 'No written comment provided.'}"
+                        <p style={{ fontSize: '13px', color: '#1F2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
+                          "{clientReview.comment || 'No comment provided.'}"
                         </p>
                       ) : (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                          Review pending submission
-                        </div>
+                        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>
+                          You have not rated {contract.gig_pro_name} yet.
+                        </p>
                       )}
                     </div>
 
-                    {/* Professional's review of Client */}
-                    <div
-                      style={{
-                        padding: '10px 12px',
-                        backgroundColor: gigReview ? '#F0FDF4' : 'var(--color-bg-light)',
-                        borderRadius: '6px',
-                        border: gigReview ? '1px solid #BBF7D0' : '1px solid var(--color-border)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: gigReview ? '#15803D' : 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          Professional's Feedback
+                    {!clientReview && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        onClick={() => setReviewingContract(contract)}
+                        style={{ alignSelf: 'flex-start', marginTop: '4px' }}
+                      >
+                        ★ Rate {contract.gig_pro_name}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Gig Professional's Review of Client */}
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: gigReview ? '#FDF4FF' : '#F9FAFB',
+                      border: `1px solid ${gigReview ? '#F5D0FE' : '#E5E7EB'}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: gigReview ? '#86198F' : '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {contract.gig_pro_name}'s Review
+                      </span>
+                      {gigReview && (
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#EAB308' }}>
+                          {'★'.repeat(gigReview.rating)}{'☆'.repeat(5 - gigReview.rating)} ({gigReview.rating}.0)
                         </span>
-                        {gigReview && (
-                          <span style={{ color: '#15803D', fontSize: '0.8rem', fontWeight: 700 }}>
-                            ★ {gigReview.rating}.0
-                          </span>
-                        )}
-                      </div>
-                      {gigReview ? (
-                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-dark)', fontStyle: 'italic', margin: '4px 0 0 0', lineHeight: 1.4 }}>
-                          "{gigReview.comment || 'No written comment provided.'}"
-                        </p>
-                      ) : (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                          Professional has not submitted feedback yet
-                        </div>
                       )}
                     </div>
+                    {gigReview ? (
+                      <p style={{ fontSize: '13px', color: '#1F2937', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
+                        "{gigReview.comment || 'No comment provided.'}"
+                      </p>
+                    ) : (
+                      <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>
+                        Professional hasn't submitted a client review yet.
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Actions Footer */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
-                  <Button variant="outline" size="sm" type="button" onClick={() => onNavigate('review-deliverables', { taskId: contract.task_id, gigProfileId: contract.gig_profile_id })}>
-                    View Deliverables
+                {/* Footer Action Links */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border)', paddingTop: '12px', marginTop: '4px', flexWrap: 'wrap', gap: '8px' }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => onNavigate('review-deliverables', { taskId: String(contract.task_id), gigProfileId: String(contract.gig_profile_id) })}
+                  >
+                    View Project Details &amp; History &rarr;
                   </Button>
 
-                  {!clientReview ? (
-                    <Button size="sm" type="button" onClick={() => setReviewingContract(contract)}>
-                      ★ Rate &amp; Review
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm" type="button" onClick={() => setViewReviewsContract(contract)}>
-                      Reviews ({reviews.length})
+                  {contract.reviews && contract.reviews.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => setViewReviewsContract(contract)}
+                    >
+                      View All Reviews ({contract.reviews.length})
                     </Button>
                   )}
                 </div>
@@ -276,6 +355,10 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
           gigProfileId={Number(reviewingContract.gig_profile_id)}
           taskTitle={reviewingContract.task_title}
           gigProName={reviewingContract.gig_pro_name}
+          onSuccess={() => {
+            setReviewingContract(null);
+            dispatch(fetchClientContracts());
+          }}
         />
       )}
 
@@ -284,10 +367,10 @@ export const ClientCompletedProjects: React.FC<ClientCompletedProjectsProps> = (
         <TaskReviewsModal
           isOpen={Boolean(viewReviewsContract)}
           onClose={() => setViewReviewsContract(null)}
-          contract={contracts.find((c) => c.contract_id === viewReviewsContract.contract_id) || viewReviewsContract}
+          contract={allCompletedProjects.find((c) => c.contract_id === viewReviewsContract.contract_id) || viewReviewsContract}
           currentUserId={user?.userId}
           onOpenRateReview={() => {
-            const current = contracts.find((c) => c.contract_id === viewReviewsContract.contract_id) || viewReviewsContract;
+            const current = allCompletedProjects.find((c) => c.contract_id === viewReviewsContract.contract_id) || viewReviewsContract;
             setReviewingContract(current);
           }}
         />
