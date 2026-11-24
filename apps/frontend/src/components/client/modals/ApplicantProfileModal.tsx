@@ -2,11 +2,13 @@
  * @file ApplicantProfileModal.tsx
  * @description
  * "View Profile" on the client's applicants page: the profile of the gig
- * professional behind ONE application. It is loaded by application id, so
- * with several applicants on a task each button always shows its own
- * applicant, and the API only answers for applications on this client's tasks.
+ * professional behind ONE application.
+ *
+ * Migrated to Redux Toolkit (clientSlice). Keyed by applicationId so concurrent
+ * lookups never overwrite each other, and switching between applicants immediately
+ * clears stale profile data and fetches the correct applicant profile.
  */
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Modal } from '../../common/Modal';
 import { Badge } from '../../common/Badge';
 import { Button } from '../../common/Button';
@@ -15,11 +17,15 @@ import { ErrorState } from '../../common/ErrorState';
 import {
   ProfileChips, ProfileFacts, ProfileHeader, ProfileLinks, ProfileSection, ProfileText, RatingSummary, ReviewList,
 } from '../../common/ProfileDetails';
-import clientApi from '../../../services/api/client/clientApi';
-import { useApiResource } from '../../../hooks/useApiResource';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchApplicantProfile } from '../../../store/client/clientSlice';
+import {
+  selectApplicantProfile,
+  selectApplicantProfileRequest,
+} from '../../../store/client/selectors';
 import { APPLICATION_STATUS } from '../../../utils/applicationStatus';
 import { formatCurrency, formatDate, formatMonthYear } from '../../../utils/format';
-import type { ApplicantProfileResponse } from '../../../types/profile';
+import type { ApplicantProfileResponse, ApplicationStatus } from '../../../types/profile';
 
 export interface ApplicantProfileModalProps {
   /** Application whose applicant to show; null keeps the modal closed. */
@@ -31,16 +37,29 @@ export interface ApplicantProfileModalProps {
 const BADGE_LABELS: Record<string, string> = { VERIFIED_PRO: 'Verified Pro', TOP_RATED: 'Top Rated' };
 
 const ApplicantProfileBody: React.FC<{ result: ApplicantProfileResponse }> = ({ result: { application, profile } }) => {
-  const status = APPLICATION_STATUS[application.status];
+  const normalizedStatus = (application.status?.toLowerCase() || 'pending') as ApplicationStatus;
+  const status = APPLICATION_STATUS[normalizedStatus] || APPLICATION_STATUS.pending;
+
   return (
     <div className="profile-body">
       <ProfileHeader
         name={profile.name}
-        subtitle={<><a href={`mailto:${profile.email}`}>{profile.email}</a> · Member since {formatMonthYear(profile.memberSince)}</>}
-        badges={<>
-          {profile.badge && <Badge variant="success">{BADGE_LABELS[profile.badge] ?? profile.badge}</Badge>}
-          <Badge variant={status.variant}>{status.label}</Badge>
-        </>}
+        subtitle={
+          <>
+            {profile.email ? (
+              <>
+                <a href={`mailto:${profile.email}`}>{profile.email}</a> ·{' '}
+              </>
+            ) : null}
+            Member since {formatMonthYear(profile.memberSince)}
+          </>
+        }
+        badges={
+          <>
+            {profile.badge && <Badge variant="success">{BADGE_LABELS[profile.badge] ?? profile.badge}</Badge>}
+            <Badge variant={status.variant}>{status.label}</Badge>
+          </>
+        }
       />
 
       <p className="profile-context">
@@ -85,19 +104,47 @@ const ApplicantProfileBody: React.FC<{ result: ApplicantProfileResponse }> = ({ 
 };
 
 export const ApplicantProfileModal: React.FC<ApplicantProfileModalProps> = ({ applicationId, onClose }) => {
-  const { data, loading, error, reload } = useApiResource(
-    clientApi.getApplicantProfile,
-    applicationId,
-    "Could not load this applicant's profile.",
+  const dispatch = useAppDispatch();
+
+  // Select profile data and request status keyed strictly by the selected applicationId
+  const profileData = useAppSelector((state) =>
+    applicationId !== null ? selectApplicantProfile(state, applicationId) : null,
   );
+  const requestState = useAppSelector((state) =>
+    applicationId !== null ? selectApplicantProfileRequest(state, applicationId) : null,
+  );
+
+  useEffect(() => {
+    if (applicationId !== null) {
+      if (!profileData && (!requestState || requestState.status === 'idle')) {
+        void dispatch(fetchApplicantProfile(applicationId));
+      }
+    }
+  }, [dispatch, applicationId, profileData, requestState]);
+
+  const handleRetry = useCallback(() => {
+    if (applicationId !== null) {
+      void dispatch(fetchApplicantProfile(applicationId));
+    }
+  }, [dispatch, applicationId]);
+
+  const isLoading = applicationId !== null && !profileData && requestState?.status === 'loading';
+  const hasError = applicationId !== null && !profileData && requestState?.status === 'failed';
+  const errorMessage = hasError ? requestState?.error ?? "Could not load this applicant's profile." : undefined;
 
   return (
     <Modal open={applicationId !== null} onClose={onClose} title="Applicant Profile" className="profile-modal">
-      {loading ? <Loader label="Loading profile..." />
-        : data ? <ApplicantProfileBody result={data} />
-          : <ErrorState title="Profile unavailable" message={error ?? undefined} onRetry={reload} />}
+      {isLoading ? (
+        <Loader label="Loading profile..." />
+      ) : profileData ? (
+        <ApplicantProfileBody result={profileData} />
+      ) : (
+        <ErrorState title="Profile unavailable" message={errorMessage} onRetry={handleRetry} />
+      )}
       <div className="profile-actions" style={{ marginTop: 20 }}>
-        <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
+        <Button variant="outline" size="sm" onClick={onClose}>
+          Close
+        </Button>
       </div>
     </Modal>
   );
