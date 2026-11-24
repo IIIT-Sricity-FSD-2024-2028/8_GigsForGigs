@@ -9,16 +9,15 @@ import {
   rejectApplication,
 } from '../../../store/client/clientSlice';
 import {
-  selectClientApplications,
   selectClientApplicationsRequest,
   selectClientContracts,
   selectClientContractsRequest,
   selectClientTasks,
   selectClientTasksRequest,
+  selectUndecidedApplications,
 } from '../../../store/client/selectors';
-import type { RawApplication } from '../../../services/api/client/clientApi';
 import { PageHeader } from '../../../components/common/PageHeader';
-import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, useToast } from '../../../components/common';
+import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Loader, useToast } from '../../../components/common';
 import { ApplicantProfileModal } from '../../../components/client/modals/ApplicantProfileModal';
 
 export interface ReviewShortlistProps {
@@ -32,11 +31,12 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
 
   const tasks = useAppSelector(selectClientTasks);
   const tasksRequest = useAppSelector(selectClientTasksRequest);
-  const applications = useAppSelector(selectClientApplications);
   const applicationsRequest = useAppSelector(selectClientApplicationsRequest);
+  const undecidedApplications = useAppSelector(selectUndecidedApplications);
   const contracts = useAppSelector(selectClientContracts);
   const contractsRequest = useAppSelector(selectClientContractsRequest);
 
+  const [actingAppId, setActingAppId] = useState<number | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   // Application whose applicant profile is open (keyed by application, not candidate, so it's always the right person).
   const [profileApplicationId, setProfileApplicationId] = useState<number | null>(null);
@@ -57,13 +57,8 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
 
   const filterTask = taskId ? tasks.find((t) => String(t.taskId) === String(taskId)) : null;
 
-  const isUndecided = (a: RawApplication) =>
-    (a.status === 'pending' || a.status === 'shortlisted' || (a.status as string) === 'PENDING' || (a.status as string) === 'SHORTLISTED') &&
-    !a.task?.skills?.includes('Service Hire');
-
   // Undecided marketplace applicants for the selected task; manager-shortlisted ones first.
-  const currentApplications = applications
-    .filter(isUndecided)
+  const currentApplications = undecidedApplications
     .filter((a) => !taskId || String(a.taskId) === String(taskId))
     .sort((a, b) => Number(b.status === 'shortlisted' || (b.status as string) === 'SHORTLISTED') - Number(a.status === 'shortlisted' || (a.status as string) === 'SHORTLISTED'));
 
@@ -73,8 +68,8 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
     .filter((t) => (t.status === 'open' || (t.status as string) === 'OPEN') && !t.skills?.includes('Service Hire'))
     .map((t) => ({
       task: t,
-      count: applications.filter((a) => isUndecided(a) && String(a.taskId) === String(t.taskId)).length,
-      hired: contracts.filter((c) => String(c.taskId) === String(t.taskId)).length,
+      count: undecidedApplications.filter((a) => a.taskId === t.taskId).length,
+      hired: contracts.filter((c) => c.taskId === t.taskId).length,
     }));
 
   const errorMessage = (err: unknown, fallback: string) =>
@@ -82,21 +77,27 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
 
   const handleApprove = async (appId: number) => {
     try {
+      setActingAppId(appId);
       await dispatch(approveApplication(appId)).unwrap();
       toast.success('Candidate hired! Fund their escrow from Active Task so they can start work. You can keep hiring for this task.');
     } catch (err) {
       console.error('Approve hire failed:', err);
       toast.error(typeof err === 'string' ? err : errorMessage(err, 'Failed to approve this candidate. Please try again.'));
+    } finally {
+      setActingAppId(null);
     }
   };
 
   const handleReject = async (appId: number) => {
     try {
+      setActingAppId(appId);
       await dispatch(rejectApplication(appId)).unwrap();
       toast.success('Candidate application discarded.');
     } catch (err) {
       console.error('Reject hire failed:', err);
       toast.error(typeof err === 'string' ? err : errorMessage(err, 'Failed to reject this candidate. Please try again.'));
+    } finally {
+      setActingAppId(null);
     }
   };
 
@@ -131,6 +132,10 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
 
   // No task selected: show every posted task.
   if (!filterTask) {
+    if (tasksRequest.status === 'loading' && tasks.length === 0) {
+      return <Loader label="Loading posted tasks..." />;
+    }
+
     return (
       <div>
         <PageHeader
@@ -269,10 +274,10 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
                   <Button variant="ghost" size="sm" onClick={() => setProfileApplicationId(a.applicationId)} aria-label={`View profile of ${candidateName}`}>
                     View Profile
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleApprove(a.applicationId)}>
-                    Approve
+                  <Button variant="outline" size="sm" disabled={actingAppId === a.applicationId} onClick={() => handleApprove(a.applicationId)}>
+                    {actingAppId === a.applicationId ? 'Hiring...' : 'Approve'}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleReject(a.applicationId)}>
+                  <Button variant="outline" size="sm" disabled={actingAppId === a.applicationId} onClick={() => handleReject(a.applicationId)}>
                     Reject
                   </Button>
                 </div>

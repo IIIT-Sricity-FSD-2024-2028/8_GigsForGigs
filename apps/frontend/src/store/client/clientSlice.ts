@@ -646,6 +646,9 @@ const clientSlice = createSlice({
         s.applications = s.applications.map((app) =>
           app.applicationId === a.payload.applicationId ? { ...app, status: 'accepted' } : app,
         );
+        if (s.applicantProfiles[a.payload.applicationId]) {
+          s.applicantProfiles[a.payload.applicationId].application.status = 'accepted';
+        }
       })
       .addCase(approveApplication.rejected, (s, a) => {
         s.applicationActionErrors[a.meta.arg] = a.payload ?? 'Failed to approve applicant.';
@@ -658,6 +661,9 @@ const clientSlice = createSlice({
         s.applications = s.applications.map((app) =>
           app.applicationId === a.payload.applicationId ? { ...app, status: 'declined' } : app,
         );
+        if (s.applicantProfiles[a.payload.applicationId]) {
+          s.applicantProfiles[a.payload.applicationId].application.status = 'declined';
+        }
       })
       .addCase(rejectApplication.rejected, (s, a) => {
         s.applicationActionErrors[a.meta.arg] = a.payload ?? 'Failed to reject applicant.';
