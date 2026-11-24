@@ -2,33 +2,40 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Loader } from '../../../components/common/Loader';
 import { KPICard } from '../../../components/super-admin/KPICard';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
+import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { PaymentIcon } from '../../../components/super-admin/Icons';
-import { useToast } from '../../../components/super-admin/Toast';
+import { useToast } from '../../../components/super-admin/useToast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchPayments, overrideEscrowPayment } from '../../../store/payment/paymentSlice';
+import { selectPayments, selectPaymentsRequest, selectPaymentOverrideRequest } from '../../../store/payment/selectors';
+import { fetchKPIs, fetchAuditLogs } from '../../../store/admin/adminSlice';
+import type { EscrowPayment } from '../../../services/api/payment/paymentApi';
+import { formatCurrency } from '../../../utils/format';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
-export interface EscrowPayment {
-  id: string;
-  paymentId: number;
-  taskId: string;
-  taskTitle: string;
-  clientName: string;
-  gigProName: string;
-  amount: number;
-  platformFee: number;
-  totalAmount: number;
-  status: 'AWAITING_FUNDING' | 'HELD_IN_ESCROW' | 'RELEASED' | 'REFUNDED' | 'FAILED';
-  createdAt: string;
-  settledAt: string | null;
-}
+export type { EscrowPayment };
+
+const STATUS_FILTERS: Array<'ALL' | EscrowPayment['status']> = [
+  'ALL',
+  'AWAITING_FUNDING',
+  'HELD_IN_ESCROW',
+  'RELEASED',
+  'REFUNDED',
+  'FAILED',
+];
 
 export const PaymentsRevenue: React.FC = () => {
   const { hasPermission } = useAuth();
   const toast = useToast();
+  const dispatch = useAppDispatch();
 
-  const [payments, setPayments] = useState<EscrowPayment[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const payments = useAppSelector(selectPayments);
+  const paymentsRequest = useAppSelector(selectPaymentsRequest);
+  const overrideRequest = useAppSelector(selectPaymentOverrideRequest);
+  const overriding = overrideRequest.status === 'loading';
+
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedPayment, setSelectedPayment] = useState<EscrowPayment | null>(null);
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
@@ -36,25 +43,8 @@ export const PaymentsRevenue: React.FC = () => {
   const [auditReason, setAuditReason] = useState('');
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadPayments() {
-      try {
-        setLoading(true);
-        const data = await adminApi.getPayments();
-        if (isMounted) setPayments(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Failed to load admin payments:', err);
-        if (isMounted) {
-          toast.error('Failed to load payments from database.');
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    loadPayments();
-    return () => { isMounted = false; };
-  }, [toast]);
+    void dispatch(fetchPayments());
+  }, [dispatch]);
 
   /**
    * Ledger totals for this page. Volume counts only committed money (held or
@@ -74,17 +64,9 @@ export const PaymentsRevenue: React.FC = () => {
     };
   }, [payments]);
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(val);
-  };
-
   const safePayments = Array.isArray(payments) ? payments : [];
 
-  const filteredPayments = safePayments.filter(p => {
+  const filteredPayments = safePayments.filter((p) => {
     if (statusFilter === 'ALL') return true;
     return p.status === statusFilter;
   });
@@ -101,120 +83,129 @@ export const PaymentsRevenue: React.FC = () => {
     if (!selectedPayment || !auditReason.trim()) return;
 
     try {
-      await adminApi.overrideEscrow(selectedPayment.paymentId, overrideAction, auditReason);
-    } catch (err) {
-      toast.error(err instanceof Error && err.message ? err.message : 'Override failed.');
-      return;
+      await dispatch(
+        overrideEscrowPayment({
+          paymentId: selectedPayment.paymentId,
+          action: overrideAction,
+          auditReason: auditReason.trim(),
+        }),
+      ).unwrap();
+      void dispatch(fetchKPIs());
+      if (hasPermission('admins:invite')) {
+        void dispatch(fetchAuditLogs());
+      }
+      setIsOverrideModalOpen(false);
+      toast.success(
+        'Escrow Override Applied',
+        `Payment #${selectedPayment.paymentId} was manually ${overrideAction === 'RELEASE' ? 'released to the pro' : 'refunded to the client'}.`,
+      );
+    } catch (err: unknown) {
+      toast.error('Override Refused', extractErrorMessage(err, 'Could not override escrow status.'));
     }
-
-    setPayments(prev => prev.map(p => 
-      p.paymentId === selectedPayment.paymentId ? { ...p, status: overrideAction === 'RELEASE' ? 'RELEASED' : 'REFUNDED' } : p
-    ));
-
-    setIsOverrideModalOpen(false);
-    toast.success(
-      `Payment ${overrideAction === 'RELEASE' ? 'Released' : 'Refunded'}`,
-      `Processed ${selectedPayment.id} (${formatCurrency(selectedPayment.totalAmount)})`
-    );
   };
 
   const columns: ColumnDef<EscrowPayment>[] = [
     {
-      header: 'Payment / Task',
+      header: 'Tx / Task ID',
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.taskTitle}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{row.id}</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.id}</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{row.taskId}</span>
         </div>
       )
     },
     {
-      header: 'Client',
-      cell: (row) => <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.clientName}</span>
+      header: 'Task Title',
+      accessorKey: 'taskTitle'
     },
     {
-      header: 'Gig Professional',
-      cell: (row) => <span style={{ color: 'var(--color-text-dark)' }}>{row.gigProName}</span>
+      header: 'Client & Freelancer',
+      cell: (row) => (
+        <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
+          <span style={{ fontWeight: 600, color: 'var(--color-primary-dark)' }}>{row.clientName}</span>
+          <span style={{ color: 'var(--color-text-muted)' }}>→ {row.gigProName}</span>
+        </div>
+      )
     },
     {
-      header: 'Gig Amount',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{formatCurrency(row.amount)}</span>
+      header: 'Gross Volume',
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{formatCurrency(row.totalAmount)}</span>
+    },
+    {
+      header: 'Net Pro Payout',
+      cell: (row) => <span>{formatCurrency(row.amount)}</span>
     },
     {
       header: 'Platform Fee',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-success-text)' }}>+{formatCurrency(row.platformFee)}</span>
+      cell: (row) => <span style={{ color: 'var(--color-primary-dark)', fontWeight: 600 }}>{formatCurrency(row.platformFee)}</span>
     },
     {
-      header: 'Total Client Paid',
-      cell: (row) => <span style={{ fontWeight: 800, color: '#084875' }}>{formatCurrency(row.totalAmount)}</span>
+      header: 'Escrow Status',
+      cell: (row) => <StatusBadge status={row.status} />
     },
     {
-      header: 'Payment Status',
-      cell: (row) => (
-        <span style={{
-          padding: '4px 10px',
-          borderRadius: '999px',
-          fontSize: '11px',
-          fontWeight: 700,
-          backgroundColor: row.status === 'RELEASED' ? '#e6f4ea' : row.status === 'HELD_IN_ESCROW' ? '#e8f0fe' : row.status === 'AWAITING_FUNDING' ? '#fef7e0' : '#fce8e6',
-          color: row.status === 'RELEASED' ? '#137333' : row.status === 'HELD_IN_ESCROW' ? '#1a73e8' : row.status === 'AWAITING_FUNDING' ? '#b06000' : '#c5221f'
-        }}>
-          {row.status.replace(/_/g, ' ')}
-        </span>
-      )
+      header: 'Settled Date',
+      cell: (row) => <span>{row.status === 'HELD_IN_ESCROW' ? 'Pending Delivery' : row.settledAt || '—'}</span>
     },
     {
       header: 'Actions',
       cell: (row) => {
-        if (row.status === 'HELD_IN_ESCROW') {
-          if (!hasPermission('payments:release') && !hasPermission('payments:refund')) {
-            return <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Read Only (Auditor)</span>;
-          }
-          return (
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {hasPermission('payments:release') && (
-                <button
-                  onClick={() => handleOpenOverride(row, 'RELEASE')}
-                  className="admin-btn admin-btn-primary"
-                  style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
-                >
-                  Release Payment
-                </button>
-              )}
-              {hasPermission('payments:refund') && (
-                <button
-                  onClick={() => handleOpenOverride(row, 'REFUND')}
-                  className="admin-btn admin-btn-danger"
-                  style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
-                >
-                  Refund Client
-                </button>
-              )}
-            </div>
-          );
+        if (row.status !== 'HELD_IN_ESCROW') {
+          return <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Settled</span>;
         }
-        if (row.status === 'RELEASED') {
-          return <span style={{ fontSize: '11px', color: 'var(--color-success-text)', fontWeight: 600 }}>✓ Settled (Paid)</span>;
+
+        const canRelease = hasPermission('payments:release');
+        const canRefund = hasPermission('payments:refund');
+
+        if (!canRelease && !canRefund) {
+          return <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Read-only</span>;
         }
-        if (row.status === 'REFUNDED') {
-          return <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Settled (Refunded)</span>;
-        }
-        if (row.status === 'AWAITING_FUNDING') {
-          return <span style={{ fontSize: '11px', color: '#b06000' }}>Awaiting Deposit</span>;
-        }
-        return <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>Failed Transaction</span>;
+
+        return (
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {canRelease && (
+              <button
+                onClick={() => handleOpenOverride(row, 'RELEASE')}
+                className="admin-btn admin-btn-secondary"
+                style={{ padding: '2px 8px', fontSize: '11px' }}
+              >
+                Release
+              </button>
+            )}
+            {canRefund && (
+              <button
+                onClick={() => handleOpenOverride(row, 'REFUND')}
+                className="admin-btn admin-btn-danger"
+                style={{ padding: '2px 8px', fontSize: '11px' }}
+              >
+                Refund
+              </button>
+            )}
+          </div>
+        );
       }
     }
   ];
 
-  if (loading) {
-    return <Loader label="Loading financial ledger..." />;
+  if (paymentsRequest.status === 'loading' && payments.length === 0) {
+    return <Loader label="Loading escrow accounting ledgers..." />;
+  }
+
+  if (paymentsRequest.status === 'failed' && payments.length === 0) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-danger-text)' }}>
+        <h3 style={{ marginBottom: 'var(--spacing-sm)' }}>Escrow Ledger Load Error</h3>
+        <p style={{ margin: 0, fontSize: 'var(--font-size-sm)' }}>
+          {paymentsRequest.error || 'Could not load escrow payments.'}
+        </p>
+      </div>
+    );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
-      {/* Super Admin Financial Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
+      {/* Financial Overview KPI Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(210px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Committed Volume"
           value={formatCurrency(metrics.totalVolume)}
@@ -225,102 +216,110 @@ export const PaymentsRevenue: React.FC = () => {
         <KPICard
           title="Held in Escrow"
           value={formatCurrency(metrics.totalEscrowFunds)}
-          subtitle="Gig amount and fee, awaiting release"
+          subtitle="Awaiting work approval or arbitration"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-secondary)"
         />
         <KPICard
-          title="Refunded to Clients"
-          value={formatCurrency(metrics.totalRefunded)}
-          subtitle="Returned from escrow"
-          icon={<PaymentIcon size={20} />}
-          accentColor="#519e8a"
-        />
-        <KPICard
           title="Released to Gig Professionals"
           value={formatCurrency(metrics.totalGigPayouts)}
-          subtitle={`${metrics.completedCount} payouts completed`}
+          subtitle={`${metrics.completedCount} settled payouts`}
           icon={<PaymentIcon size={20} />}
-          accentColor="var(--color-success-text)"
+          accentColor="var(--color-primary-blue)"
         />
         <KPICard
           title="Platform Fee Revenue"
           value={formatCurrency(metrics.totalPlatformRevenue)}
-          subtitle="Fees on released payments"
+          subtitle="Net fees on released escrow"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-dark)"
         />
+        <KPICard
+          title="Refunded to Clients"
+          value={formatCurrency(metrics.totalRefunded)}
+          subtitle="Returned via arbitration or override"
+          icon={<PaymentIcon size={20} />}
+          accentColor="var(--color-danger-text)"
+        />
       </div>
 
-      {/* Filter Bar & Ledger Table */}
-      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-            Financial Management &amp; Transaction Ledger
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-muted)' }}>Filter:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="admin-select"
-              style={{ padding: '6px 12px', fontSize: '13px', width: 'auto' }}
-            >
-              <option value="ALL">All Transactions</option>
-              <option value="AWAITING_FUNDING">Awaiting Funding</option>
-              <option value="HELD_IN_ESCROW">Held in Escrow</option>
-              <option value="RELEASED">Released</option>
-              <option value="REFUNDED">Refunded</option>
-              <option value="FAILED">Failed</option>
-            </select>
+      {/* Main Table Card with Filter Pills */}
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {STATUS_FILTERS.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setStatusFilter(filter)}
+                style={{
+                  padding: '6px 12px',
+                  border: `1px solid ${statusFilter === filter ? 'var(--color-primary-dark)' : 'var(--color-border)'}`,
+                  borderRadius: 'var(--radius-pill)',
+                  backgroundColor: statusFilter === filter ? 'var(--color-primary-dark)' : 'var(--color-bg-white)',
+                  color: statusFilter === filter ? '#ffffff' : 'var(--color-text-muted)',
+                  fontWeight: statusFilter === filter ? 700 : 600,
+                  fontSize: 'var(--font-size-xs)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {filter === 'ALL' ? 'All Statuses' : filter.replace(/_/g, ' ')}
+              </button>
+            ))}
           </div>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+            Showing {filteredPayments.length} of {safePayments.length} transactions
+          </span>
         </div>
 
         <DataTable
           data={filteredPayments}
           columns={columns}
           pageSize={10}
-          searchPlaceholder="Search financial ledger by task, client, gig pro, or ID..."
+          searchPlaceholder="Search transactions by ID, task, or user name..."
         />
       </div>
 
-      {/* Super Admin Payment Override Modal */}
+      {/* Escrow Manual Override Modal */}
       <ActionModal
         isOpen={isOverrideModalOpen}
         onClose={() => setIsOverrideModalOpen(false)}
-        title={`Transaction Override: ${overrideAction === 'RELEASE' ? 'Release Payment to Gig Pro' : 'Refund Payment to Client'}`}
+        title={`Manual Escrow Override: ${overrideAction === 'RELEASE' ? 'Release Funds to Pro' : 'Refund Escrow to Client'}`}
       >
         {selectedPayment && (
           <form onSubmit={handleExecuteOverride} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-            <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)', fontSize: '13px', lineHeight: 1.6 }}>
-              <div><strong>Task Title:</strong> {selectedPayment.taskTitle}</div>
-              <div><strong>Payment ID:</strong> {selectedPayment.paymentId}</div>
-              <div><strong>Client:</strong> {selectedPayment.clientName}</div>
+            <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-dark)' }}>
+              {overrideAction === 'RELEASE'
+                ? 'Are you sure you want to bypass pending milestone sign-off and release escrowed funds to the Gig Professional?'
+                : 'Are you sure you want to forcibly terminate escrow and refund 100% of the escrowed balance to the Client?'}
+            </p>
+            <div style={{ backgroundColor: 'var(--color-bg-light)', padding: 'var(--spacing-md)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div><strong>Transaction / Task:</strong> {selectedPayment.id} · {selectedPayment.taskTitle}</div>
+              <div><strong>Client Organization:</strong> {selectedPayment.clientName}</div>
               <div><strong>Gig Professional:</strong> {selectedPayment.gigProName}</div>
-              <div style={{ marginTop: '8px', borderTop: '1px solid var(--color-border)', paddingTop: '8px' }}>
-                <div><strong>Gig Payout:</strong> {formatCurrency(selectedPayment.amount)}</div>
-                <div><strong>Platform Fee:</strong> {formatCurrency(selectedPayment.platformFee)}</div>
-                <div><strong>Total Client Payment:</strong> {formatCurrency(selectedPayment.totalAmount)}</div>
-              </div>
+              <div><strong>Total Escrowed Amount:</strong> {formatCurrency(selectedPayment.totalAmount)}</div>
+              <div><strong>Freelancer Net Payout:</strong> {formatCurrency(selectedPayment.amount)}</div>
+              <div><strong>Platform Retained Fee:</strong> {formatCurrency(selectedPayment.platformFee)}</div>
             </div>
-
             <div>
               <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px' }}>
-                Administrative Override Reason (Logged in Audit Log)
+                Reason for Administrative Override (Recorded in System Audit Log)
               </label>
               <textarea
                 className="admin-textarea"
                 rows={3}
                 required
-                placeholder="State the audit justification for manual transaction override..."
+                disabled={overriding}
+                placeholder="Detail the justification for this manual ledger override..."
                 value={auditReason}
                 onChange={(e) => setAuditReason(e.target.value)}
               />
             </div>
-
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-sm)' }}>
               <button
                 type="button"
+                disabled={overriding}
                 onClick={() => setIsOverrideModalOpen(false)}
                 className="admin-btn admin-btn-secondary"
               >
@@ -328,9 +327,17 @@ export const PaymentsRevenue: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className={`admin-btn ${overrideAction === 'RELEASE' ? 'admin-btn-primary' : 'admin-btn-danger'}`}
+                disabled={overriding}
+                className="admin-btn admin-btn-primary"
+                style={{
+                  backgroundColor: overrideAction === 'REFUND' ? 'var(--color-danger-text)' : 'var(--color-primary-dark)'
+                }}
               >
-                Confirm {overrideAction === 'RELEASE' ? `Release ${formatCurrency(selectedPayment.amount)}` : `Refund ${formatCurrency(selectedPayment.totalAmount)}`}
+                {overriding
+                  ? 'Applying...'
+                  : overrideAction === 'RELEASE'
+                  ? `Confirm Release ${formatCurrency(selectedPayment.amount)}`
+                  : `Confirm Refund ${formatCurrency(selectedPayment.totalAmount)}`}
               </button>
             </div>
           </form>

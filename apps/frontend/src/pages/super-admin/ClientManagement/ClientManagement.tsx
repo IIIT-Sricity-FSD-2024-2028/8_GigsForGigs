@@ -4,86 +4,72 @@ import { DataTable, type ColumnDef } from '../../../components/super-admin/DataT
 import { ActionModal } from '../../../components/super-admin/ActionModal';
 import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
-import { useToast } from '../../../components/super-admin/Toast';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useToast } from '../../../components/super-admin/useToast';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchClients,
+  decideClientKYC,
+  updateUserStatus
+} from '../../../store/admin/adminSlice';
+import {
+  selectClients,
+  selectClientsRequest
+} from '../../../store/admin/selectors';
+import type { ClientDetail } from '../../../store/admin/types';
+import { formatCurrency } from '../../../utils/format';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
-export interface ClientDetail {
-  id: string;
-  name: string;
-  companyName: string;
-  email: string;
-  domain: string | null;
-  totalSpent: number;
-  activeGigsCount: number;
-  assignedManagersCount: number;
-  isVerified: boolean;
-  kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
-  status: 'ACTIVE' | 'SUSPENDED';
-  joinedDate: string;
-  managers: { managerId: number; name: string; email: string; status: string }[];
-}
+export type { ClientDetail };
 
 export const ClientManagement: React.FC = () => {
   const toast = useToast();
-  const [clients, setClients] = useState<ClientDetail[]>([]);
-  const [selectedClient, setSelectedClient] = useState<ClientDetail | null>(null);
+  const dispatch = useAppDispatch();
+  const clients = useAppSelector(selectClients);
+  const clientsRequest = useAppSelector(selectClientsRequest);
+
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSuspendDialogOpen, setIsSuspendDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const selectedClient = clients.find((c) => c.id === selectedClientId) || null;
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadClients() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await adminApi.getClients();
-        if (isMounted) {
-          setClients(Array.isArray(data) ? data : []);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err?.message || 'Failed to load client directory.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-    loadClients();
-    return () => { isMounted = false; };
-  }, []);
+    dispatch(fetchClients());
+  }, [dispatch]);
 
   const handleOpenClientDrawer = (client: ClientDetail) => {
-    setSelectedClient(client);
+    setSelectedClientId(client.id);
     setIsDrawerOpen(true);
   };
 
-  /** Records the decision, and only updates the screen once the server has accepted it. */
+  /** Records the decision, updating Redux only once the server/DB accepts it. */
   const handleKycDecision = async (decision: 'VERIFIED' | 'REJECTED') => {
     if (!selectedClient) return;
     try {
-      await adminApi.decideClientKYC(selectedClient.id, decision);
-      const patch = { kycStatus: decision, isVerified: decision === 'VERIFIED' };
-      setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, ...patch } : c)));
-      setSelectedClient({ ...selectedClient, ...patch });
-      toast.success(decision === 'VERIFIED' ? 'KYC Approved' : 'KYC Rejected', `Decision recorded for ${selectedClient.companyName}.`);
-    } catch (err: any) {
-      toast.error('KYC Update Failed', err?.message || 'Could not record the KYC decision.');
+      await dispatch(decideClientKYC({ clientId: selectedClient.id, status: decision })).unwrap();
+      toast.success(
+        decision === 'VERIFIED' ? 'KYC Approved' : 'KYC Rejected',
+        `Decision recorded for ${selectedClient.companyName}.`
+      );
+    } catch (err: unknown) {
+      toast.error('KYC Update Failed', extractErrorMessage(err, 'Could not record the KYC decision.'));
     }
   };
 
   const handleSuspendConfirm = async () => {
     if (!selectedClient) return;
     try {
-      await adminApi.updateUserStatus(selectedClient.id, 'SUSPENDED', 'Compliance review');
-      setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, status: 'SUSPENDED' as const } : c)));
+      await dispatch(
+        updateUserStatus({
+          userId: selectedClient.id,
+          status: 'SUSPENDED',
+          reason: 'Compliance review'
+        })
+      ).unwrap();
       setIsDrawerOpen(false);
       toast.warning('Client Suspended', `Account for ${selectedClient.companyName} paused.`);
-    } catch (err: any) {
-      toast.error('Suspension Failed', err?.message || 'Could not suspend this client.');
+    } catch (err: unknown) {
+      toast.error('Suspension Failed', extractErrorMessage(err, 'Could not suspend this client.'));
     }
     setIsSuspendDialogOpen(false);
   };
@@ -91,15 +77,16 @@ export const ClientManagement: React.FC = () => {
   const handleReactivateClient = async () => {
     if (!selectedClient) return;
     try {
-      await adminApi.updateUserStatus(selectedClient.id, 'ACTIVE', 'Reactivated by Admin');
-      const updated = clients.map((c) =>
-        c.id === selectedClient.id ? { ...c, status: 'ACTIVE' as const } : c
-      );
-      setClients(updated);
-      setSelectedClient({ ...selectedClient, status: 'ACTIVE' });
+      await dispatch(
+        updateUserStatus({
+          userId: selectedClient.id,
+          status: 'ACTIVE',
+          reason: 'Reactivated by Admin'
+        })
+      ).unwrap();
       toast.success('Client Reactivated', `Account for ${selectedClient.companyName} restored to Active.`);
-    } catch (err: any) {
-      toast.error('Reactivation Failed', err?.message || 'Could not reactivate client.');
+    } catch (err: unknown) {
+      toast.error('Reactivation Failed', extractErrorMessage(err, 'Could not reactivate client.'));
     }
   };
 
@@ -107,17 +94,24 @@ export const ClientManagement: React.FC = () => {
     {
       header: 'Client & Company',
       cell: (row) => (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '190px' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-text-dark)' }}>{row.name}</span>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-dark)', fontWeight: 600 }}>{row.companyName}</span>
         </div>
       )
     },
-    { header: 'Domain', cell: (row) => row.domain || '—' },
-    { header: 'Email', cell: (row) => row.email },
+    {
+      header: 'Contact & Domain',
+      cell: (row) => (
+        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '210px' }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-dark)', wordBreak: 'break-word' }}>{row.email}</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{row.domain || '—'}</span>
+        </div>
+      )
+    },
     {
       header: 'Managers',
-      cell: (row) => <span>{row.assignedManagersCount} seats</span>
+      cell: (row) => <span style={{ whiteSpace: 'nowrap' }}>{row.assignedManagersCount} seats</span>
     },
     {
       header: 'KYC Status',
@@ -132,7 +126,8 @@ export const ClientManagement: React.FC = () => {
             borderRadius: 'var(--radius-pill)',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
+            whiteSpace: 'nowrap'
           }}
         >
           {row.kycStatus === 'VERIFIED' ? '✓ Verified' : row.kycStatus === 'REJECTED' ? '✕ Rejected' : '⏳ Pending KYC'}
@@ -149,7 +144,7 @@ export const ClientManagement: React.FC = () => {
         <button
           onClick={() => handleOpenClientDrawer(row)}
           className="admin-btn admin-btn-secondary"
-          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
+          style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)', whiteSpace: 'nowrap' }}
         >
           Inspect
         </button>
@@ -157,14 +152,14 @@ export const ClientManagement: React.FC = () => {
     }
   ];
 
-  if (loading) {
+  if (clientsRequest.status === 'loading' && clients.length === 0) {
     return <Loader label="Loading clients..." />;
   }
 
-  if (error) {
+  if (clientsRequest.error && clients.length === 0) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
-        {error}
+        {clientsRequest.error}
       </div>
     );
   }
@@ -184,7 +179,7 @@ export const ClientManagement: React.FC = () => {
       <ActionModal
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title={`Client Dossier: ${selectedClient?.companyName}`}
+        title={`Client Dossier: ${selectedClient?.companyName || ''}`}
         maxWidth="640px"
       >
         {selectedClient && (
@@ -202,7 +197,7 @@ export const ClientManagement: React.FC = () => {
               <div>
                 <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Lifetime Platform Spend</span>
                 <div style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)', color: 'var(--color-primary-dark)' }}>
-                  ₹{selectedClient.totalSpent.toLocaleString('en-IN')}
+                  {formatCurrency(selectedClient.totalSpent)}
                 </div>
               </div>
               <div>

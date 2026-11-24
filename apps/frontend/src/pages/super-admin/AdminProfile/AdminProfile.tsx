@@ -1,58 +1,68 @@
 import React, { useState, useEffect } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { ShieldIcon } from '../../../components/super-admin/Icons';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
-import { useToast } from '../../../components/super-admin/Toast';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useToast } from '../../../components/super-admin/useToast';
 import { getToken } from '../../../services/api/httpClient';
 import { decodeJwtPayload } from '../../../utils/jwt';
+import { extractErrorMessage } from '../../../utils/adminAccess';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  clearTwoFactorEnrollment,
+  fetchAdminProfile,
+  updateAdminPassword,
+  enrollAdmin2FA,
+  confirmAdmin2FA,
+  disableAdmin2FA,
+  revokeAdminSession
+} from '../../../store/admin/adminSlice';
+import {
+  selectAdminProfile,
+  selectAdminProfileRequest,
+  selectTwoFactorEnrollment
+} from '../../../store/admin/selectors';
 
 /**
  * @file AdminProfile.tsx
  * @description
  * Super Admin personal profile & security management.
- * Password change, real TOTP enrollment (a code from the app is checked by the
- * server before 2FA turns on), and revocation of all other sessions through a
- * tokenVersion bump. Everything shown is read from the database or the JWT.
+ * Fully migrated to Redux thunks and selectors.
  */
 
 export const AdminProfile: React.FC = () => {
-  const { user, updateToken } = useAuth();
+  const { user, updateToken, updateUserSession } = useAuth();
   const toast = useToast();
+  const dispatch = useAppDispatch();
 
-  const [dbProfile, setDbProfile] = useState<{
-    createdAt?: string;
-    isTwoFactorEnabled?: boolean;
-    status?: string;
-    adminTier?: string;
-  } | null>(null);
+  const dbProfile = useAppSelector(selectAdminProfile);
+  const profileRequest = useAppSelector(selectAdminProfileRequest);
+  const enrollment = useAppSelector(selectTwoFactorEnrollment);
 
-  const [is2FAEnabled, setIs2FAEnabled] = useState(
-    (user as any)?.twoFactorEnabled ?? (user as any)?.isTwoFactorEnabled ?? false
-  );
+  const is2FAEnabled = dbProfile?.isTwoFactorEnabled ?? user?.twoFactorEnabled ?? false;
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const [enrollment, setEnrollment] = useState<{ secret: string; otpauthUri: string } | null>(null);
   const [totpInput, setTotpInput] = useState('');
 
-  // Load authoritative profile data from the PostgreSQL database
+  // Load authoritative profile data from the PostgreSQL database via Redux
   useEffect(() => {
-    let mounted = true;
-    adminApi.getAdminProfile()
-      .then((res) => {
-        if (!mounted || !res) return;
-        setDbProfile(res);
-        if (typeof res.isTwoFactorEnabled === 'boolean') {
-          setIs2FAEnabled(res.isTwoFactorEnabled);
-        }
-      })
-      .catch((err) => toast.error('Profile Unavailable', err?.message || 'Could not load your profile.'));
-    return () => {
-      mounted = false;
-    };
-  }, [user?.userId, toast]);
+    void dispatch(fetchAdminProfile());
+  }, [dispatch, user?.userId]);
+
+  if (profileRequest.status === 'loading' && !dbProfile) {
+    return <Loader label="Loading administrator profile..." />;
+  }
+
+  if (profileRequest.status === 'failed' && !dbProfile) {
+    return (
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
+        {profileRequest.error || 'Could not load administrator profile.'}
+      </div>
+    );
+  }
 
   const provisionedDate = dbProfile?.createdAt
     ? new Date(dbProfile.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -77,10 +87,10 @@ export const AdminProfile: React.FC = () => {
       return;
     }
     try {
-      const res = await adminApi.updateAdminPassword(currentPassword, newPassword);
+      const res = await dispatch(updateAdminPassword({ currentPassword, newPassword })).unwrap();
       updateToken(res.token); // Keep this browser's replacement token in Redux memory.
-    } catch (err: any) {
-      setMessage({ text: err?.message || 'Could not update password.', type: 'error' });
+    } catch (err: unknown) {
+      setMessage({ text: extractErrorMessage(err, 'Could not update password.'), type: 'error' });
       return;
     }
     setMessage({ text: 'Password updated.', type: 'success' });
@@ -93,24 +103,27 @@ export const AdminProfile: React.FC = () => {
   /** Step 1: fetch a secret to add to an authenticator app. 2FA stays off until step 2 succeeds. */
   const handleStartEnrollment = async () => {
     try {
-      setEnrollment(await adminApi.enrollAdmin2FA());
+      await dispatch(enrollAdmin2FA()).unwrap();
       setTotpInput('');
-    } catch (err: any) {
-      toast.error('Enrollment Failed', err?.message || 'Could not start 2FA enrollment.');
+    } catch (err: unknown) {
+      toast.error('Enrollment Failed', extractErrorMessage(err, 'Could not start 2FA enrollment.'));
     }
   };
 
   /** Step 2 of enrollment, or turning 2FA off. Either way the server checks a live code. */
   const handleSubmitCode = async () => {
     try {
-      if (is2FAEnabled) await adminApi.disableAdmin2FA(totpInput);
-      else await adminApi.confirmAdmin2FA(totpInput);
-      setIs2FAEnabled(!is2FAEnabled);
-      setEnrollment(null);
+      if (is2FAEnabled) {
+        await dispatch(disableAdmin2FA(totpInput)).unwrap();
+      } else {
+        await dispatch(confirmAdmin2FA(totpInput)).unwrap();
+      }
+      updateUserSession({ twoFactorEnabled: !is2FAEnabled });
+      dispatch(clearTwoFactorEnrollment());
       setTotpInput('');
       toast.success('2FA Updated', is2FAEnabled ? 'Two-factor authentication is off.' : 'You will be asked for a code at your next login.');
-    } catch (err: any) {
-      toast.error('Invalid Code', err?.message || 'That code was not accepted.');
+    } catch (err: unknown) {
+      toast.error('Invalid Code', extractErrorMessage(err, 'That code was not accepted.'));
     }
   };
 
@@ -118,11 +131,11 @@ export const AdminProfile: React.FC = () => {
   const handleRevokeSessions = async () => {
     if (!user?.userId) return;
     try {
-      const res = await adminApi.revokeAdminSession(`adm-${user.userId}`);
-      if (res.token) updateToken(res.token);
+      const res = await dispatch(revokeAdminSession(`adm-${user.userId}`)).unwrap();
+      if (res?.token) updateToken(res.token);
       toast.success('Other Sessions Ended', 'Every other device must sign in again.');
-    } catch (err: any) {
-      toast.error('Revocation Failed', err?.message || 'Could not revoke sessions.');
+    } catch (err: unknown) {
+      toast.error('Revocation Failed', extractErrorMessage(err, 'Could not revoke sessions.'));
     }
   };
 

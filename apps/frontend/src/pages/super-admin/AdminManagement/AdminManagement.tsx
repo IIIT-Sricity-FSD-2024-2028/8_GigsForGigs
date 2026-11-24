@@ -6,47 +6,40 @@ import { ConfirmDialog } from '../../../components/super-admin/ConfirmDialog';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
 import { AdminTabs } from '../../../components/super-admin/AdminTabs';
 import { PlusIcon } from '../../../components/super-admin/Icons';
-import { useToast } from '../../../components/super-admin/Toast';
-import { TIER_PERMISSIONS, useAuth, type AdminTier } from '../../../context/AuthContext/AuthContext';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useToast } from '../../../components/super-admin/useToast';
+import { TIER_PERMISSIONS, useAuth } from '../../../context/AuthContext/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  clearAdminInvite,
+  fetchAdminStaff,
+  fetchAuditLogs,
+  inviteAdmin,
+  removeAdmin
+} from '../../../store/admin/adminSlice';
+import {
+  selectAdminStaff,
+  selectAuditLogs,
+  selectAdminStaffRequest,
+  selectAuditLogsRequest,
+  selectLatestCreatedInvite
+} from '../../../store/admin/selectors';
+import type { AdminStaff, AuditLogEntry } from '../../../store/admin/types';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
-export interface AdminStaff {
-  id: string;
-  name: string;
-  email: string;
-  role: AdminTier;
-  permissions: string[];
-  isTwoFactorEnabled: boolean;
-  status: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
-}
-
-export interface AuditLogEntry {
-  id: string;
-  adminEmail: string;
-  action: string;
-  target: string;
-  details: string | null;
-  ipAddress: string | null;
-  createdAt: string;
-}
-
-interface GeneratedInvite {
-  email: string;
-  role: string;
-  assignedPassword: string;
-  inviteLink: string;
-  token: string;
-  expiresAt: string;
-}
+export type { AdminStaff, AuditLogEntry };
 
 export const AdminManagement: React.FC = () => {
   const { hasPermission } = useAuth();
   const toast = useToast();
+  const dispatch = useAppDispatch();
+
+  const staffList = useAppSelector(selectAdminStaff);
+  const auditLogs = useAppSelector(selectAuditLogs);
+  const staffRequest = useAppSelector(selectAdminStaffRequest);
+  const auditRequest = useAppSelector(selectAuditLogsRequest);
+  const generatedInvite = useAppSelector(selectLatestCreatedInvite);
+
   const [activeTab, setActiveTab] = useState<'staff' | 'audit'>('staff');
-  const [staffList, setStaffList] = useState<AdminStaff[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -54,7 +47,6 @@ export const AdminManagement: React.FC = () => {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(TIER_PERMISSIONS.SUPER_ADMIN);
 
   // Generated Link Modal State
-  const [generatedInvite, setGeneratedInvite] = useState<GeneratedInvite | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
   // Revoke Dialog State
@@ -62,32 +54,9 @@ export const AdminManagement: React.FC = () => {
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadStaffAndLogs() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [staffData, logData] = await Promise.all([
-          adminApi.getAdminStaff(),
-          adminApi.getAuditLogs()
-        ]);
-        if (isMounted) {
-          setStaffList(Array.isArray(staffData) ? staffData : []);
-          setAuditLogs(Array.isArray(logData) ? logData : []);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err?.message || 'Failed to load admin staff.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-    loadStaffAndLogs();
-    return () => { isMounted = false; };
-  }, []);
+    dispatch(fetchAdminStaff());
+    dispatch(fetchAuditLogs());
+  }, [dispatch]);
 
   const availablePermissions = [
     { key: 'users:read', label: 'View Users & Profiles' },
@@ -111,31 +80,23 @@ export const AdminManagement: React.FC = () => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
-    let res: any;
+    const targetEmail = inviteEmail.trim();
     try {
-      res = await adminApi.inviteAdmin(inviteEmail, inviteRole, selectedPermissions);
-    } catch (err: any) {
-      toast.error('Invite Failed', err?.message || 'Could not create the invitation.');
-      return;
+      await dispatch(
+        inviteAdmin({
+          email: targetEmail,
+          role: inviteRole,
+          permissions: selectedPermissions
+        })
+      ).unwrap();
+
+      setIsInviteModalOpen(false);
+      setIsLinkModalOpen(true);
+      setInviteEmail('');
+      toast.success('Invitation Created', `Signed 48h link issued for ${targetEmail}. Share it yourself; nothing is emailed.`);
+    } catch (err: unknown) {
+      toast.error('Invite Failed', extractErrorMessage(err, 'Could not create the invitation.'));
     }
-    const { token, assignedPassword, inviteLink, expiresAt } = res;
-
-    const inviteObj: GeneratedInvite = {
-      email: inviteEmail,
-      role: inviteRole,
-      assignedPassword,
-      inviteLink,
-      token,
-      expiresAt
-    };
-
-    // Re-read the roster so the row shows the real id and INVITED status from the database.
-    setStaffList(await adminApi.getAdminStaff());
-    setGeneratedInvite(inviteObj);
-    setIsInviteModalOpen(false);
-    setIsLinkModalOpen(true);
-    setInviteEmail('');
-    toast.success('Invitation Created', `Signed 48h link issued for ${inviteEmail}. Share it yourself; nothing is emailed.`);
   };
 
   const handleCopyInviteDetails = () => {
@@ -148,15 +109,13 @@ export const AdminManagement: React.FC = () => {
   const handleRevokeConfirm = async () => {
     if (!targetStaff) return;
     try {
-      await adminApi.removeAdmin(targetStaff.id);
-    } catch (err: any) {
-      toast.error('Revoke Failed', err?.message || 'Could not remove this admin.');
-      return;
+      await dispatch(removeAdmin(targetStaff.id)).unwrap();
+      toast.warning('Admin Access Revoked', `${targetStaff.name} was removed and their sessions no longer work.`);
+      setIsRevokeDialogOpen(false);
+      setTargetStaff(null);
+    } catch (err: unknown) {
+      toast.error('Revoke Failed', extractErrorMessage(err, 'Could not remove this admin.'));
     }
-    setStaffList(staffList.filter((s) => s.id !== targetStaff.id));
-    toast.warning('Admin Access Revoked', `${targetStaff.name} was removed and their sessions no longer work.`);
-    setIsRevokeDialogOpen(false);
-    setTargetStaff(null);
   };
 
   const staffColumns: ColumnDef<AdminStaff>[] = [
@@ -229,7 +188,7 @@ export const AdminManagement: React.FC = () => {
               <button
                 onClick={() => setIsLinkModalOpen(true)}
                 className="admin-btn admin-btn-secondary"
-                style={{ padding: '4px 8px', fontSize: '11px' }}
+                style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
               >
                 🔗 View Link & Password
               </button>
@@ -240,7 +199,7 @@ export const AdminManagement: React.FC = () => {
                 setIsRevokeDialogOpen(true);
               }}
               className="admin-btn admin-btn-danger"
-              style={{ padding: '4px 8px', fontSize: '11px' }}
+              style={{ padding: '4px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
             >
               Revoke
             </button>
@@ -283,11 +242,16 @@ export const AdminManagement: React.FC = () => {
     }
   ];
 
-  if (loading) {
-    return <Loader label="Loading admin staff..." />;
+  const isLoading = (activeTab === 'staff' ? staffRequest.status === 'loading' : auditRequest.status === 'loading') &&
+    (activeTab === 'staff' ? staffList.length === 0 : auditLogs.length === 0);
+
+  const error = activeTab === 'staff' ? staffRequest.error : auditRequest.error;
+
+  if (isLoading) {
+    return <Loader label="Loading admin data..." />;
   }
 
-  if (error) {
+  if (error && (activeTab === 'staff' ? staffList.length === 0 : auditLogs.length === 0)) {
     return (
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)', color: 'var(--color-danger-text, #c5221f)' }}>
         {error}
@@ -305,7 +269,7 @@ export const AdminManagement: React.FC = () => {
             { id: 'audit', label: 'Append-Only Audit Trail', count: auditLogs.length }
           ]}
           activeTab={activeTab}
-          onChange={(tabId) => setActiveTab(tabId as any)}
+          onChange={(tabId) => setActiveTab(tabId as 'staff' | 'audit')}
         />
 
         {activeTab === 'staff' && hasPermission('admins:invite') && (
@@ -344,7 +308,7 @@ export const AdminManagement: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => setGeneratedInvite(null)}
+              onClick={() => dispatch(clearAdminInvite())}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontWeight: 700, fontSize: '16px' }}
             >
               ✕
@@ -441,7 +405,6 @@ export const AdminManagement: React.FC = () => {
               onChange={(e) => {
                 const newRole = e.target.value as typeof inviteRole;
                 setInviteRole(newRole);
-                // Changing the tier resets the checkboxes to that tier's defaults.
                 setSelectedPermissions(TIER_PERMISSIONS[newRole]);
               }}
             >

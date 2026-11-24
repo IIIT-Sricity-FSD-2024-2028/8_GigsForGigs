@@ -1,12 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StatusBadge } from '../../../components/super-admin/StatusBadge';
-import { useToast } from '../../../components/super-admin/Toast';
+import { useToast } from '../../../components/super-admin/useToast';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 
 export interface AdminInviteActivationProps {
   initialToken?: string;
   initialEmail?: string;
   onActivationSuccess?: () => void;
+}
+
+function readInviteParams(initialToken?: string, initialEmail?: string) {
+  if (typeof window === 'undefined') {
+    return { token: initialToken || '', email: initialEmail || '', role: 'AUDITOR' };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    token: params.get('token') || initialToken || '',
+    email: params.get('email') || initialEmail || '',
+    // Display only. The tier and permissions that count come back from the server on activation.
+    role: params.get('role') || 'AUDITOR',
+  };
 }
 
 export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
@@ -17,28 +31,14 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
   const { acceptAdminInvite } = useAuth();
   const toast = useToast();
 
-  const [token, setToken] = useState(initialToken || '');
-  const [email, setEmail] = useState(initialEmail || '');
-  const [assignedRole, setAssignedRole] = useState('AUDITOR');
+  const [inviteInit] = useState(() => readInviteParams(initialToken, initialEmail));
+  const [token] = useState(inviteInit.token);
+  const [email, setEmail] = useState(inviteInit.email);
+  const [assignedRole] = useState(inviteInit.role);
   const [tempPassword, setTempPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    // Parse URL params if not passed via props
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urlToken = params.get('token') || initialToken || '';
-      const urlEmail = params.get('email') || initialEmail || '';
-      const urlRole = params.get('role');
-
-      if (urlToken) setToken(urlToken);
-      // Display only. The tier and permissions that count come back from the server on activation.
-      if (urlRole) setAssignedRole(urlRole);
-      if (urlEmail) setEmail(urlEmail);
-    }
-  }, [initialToken, initialEmail]);
 
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,8 +71,8 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
       } else if (typeof window !== 'undefined') {
         window.location.href = '/';
       }
-    } catch (err: any) {
-      toast.error('Activation Failed', err?.message || 'Could not verify token. Please check credentials.');
+    } catch (err: unknown) {
+      toast.error('Activation Failed', extractErrorMessage(err, 'Could not verify token. Please check credentials.'));
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ export const AdminInviteActivation: React.FC<AdminInviteActivationProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
             <span style={{ fontSize: '24px' }}>👑</span>
-            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em' }}>
+            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
               GigsForGigs Administrative Onboarding
             </h1>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Loader } from '../../../components/common/Loader';
 import { KPICard } from '../../../components/super-admin/KPICard';
 import { DonutChart, HorizontalBarChart } from '../../../components/super-admin/SimpleCharts';
@@ -11,14 +11,42 @@ import {
   DisputeIcon,
   ArrowRightIcon
 } from '../../../components/super-admin/Icons';
-import { adminApi } from '../../../services/api/admin/adminApi';
+import { useAuth } from '../../../context/AuthContext/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  fetchKPIs,
+  fetchProjects,
+  fetchClients,
+  fetchGigPros,
+  fetchManagers,
+  fetchAdminStaff,
+  fetchAuditLogs
+} from '../../../store/admin/adminSlice';
+import {
+  selectKPIs,
+  selectKPIsRequest,
+  selectProjects,
+  selectProjectsRequest,
+  selectClients,
+  selectClientsRequest,
+  selectGigPros,
+  selectGigProsRequest,
+  selectManagers,
+  selectManagersRequest,
+  selectAdminStaff,
+  selectAdminStaffRequest,
+  selectAuditLogs,
+  selectAuditLogsRequest
+} from '../../../store/admin/selectors';
+import type { AuditLogEntry, ClientDetail, ProjectTask } from '../../../store/admin/types';
+import { canAccessAdminView } from '../../../utils/adminAccess';
+import { formatCurrency } from '../../../utils/format';
 
 /**
  * @file Dashboard.tsx
  * @description
  * High-level executive overview for the GigsForGigs platform owner and delegate admins.
- * 100% of KPIs, Donut Charts, Demographics, and Revenue Velocity curves are dynamically
- * computed in real-time from the database backend.
+ * 100% of KPIs, Donut Charts, Demographics, and activity tables are fed from the Redux store.
  */
 
 export interface DashboardProps {
@@ -26,71 +54,72 @@ export interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [kpis, setKpis] = useState({
+  const { user, hasPermission } = useAuth();
+  const dispatch = useAppDispatch();
+  const canReadUsers = hasPermission('users:read');
+
+  const rawKpis = useAppSelector(selectKPIs);
+  const kpisRequest = useAppSelector(selectKPIsRequest);
+  const projects = useAppSelector(selectProjects);
+  const projectsRequest = useAppSelector(selectProjectsRequest);
+  const clients = useAppSelector(selectClients);
+  const clientsRequest = useAppSelector(selectClientsRequest);
+  const gigPros = useAppSelector(selectGigPros);
+  const gigProsRequest = useAppSelector(selectGigProsRequest);
+  const managers = useAppSelector(selectManagers);
+  const managersRequest = useAppSelector(selectManagersRequest);
+  const adminStaff = useAppSelector(selectAdminStaff);
+  const adminStaffRequest = useAppSelector(selectAdminStaffRequest);
+  const auditLogs = useAppSelector(selectAuditLogs);
+  const auditLogsRequest = useAppSelector(selectAuditLogsRequest);
+
+  const kpis = rawKpis || {
     grossMerchandiseVolume: 0,
     platformRevenue: 0,
     activeTasks: 0,
     totalUsers: 0,
     pendingDisputes: 0,
     escrowHeld: 0,
-    kycVerificationRate: null as number | null
-  });
+    kycVerificationRate: null
+  };
 
-  const [projects, setProjects] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [gigPros, setGigPros] = useState<any[]>([]);
-  const [managers, setManagers] = useState<any[]>([]);
-  const [adminStaff, setAdminStaff] = useState<any[]>([]);
-  const [activity, setActivity] = useState<any[]>([]);
+  const activity = useMemo(() => auditLogs.slice(0, 6), [auditLogs]);
+  const loading = kpisRequest.status === 'loading' && !rawKpis;
+  const error = kpisRequest.error;
+
+  const secondaryErrors = [
+    projectsRequest.status === 'failed' ? projectsRequest.error : null,
+    adminStaffRequest.status === 'failed' ? adminStaffRequest.error : null,
+    auditLogsRequest.status === 'failed' ? auditLogsRequest.error : null,
+    ...(canReadUsers
+      ? [
+          clientsRequest.status === 'failed' ? clientsRequest.error : null,
+          gigProsRequest.status === 'failed' ? gigProsRequest.error : null,
+          managersRequest.status === 'failed' ? managersRequest.error : null,
+        ]
+      : []),
+  ].filter((msg): msg is string => Boolean(msg));
+
   useEffect(() => {
-    let isMounted = true;
-    async function loadDashboardData() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [kpiRes, projRes, clientRes, proRes, mgrRes, staffRes, auditRes] = await Promise.all([
-          // No per-call fallbacks: a failed request shows an error, never a zero that reads as real data.
-          adminApi.getKPIs(),
-          adminApi.getProjects(),
-          adminApi.getClients(),
-          adminApi.getGigPros(),
-          adminApi.getManagers(),
-          adminApi.getAdminStaff(),
-          adminApi.getAuditLogs()
-        ]);
-        if (isMounted) {
-          setKpis(kpiRes);
-          setProjects(Array.isArray(projRes) ? projRes : []);
-          setClients(Array.isArray(clientRes) ? clientRes : []);
-          setGigPros(Array.isArray(proRes) ? proRes : []);
-          setManagers(Array.isArray(mgrRes) ? mgrRes : []);
-          setAdminStaff(Array.isArray(staffRes) ? staffRes : []);
-          setActivity(Array.isArray(auditRes) ? auditRes.slice(0, 6) : []); // API returns newest first
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err?.message || 'Failed loading dashboard live data.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+    void dispatch(fetchKPIs());
+    void dispatch(fetchProjects());
+    void dispatch(fetchAdminStaff());
+    void dispatch(fetchAuditLogs());
+    if (canReadUsers) {
+      void dispatch(fetchClients());
+      void dispatch(fetchGigPros());
+      void dispatch(fetchManagers());
     }
-    loadDashboardData();
-    return () => { isMounted = false; };
-  }, []);
+  }, [dispatch, canReadUsers]);
 
-  // 1. Dynamic Task Distribution for Donut Chart (Calculated from DB tasks)
+  // 1. Dynamic Task Distribution for Donut Chart (Calculated from Redux tasks)
   const taskDistribution = [
     { label: 'In Progress', count: projects.filter((p) => p.status === 'IN_PROGRESS').length, color: 'var(--color-primary-dark)' },
     { label: 'Open Bidding', count: projects.filter((p) => p.status === 'OPEN').length, color: 'var(--color-primary-blue)' },
     { label: 'Completed', count: projects.filter((p) => p.status === 'COMPLETED').length, color: 'var(--color-border-dark)' }
   ];
 
-  // 2. Dynamic Demographics for Bar Chart (Calculated from DB user rosters)
+  // 2. Dynamic Demographics for Bar Chart (Calculated from Redux user rosters)
   const userDemographics = [
     { label: 'Gig Professionals', count: gigPros.length, color: 'var(--color-primary-dark)' },
     { label: 'Client Organizations', count: clients.length, color: 'var(--color-primary-blue)' },
@@ -99,7 +128,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   ];
 
   // Table Columns
-  const userColumns: ColumnDef<any>[] = [
+  const userColumns: ColumnDef<ClientDetail>[] = [
     {
       header: 'Organization / Name',
       cell: (row) => (
@@ -111,7 +140,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     },
     {
       header: 'Domain',
-      accessorKey: 'domain'
+      cell: (row) => row.domain || '—'
     },
     {
       header: 'Joined',
@@ -119,7 +148,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     }
   ];
 
-  const projectColumns: ColumnDef<any>[] = [
+  const projectColumns: ColumnDef<ProjectTask>[] = [
     {
       header: 'Task Title',
       cell: (row) => (
@@ -134,13 +163,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       cell: (row) => (
         <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'var(--font-size-xs)' }}>
           <span style={{ fontWeight: 600, color: 'var(--color-primary-dark)' }}>{row.clientName}</span>
-          <span style={{ color: 'var(--color-text-muted)' }}>→ {row.gigProName || 'Open Bidding'}</span>
+          <span style={{ color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            {row.gigProName ? (
+              <>
+                <ArrowRightIcon size={11} color="var(--color-text-muted)" /> {row.gigProName}
+              </>
+            ) : (
+              'Open Bidding'
+            )}
+          </span>
         </div>
       )
     },
     {
       header: 'Budget',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>₹{Number(row.budget).toLocaleString('en-IN')}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{formatCurrency(row.budget)}</span>
     },
     {
       header: 'Status',
@@ -149,77 +186,88 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   ];
 
   if (loading) {
-    return <Loader label="Loading dashboard..." />;
+    return <Loader label="Loading executive command overview..." />;
   }
 
   if (error) {
     return (
-      <div
-        className="admin-card"
-        style={{
-          padding: 'var(--spacing-lg)',
-          backgroundColor: 'var(--color-danger-bg, #fdecea)',
-          color: 'var(--color-danger-text, #c5221f)'
-        }}
-      >
-        {error}
+      <div className="admin-card" style={{ padding: 'var(--spacing-xxl)', textAlign: 'center', color: 'var(--color-danger-text, #c5221f)' }}>
+        <h3 style={{ marginBottom: 'var(--spacing-sm)' }}>Platform Data Synchronization Error</h3>
+        <p style={{ margin: 0, fontSize: 'var(--font-size-sm)' }}>{error}</p>
       </div>
     );
   }
 
+  const canViewClients = Boolean(onNavigate) && canAccessAdminView(user?.adminTier, 'clients');
+  const canViewProjects = Boolean(onNavigate) && canAccessAdminView(user?.adminTier, 'projects');
+  const canViewDisputes = Boolean(onNavigate) && canAccessAdminView(user?.adminTier, 'disputes');
+  const canViewAdminStaff = Boolean(onNavigate) && canAccessAdminView(user?.adminTier, 'admin-staff');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xl)' }}>
+      {/* Partial Fetch Warning Banner */}
+      {secondaryErrors.length > 0 && (
+        <div
+          className="admin-card"
+          style={{
+            padding: 'var(--spacing-md)',
+            backgroundColor: 'var(--color-warning-bg)',
+            borderColor: 'var(--color-warning-text)',
+            color: 'var(--color-warning-text)',
+            fontSize: 'var(--font-size-xs)',
+            fontWeight: 600
+          }}
+        >
+          Some dashboard sections could not refresh: {secondaryErrors[0]}
+        </div>
+      )}
+
       {/* Urgent Dispute Alert Callout */}
       {kpis.pendingDisputes > 0 && (
         <div
           style={{
-            backgroundColor: 'var(--color-warning-bg)',
-            border: '1px solid var(--color-warning-border)',
-            borderRadius: 'var(--radius-lg)',
             padding: 'var(--spacing-md) var(--spacing-lg)',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'rgba(197, 34, 31, 0.08)',
+            border: '1px solid rgba(197, 34, 31, 0.35)',
             display: 'flex',
-            alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 'var(--spacing-md)'
+            alignItems: 'center',
+            gap: 'var(--spacing-md)',
+            flexWrap: 'wrap'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-            <div style={{ color: 'var(--color-warning-text)' }}>
-              <DisputeIcon size={24} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, color: 'var(--color-warning-text)', fontSize: 'var(--font-size-sm)' }}>
-                {kpis.pendingDisputes} Pending Disputes Require Super Admin Arbitration
-              </div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                Unresolved payment disputes have active SLAs. Review the docket evidence and rule before the SLA is breached.
-              </div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-danger-text)' }}>
+            <DisputeIcon size={18} color="var(--color-danger-text)" />
+            <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700 }}>
+              {kpis.pendingDisputes} active dispute {kpis.pendingDisputes === 1 ? 'docket requires' : 'dockets require'} arbitration review.
+            </span>
           </div>
-          {onNavigate && (
+          {canViewDisputes && onNavigate && (
             <button
+              type="button"
               onClick={() => onNavigate('disputes')}
-              className="admin-btn admin-btn-primary"
-              style={{ padding: '0.45rem 0.9rem', fontSize: 'var(--font-size-xs)' }}
+              className="admin-btn admin-btn-danger"
+              style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              Open Arbitration Court
+              Open Arbitration Court <ArrowRightIcon size={13} />
             </button>
           )}
         </div>
       )}
 
-      {/* Top Metric Cards Grid (Live DB Aggregates) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
+      {/* 6-Card Operational Metrics Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Gross Merchandise Volume"
-          value={`₹${kpis.grossMerchandiseVolume.toLocaleString('en-IN')}`}
+          value={formatCurrency(kpis.grossMerchandiseVolume)}
           subtitle="Held in escrow plus released"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-blue)"
         />
         <KPICard
           title="Platform Take Revenue"
-          value={`₹${kpis.platformRevenue.toLocaleString('en-IN')}`}
+          value={formatCurrency(kpis.platformRevenue)}
           subtitle="Fees on released payments"
           icon={<PaymentIcon size={20} />}
           accentColor="var(--color-primary-dark)"
@@ -233,10 +281,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         />
         <KPICard
           title="Platform Users"
-          value={kpis.totalUsers.toLocaleString()}
-          subtitle="All roles, including admin staff"
+          value={kpis.totalUsers}
+          subtitle="Registered accounts across roles"
           icon={<UsersIcon size={20} />}
-          accentColor="var(--color-text-dark)"
+          accentColor="var(--color-primary-blue)"
         />
         <KPICard
           title="Active Dispute Dockets"
@@ -254,66 +302,86 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         />
       </div>
 
-      {/* Analytics Charts Grid (100% Fed from DB with Analytical Explanations) */}
+      {/* Analytics Charts Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(480px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
               Tasks by Status
             </h3>
-            
           </div>
           <DonutChart data={taskDistribution} />
-          
         </div>
 
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-              User Demographics
-            </h3>
-            
+        {canReadUsers && (
+          <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+                User Demographics
+              </h3>
+            </div>
+            <HorizontalBarChart data={userDemographics} />
           </div>
-          <HorizontalBarChart data={userDemographics} />
-          
-        </div>
+        )}
       </div>
 
       {/* Operational Data Tables Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(480px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
-        <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
-              Recent Client Registrations
-            </h3>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate('clients')}
-                style={{ background: 'none', border: 'none', color: 'var(--color-primary-blue)', fontSize: 'var(--font-size-xs)', fontWeight: 700, cursor: 'pointer' }}
-              >
-                View All Clients <ArrowRightIcon size={13} color="var(--color-primary-blue)" style={{ marginLeft: '4px' }} />
-              </button>
-            )}
+        {canReadUsers && (
+          <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+                Recent Client Registrations
+              </h3>
+              {canViewClients && onNavigate && (
+                <button
+                  onClick={() => onNavigate('clients')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-primary-blue)',
+                    fontSize: 'var(--font-size-xs)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  View All Clients <ArrowRightIcon size={13} color="var(--color-primary-blue)" />
+                </button>
+              )}
+            </div>
+            <DataTable
+              data={clients}
+              columns={userColumns}
+              pageSize={4}
+              searchPlaceholder="Filter clients..."
+            />
           </div>
-          <DataTable
-            data={clients}
-            columns={userColumns}
-            pageSize={4}
-            searchPlaceholder="Filter clients..."
-          />
-        </div>
+        )}
 
         <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
             <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
               Recent In-Flight Tasks & Contracts
             </h3>
-            {onNavigate && (
+            {canViewProjects && onNavigate && (
               <button
                 onClick={() => onNavigate('projects')}
-                style={{ background: 'none', border: 'none', color: 'var(--color-primary-blue)', fontSize: 'var(--font-size-xs)', fontWeight: 700, cursor: 'pointer' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-primary-blue)',
+                  fontSize: 'var(--font-size-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
               >
-                View All Tasks <ArrowRightIcon size={13} color="var(--color-primary-blue)" style={{ marginLeft: '4px' }} />
+                View All Tasks <ArrowRightIcon size={13} color="var(--color-primary-blue)" />
               </button>
             )}
           </div>
@@ -332,12 +400,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
             Recent Admin Activity
           </h3>
-          {onNavigate && (
+          {canViewAdminStaff && onNavigate && (
             <button
               onClick={() => onNavigate('admin-staff')}
-              style={{ background: 'none', border: 'none', color: 'var(--color-primary-blue)', fontSize: 'var(--font-size-xs)', fontWeight: 700, cursor: 'pointer' }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-primary-blue)',
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
             >
-              Full Audit Log <ArrowRightIcon size={13} color="var(--color-primary-blue)" style={{ marginLeft: '4px' }} />
+              Full Audit Log <ArrowRightIcon size={13} color="var(--color-primary-blue)" />
             </button>
           )}
         </div>
@@ -345,11 +423,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', margin: 0 }}>No admin actions recorded yet.</p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {activity.map((a) => (
-              <li key={a.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: 'var(--font-size-sm)', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
+            {activity.map((a: AuditLogEntry) => (
+              <li key={a.id || String(a.auditId)} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: 'var(--font-size-sm)', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
                 <span>
                   <strong>{a.action}</strong> on {a.target}
-                  <span style={{ color: 'var(--color-text-muted)' }}> by {a.adminEmail}</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}> by {a.adminEmail || a.actorEmail}</span>
                 </span>
                 <span style={{ color: 'var(--color-text-muted)', whiteSpace: 'nowrap', fontSize: 'var(--font-size-xs)' }}>
                   {new Date(a.createdAt).toLocaleString()}
