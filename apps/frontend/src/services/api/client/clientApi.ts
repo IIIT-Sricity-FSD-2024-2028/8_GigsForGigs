@@ -221,24 +221,6 @@ export const clientApi = {
     return apiFetch<RawContract[]>('/contracts', { actor });
   },
 
-  /** POST /payments/pay — client funds the escrow after hiring. */
-  payTask: async (taskId: number, gigProfileId: number): Promise<void> => {
-    return apiFetch<void>('/payments/pay', {
-      method: 'POST',
-      body: { taskId, gigProfileId },
-      actor,
-    });
-  },
-
-  /** POST /payments/release — release escrowed money to the gig pro once work is approved. */
-  releasePayment: async (taskId: number, gigProfileId: number): Promise<void> => {
-    return apiFetch<void>('/payments/release', {
-      method: 'POST',
-      body: { taskId, gigProfileId },
-      actor,
-    });
-  },
-
   // =========================================================================
   // E. TASK DELIVERABLES & DEFINITIONS
   // =========================================================================

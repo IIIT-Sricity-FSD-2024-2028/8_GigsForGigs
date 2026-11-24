@@ -11,8 +11,10 @@ import {
   deleteTaskDeliverable,
   fetchTaskSubmittedDeliverables,
   reviewSubmittedDeliverable,
-  releaseClientPayment,
 } from '../../../store/client/clientSlice';
+import { releaseEscrowPayment } from '../../../store/payment/paymentSlice';
+import { selectClientReleaseRequest } from '../../../store/payment/selectors';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 import {
   selectClientContracts,
   selectClientContractsRequest,
@@ -48,6 +50,8 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
 
   const clientContracts = useAppSelector(selectClientContracts);
   const contractsRequest = useAppSelector(selectClientContractsRequest);
+  const releaseRequest = useAppSelector(selectClientReleaseRequest);
+  const releasingPayment = releaseRequest.status === 'loading';
   const tasks = useAppSelector(selectClientTasks);
   const tasksRequest = useAppSelector(selectClientTasksRequest);
 
@@ -234,15 +238,18 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
     if (!contract) return;
     try {
       await dispatch(
-        releaseClientPayment({
+        releaseEscrowPayment({
           taskId: Number(contract.task_id),
           gigProfileId: Number(contract.gig_profile_id),
         }),
       ).unwrap();
+      void dispatch(fetchClientContracts());
+      void dispatch(fetchClientTasks());
+      void dispatch(fetchTaskSubmittedDeliverables(numericTaskId));
       setIsPaymentModalOpen(false);
       toast.success(`Payment released! ${formatCurrency(gigAmount)} sent to ${contract.gig_pro_name}; ${formatCurrency(platformFee)} kept as platform fee.`);
-    } catch (err) {
-      toast.error(typeof err === 'string' ? err : 'Payment release failed. Please try again.');
+    } catch (err: unknown) {
+      toast.error(extractErrorMessage(err, 'Payment release failed. Please try again.'));
     }
   };
 
@@ -628,11 +635,11 @@ export const ReviewDeliverables: React.FC<ReviewDeliverablesProps> = ({ onNaviga
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <Button variant="outline" type="button" onClick={() => setIsPaymentModalOpen(false)}>
+              <Button variant="outline" type="button" disabled={releasingPayment} onClick={() => setIsPaymentModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleProcessPayment}>
-                Release {formatCurrency(gigAmount)}
+              <Button type="button" disabled={releasingPayment} onClick={handleProcessPayment}>
+                {releasingPayment ? 'Releasing...' : `Release ${formatCurrency(gigAmount)}`}
               </Button>
             </div>
           </div>

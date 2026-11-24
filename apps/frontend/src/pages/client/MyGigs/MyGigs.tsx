@@ -6,10 +6,12 @@ import {
   endClientHire,
   fetchClientContracts,
   fetchClientManagers,
+  fetchClientTasks,
   fetchManagerInvitations,
   raiseClientDispute,
-  releaseClientPayment,
 } from '../../../store/client/clientSlice';
+import { releaseEscrowPayment } from '../../../store/payment/paymentSlice';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 import {
   selectClientContracts,
   selectClientContractsRequest,
@@ -368,15 +370,17 @@ export const MyGigs: React.FC<MyGigsProps> = ({ onNavigate }) => {
                     setReleasing(true);
                     try {
                       await dispatch(
-                        releaseClientPayment({
+                        releaseEscrowPayment({
                           taskId: Number(t.task_id),
                           gigProfileId: Number(t.gig_profile_id),
                         }),
                       ).unwrap();
+                      void dispatch(fetchClientContracts());
+                      void dispatch(fetchClientTasks());
                       toast.success(`Payment released to ${t.gig_pro_name}.`);
                       setSelectedTaskPayment(null);
-                    } catch (err) {
-                      toast.error(typeof err === 'string' ? err : 'Payment release failed.');
+                    } catch (err: unknown) {
+                      toast.error(extractErrorMessage(err, 'Payment release failed.'));
                     } finally { setReleasing(false); }
                   }}>
                     Release {formatCurrency(t.budget)} to {t.gig_pro_name}

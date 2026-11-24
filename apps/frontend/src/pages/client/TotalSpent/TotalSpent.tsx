@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { PaymentStatus } from '../../../types/client';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { fetchClientContracts, payClientTask } from '../../../store/client/clientSlice';
+import { fetchClientContracts, fetchClientTasks } from '../../../store/client/clientSlice';
 import {
   selectClientContracts,
   selectClientContractsRequest,
 } from '../../../store/client/selectors';
+import { payEscrowTask } from '../../../store/payment/paymentSlice';
+import { selectClientPayRequest } from '../../../store/payment/selectors';
+import { extractErrorMessage } from '../../../utils/adminAccess';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Table } from '../../../components/common/Table';
 import { Loader } from '../../../components/common/Loader';
@@ -45,6 +48,8 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
   const dispatch = useAppDispatch();
   const rawContracts = useAppSelector(selectClientContracts);
   const contractsRequest = useAppSelector(selectClientContractsRequest);
+  const payRequest = useAppSelector(selectClientPayRequest);
+  const isPaying = payRequest.status === 'loading';
 
   useEffect(() => {
     if (contractsRequest.status === 'idle') {
@@ -52,7 +57,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     }
   }, [dispatch, contractsRequest.status]);
 
-  const loading = contractsRequest.status === 'loading';
+  const loading = contractsRequest.status === 'loading' && rawContracts.length === 0;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
@@ -143,18 +148,25 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
     return matchesTitle || matchesPro || matchesId || matchesStatus || matchesTaskNum;
   });
 
+  const formatFeePercent = (gigAmount: number, platformFee: number) => {
+    if (gigAmount <= 0) return null;
+    return `${Math.round((platformFee / gigAmount) * 1000) / 10}%`;
+  };
+
   const handlePayNow = async (payment: LedgerRow) => {
     try {
       await dispatch(
-        payClientTask({
+        payEscrowTask({
           taskId: Number(payment.taskId),
           gigProfileId: Number(payment.gigProfileId),
         }),
       ).unwrap();
+      void dispatch(fetchClientContracts());
+      void dispatch(fetchClientTasks());
       setPayingPayment(null);
       toast.success(`Payment successful! ${formatCurrency(payment.totalAmount)} has been securely locked in escrow until work approval.`);
-    } catch (err) {
-      toast.error(typeof err === 'string' ? err : 'Failed to process payment. Please try again.');
+    } catch (err: unknown) {
+      toast.error(extractErrorMessage(err, 'Failed to process payment. Please try again.'));
     }
   };
 
@@ -344,7 +356,7 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
           <div style={{ backgroundColor: '#F2F6F8', borderRadius: '8px', padding: '12px', fontSize: '0.82rem' }}>
             <div style={{ fontWeight: 600, color: '#0D568D', marginBottom: '4px' }}>Payment Calculation Rule:</div>
             <div style={{ color: '#1B2A36' }}>
-              Total Payable = Gig Agreed Amount + 10% Platform Fee
+              Total Payable = Gig Agreed Amount + Platform Fee (rate locked at hire time)
             </div>
           </div>
         </article>
@@ -569,7 +581,12 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                     {/* Platform Fee */}
                     <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--color-text-muted)' }}>
                       <div>+{formatCurrency(p.platformFee)}</div>
-                      <div style={{ fontSize: '10px', opacity: 0.8 }}>10% fee</div>
+                      <div style={{ fontSize: '10px', opacity: 0.8 }}>
+                        {(() => {
+                          const rate = formatFeePercent(p.gigAmount, p.platformFee);
+                          return rate ? `${rate} fee` : 'Platform fee';
+                        })()}
+                      </div>
                     </td>
 
                     {/* Total Paid */}
@@ -681,7 +698,11 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
                 <strong>{formatCurrency(payingPayment.gigAmount)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span>Platform Service Fee (10%):</span>
+                <span>
+                  Platform Service Fee (
+                  {formatFeePercent(payingPayment.gigAmount, payingPayment.platformFee) ?? 'Locked rate'}
+                  ):
+                </span>
                 <strong>{formatCurrency(payingPayment.platformFee)}</strong>
               </div>
               <div
@@ -702,11 +723,11 @@ export const TotalSpent: React.FC<TotalSpentProps> = ({ onNavigate }) => {
               🛡️ Your payment will be securely held by the platform until the work is completed and approved.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <Button variant="outline" type="button" onClick={() => setPayingPayment(null)}>
+              <Button variant="outline" type="button" disabled={isPaying} onClick={() => setPayingPayment(null)}>
                 Cancel
               </Button>
-              <Button type="button" onClick={() => handlePayNow(payingPayment)}>
-                Pay {formatCurrency(payingPayment.totalAmount)}
+              <Button type="button" disabled={isPaying} onClick={() => handlePayNow(payingPayment)}>
+                {isPaying ? 'Processing...' : `Pay ${formatCurrency(payingPayment.totalAmount)}`}
               </Button>
             </div>
           </div>
