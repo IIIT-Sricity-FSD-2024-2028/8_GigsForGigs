@@ -1,7 +1,23 @@
-import React, { useCallback, useState } from 'react';
-import { useClient } from '../../../context/ClientContext';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  approveApplication,
+  deleteClientTask,
+  fetchClientApplications,
+  fetchClientContracts,
+  fetchClientTasks,
+  rejectApplication,
+} from '../../../store/client/clientSlice';
+import {
+  selectClientApplicationsRequest,
+  selectClientContracts,
+  selectClientContractsRequest,
+  selectClientTasks,
+  selectClientTasksRequest,
+  selectUndecidedApplications,
+} from '../../../store/client/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
-import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, useToast } from '../../../components/common';
+import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Loader, useToast } from '../../../components/common';
 import { ApplicantProfileModal } from '../../../components/client/modals/ApplicantProfileModal';
 
 export interface ReviewShortlistProps {
@@ -11,68 +27,91 @@ export interface ReviewShortlistProps {
 
 export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, params }) => {
   const toast = useToast();
-  const { applications, contracts, tasks, hireCandidate, rejectCandidate, deleteTask } = useClient();
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+
+  const tasks = useAppSelector(selectClientTasks);
+  const tasksRequest = useAppSelector(selectClientTasksRequest);
+  const applicationsRequest = useAppSelector(selectClientApplicationsRequest);
+  const undecidedApplications = useAppSelector(selectUndecidedApplications);
+  const contracts = useAppSelector(selectClientContracts);
+  const contractsRequest = useAppSelector(selectClientContractsRequest);
+
+  const [actingAppId, setActingAppId] = useState<number | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   // Application whose applicant profile is open (keyed by application, not candidate, so it's always the right person).
   const [profileApplicationId, setProfileApplicationId] = useState<number | null>(null);
   const closeProfile = useCallback(() => setProfileApplicationId(null), []);
   const taskId = params?.taskId;
 
-  const filterTask = taskId ? tasks.find(t => String(t.task_id) === String(taskId)) : null;
+  useEffect(() => {
+    if (tasksRequest.status === 'idle') {
+      dispatch(fetchClientTasks());
+    }
+    if (applicationsRequest.status === 'idle') {
+      dispatch(fetchClientApplications());
+    }
+    if (contractsRequest.status === 'idle') {
+      dispatch(fetchClientContracts());
+    }
+  }, [dispatch, tasksRequest.status, applicationsRequest.status, contractsRequest.status]);
 
-  const isUndecided = (a: typeof applications[number]) =>
-    (a.status === 'PENDING' || a.status === 'SHORTLISTED') && !a.is_service_request;
+  const filterTask = taskId ? tasks.find((t) => String(t.taskId) === String(taskId)) : null;
 
   // Undecided marketplace applicants for the selected task; manager-shortlisted ones first.
-  const currentApplications = applications
-    .filter(isUndecided)
-    .filter(a => !taskId || String(a.task_id) === String(taskId))
-    .sort((a, b) => Number(b.status === 'SHORTLISTED') - Number(a.status === 'SHORTLISTED'));
+  const currentApplications = undecidedApplications
+    .filter((a) => !taskId || String(a.taskId) === String(taskId))
+    .sort((a, b) => Number(b.status === 'shortlisted' || (b.status as string) === 'SHORTLISTED') - Number(a.status === 'shortlisted' || (a.status as string) === 'SHORTLISTED'));
 
   // Every open marketplace posting, from the moment it's posted until the client deletes it.
   // Hiring doesn't close it: the client can keep hiring as many professionals as they want.
   const postedTasks = tasks
-    .filter(t => t.status === 'OPEN' && !t.skills?.includes('Service Hire'))
-    .map(t => ({
+    .filter((t) => (t.status === 'open' || (t.status as string) === 'OPEN') && !t.skills?.includes('Service Hire'))
+    .map((t) => ({
       task: t,
-      count: applications.filter(a => isUndecided(a) && String(a.task_id) === String(t.task_id)).length,
-      hired: contracts.filter(c => c.task_id === t.task_id).length,
+      count: undecidedApplications.filter((a) => a.taskId === t.taskId).length,
+      hired: contracts.filter((c) => c.taskId === t.taskId).length,
     }));
 
   const errorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
 
-  const handleApprove = async (appId: string) => {
+  const handleApprove = async (appId: number) => {
     try {
-      await hireCandidate(appId);
+      setActingAppId(appId);
+      await dispatch(approveApplication(appId)).unwrap();
       toast.success('Candidate hired! Fund their escrow from Active Task so they can start work. You can keep hiring for this task.');
     } catch (err) {
       console.error('Approve hire failed:', err);
-      toast.error(errorMessage(err, 'Failed to approve this candidate. Please try again.'));
+      toast.error(typeof err === 'string' ? err : errorMessage(err, 'Failed to approve this candidate. Please try again.'));
+    } finally {
+      setActingAppId(null);
     }
   };
 
-  const handleReject = async (appId: string) => {
+  const handleReject = async (appId: number) => {
     try {
-      await rejectCandidate(appId);
+      setActingAppId(appId);
+      await dispatch(rejectApplication(appId)).unwrap();
       toast.success('Candidate application discarded.');
     } catch (err) {
       console.error('Reject hire failed:', err);
-      toast.error(errorMessage(err, 'Failed to reject this candidate. Please try again.'));
+      toast.error(typeof err === 'string' ? err : errorMessage(err, 'Failed to reject this candidate. Please try again.'));
+    } finally {
+      setActingAppId(null);
     }
   };
 
   const handleDelete = async () => {
     const id = taskToDelete;
     setTaskToDelete(null);
-    if (!id) return;
+    if (id === null) return;
     try {
-      await deleteTask(id);
+      await dispatch(deleteClientTask(id)).unwrap();
       toast.success('Task removed from Posted Tasks.');
       if (taskId) onNavigate('review-shortlist', {});
     } catch (err) {
       console.error('Delete task failed:', err);
-      toast.error(errorMessage(err, 'Failed to delete this task. Please try again.'));
+      toast.error(typeof err === 'string' ? err : errorMessage(err, 'Failed to delete this task. Please try again.'));
     }
   };
 
@@ -93,6 +132,10 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
 
   // No task selected: show every posted task.
   if (!filterTask) {
+    if (tasksRequest.status === 'loading' && tasks.length === 0) {
+      return <Loader label="Loading posted tasks..." />;
+    }
+
     return (
       <div>
         <PageHeader
@@ -111,38 +154,41 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
           </Card>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-            {postedTasks.map(({ task, count, hired }) => (
-              <Card key={task.task_id} padding="md" interactive style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)' }}>{task.title}</h3>
-                  <Badge variant="pending">{count} applicant{count === 1 ? '' : 's'}</Badge>
-                </div>
+            {postedTasks.map(({ task, count, hired }) => {
+              const taskIdNum = task.taskId;
+              return (
+                <Card key={taskIdNum} padding="md" interactive style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)' }}>{task.title}</h3>
+                    <Badge variant="pending">{count} applicant{count === 1 ? '' : 's'}</Badge>
+                  </div>
 
-                <p style={{
-                  margin: 0, fontSize: '0.85rem', color: 'var(--color-text-subtle)',
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                }}>
-                  {task.description || 'No description provided.'}
-                </p>
+                  <p style={{
+                    margin: 0, fontSize: '0.85rem', color: 'var(--color-text-subtle)',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {task.description || 'No description provided.'}
+                  </p>
 
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                  {formatCurrency(task.budget)} &middot; {task.category || 'General'}
-                  {hired > 0 && <> &middot; {hired} hired</>}
-                </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                    {formatCurrency(Number(task.budget))} &middot; {task.category || 'General'}
+                    {hired > 0 && <> &middot; {hired} hired</>}
+                  </div>
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                  <Button size="sm" style={{ flex: 1 }} onClick={() => onNavigate('review-shortlist', { taskId: task.task_id })}>
-                    View Applicants
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => onNavigate('post-gig', { editId: task.task_id })}>
-                    Edit
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => setTaskToDelete(task.task_id)}>
-                    Delete
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                    <Button size="sm" style={{ flex: 1 }} onClick={() => onNavigate('review-shortlist', { taskId: String(taskIdNum) })}>
+                      View Applicants
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => onNavigate('post-gig', { editId: String(taskIdNum) })}>
+                      Edit
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => setTaskToDelete(taskIdNum)}>
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
         {deleteDialog}
@@ -151,6 +197,9 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
   }
 
   // A task is selected: show its details, an edit action, and its applicants.
+  const filterTaskIdNum = filterTask.taskId;
+  const isOpen = filterTask.status === 'open' || (filterTask.status as string) === 'OPEN';
+
   return (
     <div>
       <PageHeader title={filterTask.title} description="Review applicants for this task." />
@@ -159,8 +208,8 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
         <Button variant="ghost" size="sm" type="button" onClick={() => onNavigate('review-shortlist', {})} style={{ paddingLeft: 0 }}>
           ← Back to Posted Tasks
         </Button>
-        {filterTask.status === 'OPEN' && (
-          <Button variant="danger" size="sm" type="button" onClick={() => setTaskToDelete(filterTask.task_id)}>
+        {isOpen && (
+          <Button variant="danger" size="sm" type="button" onClick={() => setTaskToDelete(filterTaskIdNum)}>
             Delete Task
           </Button>
         )}
@@ -181,50 +230,60 @@ export const ReviewShortlist: React.FC<ReviewShortlistProps> = ({ onNavigate, pa
         </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {currentApplications.map(a => (
-            <Card key={a.application_id} padding="md" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-              <Avatar name={a.candidate_name} size={40} />
+          {currentApplications.map((a) => {
+            const candidateName = a.gigProfile?.user?.name ?? 'Unknown Candidate';
+            const candidateRole = a.gigProfile?.bio || 'Gig Professional';
+            const reviewAverage = a.reviewRating?.average ?? null;
+            const reviewCount = a.reviewRating?.count ?? 0;
+            const hourlyRate = a.hourlyRate ? Number(a.hourlyRate) : null;
+            const rate = a.task?.budget ? Number(a.task.budget) : 0;
+            const isShortlisted = a.status === 'shortlisted' || (a.status as string) === 'SHORTLISTED';
 
-              <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                <div style={{ fontWeight: 700, color: 'var(--color-text)' }}>{a.candidate_name}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                  {a.status === 'SHORTLISTED' && <Badge variant="active" style={{ marginRight: '6px' }}>Shortlisted</Badge>}
-                  {a.candidate_role}
-                </div>
-              </div>
+            return (
+              <Card key={a.applicationId} padding="md" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <Avatar name={candidateName} size={40} />
 
-              <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                {a.review_average !== null ? (
-                  <div aria-label={`Average rating ${a.review_average} out of 5 from ${a.review_count} review${a.review_count === 1 ? '' : 's'}`}>
-                    <span aria-hidden="true" style={{ color: '#f5a623', letterSpacing: '1px' }}>
-                      {'★'.repeat(Math.round(a.review_average))}{'☆'.repeat(5 - Math.round(a.review_average))}
-                    </span>{' '}
-                    <strong>{a.review_average.toFixed(1)}</strong> / 5 ({a.review_count} review{a.review_count === 1 ? '' : 's'})
+                <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--color-text)' }}>{candidateName}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                    {isShortlisted && <Badge variant="active" style={{ marginRight: '6px' }}>Shortlisted</Badge>}
+                    {candidateRole}
                   </div>
-                ) : (
-                  <div>No ratings yet</div>
-                )}
-                {a.rating ? <div>Manager score: {a.rating} / 5</div> : null}
-                <div>Hourly: {a.hourlyRate ? formatCurrency(a.hourlyRate) : '—'}</div>
-              </div>
+                </div>
 
-              <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)', minWidth: '90px' }}>
-                {formatCurrency(a.rate)}
-              </div>
+                <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                  {reviewAverage !== null ? (
+                    <div aria-label={`Average rating ${reviewAverage} out of 5 from ${reviewCount} review${reviewCount === 1 ? '' : 's'}`}>
+                      <span aria-hidden="true" style={{ color: '#f5a623', letterSpacing: '1px' }}>
+                        {'★'.repeat(Math.round(reviewAverage))}{'☆'.repeat(5 - Math.round(reviewAverage))}
+                      </span>{' '}
+                      <strong>{reviewAverage.toFixed(1)}</strong> / 5 ({reviewCount} review{reviewCount === 1 ? '' : 's'})
+                    </div>
+                  ) : (
+                    <div>No ratings yet</div>
+                  )}
+                  {a.rating ? <div>Manager score: {a.rating} / 5</div> : null}
+                  <div>Hourly: {hourlyRate ? formatCurrency(hourlyRate) : '—'}</div>
+                </div>
 
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <Button variant="ghost" size="sm" onClick={() => setProfileApplicationId(Number(a.application_id))} aria-label={`View profile of ${a.candidate_name}`}>
-                  View Profile
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleApprove(a.application_id)}>
-                  Approve
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleReject(a.application_id)}>
-                  Reject
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)', minWidth: '90px' }}>
+                  {formatCurrency(rate)}
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <Button variant="ghost" size="sm" onClick={() => setProfileApplicationId(a.applicationId)} aria-label={`View profile of ${candidateName}`}>
+                    View Profile
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={actingAppId === a.applicationId} onClick={() => handleApprove(a.applicationId)}>
+                    {actingAppId === a.applicationId ? 'Hiring...' : 'Approve'}
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={actingAppId === a.applicationId} onClick={() => handleReject(a.applicationId)}>
+                    Reject
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
       {deleteDialog}

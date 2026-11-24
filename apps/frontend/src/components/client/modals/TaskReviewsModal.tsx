@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal } from '../../common/Modal';
-import type { Contract, ContractReview } from '../../../context/ClientContext/ClientContext';
+import type { Contract, ContractReview } from '../../../types/client';
 
 export interface TaskReviewsModalProps {
   isOpen: boolean;

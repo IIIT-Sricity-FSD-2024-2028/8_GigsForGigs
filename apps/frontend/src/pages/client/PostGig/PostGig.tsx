@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClient } from '../../../context/ClientContext';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import {
+  createClientTask,
+  fetchClientTasks,
+  updateClientTask,
+} from '../../../store/client/clientSlice';
+import {
+  selectClientTasks,
+} from '../../../store/client/selectors';
 import { Button, Input, Select, TextArea, useToast } from '../../../components/common';
 
 export interface PostGigProps {
@@ -21,35 +29,46 @@ const MAX_TASK_BUDGET = Math.floor(MAX_ESCROW_THRESHOLD / 1.1);
 
 export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
   const toast = useToast();
-  const { addTask, updateTask, tasks } = useClient();
-  const editId = params?.editId;
+  const dispatch = useAppDispatch();
+  const tasks = useAppSelector(selectClientTasks);
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [budget, setBudget] = useState<number | ''>('');
-  const [category, setCategory] = useState('dev');
-  const [duration, setDuration] = useState('1-3-months');
+  const editId = params?.editId;
+  const existingTask = tasks.find((t) => String(t.taskId) === String(editId));
+
+  const [title, setTitle] = useState(() => existingTask?.title || '');
+  const [description, setDescription] = useState(() => existingTask?.description || '');
+  const [budget, setBudget] = useState<number | ''>(() => (existingTask?.budget ? Number(existingTask.budget) : ''));
+  const [category, setCategory] = useState(() => existingTask?.category || 'dev');
+  const [duration, setDuration] = useState(() => existingTask?.duration || '1-3-months');
   const [pricing, setPricing] = useState('fixed');
-  const [skills, setSkills] = useState('');
+  const [skills, setSkills] = useState(() => (Array.isArray(existingTask?.skills) ? existingTask.skills.join(', ') : ''));
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (editId) {
-      const task = tasks.find(t => String(t.task_id) === String(editId));
-      if (task) {
-        setTitle(task.title || '');
-        setDescription(task.description || '');
-        setBudget(task.budget ? Number(task.budget) : '');
-        setCategory(task.category || 'dev');
-        setDuration(task.duration || '1-3-months');
-        setSkills(task.skills ? task.skills.join(', ') : '');
+    async function loadTaskForEdit() {
+      if (!editId) return;
+      try {
+        const loadedTasks = await dispatch(fetchClientTasks()).unwrap();
+        const task = loadedTasks.find((t) => String(t.taskId) === String(editId));
+        if (task) {
+          setTitle(task.title || '');
+          setDescription(task.description || '');
+          setBudget(task.budget ? Number(task.budget) : '');
+          setCategory(task.category || 'dev');
+          setDuration(task.duration || '1-3-months');
+          setSkills(Array.isArray(task.skills) ? task.skills.join(', ') : '');
+        }
+      } catch {
+        // ignore
       }
     }
-  }, [editId, tasks]);
+    loadTaskForEdit();
+  }, [dispatch, editId]);
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -71,7 +90,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
       });
     }
 
-    setAttachedFiles(prev => [...prev, ...newFiles]);
+    setAttachedFiles((prev) => [...prev, ...newFiles]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +117,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
   };
 
   const removeFile = (id: string) => {
-    setAttachedFiles(prev => prev.filter(f => f.id !== id));
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   const formatFileSize = (bytes: number) => {
@@ -114,22 +133,63 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
       return;
     }
     if (Number(budget) > MAX_TASK_BUDGET) {
-      toast.warning(`Budget is too high: with the platform fee this would exceed the maximum escrow of ₹${MAX_ESCROW_THRESHOLD.toLocaleString('en-IN')}. Maximum allowed budget is ₹${MAX_TASK_BUDGET.toLocaleString('en-IN')}.`);
+      toast.warning(
+        `Budget is too high: with the platform fee this would exceed the maximum escrow of ₹${MAX_ESCROW_THRESHOLD.toLocaleString(
+          'en-IN',
+        )}. Maximum allowed budget is ₹${MAX_TASK_BUDGET.toLocaleString('en-IN')}.`,
+      );
       return;
     }
 
+    const parsedSkills = skills
+      ? skills
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+
     try {
+      setIsSubmitting(true);
       if (editId) {
-        await updateTask(editId, title, description, Number(budget), category, duration, skills);
+        await dispatch(
+          updateClientTask({
+            taskId: Number(editId),
+            dto: {
+              title: title.trim(),
+              description: description.trim(),
+              budget: Number(budget),
+              category,
+              duration,
+              skills: parsedSkills,
+            },
+          }),
+        ).unwrap();
         toast.success('Task updated successfully!');
       } else {
-        await addTask(title, description, Number(budget), category, duration, skills);
+        await dispatch(
+          createClientTask({
+            title: title.trim(),
+            description: description.trim(),
+            budget: Number(budget),
+            category,
+            duration,
+            skills: parsedSkills,
+          }),
+        ).unwrap();
         toast.success('Task published successfully!');
       }
       onNavigate('dashboard');
     } catch (err) {
       console.error('Save task failed:', err);
-      toast.error(err instanceof Error && err.message ? err.message : 'Failed to save this task. Please try again.');
+      toast.error(
+        typeof err === 'string'
+          ? err
+          : err instanceof Error && err.message
+          ? err.message
+          : 'Failed to save this task. Please try again.',
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -266,7 +326,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-dark)' }}>
                 Attached Files ({attachedFiles.length}):
               </div>
-              {attachedFiles.map(file => (
+              {attachedFiles.map((file) => (
                 <div
                   key={file.id}
                   style={{
@@ -277,7 +337,7 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
                     borderRadius: '6px',
                     backgroundColor: '#F5F9FA',
                     border: '1px solid var(--color-border)',
-                    fontSize: '0.82rem'
+                    fontSize: '0.82rem',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
@@ -302,8 +362,8 @@ export const PostGig: React.FC<PostGigProps> = ({ onNavigate, params }) => {
           <Button variant="outline" type="button" onClick={() => onNavigate('dashboard')}>
             Cancel
           </Button>
-          <Button type="submit">
-            {editId ? 'Save Changes' : 'Publish Gig'}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : (editId ? 'Save Changes' : 'Publish Gig')}
           </Button>
         </div>
       </form>

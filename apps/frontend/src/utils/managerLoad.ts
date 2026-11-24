@@ -1,4 +1,4 @@
-import type { Contract } from '../context/ClientContext';
+import type { Contract } from '../types/client';
 
 /** Hires a manager supervises; `managerId` is the ManagerInvite.invite_id of a real manager. */
 export const hiresFor = (contracts: Contract[], managerId: string) =>

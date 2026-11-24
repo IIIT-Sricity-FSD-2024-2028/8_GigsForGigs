@@ -1,12 +1,13 @@
 import { combineReducers, configureStore, createSlice } from '@reduxjs/toolkit';
 import authReducer, { clearSession, logoutManager } from './auth/authSlice';
 import managerReducer from './manager/managerSlice';
+import clientReducer from './client/clientSlice';
 import { configureTokenReader } from '../services/api/httpClient';
 
 const emptyFeature = (name: string) => createSlice({ name, initialState: {}, reducers: {} }).reducer;
 const appReducer = combineReducers({
     auth: authReducer,
-    client: emptyFeature('client'),
+    client: clientReducer,
     gig: emptyFeature('gig'),
     manager: managerReducer,
     admin: emptyFeature('admin'),

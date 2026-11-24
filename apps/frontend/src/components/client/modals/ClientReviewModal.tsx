@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../../common/Modal';
-import { useClient } from '../../../context/ClientContext';
+import { useAppDispatch } from '../../../store/hooks';
+import { submitClientReview, fetchClientContracts } from '../../../store/client/clientSlice';
 import { ApiError } from '../../../services/api/httpClient';
 
 export interface ClientReviewModalProps {
@@ -30,7 +31,7 @@ export const ClientReviewModal: React.FC<ClientReviewModalProps> = ({
   gigProName,
   onSuccess,
 }) => {
-  const { submitReview, refreshContracts } = useClient();
+  const dispatch = useAppDispatch();
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [comment, setComment] = useState<string>('');
@@ -45,14 +46,21 @@ export const ClientReviewModal: React.FC<ClientReviewModalProps> = ({
     setSubmitting(true);
 
     try {
-      await submitReview(taskId, gigProfileId, rating, comment);
-      await refreshContracts();
+      await dispatch(
+        submitClientReview({
+          taskId,
+          gigProfileId,
+          rating,
+          comment,
+        }),
+      ).unwrap();
+      await dispatch(fetchClientContracts()).unwrap();
       onSuccess?.();
       onClose();
     } catch (err) {
-      if (err instanceof ApiError) {
-        setErrorMessage(err.message);
-      } else if (err instanceof Error) {
+      if (typeof err === 'string') {
+        setErrorMessage(err);
+      } else if (err instanceof ApiError || err instanceof Error) {
         setErrorMessage(err.message);
       } else {
         setErrorMessage('Failed to submit review. Please try again.');
