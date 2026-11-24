@@ -16,7 +16,6 @@ import { store } from './store/store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { clearManagerTaskDetail, fetchAssignedTasks, fetchManagerProfile, fetchManagerTaskDetail, setSelectedManagerTask } from './store/manager/managerSlice';
 import { selectManagerTaskDetail, selectManagerTaskDetailRequest } from './store/manager/selectors';
-import { GigProvider } from './context/GigContext/GigContext';
 import { ToastProvider } from './components/super-admin/Toast';
 import { ToastProvider as AppToastProvider } from './components/common/Toast';
 import { Loader } from './components/common/Loader';
@@ -358,7 +357,6 @@ function ProtectedRole({ role }: { role: 'CLIENT' | 'MANAGER' | 'GIG_PROFESSIONA
   const location = useLocation();
   if (!isAuthenticated || !user) return <Navigate to="/login" replace state={{ from: location }} />;
   if (user.role !== role) return <HomeRedirect />;
-  if (role === 'GIG_PROFESSIONAL') return <GigProvider><Outlet /></GigProvider>;
   return <Outlet />;
 }
 

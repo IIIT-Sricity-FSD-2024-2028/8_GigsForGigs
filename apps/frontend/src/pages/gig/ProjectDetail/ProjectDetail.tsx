@@ -6,10 +6,10 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { GigTask } from '../../../types/gig';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchActiveTasks, fetchTaskDefinitions } from '../../../store/gig/gigSlice';
+import { selectActiveTasks, selectTaskDefinitions } from '../../../store/gig/selectors';
 import type { TaskDeliverableDefinition } from '../../../types/gig';
 import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
@@ -18,49 +18,23 @@ import { HIRE_WORK_STATUS } from '../../../utils/taskStatus';
 import { WithdrawTaskButton } from '../../../components/gig/modals/WithdrawTaskButton';
 import { ClientDetailsCard } from '../../../components/gig/profile/ClientDetailsCard';
 
+const NO_DEFINITIONS: TaskDeliverableDefinition[] = [];
+
 export const ProjectDetail: React.FC = () => {
-  const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable, navigateToClientProfile } = useGig();
+  const { selectedTaskId, setActiveTab, navigateToSubmitDeliverable, navigateToClientProfile } = useGigNavigation();
+  const dispatch = useAppDispatch();
   const [showClientDetails, setShowClientDetails] = useState(false);
-  const [task, setTask] = useState<GigTask | null>(null);
-  const [definitions, setDefinitions] = useState<TaskDeliverableDefinition[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const tasksRes = useAppSelector(selectActiveTasks);
+  // Exactly the task in the URL; never fall back to another task.
+  const task = tasksRes.data.find((t) => String(t.taskId) === selectedTaskId) ?? null;
+  const taskId = task?.taskId ?? null;
+  const definitionsRes = useAppSelector((state) => selectTaskDefinitions(state, taskId));
+  const definitions = definitionsRes?.data ?? NO_DEFINITIONS;
+  const error = tasksRes.error ?? definitionsRes?.error ?? null;
+  const loading = !tasksRes.loaded && !tasksRes.error;
 
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (mounted) setError(null);
-      try {
-        const active = await gigApi.getActiveTasks();
-        if (mounted) {
-          const found = active.find((t) => String(t.taskId) === selectedTaskId) || active[0] || null;
-          setTask(found);
-          setDefinitions([]);
-          if (found) {
-            try {
-              const loadedDefinitions = await gigApi.getTaskDeliverableDefinitions(found.taskId);
-              if (mounted) setDefinitions(loadedDefinitions);
-            } catch (definitionError) {
-              if (mounted) setError(definitionError instanceof ApiError ? definitionError.message : 'Could not load client-defined deliverables.');
-            }
-          }
-          if (mounted) setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load task.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [selectedTaskId]);
+  useEffect(() => { void dispatch(fetchActiveTasks()); }, [dispatch]);
+  useEffect(() => { if (taskId !== null) void dispatch(fetchTaskDefinitions(taskId)); }, [dispatch, taskId]);
 
   const formatCurrency = (amt: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../../common/Modal';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
+import { useAppDispatch } from '../../../store/hooks';
+import { createReview, rejectionMessage } from '../../../store/gig/gigSlice';
 
 export interface GigReviewModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export const GigReviewModal: React.FC<GigReviewModalProps> = ({
   clientName,
   onSuccess,
 }) => {
+  const dispatch = useAppDispatch();
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [comment, setComment] = useState<string>('');
@@ -56,21 +57,11 @@ export const GigReviewModal: React.FC<GigReviewModalProps> = ({
     setSubmitting(true);
 
     try {
-      await gigApi.createReview(taskId, rating, comment.trim() || undefined);
+      await dispatch(createReview({ taskId, rating, comment: comment.trim() || undefined })).unwrap();
       onSuccess?.();
       handleClose();
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 409) {
-          setErrorMessage(err.message || 'You have already reviewed this client for this task.');
-        } else {
-          setErrorMessage(err.message || 'Failed to submit review.');
-        }
-      } else if (err instanceof Error) {
-        setErrorMessage(err.message);
-      } else {
-        setErrorMessage('An unexpected error occurred while submitting your review.');
-      }
+      setErrorMessage(rejectionMessage(err, 'Failed to submit review.'));
     } finally {
       setSubmitting(false);
     }

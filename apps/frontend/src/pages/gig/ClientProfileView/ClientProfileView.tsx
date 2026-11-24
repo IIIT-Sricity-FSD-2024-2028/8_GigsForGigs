@@ -5,11 +5,12 @@
  * applied to (or was hired on) it. Route: /gig/tasks/:taskId/client. The
  * client is resolved server-side from the task, never chosen by the browser.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import type { ClientProfileOrigin } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { useApiResource } from '../../../hooks/useApiResource';
+import type { ClientProfileOrigin } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchTaskClientProfile } from '../../../store/gig/gigSlice';
+import { selectTaskClientProfile } from '../../../store/gig/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Loader } from '../../../components/common/Loader';
 import { ErrorState } from '../../../components/common/ErrorState';
@@ -60,7 +61,13 @@ export const ClientProfileView: React.FC = () => {
   const location = useLocation();
   const parsed = Number(rawTaskId);
   const taskId = Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
-  const { data, loading, error, reload } = useApiResource(gigApi.getTaskClientProfile, taskId, 'Could not load the client profile.');
+  const dispatch = useAppDispatch();
+  const res = useAppSelector((state) => selectTaskClientProfile(state, taskId));
+  const data = res?.data ?? null;
+  const error = res?.error ?? null;
+  const loading = !data && res?.status !== 'failed';
+  const reload = () => { if (taskId !== null) void dispatch(fetchTaskClientProfile(taskId)); };
+  useEffect(() => { if (taskId !== null) void dispatch(fetchTaskClientProfile(taskId)); }, [dispatch, taskId]);
 
   const from = (location.state as { from?: ClientProfileOrigin } | null)?.from;
   const back = from === 'project-detail' && taskId !== null

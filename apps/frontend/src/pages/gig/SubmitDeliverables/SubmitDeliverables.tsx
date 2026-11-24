@@ -7,94 +7,70 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { GigTask } from '../../../types/gig';
+import { useGigNavigation } from '../../../hooks/useGigNavigation';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchActiveTasks, fetchTaskDefinitions, rejectionMessage, submitDeliverable } from '../../../store/gig/gigSlice';
+import { selectActiveTasks, selectTaskDefinitions } from '../../../store/gig/selectors';
 import type { TaskDeliverableDefinition } from '../../../types/gig';
 import { Badge } from '../../../components/common/Badge';
 import { Loader } from '../../../components/common/Loader';
 import { Button, Input, TextArea, useToast } from '../../../components/common';
 
-export const SubmitDeliverables: React.FC = () => {
-  const { selectedTaskId, setActiveTab, triggerRefresh } = useGig();
-  const [task, setTask] = useState<GigTask | null>(null);
+const NO_DEFINITIONS: TaskDeliverableDefinition[] = [];
+
+const SubmitDeliverablesForm: React.FC<{ selectedTaskId: string | null }> = ({ selectedTaskId }) => {
+  const { setActiveTab } = useGigNavigation();
+  const dispatch = useAppDispatch();
+  const tasksRes = useAppSelector(selectActiveTasks);
+  // Exactly the task in the URL; never fall back to another task.
+  const task = tasksRes.data.find((t) => String(t.taskId) === selectedTaskId) ?? null;
+  const taskId = task?.taskId ?? null;
+  // Definitions are keyed by task id, so a slow response for another task can never show here.
+  const definitionsRes = useAppSelector((state) => selectTaskDefinitions(state, taskId));
+  const definitions = definitionsRes?.data ?? NO_DEFINITIONS;
+  const definitionsReady = !!definitionsRes?.loaded;
+  // Unsaved form state stays local.
   const [content, setContent] = useState('');
   const [notes, setNotes] = useState('');
-  const [definitions, setDefinitions] = useState<TaskDeliverableDefinition[]>([]);
   const [selectedDefinitionIds, setSelectedDefinitionIds] = useState<Set<number>>(new Set());
-  const [definitionsReady, setDefinitionsReady] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const error = submitError ?? tasksRes.error ?? definitionsRes?.error ?? null;
+  const loading = !tasksRes.loaded && !tasksRes.error;
   const toast = useToast();
   useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (mounted) { setError(null); setDefinitions([]); setDefinitionsReady(false); setSelectedDefinitionIds(new Set()); }
-      try {
-        const active = await gigApi.getActiveTasks();
-        if (mounted) {
-          const found = active.find((t) => String(t.taskId) === selectedTaskId) || active[0] || null;
-          setTask(found);
-          if (found) {
-            try {
-              const loadedDefinitions = await gigApi.getTaskDeliverableDefinitions(found.taskId);
-              if (mounted) { setDefinitions(loadedDefinitions); setDefinitionsReady(true); }
-            } catch (definitionError) {
-              if (mounted) setError(definitionError instanceof ApiError ? definitionError.message : 'Could not load the client-defined deliverables.');
-            }
-          }
-          if (mounted) setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load task.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [selectedTaskId]);
+  useEffect(() => { void dispatch(fetchActiveTasks()); }, [dispatch]);
+  useEffect(() => { if (taskId !== null) void dispatch(fetchTaskDefinitions(taskId)); }, [dispatch, taskId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!task) return;
     if (!definitionsReady) {
-      setError('Task deliverables could not be loaded. Refresh the page before submitting.');
+      setSubmitError('Task deliverables could not be loaded. Refresh the page before submitting.');
       return;
     }
     if (!content.trim()) {
-      setError('Please provide deliverable submission details or links.');
+      setSubmitError('Please provide deliverable submission details or links.');
       return;
     }
     if (definitions.length > 0 && selectedDefinitionIds.size === 0) {
-      setError('Select at least one client-defined deliverable completed by this submission.');
+      setSubmitError('Select at least one client-defined deliverable completed by this submission.');
       return;
     }
 
     setSubmitting(true);
-    setError(null);
+    setSubmitError(null);
     try {
-      await gigApi.submitDeliverable({
+      await dispatch(submitDeliverable({
         taskId: task.taskId,
         content: content.trim(),
         notes: notes.trim(),
         definitionIds: Array.from(selectedDefinitionIds)
-      });
-      triggerRefresh();
-      void gigApi.getTaskDeliverableDefinitions(task.taskId).then(setDefinitions).catch(() => undefined);
+      })).unwrap(); // the thunk re-reads this task's definitions and the active tasks
       setActiveTab('submission-success');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error submitting deliverable.');
+      setSubmitError(rejectionMessage(err, 'Error submitting deliverable.'));
     } finally {
       setSubmitting(false);
     }
@@ -247,6 +223,12 @@ export const SubmitDeliverables: React.FC = () => {
       </form>
     </div>
   );
+};
+
+/** Keyed by task, so content, notes and the checkbox selection never carry over to another task. */
+export const SubmitDeliverables: React.FC = () => {
+  const { selectedTaskId } = useGigNavigation();
+  return <SubmitDeliverablesForm key={selectedTaskId} selectedTaskId={selectedTaskId} />;
 };
 
 export default SubmitDeliverables;

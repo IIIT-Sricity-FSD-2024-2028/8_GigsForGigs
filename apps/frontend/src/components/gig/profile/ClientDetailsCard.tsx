@@ -6,13 +6,14 @@
  * server resolves the client from the task itself, and only answers when
  * this professional applied to (or was hired on) the task.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '../../common/Button';
 import { Loader } from '../../common/Loader';
 import { ErrorState } from '../../common/ErrorState';
 import { ProfileFacts, RatingSummary } from '../../common/ProfileDetails';
-import gigApi from '../../../services/api/gig/gigApi';
-import { useApiResource } from '../../../hooks/useApiResource';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchTaskClientProfile } from '../../../store/gig/gigSlice';
+import { selectTaskClientProfile } from '../../../store/gig/selectors';
 import { formatMonthYear } from '../../../utils/format';
 import { ClientContactLine, ClientIdentityHeader } from './ClientProfileParts';
 
@@ -25,7 +26,13 @@ export interface ClientDetailsCardProps {
 }
 
 export const ClientDetailsCard: React.FC<ClientDetailsCardProps> = ({ taskId, onViewProfile, id }) => {
-  const { data, loading, error, reload } = useApiResource(gigApi.getTaskClientProfile, taskId, 'Could not load client details.');
+  const dispatch = useAppDispatch();
+  const res = useAppSelector((state) => selectTaskClientProfile(state, taskId));
+  const data = res?.data ?? null;
+  const error = res?.error ?? null;
+  const loading = !data && res?.status !== 'failed';
+  const reload = () => { void dispatch(fetchTaskClientProfile(taskId)); };
+  useEffect(() => { void dispatch(fetchTaskClientProfile(taskId)); }, [dispatch, taskId]);
 
   return (
     <section id={id} className="client-details-card" aria-label="Client details" aria-busy={loading || undefined}>

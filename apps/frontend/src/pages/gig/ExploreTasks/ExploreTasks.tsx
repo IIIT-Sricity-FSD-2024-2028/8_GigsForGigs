@@ -7,10 +7,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useGig } from '../../../context/GigContext/GigContext';
-import gigApi from '../../../services/api/gig/gigApi';
-import { ApiError } from '../../../services/api/httpClient';
-import type { GigTask } from '../../../types/gig';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { applyForTask, fetchMarketplaceTasks, rejectionMessage } from '../../../store/gig/gigSlice';
+import { selectGigTaskSearch, selectMarketplaceTasks } from '../../../store/gig/selectors';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Loader } from '../../../components/common/Loader';
@@ -18,49 +17,25 @@ import { ErrorState } from '../../../components/common/ErrorState';
 import { Button, useToast } from '../../../components/common';
 
 export const ExploreTasks: React.FC = () => {
-  const [tasks, setTasks] = useState<GigTask[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const { taskSearch: searchQuery } = useGig();
+  const dispatch = useAppDispatch();
+  const { data: tasks, loaded, error: loadError } = useAppSelector(selectMarketplaceTasks);
+  const searchQuery = useAppSelector(selectGigTaskSearch);
   const [applyingId, setApplyingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const error = applyError ?? loadError;
+  const loading = !loaded && !loadError;
   const toast = useToast();
   useEffect(() => { if (error) toast.error(error); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (mounted) setError(null);
-      try {
-        const res = await gigApi.getMarketplaceTasks();
-        if (mounted) {
-          setTasks(res);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load marketplace tasks.');
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  useEffect(() => { void dispatch(fetchMarketplaceTasks()); }, [dispatch]);
 
   const handleApply = async (taskId: number) => {
     setApplyingId(taskId);
-    setError(null);
+    setApplyError(null);
     try {
-      await gigApi.applyForTask(taskId);
-      setTasks((prev) => prev.filter((t) => t.taskId !== taskId)); // moves to Applied Tasks
+      await dispatch(applyForTask(taskId)).unwrap(); // the task leaves the marketplace and shows under Applied Tasks
       toast.success('Applied! Track it under Applied Tasks.');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to apply for task.');
+      setApplyError(rejectionMessage(err, 'Failed to apply for task.'));
     } finally {
       setApplyingId(null);
     }
