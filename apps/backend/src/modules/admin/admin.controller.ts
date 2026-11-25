@@ -21,6 +21,7 @@ import type {
   UpdateGigProfileDto,
   KycDecisionDto,
   ModerateReviewDto,
+  ModerateServiceDto,
   OverridePaymentDto,
   SettleDisputeDto,
   TwoFactorCodeDto,
@@ -305,6 +306,11 @@ export async function revokeSessions(req: Request, res: Response): Promise<void>
 export async function moderateReview(req: Request, res: Response): Promise<void> {
   const dto = getValidated<ModerateReviewDto>(res, "body");
   res.status(200).json(await adminService.moderateReview(String(req.params.reviewId), dto));
+}
+
+export async function moderateService(req: Request, res: Response): Promise<void> {
+  const { status } = getValidated<ModerateServiceDto>(res, "body");
+  res.status(200).json(await adminService.moderateService(Number(req.params.serviceId), status));
 }
 
 // ---- Own Profile -----------------------------------------------------------

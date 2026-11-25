@@ -21,14 +21,22 @@ import type {
   AdminUserSummary,
   AuditLogEntry,
   ClientDetail,
+  ClientDossier,
+  CreateClientAccountInput,
+  CreateManagerSeatInput,
   DisputeCase,
   DisputeSettlementOutcome,
   GigProDetail,
+  GigProDossier,
+  ManagerAssignmentRow,
   ManagerDetail,
   ModerationReview,
   PlatformSettingsData,
   ProjectTask,
   RequestState,
+  UpdateClientDetailsInput,
+  UpdateGigProDetailsInput,
+  UpdateManagerDetailsInput,
 } from './types';
 import { clearSession } from '../auth/authSlice';
 import { overrideEscrowPayment } from '../payment/paymentSlice';
@@ -47,12 +55,18 @@ export const initialAdminState: AdminState = {
 
   clients: [],
   clientsRequest: idle,
+  clientDossiers: {},
+  clientDossierRequest: idle,
 
   gigPros: [],
   gigProsRequest: idle,
+  gigProDossiers: {},
+  gigProDossierRequest: idle,
 
   managers: [],
   managersRequest: idle,
+  assignments: [],
+  assignmentsRequest: idle,
 
   projects: [],
   projectsRequest: idle,
@@ -233,11 +247,57 @@ export const fetchAdminProfile = createAsyncThunk<AdminUserProfile, void, ThunkC
   },
 );
 
+export const fetchClientDossier = createAsyncThunk<
+  { key: string; dossier: ClientDossier },
+  string,
+  ThunkConfig
+>('admin/fetchClientDossier', async (clientId, { rejectWithValue }) => {
+  try {
+    const dossier = await adminApi.getClientDossier(clientId);
+    return { key: clientId, dossier };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to fetch client dossier.'));
+  }
+});
+
+export const fetchGigProDossier = createAsyncThunk<
+  { key: string; dossier: GigProDossier },
+  string,
+  ThunkConfig
+>('admin/fetchGigProDossier', async (gigProId, { rejectWithValue }) => {
+  try {
+    const dossier = await adminApi.getGigProDossier(gigProId);
+    return { key: gigProId, dossier };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to fetch freelancer dossier.'));
+  }
+});
+
+export const fetchAssignments = createAsyncThunk<ManagerAssignmentRow[], void, ThunkConfig>(
+  'admin/fetchAssignments',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await adminApi.getAssignments();
+    } catch (error) {
+      return rejectWithValue(messageOf(error, 'Failed to fetch manager assignments.'));
+    }
+  },
+);
+
 /** Refresh already-loaded dependent caches (audit trail, KPIs, etc.) in the background after a DB mutation. */
 function refreshAfterMutation(
   dispatch: ThunkDispatch<unknown, unknown, UnknownAction>,
   getState: () => { admin: AdminState },
-  opts: { audit?: boolean; kpis?: boolean; staff?: boolean; gigPros?: boolean } = {},
+  opts: {
+    audit?: boolean;
+    kpis?: boolean;
+    staff?: boolean;
+    gigPros?: boolean;
+    clients?: boolean;
+    managers?: boolean;
+    users?: boolean;
+    assignments?: boolean;
+  } = {},
 ) {
   const adminDispatch = dispatch as ThunkDispatch<{ admin: AdminState }, unknown, UnknownAction>;
   const { admin } = getState();
@@ -245,6 +305,10 @@ function refreshAfterMutation(
   if (opts.kpis && admin.kpisRequest.status !== 'idle') void adminDispatch(fetchKPIs());
   if (opts.staff && admin.adminStaffRequest.status !== 'idle') void adminDispatch(fetchAdminStaff());
   if (opts.gigPros && admin.gigProsRequest.status !== 'idle') void adminDispatch(fetchGigPros());
+  if (opts.clients && admin.clientsRequest.status !== 'idle') void adminDispatch(fetchClients());
+  if (opts.managers && admin.managersRequest.status !== 'idle') void adminDispatch(fetchManagers());
+  if (opts.users && admin.usersRequest.status !== 'idle') void adminDispatch(fetchUsers());
+  if (opts.assignments && admin.assignmentsRequest.status !== 'idle') void adminDispatch(fetchAssignments());
 }
 
 // ============================================================================
@@ -457,6 +521,116 @@ export const disableAdmin2FA = createAsyncThunk<void, string, ThunkConfig>(
   },
 );
 
+export const createClientAccount = createAsyncThunk<
+  { userId: number; clientId: number },
+  CreateClientAccountInput,
+  ThunkConfig
+>('admin/createClientAccount', async (input, { dispatch, getState, rejectWithValue }) => {
+  try {
+    const res = await adminApi.createClientAccount(input);
+    refreshAfterMutation(dispatch, getState, { audit: true, kpis: true, clients: true, users: true });
+    return res;
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to provision client account.'));
+  }
+});
+
+export const updateClientDetails = createAsyncThunk<
+  UpdateClientDetailsInput,
+  UpdateClientDetailsInput,
+  ThunkConfig
+>('admin/updateClientDetails', async (input, { dispatch, getState, rejectWithValue }) => {
+  try {
+    await adminApi.updateClientDetails(input);
+    refreshAfterMutation(dispatch, getState, { audit: true, clients: true, users: true });
+    return input;
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to update client organization details.'));
+  }
+});
+
+export const updateGigProDetails = createAsyncThunk<
+  UpdateGigProDetailsInput,
+  UpdateGigProDetailsInput,
+  ThunkConfig
+>('admin/updateGigProDetails', async (input, { dispatch, getState, rejectWithValue }) => {
+  try {
+    await adminApi.updateGigProDetails(input);
+    refreshAfterMutation(dispatch, getState, { audit: true, gigPros: true, users: true });
+    return input;
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to update freelancer profile.'));
+  }
+});
+
+export const moderateGigService = createAsyncThunk<
+  { serviceId: number; status: 'active' | 'paused' | 'archived' },
+  { serviceId: number; status: 'active' | 'paused' | 'archived' },
+  ThunkConfig
+>('admin/moderateGigService', async ({ serviceId, status }, { dispatch, getState, rejectWithValue }) => {
+  try {
+    await adminApi.moderateGigService(serviceId, status);
+    refreshAfterMutation(dispatch, getState, { audit: true });
+    return { serviceId, status };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to update service status.'));
+  }
+});
+
+export const createManagerSeat = createAsyncThunk<
+  { userId: number; managerId: number; clientId: number },
+  CreateManagerSeatInput,
+  ThunkConfig
+>('admin/createManagerSeat', async (input, { dispatch, getState, rejectWithValue }) => {
+  try {
+    const res = await adminApi.createManagerSeat(input);
+    refreshAfterMutation(dispatch, getState, {
+      audit: true,
+      kpis: true,
+      managers: true,
+      clients: true,
+      users: true,
+    });
+    return res;
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to provision manager seat.'));
+  }
+});
+
+export const updateManagerDetails = createAsyncThunk<
+  UpdateManagerDetailsInput,
+  UpdateManagerDetailsInput,
+  ThunkConfig
+>('admin/updateManagerDetails', async (input, { dispatch, getState, rejectWithValue }) => {
+  try {
+    await adminApi.updateManagerDetails(input);
+    refreshAfterMutation(dispatch, getState, { audit: true, managers: true, clients: true, users: true });
+    return input;
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to update manager details.'));
+  }
+});
+
+export const removeManagerSeat = createAsyncThunk<
+  { clientId: number; managerId: number },
+  { clientId: number; managerId: number },
+  ThunkConfig
+>('admin/removeManagerSeat', async ({ clientId, managerId }, { dispatch, getState, rejectWithValue }) => {
+  try {
+    await adminApi.removeManagerSeat(clientId, managerId);
+    refreshAfterMutation(dispatch, getState, {
+      audit: true,
+      kpis: true,
+      managers: true,
+      clients: true,
+      assignments: true,
+    });
+    return { clientId, managerId };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, 'Failed to unlink manager seat.'));
+  }
+});
+
 // ============================================================================
 // SLICE DEFINITION
 // ============================================================================
@@ -559,6 +733,13 @@ export const adminSlice = createSlice({
           (targetNum !== '' && a.id === `adm-${targetNum}`),
       );
       if (staffRow) staffRow.status = normalizedStatus;
+
+      for (const dossier of Object.values(state.clientDossiers)) {
+        if (dossier.userId === resolvedUserId) dossier.status = normalizedStatus;
+      }
+      for (const dossier of Object.values(state.gigProDossiers)) {
+        if (dossier.userId === resolvedUserId) dossier.status = normalizedStatus;
+      }
     });
 
     // Clients
@@ -587,6 +768,51 @@ export const adminSlice = createSlice({
         target.kycStatus = status;
         target.isVerified = status === 'VERIFIED';
       }
+      for (const dossier of Object.values(state.clientDossiers)) {
+        if (String(dossier.clientId) === String(clientId).replace(/\D/g, '')) {
+          dossier.kycStatus = status;
+        }
+      }
+    });
+
+    builder
+      .addCase(fetchClientDossier.pending, (state, action) => {
+        state.clientDossierRequest = { status: 'loading', error: null, requestId: action.meta.requestId };
+      })
+      .addCase(fetchClientDossier.fulfilled, (state, action) => {
+        if (state.clientDossierRequest.requestId === action.meta.requestId) {
+          state.clientDossierRequest = { status: 'succeeded', error: null };
+        }
+        state.clientDossiers[action.payload.key] = action.payload.dossier;
+        state.clientDossiers[String(action.payload.dossier.clientId)] = action.payload.dossier;
+      })
+      .addCase(fetchClientDossier.rejected, (state, action) => {
+        if (state.clientDossierRequest.requestId === action.meta.requestId) {
+          state.clientDossierRequest = { status: 'failed', error: action.payload || 'Failed to load client dossier.' };
+        }
+      });
+
+    builder.addCase(updateClientDetails.fulfilled, (state, action) => {
+      const { clientId, name, email, companyName, domain } = action.payload;
+      const numId = String(clientId).replace(/\D/g, '');
+      const normalizedDomain = domain && domain.trim() ? domain.trim() : null;
+      const target = state.clients.find(
+        (c) => String(c.id) === String(clientId) || String(c.clientId ?? '') === numId,
+      );
+      if (target) {
+        target.name = name;
+        target.email = email;
+        target.companyName = companyName;
+        target.domain = normalizedDomain;
+      }
+      for (const dossier of Object.values(state.clientDossiers)) {
+        if (String(dossier.clientId) === numId) {
+          dossier.name = name;
+          dossier.email = email;
+          dossier.companyName = companyName;
+          dossier.domain = normalizedDomain;
+        }
+      }
     });
 
     // Gig Pros
@@ -608,13 +834,70 @@ export const adminSlice = createSlice({
 
     builder.addCase(updateGigProBadge.fulfilled, (state, action) => {
       const { gigProId, badge } = action.payload;
+      const numId = String(gigProId).replace(/\D/g, '');
       const target = state.gigPros.find(
-        (g) => String(g.id) === String(gigProId) || String(g.gigProId ?? '') === String(gigProId),
+        (g) => String(g.id) === String(gigProId) || String(g.gigProId ?? '') === String(gigProId) || String(g.gigProfileId ?? '') === numId,
       );
       if (target) target.badge = badge;
+      for (const dossier of Object.values(state.gigProDossiers)) {
+        if (String(dossier.gigProfileId) === numId) {
+          dossier.badge = badge;
+        }
+      }
     });
 
-    // Managers
+    builder
+      .addCase(fetchGigProDossier.pending, (state, action) => {
+        state.gigProDossierRequest = { status: 'loading', error: null, requestId: action.meta.requestId };
+      })
+      .addCase(fetchGigProDossier.fulfilled, (state, action) => {
+        if (state.gigProDossierRequest.requestId === action.meta.requestId) {
+          state.gigProDossierRequest = { status: 'succeeded', error: null };
+        }
+        state.gigProDossiers[action.payload.key] = action.payload.dossier;
+        state.gigProDossiers[String(action.payload.dossier.gigProfileId)] = action.payload.dossier;
+      })
+      .addCase(fetchGigProDossier.rejected, (state, action) => {
+        if (state.gigProDossierRequest.requestId === action.meta.requestId) {
+          state.gigProDossierRequest = {
+            status: 'failed',
+            error: action.payload || 'Failed to load freelancer dossier.',
+          };
+        }
+      });
+
+    builder.addCase(updateGigProDetails.fulfilled, (state, action) => {
+      const { gigProfileId, name, email, headline } = action.payload;
+      const numId = String(gigProfileId).replace(/\D/g, '');
+      const target = state.gigPros.find(
+        (g) =>
+          String(g.id) === String(gigProfileId) ||
+          String(g.gigProId ?? '') === String(gigProfileId) ||
+          String(g.gigProfileId ?? '') === numId,
+      );
+      if (target) {
+        target.name = name;
+        target.email = email;
+        target.headline = headline;
+      }
+      for (const dossier of Object.values(state.gigProDossiers)) {
+        if (String(dossier.gigProfileId) === numId) {
+          dossier.name = name;
+          dossier.email = email;
+          dossier.headline = headline;
+        }
+      }
+    });
+
+    builder.addCase(moderateGigService.fulfilled, (state, action) => {
+      const { serviceId, status } = action.payload;
+      for (const dossier of Object.values(state.gigProDossiers)) {
+        const svc = dossier.services.find((s) => s.serviceId === serviceId);
+        if (svc) svc.status = status;
+      }
+    });
+
+    // Managers & Assignments
     builder
       .addCase(fetchManagers.pending, (state, action) => {
         state.managersRequest = { status: 'loading', error: null, requestId: action.meta.requestId };
@@ -630,6 +913,43 @@ export const adminSlice = createSlice({
           state.managersRequest = { status: 'failed', error: action.payload || 'Failed to fetch managers.' };
         }
       });
+
+    builder
+      .addCase(fetchAssignments.pending, (state, action) => {
+        state.assignmentsRequest = { status: 'loading', error: null, requestId: action.meta.requestId };
+      })
+      .addCase(fetchAssignments.fulfilled, (state, action) => {
+        if (state.assignmentsRequest.requestId === action.meta.requestId) {
+          state.assignmentsRequest = { status: 'succeeded', error: null };
+          state.assignments = action.payload;
+        }
+      })
+      .addCase(fetchAssignments.rejected, (state, action) => {
+        if (state.assignmentsRequest.requestId === action.meta.requestId) {
+          state.assignmentsRequest = { status: 'failed', error: action.payload || 'Failed to fetch assignments.' };
+        }
+      });
+
+    builder.addCase(updateManagerDetails.fulfilled, (state, action) => {
+      const { userId, name, email } = action.payload;
+      const numUid = String(userId).replace(/\D/g, '');
+      const target = state.managers.find(
+        (m) => String(m.userId ?? '') === String(userId) || String(m.userId ?? '').replace(/\D/g, '') === numUid,
+      );
+      if (target) {
+        target.name = name;
+        target.email = email;
+      }
+    });
+
+    builder.addCase(removeManagerSeat.fulfilled, (state, action) => {
+      const { clientId, managerId } = action.payload;
+      state.managers = state.managers.filter((m) => {
+        const mId = Number(String(m.managerId ?? m.id).replace(/\D/g, ''));
+        if (mId !== managerId) return true;
+        return m.clientId !== undefined && m.clientId !== clientId;
+      });
+    });
 
     // Projects
     builder

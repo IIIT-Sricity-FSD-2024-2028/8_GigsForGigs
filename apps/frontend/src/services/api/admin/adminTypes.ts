@@ -28,6 +28,14 @@ export interface VelocityPoint {
   rake: number;
 }
 
+export interface AnalyticsFunnel {
+  posted: number;
+  withBids: number;
+  hired: number;
+  escrowFunded: number;
+  released: number;
+}
+
 export interface AdminAnalyticsData {
   timeRange: string;
   grossVolume: number;
@@ -36,6 +44,7 @@ export interface AdminAnalyticsData {
   repeatClientRate: number | null;
   velocity: VelocityPoint[];
   peak: { date: string; gmv: number } | null;
+  funnel?: AnalyticsFunnel;
   categories: CategoryDemand[];
 }
 
@@ -87,6 +96,50 @@ export interface ClientDetail {
   managers: ClientManagerSummary[];
 }
 
+export interface ClientDossierTask {
+  taskId: number;
+  title: string;
+  status: string;
+  budget: number;
+  createdAt: string;
+  applicationsCount: number;
+  deliverablesCount: number;
+  escrowStatus: string | null;
+  totalCommitted: number;
+}
+
+export interface ClientDossier {
+  clientId: number;
+  userId: number;
+  name: string;
+  companyName: string;
+  email: string;
+  domain: string | null;
+  kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  status: string;
+  joinedDate: string;
+  managers: ClientManagerSummary[];
+  tasks: ClientDossierTask[];
+  serviceRequestsCount: number;
+}
+
+export interface CreateClientAccountInput {
+  name: string;
+  email: string;
+  password: string;
+  companyName: string;
+  domain?: string;
+}
+
+export interface UpdateClientDetailsInput {
+  clientId: string;
+  userId: string;
+  name: string;
+  email: string;
+  companyName: string;
+  domain: string | null;
+}
+
 export interface GigProDetail {
   id: string;
   gigProfileId?: number;
@@ -107,6 +160,49 @@ export interface GigProDetail {
   portfolioCount: number;
 }
 
+export interface GigProDeliverableSummary {
+  taskId: number;
+  deliverableNo: number;
+  description: string;
+  submissionPath: string;
+  status: string;
+  feedback: string | null;
+  createdAt: string;
+}
+
+export interface GigProServiceSummary {
+  serviceId: number;
+  title: string;
+  description: string | null;
+  price: number;
+  category: string | null;
+  status: 'active' | 'paused' | 'archived' | string;
+  createdAt: string;
+}
+
+export interface GigProDossier {
+  gigProfileId: number;
+  userId: number;
+  name: string;
+  email: string;
+  headline: string | null;
+  badge: string;
+  status: string;
+  skills: string[];
+  tools: string[];
+  portfolioUrls: string[];
+  deliverables: GigProDeliverableSummary[];
+  services: GigProServiceSummary[];
+}
+
+export interface UpdateGigProDetailsInput {
+  gigProfileId: string;
+  userId: string;
+  name: string;
+  email: string;
+  headline: string;
+}
+
 export interface ManagerDetail {
   id: string;
   managerId?: number | string;
@@ -119,6 +215,31 @@ export interface ManagerDetail {
   activeSupervisedTasks: number;
   status: 'ACTIVE' | 'SUSPENDED';
   createdAt?: string;
+}
+
+export interface ManagerAssignmentRow {
+  gigProfileId: number;
+  taskId: number;
+  managerId: number | null;
+  assignedAt: string;
+  taskTitle: string;
+  taskStatus: string;
+  taskBudget: number;
+  gigProName: string;
+  managerName: string | null;
+}
+
+export interface CreateManagerSeatInput {
+  name: string;
+  email: string;
+  password: string;
+  clientId: number;
+}
+
+export interface UpdateManagerDetailsInput {
+  userId: string;
+  name: string;
+  email: string;
 }
 
 export interface ProjectTask {

@@ -13,13 +13,21 @@ import type {
   AuditLogEntry,
   CategoryDemand,
   ClientDetail,
+  ClientDossier,
+  CreateClientAccountInput,
+  CreateManagerSeatInput,
   DisputeCase,
   DisputeSettlementOutcome,
   GigProDetail,
+  GigProDossier,
+  ManagerAssignmentRow,
   ManagerDetail,
   ModerationReview,
   PlatformSettingsData,
   ProjectTask,
+  UpdateClientDetailsInput,
+  UpdateGigProDetailsInput,
+  UpdateManagerDetailsInput,
   VelocityPoint,
 } from '../../services/api/admin/adminTypes';
 
@@ -33,13 +41,21 @@ export type {
   AuditLogEntry,
   CategoryDemand,
   ClientDetail,
+  ClientDossier,
+  CreateClientAccountInput,
+  CreateManagerSeatInput,
   DisputeCase,
   DisputeSettlementOutcome,
   GigProDetail,
+  GigProDossier,
+  ManagerAssignmentRow,
   ManagerDetail,
   ModerationReview,
   PlatformSettingsData,
   ProjectTask,
+  UpdateClientDetailsInput,
+  UpdateGigProDetailsInput,
+  UpdateManagerDetailsInput,
   VelocityPoint,
 };
 
@@ -63,12 +79,18 @@ export interface AdminState {
 
   clients: ClientDetail[];
   clientsRequest: RequestState;
+  clientDossiers: Record<string, ClientDossier>;
+  clientDossierRequest: RequestState;
 
   gigPros: GigProDetail[];
   gigProsRequest: RequestState;
+  gigProDossiers: Record<string, GigProDossier>;
+  gigProDossierRequest: RequestState;
 
   managers: ManagerDetail[];
   managersRequest: RequestState;
+  assignments: ManagerAssignmentRow[];
+  assignmentsRequest: RequestState;
 
   projects: ProjectTask[];
   projectsRequest: RequestState;

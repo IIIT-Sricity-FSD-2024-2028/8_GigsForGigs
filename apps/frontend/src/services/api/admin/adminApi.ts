@@ -16,13 +16,21 @@ import type {
   AdminUserSummary,
   AuditLogEntry,
   ClientDetail,
+  ClientDossier,
+  CreateClientAccountInput,
+  CreateManagerSeatInput,
   DisputeCase,
   DisputeSettlementOutcome,
   GigProDetail,
+  GigProDossier,
+  ManagerAssignmentRow,
   ManagerDetail,
   ModerationReview,
   PlatformSettingsData,
   ProjectTask,
+  UpdateClientDetailsInput,
+  UpdateGigProDetailsInput,
+  UpdateManagerDetailsInput,
 } from './adminTypes';
 
 export type {
@@ -34,16 +42,85 @@ export type {
   AdminUserSummary,
   AuditLogEntry,
   ClientDetail,
+  ClientDossier,
+  CreateClientAccountInput,
+  CreateManagerSeatInput,
   DisputeCase,
   DisputeSettlementOutcome,
   GigProDetail,
+  GigProDossier,
+  ManagerAssignmentRow,
   ManagerDetail,
   ModerationReview,
   PlatformSettingsData,
   ProjectTask,
+  UpdateClientDetailsInput,
+  UpdateGigProDetailsInput,
+  UpdateManagerDetailsInput,
 };
 
 const actor = 'admin' as const;
+const stripDigits = (raw: string | number): string => String(raw).replace(/\D/g, '');
+
+interface RawClientDossierResponse {
+  clientId: number;
+  userId: number;
+  clientName: string;
+  domain: string | null;
+  kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  user: { name: string; email: string; status: string; createdAt: string };
+  managers: Array<{ managerId: number; user: { name: string; email: string; status: string } }>;
+  tasks: Array<{
+    taskId: number;
+    title: string;
+    status: string;
+    budget: number | string;
+    createdAt: string;
+    applications?: unknown[];
+    deliverables?: unknown[];
+    payments?: Array<{ status: string; amount: number | string; platformFee: number | string }>;
+  }>;
+  serviceRequests?: unknown[];
+}
+
+interface RawGigProDossierResponse {
+  gigProfileId: number;
+  userId: number;
+  bio: string | null;
+  badge: string | null;
+  user: { name: string; email: string; status: string };
+  skills: Array<{ skill: string }>;
+  tools: Array<{ tool: string }>;
+  portfolio: Array<{ url: string }>;
+  deliverables: Array<{
+    taskId: number;
+    deliverableNo: number;
+    description: string;
+    submissionPath: string;
+    status: string;
+    feedback: string | null;
+    createdAt: string;
+  }>;
+  services: Array<{
+    serviceId: number;
+    title: string;
+    description: string | null;
+    price: number | string;
+    category: string | null;
+    status: string;
+    createdAt: string;
+  }>;
+}
+
+interface RawAssignmentResponse {
+  gigProfileId: number;
+  taskId: number;
+  managerId: number | null;
+  assignedAt: string;
+  task: { title: string; status: string; budget: number | string };
+  gigProfile: { user: { name: string } };
+  manager: { user: { name: string } } | null;
+}
 
 export const adminApi = {
   // KPIs & Analytics
@@ -64,6 +141,89 @@ export const adminApi = {
     return apiFetch<ClientDetail[]>('/admin/clients', { actor });
   },
 
+  async getClientDossier(clientId: string | number): Promise<ClientDossier> {
+    const raw = await apiFetch<RawClientDossierResponse>(`/admin/clients/${stripDigits(clientId)}`, { actor });
+    return {
+      clientId: raw.clientId,
+      userId: raw.userId,
+      name: raw.user.name,
+      companyName: raw.clientName,
+      email: raw.user.email,
+      domain: raw.domain,
+      kycStatus: raw.kycStatus,
+      status: raw.user.status,
+      joinedDate: String(raw.user.createdAt).split('T')[0],
+      managers: raw.managers.map((m) => ({
+        managerId: m.managerId,
+        name: m.user.name,
+        email: m.user.email,
+        status: m.user.status,
+      })),
+      tasks: raw.tasks.map((t) => {
+        const payment = t.payments?.[0];
+        const committed = (t.payments ?? [])
+          .filter((p) => p.status === 'held' || p.status === 'completed')
+          .reduce((sum, p) => sum + Number(p.amount) + Number(p.platformFee), 0);
+        return {
+          taskId: t.taskId,
+          title: t.title,
+          status: t.status.toUpperCase(),
+          budget: Number(t.budget),
+          createdAt: String(t.createdAt).split('T')[0],
+          applicationsCount: t.applications?.length ?? 0,
+          deliverablesCount: t.deliverables?.length ?? 0,
+          escrowStatus: payment ? payment.status.toUpperCase() : null,
+          totalCommitted: committed,
+        };
+      }),
+      serviceRequestsCount: raw.serviceRequests?.length ?? 0,
+    };
+  },
+
+  async createClientAccount(input: CreateClientAccountInput): Promise<{ userId: number; clientId: number }> {
+    const createdUser = await apiFetch<{ userId: number }>('/admin/users', {
+      method: 'POST',
+      body: {
+        name: input.name,
+        email: input.email,
+        password: input.password,
+        role: 'client',
+      },
+      actor,
+    });
+    try {
+      const createdClient = await apiFetch<{ clientId: number }>('/admin/clients', {
+        method: 'POST',
+        body: {
+          userId: createdUser.userId,
+          clientName: input.companyName,
+          ...(input.domain?.trim() ? { domain: input.domain.trim() } : {}),
+        },
+        actor,
+      });
+      return { userId: createdUser.userId, clientId: createdClient.clientId };
+    } catch (error) {
+      await apiFetch<void>(`/admin/users/${createdUser.userId}`, { method: 'DELETE', actor }).catch(() => undefined);
+      throw error;
+    }
+  },
+
+  async updateClientDetails(input: UpdateClientDetailsInput): Promise<void> {
+    await apiFetch(`/admin/users/${stripDigits(input.userId)}`, {
+      method: 'PATCH',
+      body: { name: input.name, email: input.email },
+      actor,
+    });
+    await apiFetch(`/admin/clients/${stripDigits(input.clientId)}`, {
+      method: 'PATCH',
+      body: {
+        clientName: input.companyName,
+        domain: input.domain && input.domain.trim() ? input.domain.trim() : null,
+      },
+      actor,
+    });
+  },
+
   async decideClientKYC(
     clientId: string,
     status: 'VERIFIED' | 'REJECTED',
@@ -79,6 +239,61 @@ export const adminApi = {
     return apiFetch<GigProDetail[]>('/admin/gig-pros', { actor });
   },
 
+  async getGigProDossier(gigProfileId: string | number): Promise<GigProDossier> {
+    const raw = await apiFetch<RawGigProDossierResponse>(`/admin/gig-profiles/${stripDigits(gigProfileId)}`, { actor });
+    return {
+      gigProfileId: raw.gigProfileId,
+      userId: raw.userId,
+      name: raw.user.name,
+      email: raw.user.email,
+      headline: raw.bio,
+      badge: raw.badge ?? 'NONE',
+      status: raw.user.status,
+      skills: raw.skills.map((s) => s.skill),
+      tools: raw.tools.map((t) => t.tool),
+      portfolioUrls: raw.portfolio.map((p) => p.url),
+      deliverables: raw.deliverables.map((d) => ({
+        taskId: d.taskId,
+        deliverableNo: d.deliverableNo,
+        description: d.description,
+        submissionPath: d.submissionPath,
+        status: d.status.toUpperCase(),
+        feedback: d.feedback,
+        createdAt: String(d.createdAt).split('T')[0],
+      })),
+      services: raw.services.map((s) => ({
+        serviceId: s.serviceId,
+        title: s.title,
+        description: s.description,
+        price: Number(s.price),
+        category: s.category,
+        status: s.status,
+        createdAt: String(s.createdAt).split('T')[0],
+      })),
+    };
+  },
+
+  async updateGigProDetails(input: UpdateGigProDetailsInput): Promise<void> {
+    await apiFetch(`/admin/users/${stripDigits(input.userId)}`, {
+      method: 'PATCH',
+      body: { name: input.name, email: input.email },
+      actor,
+    });
+    await apiFetch(`/admin/gig-profiles/${stripDigits(input.gigProfileId)}`, {
+      method: 'PATCH',
+      body: { bio: input.headline },
+      actor,
+    });
+  },
+
+  async moderateGigService(serviceId: number, status: 'active' | 'paused' | 'archived'): Promise<{ serviceId: number; status: string }> {
+    return apiFetch<{ serviceId: number; status: string }>(`/admin/services/${serviceId}`, {
+      method: 'PATCH',
+      body: { status },
+      actor,
+    });
+  },
+
   async updateGigProBadge(
     gigProId: string,
     badge: string,
@@ -92,6 +307,57 @@ export const adminApi = {
 
   async getManagers(): Promise<ManagerDetail[]> {
     return apiFetch<ManagerDetail[]>('/admin/managers', { actor });
+  },
+
+  async getAssignments(): Promise<ManagerAssignmentRow[]> {
+    const rows = await apiFetch<RawAssignmentResponse[]>('/admin/assignments', { actor });
+    return rows.map((r) => ({
+      gigProfileId: r.gigProfileId,
+      taskId: r.taskId,
+      managerId: r.managerId,
+      assignedAt: String(r.assignedAt).split('T')[0],
+      taskTitle: r.task.title,
+      taskStatus: r.task.status.toUpperCase(),
+      taskBudget: Number(r.task.budget),
+      gigProName: r.gigProfile.user.name,
+      managerName: r.manager?.user.name ?? null,
+    }));
+  },
+
+  async createManagerSeat(input: CreateManagerSeatInput): Promise<{ userId: number; managerId: number; clientId: number }> {
+    const createdUser = await apiFetch<{ userId: number }>('/admin/users', {
+      method: 'POST',
+      body: {
+        name: input.name,
+        email: input.email,
+        password: input.password,
+        role: 'manager',
+      },
+      actor,
+    });
+    try {
+      const createdMgr = await apiFetch<{ managerId: number; clientId: number }>('/admin/managers', {
+        method: 'POST',
+        body: { userId: createdUser.userId, clientId: input.clientId },
+        actor,
+      });
+      return { userId: createdUser.userId, managerId: createdMgr.managerId, clientId: createdMgr.clientId };
+    } catch (error) {
+      await apiFetch<void>(`/admin/users/${createdUser.userId}`, { method: 'DELETE', actor }).catch(() => undefined);
+      throw error;
+    }
+  },
+
+  async updateManagerDetails(input: UpdateManagerDetailsInput): Promise<void> {
+    await apiFetch(`/admin/users/${stripDigits(input.userId)}`, {
+      method: 'PATCH',
+      body: { name: input.name, email: input.email },
+      actor,
+    });
+  },
+
+  async removeManagerSeat(clientId: number, managerId: number): Promise<void> {
+    return apiFetch<void>(`/admin/managers/${clientId}/${managerId}`, { method: 'DELETE', actor });
   },
 
   async getProjects(): Promise<ProjectTask[]> {

@@ -17,6 +17,7 @@ import {
   createUserSchema,
   kycDecisionSchema,
   moderateReviewSchema,
+  moderateServiceSchema,
   overridePaymentSchema,
   settleDisputeSchema,
   twoFactorCodeSchema,
@@ -123,6 +124,9 @@ adminRouter.post("/reviews", act("reviews:moderate", "REVIEW_CREATE"), validate(
 adminRouter.patch("/reviews/:reviewId", act("reviews:moderate", "REVIEW_UPDATE"), validate(updateReviewSchema), adminController.updateReview);
 adminRouter.delete("/reviews/:reviewId", act("reviews:moderate", "REVIEW_DELETE"), adminController.deleteReview);
 adminRouter.patch("/reviews/:reviewId/moderate", act("reviews:moderate", "REVIEW_MODERATE"), validate(moderateReviewSchema), adminController.moderateReview);
+
+// Services moderation (gig professional service catalog).
+adminRouter.patch("/services/:serviceId", act("reviews:moderate", "SERVICE_MODERATE"), validate(moderateServiceSchema), adminController.moderateService);
 
 // Disputes.
 adminRouter.get("/disputes", adminController.listDisputes);

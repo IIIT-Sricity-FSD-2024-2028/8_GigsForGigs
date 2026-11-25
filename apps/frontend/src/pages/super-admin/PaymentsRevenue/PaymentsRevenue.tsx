@@ -54,13 +54,41 @@ export const PaymentsRevenue: React.FC = () => {
     const sum = (status: EscrowPayment['status'], pick: (p: EscrowPayment) => number) =>
       payments.filter((p) => p.status === status).reduce((total, p) => total + pick(p), 0);
     const total = (p: EscrowPayment) => p.totalAmount;
+    const totalEscrowFunds = sum('HELD_IN_ESCROW', total);
+    const totalRefunded = sum('REFUNDED', total);
+    const totalReleased = sum('RELEASED', total);
+    const totalAwaitingFunding = sum('AWAITING_FUNDING', total);
+    const totalFailed = sum('FAILED', total);
+    const totalLedgerGross = totalReleased + totalEscrowFunds + totalAwaitingFunding + totalRefunded + totalFailed;
+    const statusCounts: Record<string, number> = {
+      ALL: payments.length,
+      AWAITING_FUNDING: payments.filter((p) => p.status === 'AWAITING_FUNDING').length,
+      HELD_IN_ESCROW: payments.filter((p) => p.status === 'HELD_IN_ESCROW').length,
+      RELEASED: payments.filter((p) => p.status === 'RELEASED').length,
+      REFUNDED: payments.filter((p) => p.status === 'REFUNDED').length,
+      FAILED: payments.filter((p) => p.status === 'FAILED').length,
+    };
+    const allocationSegments = [
+      { key: 'RELEASED', label: 'Released', amount: totalReleased, color: '#059669' },
+      { key: 'HELD_IN_ESCROW', label: 'Held in Escrow', amount: totalEscrowFunds, color: '#0D568D' },
+      { key: 'AWAITING_FUNDING', label: 'Awaiting Funding', amount: totalAwaitingFunding, color: '#D97706' },
+      { key: 'REFUNDED', label: 'Refunded', amount: totalRefunded, color: '#C5221F' },
+      { key: 'FAILED', label: 'Failed', amount: totalFailed, color: '#94A3B8' },
+    ].map((seg) => ({
+      ...seg,
+      sharePct: totalLedgerGross > 0 ? Math.round((seg.amount / totalLedgerGross) * 1000) / 10 : 0,
+    }));
+
     return {
-      totalVolume: sum('RELEASED', total) + sum('HELD_IN_ESCROW', total),
-      totalEscrowFunds: sum('HELD_IN_ESCROW', total),
-      totalRefunded: sum('REFUNDED', total),
+      totalVolume: totalReleased + totalEscrowFunds,
+      totalEscrowFunds,
+      totalRefunded,
       totalGigPayouts: sum('RELEASED', (p) => p.amount),
       totalPlatformRevenue: sum('RELEASED', (p) => p.platformFee),
-      completedCount: payments.filter((p) => p.status === 'RELEASED').length
+      completedCount: statusCounts.RELEASED,
+      totalLedgerGross,
+      statusCounts,
+      allocationSegments,
     };
   }, [payments]);
 
@@ -243,6 +271,60 @@ export const PaymentsRevenue: React.FC = () => {
         />
       </div>
 
+      {/* Escrow Capital Allocation Breakdown */}
+      <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+              Escrow Capital Allocation
+            </h3>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+              Share of total gross ledger volume across escrow lifecycle states
+            </span>
+          </div>
+          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 800, color: 'var(--color-text-dark)' }}>
+            Total Ledger: {formatCurrency(metrics.totalLedgerGross)}
+          </span>
+        </div>
+
+        <div
+          style={{
+            height: '12px',
+            borderRadius: 'var(--radius-pill)',
+            backgroundColor: 'var(--color-bg-light)',
+            overflow: 'hidden',
+            display: 'flex',
+            gap: '2px',
+          }}
+        >
+          {metrics.allocationSegments
+            .filter((seg) => seg.amount > 0)
+            .map((seg) => (
+              <div
+                key={seg.key}
+                title={`${seg.label}: ${formatCurrency(seg.amount)} (${seg.sharePct}%)`}
+                style={{
+                  width: `${Math.max(1.5, seg.sharePct)}%`,
+                  backgroundColor: seg.color,
+                  height: '100%',
+                  transition: 'width 0.35s ease',
+                }}
+              />
+            ))}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 20px', fontSize: 'var(--font-size-xs)' }}>
+          {metrics.allocationSegments.map((seg) => (
+            <div key={seg.key} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: seg.color, flexShrink: 0 }} />
+              <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>{seg.label}:</span>
+              <strong style={{ color: 'var(--color-text-dark)' }}>{formatCurrency(seg.amount)}</strong>
+              <span style={{ color: 'var(--color-text-muted)' }}>({seg.sharePct}%)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Main Table Card with Filter Pills */}
       <div className="admin-card" style={{ padding: 'var(--spacing-lg)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
@@ -264,7 +346,7 @@ export const PaymentsRevenue: React.FC = () => {
                   transition: 'all 0.15s ease'
                 }}
               >
-                {filter === 'ALL' ? 'All Statuses' : filter.replace(/_/g, ' ')}
+                {filter === 'ALL' ? 'All Statuses' : filter.replace(/_/g, ' ')} ({metrics.statusCounts[filter] ?? 0})
               </button>
             ))}
           </div>

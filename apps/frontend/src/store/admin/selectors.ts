@@ -19,12 +19,20 @@ export const selectUsersRequest = (state: RootState) => selectAdminState(state).
 
 export const selectClients = (state: RootState) => selectAdminState(state).clients;
 export const selectClientsRequest = (state: RootState) => selectAdminState(state).clientsRequest;
+export const selectClientDossierById = (state: RootState, clientId: string) =>
+  selectAdminState(state).clientDossiers[clientId] ?? null;
+export const selectClientDossierRequest = (state: RootState) => selectAdminState(state).clientDossierRequest;
 
 export const selectGigPros = (state: RootState) => selectAdminState(state).gigPros;
 export const selectGigProsRequest = (state: RootState) => selectAdminState(state).gigProsRequest;
+export const selectGigProDossierById = (state: RootState, gigProId: string) =>
+  selectAdminState(state).gigProDossiers[gigProId] ?? null;
+export const selectGigProDossierRequest = (state: RootState) => selectAdminState(state).gigProDossierRequest;
 
 export const selectManagers = (state: RootState) => selectAdminState(state).managers;
 export const selectManagersRequest = (state: RootState) => selectAdminState(state).managersRequest;
+export const selectAssignments = (state: RootState) => selectAdminState(state).assignments;
+export const selectAssignmentsRequest = (state: RootState) => selectAdminState(state).assignmentsRequest;
 
 export const selectProjects = (state: RootState) => selectAdminState(state).projects;
 export const selectProjectsRequest = (state: RootState) => selectAdminState(state).projectsRequest;

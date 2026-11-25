@@ -23,7 +23,7 @@ export type CreateClientDto = z.infer<typeof createClientSchema>;
 
 export const updateClientSchema = z.object({
   clientName: orgName(100).optional(),
-  domain: text(100).optional(),
+  domain: z.union([text(100), z.null()]).optional(),
 });
 export type UpdateClientDto = z.infer<typeof updateClientSchema>;
 
@@ -161,6 +161,11 @@ export const moderateReviewSchema = z.object({
   moderatorNotes: text(500).optional(),
 });
 export type ModerateReviewDto = z.infer<typeof moderateReviewSchema>;
+
+export const moderateServiceSchema = z.object({
+  status: z.enum(["active", "paused", "archived"]),
+});
+export type ModerateServiceDto = z.infer<typeof moderateServiceSchema>;
 
 export const settleDisputeSchema = z.object({
   settlementType: z.enum(["FULL_REFUND", "FULL_RELEASE", "SPLIT"]),

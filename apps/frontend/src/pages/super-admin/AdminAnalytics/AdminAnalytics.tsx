@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { Loader } from '../../../components/common/Loader';
 import { KPICard } from '../../../components/super-admin/KPICard';
-import { RevenueAreaChart } from '../../../components/super-admin/SimpleCharts';
+import {
+  RevenueAreaChart,
+  ConversionFunnelChart,
+  HorizontalBarChart
+} from '../../../components/super-admin/SimpleCharts';
 import { DataTable, type ColumnDef } from '../../../components/super-admin/DataTable';
 import { ExportIcon } from '../../../components/super-admin/Icons';
 import { useToast } from '../../../components/super-admin/useToast';
+import { formatCurrency } from '../../../utils/format';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { fetchAnalytics } from '../../../store/admin/adminSlice';
 import { selectAnalyticsByRange, selectAnalyticsRequest } from '../../../store/admin/selectors';
@@ -15,6 +21,8 @@ import type { CategoryDemand } from '../../../store/admin/types';
  * Deep-dive business intelligence and financial metrics for the GigsForGigs platform.
  * 100% selector-driven from Redux store (`adminSlice`).
  */
+
+const CATEGORY_PALETTE = ['#0D568D', '#D97706', '#519e8a', '#1E40AF', '#7E22CE'];
 
 export const AdminAnalytics: React.FC = () => {
   const toast = useToast();
@@ -36,11 +44,11 @@ export const AdminAnalytics: React.FC = () => {
     },
     {
       header: 'Total Volume',
-      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>₹{Number(row.totalVolume ?? 0).toLocaleString('en-IN')}</span>
+      cell: (row) => <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>{formatCurrency(Number(row.totalVolume ?? 0))}</span>
     },
     {
       header: 'Average Order Value',
-      cell: (row) => <span>₹{Number(row.avgContractValue ?? 0).toLocaleString('en-IN')}</span>
+      cell: (row) => <span>{formatCurrency(Number(row.avgContractValue ?? 0))}</span>
     },
     {
       header: 'Market Share (% GMV)',
@@ -55,6 +63,26 @@ export const AdminAnalytics: React.FC = () => {
   const rawVelocity = analyticsData?.velocity;
   const velocity = Array.isArray(rawVelocity) ? rawVelocity : [];
   const categories: CategoryDemand[] = Array.isArray(analyticsData?.categories) ? analyticsData.categories : [];
+  const funnel = analyticsData?.funnel;
+  const funnelSteps = funnel
+    ? [
+        { label: 'Posted Tasks', count: funnel.posted, color: '#084875' },
+        { label: 'Tasks with Bids', count: funnel.withBids, color: '#0D568D' },
+        { label: 'Hired Contracts', count: funnel.hired, color: '#1E40AF' },
+        { label: 'Escrow Funded', count: funnel.escrowFunded, color: '#519e8a' },
+        { label: 'Completed & Released', count: funnel.released, color: '#059669' }
+      ]
+    : [];
+  const overallConversionPct =
+    funnel && funnel.posted > 0 ? `${Math.round((funnel.released / funnel.posted) * 1000) / 10}%` : '—';
+  const categoryBarItems = categories.map((cat, idx) => ({
+    label: cat.category,
+    count: cat.totalVolume,
+    color: CATEGORY_PALETTE[idx % CATEGORY_PALETTE.length],
+    valueText: formatCurrency(cat.totalVolume),
+    sharePct: cat.marketShare,
+    subText: `${cat.contracts} settled ${cat.contracts === 1 ? 'contract' : 'contracts'} · ${cat.marketShare}% GMV share`
+  }));
 
   /** Download what's on screen. CSV is a pure utility over selected Redux state. */
   const handleExport = (format: 'CSV' | 'JSON') => {
@@ -77,6 +105,10 @@ export const AdminAnalytics: React.FC = () => {
     URL.revokeObjectURL(url);
     toast.success('Report Exported', `Generated ${format} report for ${timeRange.toUpperCase()}.`);
   };
+
+  if (analyticsRequest.status === 'loading' && !analyticsData) {
+    return <Loader label="Loading marketplace intelligence..." />;
+  }
 
   if (analyticsRequest.status === 'failed' && !analyticsData) {
     return (
@@ -136,7 +168,7 @@ export const AdminAnalytics: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
         <KPICard
           title="Gross Volume"
-          value={`₹${Number(analyticsData?.grossVolume ?? 0).toLocaleString('en-IN')}`}
+          value={formatCurrency(Number(analyticsData?.grossVolume ?? 0))}
           subtitle={`Released in the last ${timeRange.toUpperCase()}`}
           accentColor="var(--color-primary-blue)"
         />
@@ -148,7 +180,7 @@ export const AdminAnalytics: React.FC = () => {
         />
         <KPICard
           title="Avg Contract Value"
-          value={analyticsData?.avgContractValue == null ? '—' : `₹${analyticsData.avgContractValue.toLocaleString('en-IN')}`}
+          value={analyticsData?.avgContractValue == null ? '—' : formatCurrency(analyticsData.avgContractValue)}
           subtitle="Across contracts settled in this range"
           accentColor="var(--color-secondary)"
         />
@@ -168,11 +200,54 @@ export const AdminAnalytics: React.FC = () => {
           </h3>
           {analyticsData?.peak && (
             <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-              Peak: {analyticsData.peak.date} (₹{analyticsData.peak.gmv.toLocaleString('en-IN')})
+              Peak: {analyticsData.peak.date} ({formatCurrency(analyticsData.peak.gmv)})
             </span>
           )}
         </div>
         <RevenueAreaChart data={velocity} />
+      </div>
+
+      {/* Marketplace Funnel & Category GMV Share */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))', gap: 'var(--spacing-lg)' }}>
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+                Marketplace Conversion Funnel
+              </h3>
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                Tasks created in {timeRange.toUpperCase()} window progressing to release
+              </span>
+            </div>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#059669',
+                backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-pill)',
+              }}
+            >
+              End-to-End: {overallConversionPct}
+            </span>
+          </div>
+          <ConversionFunnelChart steps={funnelSteps} />
+        </div>
+
+        <div className="admin-card" style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--color-primary-dark)', margin: 0 }}>
+                Category GMV Share
+              </h3>
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                Settled escrow volume distribution across categories
+              </span>
+            </div>
+          </div>
+          <HorizontalBarChart data={categoryBarItems} />
+        </div>
       </div>
 
       {/* Category Performance */}

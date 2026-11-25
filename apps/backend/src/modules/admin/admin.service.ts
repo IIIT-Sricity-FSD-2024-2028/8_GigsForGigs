@@ -802,12 +802,20 @@ export async function getAnalytics(rawRange: string = "30d") {
   const range: AnalyticsRange = rawRange === "7d" || rawRange === "90d" || rawRange === "ytd" ? rawRange : "30d";
   const buckets = buildVelocityBuckets(range, new Date());
 
-  const [payments, tasksPerClient] = await Promise.all([
+  const [payments, tasksPerClient, rangeTasks] = await Promise.all([
     prisma.payment.findMany({
       where: { status: "completed", settledAt: { gte: new Date(buckets[0]!.start) } },
       include: { task: { select: { category: true, clientId: true } } },
     }),
     prisma.task.groupBy({ by: ["clientId"], _count: { taskId: true } }),
+    prisma.task.findMany({
+      where: { createdAt: { gte: new Date(buckets[0]!.start) } },
+      select: {
+        applications: { select: { status: true } },
+        assignments: { select: { gigProfileId: true } },
+        payments: { select: { status: true } },
+      },
+    }),
   ]);
 
   const velocity = buckets.map((b) => ({ date: b.label, gmv: 0, rake: 0 }));
@@ -838,6 +846,21 @@ export async function getAnalytics(rawRange: string = "30d") {
   );
   const repeatClients = tasksPerClient.filter((c) => c._count.taskId > 1).length;
 
+  const postedCount = rangeTasks.length;
+  const releasedCount = rangeTasks.filter((t) => t.payments.some((p) => p.status === "completed")).length;
+  const fundedCount = rangeTasks.filter((t) =>
+    t.payments.some((p) => p.status === "completed" || p.status === "held" || p.status === "refunded"),
+  ).length;
+  const hiredCount = rangeTasks.filter(
+    (t) =>
+      t.assignments.length > 0 ||
+      t.payments.length > 0 ||
+      t.applications.some((a) => a.status === "accepted"),
+  ).length;
+  const bidCount = rangeTasks.filter(
+    (t) => t.applications.length > 0 || t.assignments.length > 0 || t.payments.length > 0,
+  ).length;
+
   return {
     timeRange: range,
     grossVolume,
@@ -846,6 +869,13 @@ export async function getAnalytics(rawRange: string = "30d") {
     repeatClientRate: tasksPerClient.length > 0 ? round1((repeatClients / tasksPerClient.length) * 100) : null,
     velocity,
     peak: peak && { date: peak.date, gmv: peak.gmv },
+    funnel: {
+      posted: postedCount,
+      withBids: bidCount,
+      hired: hiredCount,
+      escrowFunded: fundedCount,
+      released: releasedCount,
+    },
     categories: [...categoryTotals.entries()]
       .sort((a, b) => b[1].gmv - a[1].gmv)
       .map(([category, c]) => ({
@@ -1141,6 +1171,17 @@ export async function moderateReview(rawReviewId: string, dto: ModerateReviewDto
     data: { status: dto.status, ...(dto.moderatorNotes !== undefined ? { moderatorNotes: dto.moderatorNotes } : {}) },
   });
   return { success: true, reviewId, status: dto.status };
+}
+
+/**
+ * Pause, re-activate, or archive a gig professional's published service listing.
+ */
+export async function moderateService(serviceId: number, status: "active" | "paused" | "archived") {
+  await prisma.service.update({
+    where: { serviceId },
+    data: { status },
+  });
+  return { success: true, serviceId, status };
 }
 
 /**

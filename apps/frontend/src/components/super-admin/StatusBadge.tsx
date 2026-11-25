@@ -26,6 +26,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'RELEASED':
     case 'ACCEPTED':
     case 'TOP_RATED':
+    case 'VERIFIED':
       badgeClass = 'badge-success';
       break;
 
@@ -35,6 +36,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'ASSIGNED':
     case 'VERIFIED_PRO':
     case 'STANDARD':
+    case 'HELD':
     case 'HELD_IN_ESCROW':
       badgeClass = 'badge-info';
       break;
@@ -43,6 +45,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'PENDING_KYC':
     case 'UNDER_REVIEW':
     case 'INVITED':
+    case 'PAUSED':
     case 'AWAITING_FUNDING':
       badgeClass = 'badge-warning';
       break;
@@ -50,6 +53,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'DISPUTED':
     case 'SUSPENDED':
     case 'BANNED':
+    case 'REJECTED':
     case 'FLAGGED':
     case 'CANCELLED':
     case 'REFUNDED':
