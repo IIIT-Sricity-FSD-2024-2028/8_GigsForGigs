@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext/AuthContext';
-import { authApi } from '../../../services/api/auth/authApi';
-import { ApiError } from '../../../services/api/httpClient';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { fetchManagerInvite } from '../../../store/auth/authSlice';
 import { Button, Input } from '../../../components/common';
 
 export interface ManagerInviteSetupProps {
@@ -15,22 +15,17 @@ const labelStyle: React.CSSProperties = { display: 'block', fontSize: '13px', fo
 /** Activation page for the one-time link a client shares with an invited manager. */
 export const ManagerInviteSetup: React.FC<ManagerInviteSetupProps> = ({ token, onDone }) => {
   const { acceptManagerInvite, loading, authError } = useAuth();
-  const [invite, setInvite] = useState<{ name: string; email: string; clientName: string } | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const managerInvite = useAppSelector((state) => state.auth.managerInvite);
+  // Ignore a preview fetched for a different token.
+  const current = managerInvite.token === token ? managerInvite : null;
+  const invite = current?.data ?? null;
+  const loadError = current?.error ?? null;
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    authApi
-      .getManagerInvite(token)
-      .then((data) => active && setInvite(data))
-      .catch((err) => active && setLoadError(err instanceof ApiError ? err.message : 'This invite link could not be verified.'));
-    return () => {
-      active = false;
-    };
-  }, [token]);
+  useEffect(() => { void dispatch(fetchManagerInvite(token)); }, [dispatch, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

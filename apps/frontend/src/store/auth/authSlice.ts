@@ -13,8 +13,11 @@ export interface UserSession {
   clientId?: number; managerId?: number; gigProfileId?: number;
 }
 interface TokenPayload { role: 'client' | 'gig_professional' | 'manager' | 'admin'; clientId?: number; managerId?: number; gigProfileId?: number }
-export interface AuthState { user: UserSession | null; token: string | null; loading: boolean; authError: string | null; twoFactorRequired: boolean; adminProfileChecked: boolean }
-const initialState: AuthState = { user: null, token: null, loading: false, authError: null, twoFactorRequired: false, adminProfileChecked: false };
+export interface ManagerInvite { name: string; email: string; clientName: string }
+/** Invite preview shown on the manager setup page, keyed by the token it was fetched for. */
+export interface ManagerInviteState { token: string | null; data: ManagerInvite | null; error: string | null; requestId?: string }
+export interface AuthState { user: UserSession | null; token: string | null; loading: boolean; authError: string | null; twoFactorRequired: boolean; adminProfileChecked: boolean; managerInvite: ManagerInviteState }
+const initialState: AuthState = { user: null, token: null, loading: false, authError: null, twoFactorRequired: false, adminProfileChecked: false, managerInvite: { token: null, data: null, error: null } };
 
 export const TIER_PERMISSIONS: Record<AdminTier, string[]> = {
   OWNER: ['*'],
@@ -61,6 +64,12 @@ export const login = createAsyncThunk<{ user: UserSession; token: string }, { em
       const twoFactorRequired = error instanceof ApiError && !!(error.errors as { twoFactorRequired?: boolean } | undefined)?.twoFactorRequired;
       return rejectWithValue({ message: messageOf(error, 'Authentication failed. Please verify your credentials.'), twoFactorRequired });
     }
+  },
+);
+export const fetchManagerInvite = createAsyncThunk<ManagerInvite, string, { rejectValue: string }>(
+  'auth/fetchManagerInvite', async (token, { rejectWithValue }) => {
+    try { return await authApi.getManagerInvite(token); }
+    catch (error) { return rejectWithValue(error instanceof ApiError ? error.message : 'This invite link could not be verified.'); }
   },
 );
 export const acceptManagerInvite = createAsyncThunk<{ user: UserSession; token: string }, { token: string; password: string }, { rejectValue: string }>(
@@ -116,8 +125,11 @@ const authSlice = createSlice({
       .addCase(login.pending, (s) => { s.loading = true; s.authError = null; s.twoFactorRequired = false; })
       .addCase(login.fulfilled, (s, a) => { s.loading = false; s.user = a.payload.user; s.token = a.payload.token; s.twoFactorRequired = false; s.adminProfileChecked = false; })
       .addCase(login.rejected, (s, a) => { s.loading = false; s.authError = a.payload?.message ?? a.error.message ?? 'Authentication failed.'; s.twoFactorRequired = a.payload?.twoFactorRequired ?? false; })
+      .addCase(fetchManagerInvite.pending, (s, a) => { s.managerInvite = { token: a.meta.arg, data: null, error: null, requestId: a.meta.requestId }; })
+      .addCase(fetchManagerInvite.fulfilled, (s, a) => { if (s.managerInvite.requestId === a.meta.requestId) s.managerInvite.data = a.payload; })
+      .addCase(fetchManagerInvite.rejected, (s, a) => { if (s.managerInvite.requestId === a.meta.requestId) s.managerInvite.error = a.payload ?? 'This invite link could not be verified.'; })
       .addCase(acceptManagerInvite.pending, (s) => { s.loading = true; s.authError = null; })
-      .addCase(acceptManagerInvite.fulfilled, (s, a) => { s.loading = false; s.user = a.payload.user; s.token = a.payload.token; })
+      .addCase(acceptManagerInvite.fulfilled, (s, a) => { s.loading = false; s.managerInvite = initialState.managerInvite; s.user = a.payload.user; s.token = a.payload.token; })
       .addCase(acceptManagerInvite.rejected, (s, a) => { s.loading = false; s.authError = a.payload ?? 'Could not activate your manager account.'; })
       .addCase(acceptAdminInvite.pending, (s) => { s.loading = true; s.authError = null; })
       .addCase(acceptAdminInvite.fulfilled, (s, a) => { s.loading = false; s.user = a.payload.user; s.token = a.payload.token; s.adminProfileChecked = false; })
